@@ -3,5 +3,6 @@
   { "id": "o3-mini", "name": "o3-mini" },
   { "id": "o2-mini", "name": "o2-mini" },
   { "id": "o1-mini", "name": "o1-mini" },
+  { "id": "grok-4-fast", "name": "grok-4-fast" },
   { "id": "gemini-2.0-flash", "name": "gemini-2.0-flash" }
 ]

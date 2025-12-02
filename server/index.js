@@ -229,6 +229,599 @@ app.post('/api/translate', async (req, res) => {
   }
 })
 
+// Solution 题解整理接口
+app.post('/api/solution', async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const SOLUTION_PROMPT = `你是一个专业的题目解析翻译器，请根据题意和AC代码, 给出解题思路，并按照以下Markdown格式输出, 要注意的是markdown代码标记块 '\`\`\`' 后要换行再继续输出
+
+## 题意
+
+[题意]
+
+### 算法标签
+
+[算法标签]
+
+## 思路
+
+[解题思路]
+
+## 示例代码
+
+\`\`\`cpp
+[示例代码]
+\`\`\`
+
+请确保：
+
+1. **所有数学公式、数字、符号必须使用美元符号包裹**：
+   - 行内公式使用单个美元符号 ($...$)，例如 $O(n)$、$n^2$、$10^9$
+   - 数组下标、变量、数学符号都要用美元符号，例如 $a[i]$、$n$、$k$、$\leq$、$\geq$
+   - 数字范围、不等式等也要包裹，例如 $1 \leq n \leq 10^5$
+   - 块级公式使用双美元符号 ($$...$$)
+2. 保持题解原意
+3. 专业术语翻译准确
+4. 中文表达流畅自然
+5. 代码块必须正确使用三个反引号包裹，且反引号后要换行
+6. **严格要求**：模型在输出中必须使用美元符号来包裹所有公式、数字、变量和符号。如果输出中没有使用美元符号，请仍然以美元符号形式返回；不要删除或转义美元符号。`
+
+    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+    const apiKey = process.env.YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: SOLUTION_PROMPT },
+      { role: 'user', content: text }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.5,
+      max_tokens: 32767
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else if (data.data && data.data[0] && data.data[0].text) {
+        content = data.data[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    // 优化 Markdown 格式
+    try {
+      let fixed = content
+      // 修正标题格式
+      fixed = fixed.replace(/^#\s/gm, '## ')
+      // 删除多余空行
+      fixed = fixed.replace(/\n{3,}/g, '\n\n')
+      // 确保代码块格式正确
+      fixed = fixed.replace(/```\s*(\w+)/g, '```$1')
+      
+      return res.json({ result: fixed })
+    } catch (e) {
+      return res.json({ result: content })
+    }
+  } catch (err) {
+    console.error('Solution error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Solution generation failed', detail: message })
+  }
+})
+
+// Checker 代码错误检查接口
+app.post('/api/checker', async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const CHECKER_PROMPT = `你是一个专业的算法竞赛代码调试助手，帮助选手定位代码错误并给出修改建议，但不直接提供完整的正确代码。请根据题目和选手的代码，按照以下Markdown格式输出：
+
+## 代码分析
+
+[分析代码的整体逻辑和思路]
+
+## 发现的问题
+
+### 问题 1: [问题标题]
+
+**位置**: [指出具体在哪个函数/哪几行]
+
+**问题描述**: [详细说明这里有什么问题]
+
+**为什么错误**: [解释为什么这样写会导致错误]
+
+**修改建议**: [给出修改方向和提示，但不要直接写出完整代码]
+
+### 问题 2: [如有其他问题]
+
+...
+
+## 测试样例
+
+请提供 2-3 个简单的测试样例，帮助选手调试和验证修改：
+
+### 样例 1
+
+**输入**:
+\`\`\`
+[输入数据]
+\`\`\`
+
+**预期输出**:
+\`\`\`
+[正确的输出]
+\`\`\`
+
+**说明**: [这个样例可以暴露什么问题]
+
+### 样例 2
+
+...
+
+## 调试思路
+
+[给出调试的方向和步骤建议]
+
+请确保：
+
+1. **不要直接给出完整的正确代码**，只给出修改建议和提示
+2. **必须提供 2-3 个能暴露代码问题的简单测试样例**，帮助选手验证和调试
+3. **所有数学公式、数字、变量、符号必须使用美元符号包裹**：
+   - 行内使用 ($...$)，例如 $O(n)$、$i$、$n$、$a[i]$
+   - 数学符号用 $\leq$、$\geq$ 等
+   - 范围用 $1 \leq n \leq 10^5$ 等格式
+4. 指出错误位置要具体（哪个函数、哪几行、哪个逻辑）
+5. 解释为什么会错，帮助选手理解问题本质
+6. 给出修改方向和思路，让选手自己动手改
+7. 如果有多个问题，按重要程度排序
+8. **【重要】代码块格式严格要求**：
+   - 三个反引号后**必须立即换行**，不能在反引号后直接跟内容
+   - 正确格式示例：
+     \`\`\`
+     10
+     \`\`\`
+   - 错误格式（禁止）：\`\`\`10
+   - 这条规则适用于所有代码块，包括输入、输出、代码片段
+9. **严格要求**：必须使用美元符号包裹所有数学内容，不要删除或转义美元符号`
+
+    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+    const apiKey = process.env.YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: CHECKER_PROMPT },
+      { role: 'user', content: text }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.3,
+      max_tokens: 32767
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else if (data.data && data.data[0] && data.data[0].text) {
+        content = data.data[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    // 优化 Markdown 格式
+    try {
+      let fixed = content
+      // 修正标题格式
+      fixed = fixed.replace(/^#\s/gm, '## ')
+      // 删除多余空行
+      fixed = fixed.replace(/\n{3,}/g, '\n\n')
+      // **修正代码块格式：确保 ``` 后换行**
+      // 匹配 ```后直接跟非换行字符的情况，在中间插入换行
+      fixed = fixed.replace(/```(\w*?)([^\n])/g, '```$1\n$2')
+      
+      return res.json({ result: fixed })
+    } catch (e) {
+      return res.json({ result: content })
+    }
+  } catch (err) {
+    console.error('Checker error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Code checking failed', detail: message })
+  }
+})
+
+// Solve 生成AC代码接口
+app.post('/api/solve', async (req, res) => {
+  try {
+    const { text, model, language } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const lang = language || 'C++'
+    const SOLVE_PROMPT = `你是一个专业的算法竞赛选手，请根据题目描述生成一个正确的 AC 代码。
+
+请按照以下格式输出：
+
+## 算法思路
+
+[简要说明解题思路和算法]
+
+## 时间复杂度
+
+[时间复杂度分析，使用 LaTeX 格式如 $O(n)$]
+
+## 代码实现
+
+\`\`\`${lang.toLowerCase()}
+[完整的可运行代码]
+\`\`\`
+
+请确保：
+
+1. 代码必须是完整的，可以直接编译运行
+2. 代码要包含必要的头文件/库导入
+3. 代码要处理好输入输出
+4. 代码要考虑边界情况
+5. 代码风格要清晰规范，包含必要的注释
+6. **所有数学公式必须用美元符号包裹**，例如 $O(n)$、$n^2$、$1 \leq n \leq 10^5$
+7. 代码块必须在 \`\`\` 后换行
+8. **严格要求**：必须使用美元符号包裹所有数学内容`
+
+    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+    const apiKey = process.env.YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: SOLVE_PROMPT },
+      { role: 'user', content: text }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.3,
+      max_tokens: 32767
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else if (data.data && data.data[0] && data.data[0].text) {
+        content = data.data[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    // 优化格式
+    try {
+      let fixed = content
+      fixed = fixed.replace(/^#\s/gm, '## ')
+      fixed = fixed.replace(/\n{3,}/g, '\n\n')
+      fixed = fixed.replace(/```(\w*?)([^\n])/g, '```$1\n$2')
+      
+      return res.json({ result: fixed })
+    } catch (e) {
+      return res.json({ result: content })
+    }
+  } catch (err) {
+    console.error('Solve error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Code generation failed', detail: message })
+  }
+})
+
+// Generate Data 生成测试数据脚本接口
+app.post('/api/generate-data', async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    // 读取 Cyaron 文档
+    let cyaronDocs = ''
+    const docsDir = path.join(__dirname, '../cyaron-docs')
+    try {
+      const files = await fs.promises.readdir(docsDir)
+      for (const file of files) {
+        if (file.endsWith('.md')) {
+          const content = await fs.promises.readFile(path.join(docsDir, file), 'utf8')
+          cyaronDocs += `# ${file}\n${content}\n\n`
+        }
+      }
+    } catch (e) {
+      debugLog('Failed to read cyaron docs', e)
+    }
+
+    const DATA_GEN_PROMPT = `你是一个专业的算法竞赛测试数据生成专家，请根据题目描述生成使用 CYaRon 库的 Python 数据生成脚本。
+
+以下是 CYaRon 库的文档：
+
+${cyaronDocs}
+
+请按照以下格式输出：
+
+## 输入格式分析
+
+[分析题目的输入格式和数据范围]
+
+## 数据生成策略
+
+[说明如何分组生成数据，考虑哪些边界情况]
+
+## Cyaron 脚本
+
+\`\`\`python
+[完整的 Python 数据生成脚本]
+\`\`\`
+
+请确保：
+
+1. 脚本必须使用 \`from cyaron import *\`
+2. 数据文件前缀设置为 \`file_prefix='./data/data'\`
+3. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
+4. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
+5. 生成 10-20 组数据（可根据题目复杂度调整）
+6. 考虑特殊情况：边界值、极端情况、随机数据
+7. 代码要包含注释，说明每组数据的特点
+8. **所有数学表达式用美元符号包裹**，例如 $n$、$10^5$
+9. 代码块必须在 \`\`\` 后换行
+10. **严格要求**：必须使用美元符号包裹所有数学内容`
+
+    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+    const apiKey = process.env.YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: DATA_GEN_PROMPT },
+      { role: 'user', content: text }
+    ]
+
+    const payload = {
+      model: model || 'gemini-2.0-flash',
+      messages,
+      temperature: 0.5,
+      max_tokens: 32767
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else if (data.data && data.data[0] && data.data[0].text) {
+        content = data.data[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    // 优化格式
+    try {
+      let fixed = content
+      fixed = fixed.replace(/^#\s/gm, '## ')
+      fixed = fixed.replace(/\n{3,}/g, '\n\n')
+      fixed = fixed.replace(/```(\w*?)([^\n])/g, '```$1\n$2')
+      
+      return res.json({ result: fixed })
+    } catch (e) {
+      return res.json({ result: content })
+    }
+  } catch (err) {
+    console.error('Data generation error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Data script generation failed', detail: message })
+  }
+})
+
+// 运行数据生成脚本并返回测试数据
+app.post('/api/run-data-generator', async (req, res) => {
+  try {
+    const { stdCode, dataScript, language } = req.body
+    if (!stdCode || !dataScript) {
+      return res.status(400).json({ error: '缺少代码或脚本' })
+    }
+
+    const workDir = path.join(__dirname, '../temp', `gen_${Date.now()}`)
+    await fs.promises.mkdir(workDir, { recursive: true })
+    await fs.promises.mkdir(path.join(workDir, 'data'), { recursive: true })
+
+    try {
+      // 1. 保存标准程序
+      let stdFile, execCmd
+      if (language === 'C++') {
+        stdFile = path.join(workDir, 'std.cpp')
+        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
+        
+        // 编译 C++ 代码
+        debugLog('Compiling C++ code...')
+        const { exec } = require('child_process')
+        const compileCmd = `g++ "${stdFile}" -o "${path.join(workDir, 'std.exe')}" -std=c++17`
+        
+        await new Promise((resolve, reject) => {
+          exec(compileCmd, (error, stdout, stderr) => {
+            if (error) {
+              debugLog('Compile error:', stderr)
+              reject(new Error(`编译失败: ${stderr}`))
+            } else {
+              debugLog('Compilation successful')
+              resolve()
+            }
+          })
+        })
+        
+        execCmd = './std.exe'
+      } else if (language === 'Python') {
+        stdFile = path.join(workDir, 'std.py')
+        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
+        execCmd = 'python std.py'
+      } else if (language === 'Java') {
+        stdFile = path.join(workDir, 'Main.java')
+        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
+        
+        // 编译 Java 代码
+        debugLog('Compiling Java code...')
+        const { exec } = require('child_process')
+        const compileCmd = `javac "${stdFile}"`
+        
+        await new Promise((resolve, reject) => {
+          exec(compileCmd, { cwd: workDir }, (error, stdout, stderr) => {
+            if (error) {
+              debugLog('Compile error:', stderr)
+              reject(new Error(`编译失败: ${stderr}`))
+            } else {
+              debugLog('Compilation successful')
+              resolve()
+            }
+          })
+        })
+        
+        execCmd = 'java Main'
+      }
+
+      // 2. 修改脚本中的路径和 output_gen 调用
+      let modifiedScript = dataScript
+        .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./data/data'`)
+        .replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('${execCmd}')`)
+      
+      const scriptFile = path.join(workDir, 'data_generator.py')
+      await fs.promises.writeFile(scriptFile, modifiedScript, 'utf8')
+
+      // 3. 运行数据生成脚本
+      debugLog('Running data generator...')
+      const { exec } = require('child_process')
+      
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('数据生成超时（30秒）'))
+        }, 30000)
+        
+        exec(`python "${scriptFile}"`, { cwd: workDir }, (error, stdout, stderr) => {
+          clearTimeout(timeout)
+          if (error) {
+            debugLog('Script error:', stderr)
+            reject(new Error(`脚本执行失败: ${stderr || error.message}`))
+          } else {
+            debugLog('Script output:', stdout)
+            resolve()
+          }
+        })
+      })
+
+      // 4. 读取生成的测试数据
+      const dataDir = path.join(workDir, 'data')
+      const files = await fs.promises.readdir(dataDir)
+      const testFiles = files.filter(f => f.endsWith('.in') || f.endsWith('.out'))
+      
+      if (testFiles.length === 0) {
+        throw new Error('未生成任何测试数据文件')
+      }
+
+      // 5. 读取所有测试数据内容
+      const fileContents = {}
+      for (const file of testFiles) {
+        const content = await fs.promises.readFile(path.join(dataDir, file), 'utf8')
+        fileContents[file] = content
+      }
+
+      debugLog(`Generated ${testFiles.length} test files`)
+
+      // 6. 清理临时文件（延迟清理，确保响应已发送）
+      setTimeout(async () => {
+        try {
+          await fs.promises.rm(workDir, { recursive: true, force: true })
+          debugLog('Cleaned up temp directory:', workDir)
+        } catch (e) {
+          debugLog('Failed to cleanup:', e)
+        }
+      }, 5000)
+
+      return res.json({ 
+        success: true, 
+        files: fileContents,
+        fileCount: testFiles.length / 2
+      })
+
+    } catch (err) {
+      // 清理临时文件
+      try {
+        await fs.promises.rm(workDir, { recursive: true, force: true })
+      } catch (e) {
+        debugLog('Failed to cleanup after error:', e)
+      }
+      throw err
+    }
+
+  } catch (err) {
+    console.error('Run data generator error:', err.message || err)
+    return res.status(500).json({ 
+      error: '数据生成失败', 
+      detail: err.message || 'unknown error' 
+    })
+  }
+})
+
 // 简单的上下文聊天接口：接收 messages 数组并转发到 Yun API
 app.post('/api/chat', async (req, res) => {
   try {
@@ -292,9 +885,15 @@ app.post('/api/chat', async (req, res) => {
 
     try {
       const fixed = wrapLatexIfNeeded(content)
-      // persist session if provided
+      // persist session if provided - include assistant reply
       if (sessionId) {
-        try { await saveSession(sessionId, messages) } catch (e) { debugLog('save session failed', e) }
+        try {
+          // 过滤掉 system prompt，只保留 user 和 assistant 消息
+          const userMessages = messages.filter(m => m.role !== 'system')
+          // 添加 assistant 回复
+          userMessages.push({ role: 'assistant', content: fixed })
+          await saveSession(sessionId, userMessages)
+        } catch (e) { debugLog('save session failed', e) }
       }
       return res.json({ result: fixed })
     } catch (e) {

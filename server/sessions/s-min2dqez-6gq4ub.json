@@ -22,5 +22,17 @@
     "role": "assistant",
     "content": "你好！很高兴再次见到你。请问有什么我可以帮助你的？",
     "time": "09:42:50"
+  },
+  {
+    "id": "mio12t0s-ytht40",
+    "role": "user",
+    "content": "你好朋友",
+    "time": "11:38:10"
+  },
+  {
+    "id": "mio12vry-3xt0r1",
+    "role": "assistant",
+    "content": "你好，朋友！很高兴认识你。有什么我可以帮你的吗？",
+    "time": "11:38:14"
   }
 ]
