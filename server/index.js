@@ -88,6 +88,7 @@ const SYSTEM_PROMPT = `你是一个专业的算法题目翻译器，专门修改
    - 保持题干内容不变, 不要增加过多的解释
    - 无需给出复杂度等信息
    - 无需给出解决此题的提示
+   - **不要添加原题链接、题目来源、题目编号等额外信息**
 
 3. 公式格式：
    - 所有数学公式必须使用LaTeX格式
@@ -140,6 +141,11 @@ const SYSTEM_PROMPT = `你是一个专业的算法题目翻译器，专门修改
     ## 数据范围
     [数据范围的翻译]
 
+
+**重要提醒**：
+- 输出内容到"数据范围"部分后就结束，不要添加任何额外内容
+- 不要添加原题链接、题目来源、题目编号、参考链接等信息
+- 不要添加类似 [题目名称](链接) 的 Markdown 链接格式
 
 输出格式请遵循 README 中的翻译模板（包含题目背景、题目描述、输入格式、输出格式、样例、样例解释、数据范围等）。保留算法复杂度表达如 $O(n)$ 等。
 `
@@ -561,6 +567,121 @@ app.post('/api/solve', async (req, res) => {
   }
 })
 
+// Generate problem.yaml 生成题目元数据接口
+app.post('/api/generate-problem-meta', async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const PROBLEM_META_PROMPT = `你是一个专业的算法竞赛题目分析专家，请根据题目描述分析题目并生成元数据。
+
+请仔细阅读题目，分析题目的核心算法和知识点，然后按照以下格式输出：
+
+## 题目标题
+
+[提取或总结一个简洁、准确、有吸引力的中文题目标题，8-15字以内，要能体现题目的核心内容]
+
+## 知识点标签
+
+[根据题目的核心算法和解题思路，从下面的标签列表中选择1-3个最匹配的标签。必须从列表中选择，不要自己创造标签。]
+
+可选标签（按难度分级）：
+
+**Level1**: 顺序结构, 条件结构, 循环结构, 暴力枚举1, 数学1
+
+**Level2**: 数组, 函数, 字符串, 结构体, 排序, 模拟2, 暴力枚举2, 数学2, 二维数组
+
+**Level3**: STL, 暴力枚举3, 模拟3, 数学3, 贪心3, 思维3
+
+**Level4**: 递推, 递归, 前缀和, 差分, 二分, 三分, BFS, DFS, 双指针, 栈, 链表, 离散化, ST表, 贪心4, 数学4, 思维4, 优先队列
+
+**Level5**: DP, DP变形, 线性DP, 背包DP, 区间DP, BFS进阶, DFS进阶, 树形结构, 倍增, 反悔贪心, 哈希, KMP, 字典树, 并查集, 数学5, 思维5, 环, 搜索进阶, 树的直径
+
+**Level6**: 树状数组, 线段树, 概率DP, 期望DP, 单调队列优化DP, 数位DP, 状压DP, 树上DP, 换根DP, 单源最短路径, floyd, 差分约束, 最小生成树, AC自动机, 平衡树, 二分图, 博弈论, 分块, 莫队, 矩阵, 数学6, 思维6
+
+**重要提示**：
+1. 标题要能准确反映题目的主题和场景，不要太泛泛
+2. 仔细分析题目需要的核心算法和数据结构，选择最相关的标签
+3. 标签难度要和题目实际难度匹配
+4. 每个题目选择1-3个标签，标签之间用逗号分隔
+5. 标签必须严格从上述列表中选择，保持原有格式（如"暴力枚举1"、"DP"、"排序"等）
+6. 输出格式严格按照上述模板，不要添加额外内容`
+
+    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+    const apiKey = process.env.YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: PROBLEM_META_PROMPT },
+      { role: 'user', content: text }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.3,
+      max_tokens: 2000
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 60000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else if (data.data && data.data[0] && data.data[0].text) {
+        content = data.data[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    // 解析返回内容，提取标题和标签
+    let title = '未命名题目'
+    let tags = []
+    
+    try {
+      // 提取标题
+      const titleMatch = content.match(/##\s*题目标题\s*\n+(.+?)(?:\n|$)/i)
+      if (titleMatch) {
+        title = titleMatch[1].trim()
+      }
+      
+      // 提取标签
+      const tagsMatch = content.match(/##\s*知识点标签\s*\n+([\s\S]+?)(?:\n##|\n\n|$)/i)
+      if (tagsMatch) {
+        const tagsText = tagsMatch[1]
+        // 先按照逗号、顿号、换行符等分隔符拆分
+        const rawTags = tagsText.split(/[,，、\n]+/)
+        tags = rawTags
+          .map(t => t.trim())
+          .map(t => t.replace(/^[-\s*]+/, ''))  // 移除开头的破折号、星号、空格
+          .map(t => t.replace(/[、，,]+$/, ''))  // 移除结尾的标点
+          .filter(t => t && t.length > 1 && !/^[\s\p{P}]+$/u.test(t))  // 过滤空值和纯标点
+      }
+    } catch (e) {
+      debugLog('Failed to parse problem meta:', e)
+    }
+
+    return res.json({ title, tags, rawContent: content })
+  } catch (err) {
+    console.error('Generate problem meta error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Problem meta generation failed', detail: message })
+  }
+})
+
 // Generate Data 生成测试数据脚本接口
 app.post('/api/generate-data', async (req, res) => {
   try {
@@ -606,16 +727,24 @@ ${cyaronDocs}
 
 请确保：
 
-1. 脚本必须使用 \`from cyaron import *\`
-2. 数据文件前缀设置为 \`file_prefix='./data/data'\`
-3. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
-4. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
-5. 生成 10-20 组数据（可根据题目复杂度调整）
-6. 考虑特殊情况：边界值、极端情况、随机数据
-7. 代码要包含注释，说明每组数据的特点
-8. **所有数学表达式用美元符号包裹**，例如 $n$、$10^5$
-9. 代码块必须在 \`\`\` 后换行
-10. **严格要求**：必须使用美元符号包裹所有数学内容`
+1. **导入库的正确方式（重要！）**：
+   - 先导入 \`from cyaron import *\`
+   - 再导入 \`import random as py_random\` （使用别名避免与 CYaRon 的 random 冲突）
+   - 如需要数学函数，导入 \`import math\`
+   - 如果需要使用标准库的 random 函数（如 shuffle、choice、seed），使用 \`py_random.shuffle()\`、\`py_random.seed()\` 等
+   - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
+2. **推荐做法**：
+   - 优先使用 CYaRon 提供的随机数生成函数
+   - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
+3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
+4. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
+5. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
+6. 生成 10-20 组数据（可根据题目复杂度调整）
+7. 考虑特殊情况：边界值、极端情况、随机数据
+8. 代码要包含注释，说明每组数据的特点
+9. **所有数学表达式用美元符号包裹**，例如 $n$、$10^5$
+10. 代码块必须在 \`\`\` 后换行
+11. **严格要求**：必须使用美元符号包裹所有数学内容`
 
     const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
     const apiKey = process.env.YUN_API_KEY
@@ -742,7 +871,7 @@ app.post('/api/run-data-generator', async (req, res) => {
 
       // 2. 修改脚本中的路径和 output_gen 调用
       let modifiedScript = dataScript
-        .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./data/data'`)
+        .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
         .replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('${execCmd}')`)
       
       const scriptFile = path.join(workDir, 'data_generator.py')
@@ -953,4 +1082,19 @@ app.post('/api/sessions/:id/clear', async (req, res) => {
   } catch (e) {
     return res.status(500).json({ ok: false })
   }
+})
+
+// 全局错误处理中间件 - 确保所有错误都返回JSON
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err)
+  res.status(500).json({ 
+    error: 'Internal server error', 
+    message: err.message || 'Unknown error',
+    detail: DEBUG_LOG ? err.stack : undefined
+  })
+})
+
+// 404处理 - 返回JSON而不是HTML
+app.use((req, res) => {
+  res.status(404).json({ error: 'API endpoint not found', path: req.path })
 })

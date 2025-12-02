@@ -1,143 +1,100 @@
 <template>
-  <div class="solve-data-container">
-    <div class="top-bar">
-      <h2>Solve + Data 生成器</h2>
-      <div class="model-selector">
-        <label for="model-select">模型:</label>
-        <select id="model-select" v-model="selectedModel">
-          <option value="o4-mini">o4-mini</option>
-          <option value="o4">o4</option>
-          <option value="claude-3.7-sonnet">claude-3.7-sonnet</option>
-          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-          <option value="gemini-2.0-pro">gemini-2.0-pro</option>
-        </select>
-      </div>
+<div class="solve-data-container">
+  <!-- 自动消失的 Toast 提示 -->
+  <div v-if="showToast" class="custom-toast">
+    <span v-html="toastMessage"></span>
+  </div>
+  <div class="top-bar">
+    <h2>Solve + Data 生成器</h2>
+    <div class="model-selector">
+      <label for="model-select">模型:</label>
+      <select id="model-select" v-model="selectedModel">
+        <option value="o4-mini">o4-mini</option>
+        <option value="o4">o4</option>
+        <option value="claude-3.7-sonnet">claude-3.7-sonnet</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        <option value="gemini-2.0-pro">gemini-2.0-pro</option>
+      </select>
     </div>
-    
-    <div class="main-layout">
-      <!-- 左侧输入区域 -->
-      <div class="input-panel">
-        <div class="panel-header">
-          <h3>题目描述</h3>
-          <div class="header-controls">
-            <div class="lang-selector">
-              <label>代码语言:</label>
-              <select v-model="language">
-                <option value="C++">C++</option>
-                <option value="Python">Python</option>
-                <option value="Java">Java</option>
-              </select>
+  </div>
+  <div class="main-layout new-layout">
+    <!-- 左侧输入区域，仅题目描述和手动代码 -->
+    <div class="input-panel new-input-panel">
+      <div class="panel-header">
+        <h3>题目描述</h3>
+      </div>
+      <textarea 
+        v-model="problemText" 
+        placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
+        class="problem-input"
+      ></textarea>
+      <div class="panel-header" style="margin-top:18px;">
+        <h3>手动输入代码</h3>
+      </div>
+      <textarea 
+        v-model="manualCode" 
+        placeholder="请输入你的 AC 代码..."
+        class="manual-code-input"
+      ></textarea>
+      <button @click="clearManualCode" class="btn-small-clear" style="margin-top:8px;">清空代码</button>
+          <div class="input-actions-bar">
+            <button @click="generateAll" :disabled="isGenerating" class="btn-success" style="background: linear-gradient(90deg,#667eea,#764ba2);">{{ isGenerating ? '生成中...' : '一键生成全部' }}</button>
+            <div 
+              :class="['btn-translate', {disabled: isTranslating || isGenerating === 'all' || !problemText.trim()}]"
+              @click="!(isTranslating || isGenerating === 'all' || !problemText.trim()) && autoTranslate()"
+              style="display:inline-block; text-align:center;"
+            >
+              {{ isTranslating ? '翻译中...' : '生成翻译' }}
             </div>
-            <div class="mode-selector">
-              <label>
-                <input type="checkbox" v-model="manualCodeMode" @change="onModeChange">
-                手动输入代码
-              </label>
-            </div>
+            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
+            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all'" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
+            <button @click="runAndDownload" :disabled="isGenerating || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
+            <button @click="clearAll" class="btn-clear">清空</button>
           </div>
+    </div>
+    <!-- 右侧分栏输出区域 -->
+    <div class="output-panel new-output-panel">
+      <div class="output-tabs">
+        <button :class="['tab-btn', {active: activeTab === 'translate'}]" @click="activeTab = 'translate'">🌐 翻译内容</button>
+        <button :class="['tab-btn', {active: activeTab === 'code'}]" @click="activeTab = 'code'">📝 解题代码</button>
+        <button :class="['tab-btn', {active: activeTab === 'data'}]" @click="activeTab = 'data'">📊 数据脚本</button>
+      </div>
+      <div class="output-tab-content">
+        <div v-show="activeTab === 'translate'" class="output-block">
+          <div class="output-block-header">🌐 翻译内容
+            <button @click="copyTranslation" :disabled="!translationText" class="btn-small" style="float:right;">📋 复制翻译</button>
+            <button @click="downloadTranslation" :disabled="!translationText" class="btn-download" style="float:right; margin-right:8px;">💾 下载</button>
+          </div>
+          <div v-if="translationText" class="translation-preview">
+            <pre class="translation-content">{{ translationText }}</pre>
+          </div>
+          <div v-else class="translation-preview-empty">暂无翻译内容</div>
         </div>
-        
-        <!-- 手动代码输入模式 -->
-        <div v-if="manualCodeMode" class="manual-code-section">
-          <div class="code-input-header">
-            <span>📝 AC 代码（标准程序）</span>
-            <button @click="clearManualCode" class="btn-small-clear">清空代码</button>
+        <div v-show="activeTab === 'code'" class="output-block">
+          <div class="output-block-header">📝 解题代码
+            <button @click="copyPureCode" class="btn-small" style="float:right;">📋 复制代码</button>
+            <button @click="copyCode" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
+            <button @click="saveCode" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
           </div>
-          <textarea 
-            v-model="manualCode" 
-            placeholder="请输入你的 AC 代码..."
-            class="manual-code-input"
-          ></textarea>
-          <div class="code-input-header" style="border-top: 2px solid #dee2e6;">
-            <span>📄 题目描述（用于生成数据脚本）</span>
-          </div>
-          <textarea 
-            v-model="problemText" 
-            placeholder="请输入题目描述，包括输入格式、输出格式、数据范围等..."
-            class="problem-input-small"
-          ></textarea>
+          <div class="rendered-output" v-if="manualCodeMode ? manualCode : codeOutput" v-html="renderedCode"></div>
+          <div v-else class="translation-preview-empty">暂无解题代码</div>
         </div>
-        
-        <!-- 原有的题目描述输入 -->
-        <textarea 
-          v-show="!manualCodeMode"
-          v-model="problemText" 
-          placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
-          class="problem-input"
-        ></textarea>
-        
-        <div class="button-group">
-          <button 
-            v-if="!manualCodeMode"
-            @click="generateCode" 
-            :disabled="isGenerating" 
-            class="btn-primary"
-          >
-            {{ isGenerating === 'code' ? '生成中...' : '🚀 生成解题代码' }}
-          </button>
-          <button @click="generateData" :disabled="isGenerating" class="btn-secondary">
-            {{ isGenerating === 'data' ? '生成中...' : '📊 生成数据脚本' }}
-          </button>
-          <button 
-            @click="runAndDownload" 
-            :disabled="isGenerating || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" 
-            class="btn-success"
-            :title="manualCodeMode ? '使用你的代码生成项目包' : '使用AI生成的代码生成项目包'"
-          >
-            {{ isGenerating === 'run' ? '打包中...' : '📦 下载完整项目包' }}
-          </button>
-          <button @click="clearAll" class="btn-clear">🗑️ 清空</button>
+        <div v-show="activeTab === 'data'" class="output-block">
+          <div class="output-block-header">📊 数据脚本
+            <button @click="copyDataCode" class="btn-small" style="float:right;">📋 复制代码</button>
+            <button @click="copyData" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
+            <button @click="saveData" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
+          </div>
+          <div class="rendered-output" v-if="dataOutput" v-html="renderedData"></div>
+          <div v-else class="translation-preview-empty">暂无数据脚本</div>
         </div>
       </div>
-
-      <!-- 右侧输出区域 -->
-      <div class="output-panel">
-        <!-- 代码输出标签页 -->
-        <div class="tabs">
-          <div 
-            :class="['tab', { active: activeTab === 'code' }]" 
-            @click="activeTab = 'code'"
-          >
-            解题代码
-          </div>
-          <div 
-            :class="['tab', { active: activeTab === 'data' }]" 
-            @click="activeTab = 'data'"
-          >
-            数据脚本
-          </div>
-        </div>
-
-        <!-- 代码输出内容 -->
-        <div v-show="activeTab === 'code'" class="output-content">
-          <div v-if="manualCodeMode ? manualCode : codeOutput" class="output-wrapper">
-            <div class="output-actions">
-              <button @click="copyCode" class="btn-small">📋 复制结果</button>
-              <button @click="saveCode" class="btn-small">💾 保存代码</button>
-            </div>
-            <div class="rendered-output" v-html="renderedCode"></div>
-          </div>
-          <div v-else class="empty-state">
-            <p>👈 {{ manualCodeMode ? '请在左侧输入代码' : '点击"生成解题代码"按钮开始生成' }}</p>
-          </div>
-        </div>
-
-        <!-- 数据脚本输出内容 -->
-        <div v-show="activeTab === 'data'" class="output-content">
-          <div v-if="dataOutput" class="output-wrapper">
-            <div class="output-actions">
-              <button @click="copyData" class="btn-small">📋 复制结果</button>
-              <button @click="saveData" class="btn-small">💾 保存脚本</button>
-            </div>
-            <div class="rendered-output" v-html="renderedData"></div>
-          </div>
-          <div v-else class="empty-state">
-            <p>👈 点击"生成数据脚本"按钮开始生成</p>
-          </div>
-        </div>
+      <div class="output-actions-bar">
+        <!-- 操作按钮已移至左侧 -->
       </div>
     </div>
   </div>
+</div>
 </template>
 
 <script>
@@ -157,7 +114,12 @@ export default {
       isGenerating: false,
       activeTab: 'code',
       manualCodeMode: false,
-      manualCode: ''
+      manualCode: '',
+      showToast: false,
+      toastMessage: '',
+      isTranslating: false,
+      translationText: '',
+      problemMeta: null
     }
   },
   computed: {
@@ -172,6 +134,63 @@ export default {
     }
   },
   methods: {
+        showToastMessage(message) {
+          this.toastMessage = message
+          this.showToast = true
+          setTimeout(() => {
+            this.showToast = false
+          }, 2500)
+        },
+        
+        async autoTranslate() {
+          if (!this.problemText.trim()) return;
+          this.isTranslating = true;
+          this.translationText = '';
+          try {
+            const resp = await fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: this.problemText, model: this.selectedModel })
+            });
+            const ct = resp.headers.get('content-type') || '';
+            let data = null;
+            if (ct.includes('application/json')) {
+              try { data = await resp.json(); } catch (e) { data = null; }
+            } else {
+              try { const txt = await resp.text(); data = { rawText: txt }; } catch (e) { data = null; }
+            }
+            if (resp.ok) {
+              if (data && data.result) this.translationText = data.result;
+              else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
+              else this.translationText = '(无返回内容)';
+            } else {
+              if (data) this.translationText = `翻译失败: ${JSON.stringify(data)}`;
+              else this.translationText = `翻译失败: HTTP ${resp.status}`;
+            }
+          } catch (e) {
+            this.translationText = '请求错误: ' + e.toString();
+          } finally {
+            this.isTranslating = false;
+          }
+        },
+
+        downloadTranslation() {
+          if (!this.translationText) return;
+          const blob = new Blob([this.translationText], { type: 'text/markdown' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'problem_zh.md';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        
+        copyTranslation() {
+          if (!this.translationText) return;
+          navigator.clipboard.writeText(this.translationText).then(() => {
+            this.showToastMessage('✅ 已复制翻译到剪贴板');
+          });
+        },
     escapeHtml(text) {
       const div = document.createElement('div')
       div.textContent = text
@@ -223,7 +242,20 @@ export default {
       
       // 转换 Markdown
       const rawHtml = marked.parse(tempText)
-      return DOMPurify.sanitize(rawHtml)
+      const sanitized = DOMPurify.sanitize(rawHtml)
+      
+      // 移除代码块的语言标签显示（多种情况处理）
+      let result = sanitized
+        // 1. 移除 class="language-*" 属性（包括 c++, cpp, python 等）
+        .replace(/<pre><code class="language-[\w\+\-]+"/g, '<pre><code')
+        // 2. 移除 <pre> 标签前可能出现的语言标签段落
+        .replace(/<p>([\w\+\-]+)<\/p>\s*<pre>/g, '<pre>')
+        // 3. 移除 <pre> 内部开头的语言标签
+        .replace(/<pre>([\w\+\-]+)\s*<code>/g, '<pre><code>')
+        // 4. 移除 code 标签后紧跟的任意语言名（包括换行）
+        .replace(/<code>(\s*[\r\n]*)([\w\+\-]+)(\s*[\r\n]+)/gi, '<code>$1')
+      
+      return result
     },
     
     async generateCode() {
@@ -237,25 +269,256 @@ export default {
       this.activeTab = 'code'
       
       try {
-        const response = await fetch('/api/solve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: this.problemText,
-            model: this.selectedModel,
-            language: this.language
+        // 同时生成代码和题目元数据
+        const [codeResponse, metaResponse] = await Promise.all([
+          fetch('/api/solve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: this.problemText,
+              model: this.selectedModel,
+              language: this.language
+            })
+          }),
+          fetch('/api/generate-problem-meta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: this.problemText,
+              model: this.selectedModel
+            })
           })
-        })
+        ])
         
-        const data = await response.json()
+        // 检查响应类型并安全解析
+        let codeData, metaData
         
-        if (response.ok) {
-          this.codeOutput = data.result
+        const codeContentType = codeResponse.headers.get('content-type') || ''
+        if (codeContentType.includes('application/json')) {
+          codeData = await codeResponse.json()
         } else {
-          alert('生成失败: ' + (data.error || '未知错误'))
+          const textContent = await codeResponse.text()
+          console.error('代码生成API返回非JSON:', textContent.substring(0, 200))
+          throw new Error('服务器返回了错误的响应格式，请检查后端服务是否正常运行')
+        }
+        
+        const metaContentType = metaResponse.headers.get('content-type') || ''
+        if (metaContentType.includes('application/json')) {
+          metaData = await metaResponse.json()
+        } else {
+          console.warn('元数据API返回非JSON，跳过')
+          metaData = null
+        }
+        
+        if (codeResponse.ok) {
+          this.codeOutput = codeData.result
+        } else {
+          alert('生成失败: ' + (codeData.error || '未知错误'))
+        }
+        
+        if (metaResponse.ok && metaData) {
+          this.problemMeta = metaData
+          console.log('题目元数据:', metaData)
         }
       } catch (error) {
         console.error('Generate code error:', error)
+        alert('生成失败: ' + error.message)
+      } finally {
+        this.isGenerating = false
+      }
+    },
+    
+    async generateAll() {
+      if (!this.problemText.trim()) {
+        alert('请先输入题目描述')
+        return
+      }
+      
+      this.isGenerating = 'all'
+      this.dataOutput = ''
+      this.translationText = ''
+      
+      // 检查是否是手动输入代码模式
+      const isManualMode = this.manualCode.trim() !== ''
+      
+      // 如果是手动输入模式，将手动代码赋值给 codeOutput
+      if (isManualMode) {
+        this.codeOutput = this.manualCode
+      } else {
+        this.codeOutput = ''
+      }
+      
+      this.activeTab = 'code'
+      
+      try {
+        // 如果是手动输入代码模式，跳过代码生成
+        let requests = []
+        
+        if (!isManualMode) {
+          // 自动生成模式：生成代码、数据、翻译和元数据
+          requests = [
+            fetch('/api/solve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel,
+                language: this.language
+              })
+            }),
+            fetch('/api/generate-data', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            }),
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            }),
+            fetch('/api/generate-problem-meta', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            })
+          ]
+        } else {
+          // 手动输入模式：只生成数据、翻译和元数据
+          requests = [
+            fetch('/api/generate-data', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            }),
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            }),
+            fetch('/api/generate-problem-meta', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: this.problemText,
+                model: this.selectedModel
+              })
+            })
+          ]
+        }
+        
+        const responses = await Promise.all(requests)
+        
+        if (!isManualMode) {
+          // 自动生成模式：解析所有4个响应
+          const [codeResponse, dataResponse, translateResponse, metaResponse] = responses
+          
+          // 解析代码生成结果
+          const codeContentType = codeResponse.headers.get('content-type') || ''
+          if (codeContentType.includes('application/json')) {
+            const codeData = await codeResponse.json()
+            if (codeResponse.ok) {
+              this.codeOutput = codeData.result
+            } else {
+              console.error('代码生成失败:', codeData.error)
+            }
+          }
+          
+          // 解析数据生成结果
+          const dataContentType = dataResponse.headers.get('content-type') || ''
+          if (dataContentType.includes('application/json')) {
+            const dataData = await dataResponse.json()
+            if (dataResponse.ok) {
+              this.dataOutput = dataData.result
+            } else {
+              console.error('数据生成失败:', dataData.error)
+            }
+          }
+          
+          // 解析翻译结果
+          const translateContentType = translateResponse.headers.get('content-type') || ''
+          if (translateContentType.includes('application/json')) {
+            const translateData = await translateResponse.json()
+            if (translateResponse.ok) {
+              this.translationText = translateData.result || ''
+            }
+          }
+          
+          // 解析元数据结果
+          const metaContentType = metaResponse.headers.get('content-type') || ''
+          if (metaContentType.includes('application/json')) {
+            const metaData = await metaResponse.json()
+            if (metaResponse.ok && metaData) {
+              this.problemMeta = metaData
+              console.log('题目元数据:', metaData)
+            }
+          }
+        } else {
+          // 手动输入模式：只解析3个响应
+          const [dataResponse, translateResponse, metaResponse] = responses
+          
+          // 解析数据生成结果
+          const dataContentType = dataResponse.headers.get('content-type') || ''
+          if (dataContentType.includes('application/json')) {
+            const dataData = await dataResponse.json()
+            if (dataResponse.ok) {
+              this.dataOutput = dataData.result
+            } else {
+              console.error('数据生成失败:', dataData.error)
+            }
+          }
+          
+          // 解析翻译结果
+          const translateContentType = translateResponse.headers.get('content-type') || ''
+          if (translateContentType.includes('application/json')) {
+            const translateData = await translateResponse.json()
+            if (translateResponse.ok) {
+              this.translationText = translateData.result || ''
+            }
+          }
+          
+          // 解析元数据结果
+          const metaContentType = metaResponse.headers.get('content-type') || ''
+          if (metaContentType.includes('application/json')) {
+            const metaData = await metaResponse.json()
+            console.log('手动模式 - 元数据响应:', metaResponse.ok, metaData)
+            if (metaResponse.ok && metaData) {
+              this.problemMeta = metaData
+              console.log('手动模式 - 保存的元数据:', this.problemMeta)
+            } else {
+              console.error('手动模式 - 元数据响应失败或为空')
+            }
+          } else {
+            console.error('手动模式 - 元数据响应非JSON格式:', metaContentType)
+          }
+        }
+        
+        // 检查是否有生成成功的内容
+        const hasContent = isManualMode 
+          ? (this.dataOutput || this.translationText)
+          : (this.codeOutput || this.dataOutput || this.translationText)
+        
+        if (hasContent) {
+          this.showToastMessage('✅ 全部生成完成！')
+        } else {
+          alert('生成失败，请检查网络连接和后端服务')
+        }
+      } catch (error) {
+        console.error('Generate all error:', error)
         alert('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
@@ -277,21 +540,52 @@ export default {
       this.activeTab = 'data'
       
       try {
-        const response = await fetch('/api/generate-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: textForData,
-            model: this.selectedModel
+        // 同时生成数据脚本和题目元数据
+        const [dataResponse, metaResponse] = await Promise.all([
+          fetch('/api/generate-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: textForData,
+              model: this.selectedModel
+            })
+          }),
+          fetch('/api/generate-problem-meta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: textForData,
+              model: this.selectedModel
+            })
           })
-        })
+        ])
         
-        const data = await response.json()
+        // 解析数据生成结果
+        const dataContentType = dataResponse.headers.get('content-type') || ''
+        let dataData
         
-        if (response.ok) {
-          this.dataOutput = data.result
+        if (dataContentType.includes('application/json')) {
+          dataData = await dataResponse.json()
         } else {
-          alert('生成失败: ' + (data.error || '未知错误'))
+          const textContent = await dataResponse.text()
+          console.error('数据生成API返回非JSON:', textContent.substring(0, 200))
+          throw new Error('服务器返回了错误的响应格式，请检查后端服务是否正常运行')
+        }
+        
+        if (dataResponse.ok) {
+          this.dataOutput = dataData.result
+        } else {
+          alert('生成失败: ' + (dataData.error || '未知错误'))
+        }
+        
+        // 解析元数据结果
+        const metaContentType = metaResponse.headers.get('content-type') || ''
+        if (metaContentType.includes('application/json')) {
+          const metaData = await metaResponse.json()
+          if (metaResponse.ok && metaData) {
+            this.problemMeta = metaData
+            console.log('题目元数据:', metaData)
+          }
         }
       } catch (error) {
         console.error('Generate data error:', error)
@@ -304,13 +598,72 @@ export default {
     copyCode() {
       const textToCopy = this.manualCodeMode ? this.manualCode : this.codeOutput
       navigator.clipboard.writeText(textToCopy).then(() => {
-        alert('已复制到剪贴板')
+        this.showToastMessage('✅ 已复制全部内容到剪贴板')
       })
+    },
+    
+    copyPureCode() {
+      // 提取纯代码，去除 Markdown 格式和文字说明
+      const content = this.manualCodeMode ? this.manualCode : this.codeOutput
+      if (!content) return
+      
+      // 匹配所有代码块，支持多种格式
+      // ```language\ncode``` 或 ```\ncode``` 或 ```language code```
+      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
+      const matches = [...content.matchAll(codeBlockRegex)]
+      
+      if (matches.length > 0) {
+        // 如果有代码块，提取第一个代码块的内容
+        let pureCode = matches[0][1].trim()
+        
+        // 额外处理：如果第一行只是语言标识符，删除它
+        const firstLine = pureCode.split('\n')[0].trim()
+        if (/^(cpp|c\+\+|python|py|java|javascript|js)$/i.test(firstLine)) {
+          pureCode = pureCode.split('\n').slice(1).join('\n').trim()
+        }
+        
+        navigator.clipboard.writeText(pureCode).then(() => {
+          this.showToastMessage('✅ 已复制纯代码到剪贴板')
+        })
+      } else {
+        // 如果没有代码块标记，复制全部内容
+        navigator.clipboard.writeText(content).then(() => {
+          this.showToastMessage('✅ 已复制内容到剪贴板')
+        })
+      }
+    },
+    
+    copyDataCode() {
+      // 提取数据脚本中的纯 Python 代码
+      if (!this.dataOutput) return
+      
+      const codeBlockRegex = /```(?:python|py)?\s*\n([\s\S]*?)```/g
+      const matches = [...this.dataOutput.matchAll(codeBlockRegex)]
+      
+      if (matches.length > 0) {
+        // 提取第一个 Python 代码块
+        let pureCode = matches[0][1].trim()
+        
+        // 删除可能的语言标识符首行
+        const firstLine = pureCode.split('\n')[0].trim()
+        if (/^(python|py)$/i.test(firstLine)) {
+          pureCode = pureCode.split('\n').slice(1).join('\n').trim()
+        }
+        
+        navigator.clipboard.writeText(pureCode).then(() => {
+          this.showToastMessage('✅ 已复制 Python 代码到剪贴板')
+        })
+      } else {
+        // 没有代码块标记，复制全部内容
+        navigator.clipboard.writeText(this.dataOutput).then(() => {
+          this.showToastMessage('✅ 已复制数据脚本到剪贴板')
+        })
+      }
     },
     
     copyData() {
       navigator.clipboard.writeText(this.dataOutput).then(() => {
-        alert('已复制到剪贴板')
+        this.showToastMessage('✅ 已复制到剪贴板')
       })
     },
     
@@ -361,12 +714,21 @@ export default {
         let dataScript = ''
         
         console.log('=== 开始提取代码 ===')
+        console.log('手动模式:', this.manualCodeMode ? 'true' : 'false')
+        console.log('manualCode 长度:', this.manualCode ? this.manualCode.length : 0)
+        console.log('codeOutput 长度:', this.codeOutput ? this.codeOutput.length : 0)
         console.log('dataOutput 长度:', this.dataOutput.length)
         console.log('dataOutput 前200字符:', this.dataOutput.substring(0, 200))
         
-        if (this.manualCodeMode) {
+        // 提取标准程序代码
+        const isManualMode = this.manualCode && this.manualCode.trim() !== ''
+        
+        if (isManualMode) {
+          // 手动输入模式：直接使用手动输入的代码
           stdCode = this.manualCode.trim()
+          console.log('使用手动输入代码，长度:', stdCode.length)
         } else {
+          // 自动生成模式：从 Markdown 中提取代码块
           const codePatterns = [
             /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
             /```cpp([\s\S]*?)```/i,
@@ -444,13 +806,20 @@ export default {
         
         if (!stdCode || !dataScript) {
           let errorMsg = '无法提取代码或脚本：\n'
-          if (!stdCode) errorMsg += this.manualCodeMode 
-            ? '- 请输入有效的代码\n' 
+          if (!stdCode) errorMsg += isManualMode
+            ? '- 手动输入的代码为空\n' 
             : '- 未找到有效的 AC 代码块\n'
           if (!dataScript) errorMsg += '- 未找到有效的 Python 脚本块\n'
+          console.error('提取失败:', errorMsg)
+          console.log('stdCode:', stdCode)
+          console.log('dataScript 长度:', dataScript ? dataScript.length : 0)
           alert(errorMsg)
           return
         }
+        
+        console.log('✓ 代码提取成功')
+        console.log('stdCode 长度:', stdCode.length)
+        console.log('dataScript 长度:', dataScript.length)
         
         const JSZip = (await import('jszip')).default
         const zip = new JSZip()
@@ -493,15 +862,33 @@ export default {
         const runScript = this.generateRunScript()
         zip.file('run.py', runScript)
         
-        const blob = await zip.generateAsync({ type: 'blob' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'test_data_project.zip'
-        a.click()
-        URL.revokeObjectURL(url)
+        // 生成 Windows 批处理启动脚本
+        const batScript = this.generateBatScript()
+        zip.file('run.bat', batScript)
         
-        alert('✅ 项目包已下载！\n\n解压后运行命令: python run.py')
+        // 生成 problem.yaml 文件（始终生成，即使没有元数据也使用默认值）
+        console.log('当前 problemMeta:', this.problemMeta)
+        const yamlContent = this.generateProblemYaml()
+        zip.file('problem.yaml', yamlContent)
+
+                // 如果有翻译内容则一并打包
+                if (this.translationText && this.translationText.trim()) {
+                  zip.file('problem_zh.md', this.translationText)
+                } else if (this.problemText && this.problemText.trim()) {
+                  zip.file('problem_zh.md', this.problemText)
+                }
+
+                const blob = await zip.generateAsync({ type: 'blob' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'test_data_project.zip'
+                a.click()
+                URL.revokeObjectURL(url)
+        
+        this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';
+        this.showToast = true;
+        setTimeout(() => { this.showToast = false; }, 2500);
         
       } catch (error) {
         console.error('Package error:', error)
@@ -523,6 +910,8 @@ import os
 import sys
 import subprocess
 import platform
+import zipfile
+import re
 
 def print_header(text):
     """打印标题"""
@@ -568,6 +957,21 @@ def check_command(cmd, name):
 
 def main():
     print_header("测试数据生成工具")
+    
+    # 获取脚本所在目录的绝对路径
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if not script_dir:
+        script_dir = os.getcwd()
+    
+    print(f"脚本所在目录: {script_dir}")
+    
+    # 切换到脚本所在目录
+    try:
+        os.chdir(script_dir)
+        print(f"工作目录已切换: {os.getcwd()}\\n")
+    except Exception as e:
+        print(f"[!] 警告: 无法切换工作目录: {e}")
+        print(f"当前工作目录: {os.getcwd()}\\n")
     
     is_windows = platform.system() == 'Windows'
     
@@ -685,6 +1089,66 @@ def main():
         print(f"  输出文件: {out_files} 个")
         print(f"  数据目录: ./testdata/")
         print("=" * 50 + "\\n")
+        
+        # 打包文件
+        print_header("打包文件")
+        
+        try:
+            import zipfile
+            import yaml
+            
+            # 读取 problem.yaml 获取题目标题
+            zip_name = "problem"
+            if os.path.exists('problem.yaml'):
+                try:
+                    with open('problem.yaml', 'r', encoding='utf-8') as f:
+                        yaml_content = yaml.safe_load(f)
+                        if yaml_content and 'title' in yaml_content:
+                            zip_name = yaml_content['title']
+                            print(f"题目标题: {zip_name}")
+                except:
+                    print("[!] 无法读取 problem.yaml，使用默认名称")
+            else:
+                print("[!] problem.yaml 不存在，使用默认名称")
+            
+            # 创建 zip 文件名（去除特殊字符）
+            import re
+            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', zip_name)
+            zip_path = os.path.join('..', f"{zip_name}.zip")
+            
+            print(f"\\n正在打包到: {zip_path}")
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # 打包 testdata 文件夹
+                if os.path.exists('testdata'):
+                    for root, dirs, files in os.walk('testdata'):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, '.')
+                            zipf.write(file_path, arcname)
+                            print(f"  + {arcname}")
+                
+                # 打包 problem.yaml
+                if os.path.exists('problem.yaml'):
+                    zipf.write('problem.yaml', 'problem.yaml')
+                    print("  + problem.yaml")
+                
+                # 打包 problem_zh.md
+                if os.path.exists('problem_zh.md'):
+                    zipf.write('problem_zh.md', 'problem_zh.md')
+                    print("  + problem_zh.md")
+            
+            print("\\n" + "=" * 50)
+            print(f"  打包完成！")
+            print(f"  文件位置: {os.path.abspath(zip_path)}")
+            print("=" * 50 + "\\n")
+            
+        except ImportError:
+            print("[!] 警告: 缺少 PyYAML 库，跳过打包")
+            print("    安装命令: pip install pyyaml")
+        except Exception as e:
+            print(f"[!] 打包时出错: {e}")
+            print("    继续执行...")
     else:
         print("\\n[X] 数据生成失败！请检查脚本或标准程序\\n")
         sys.exit(1)
@@ -697,9 +1161,42 @@ if __name__ == '__main__':
         sys.exit(1)
     except Exception as e:
         print(f"\\n[X] 发生错误: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 `
       return script
+    },
+    
+    generateBatScript() {
+      return `@echo off
+REM Change to script directory
+cd /d "%~dp0"
+
+REM Check Python installation
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Python not found!
+    echo.
+    echo Please install Python 3.x from:
+    echo https://www.python.org/downloads/
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Run Python script
+python run.py
+
+REM Pause to view results
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Script execution failed!
+)
+echo.
+pause
+`
     },
     
     generateReadme() {
@@ -759,12 +1256,324 @@ python data_generator.py
 ---
 生成于 ${new Date().toLocaleString('zh-CN')}
 `
+    },
+    
+    generateProblemYaml() {
+      console.log('生成 problem.yaml，当前 problemMeta:', this.problemMeta)
+      
+      if (!this.problemMeta) {
+        console.warn('problemMeta 为空，返回默认值')
+        return 'title: 未命名题目\ntag:\n  - Level1'
+      }
+      
+      const { title, tags } = this.problemMeta
+      let yaml = `title: ${title || '未命名题目'}\n`
+      
+      // 从标签中提取难度等级
+      let level = 1
+      const cleanTags = []
+      
+      if (tags && tags.length > 0) {
+        tags.forEach(tag => {
+          const cleaned = tag.trim()
+          if (!cleaned) return
+          
+          // 检查标签中是否包含 Level 数字（如"暴力枚举1"、"数学3"等）
+          const levelMatch = cleaned.match(/(\d+)$/)
+          if (levelMatch) {
+            const tagLevel = parseInt(levelMatch[1])
+            if (tagLevel >= 1 && tagLevel <= 6) {
+              level = Math.max(level, tagLevel)  // 取最高难度
+            }
+          }
+          
+          cleanTags.push(cleaned)
+        })
+      }
+      
+      // 生成标签列表，第一个是 Level
+      yaml += 'tag:\n'
+      yaml += `  - Level${level}\n`
+      
+      if (cleanTags.length > 0) {
+        cleanTags.forEach(tag => {
+          yaml += `  - ${tag}\n`
+        })
+      }
+      
+      return yaml
     }
   }
 }
 </script>
 
 <style scoped>
+/* 生成翻译按钮美化及禁用彩色样式 */
+.btn-translate {
+  background: linear-gradient(90deg,#4f8cff,#6edfff);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  transition: background 0.2s, color 0.2s;
+  font-weight: 600;
+  text-align: center;
+  min-width: 110px;
+  margin-right: 0;
+}
+.btn-translate.disabled {
+  background: linear-gradient(90deg,#b3c6e2,#d0e6f7) !important;
+  color: #fff !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  border: none !important;
+  pointer-events: none !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
+  text-align: center !important;
+}
+/* 左侧操作按钮区域美化 */
+.input-actions-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.input-actions-bar button,
+.input-actions-bar .btn-translate {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+/* 在较小屏幕上调整按钮 */
+@media (max-width: 1600px) {
+  .input-actions-bar button,
+  .input-actions-bar .btn-translate {
+    font-size: 13px;
+    padding: 7px 10px;
+  }
+}
+@media (max-width: 1400px) {
+  .input-actions-bar {
+    gap: 6px;
+  }
+  .input-actions-bar button,
+  .input-actions-bar .btn-translate {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+}
+/* 标签页按钮样式 */
+.output-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tab-btn {
+  flex: 1;
+  background: #f5f7fa;
+  color: #2d3a4b;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.tab-btn.active {
+  background: #fff;
+  color: #4f8cff;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+}
+.output-tab-content {
+  background: #fff;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 16px 12px 12px 12px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+/* 新布局样式 */
+.new-layout {
+  display: flex;
+  gap: 32px;
+  margin-top: 18px;
+}
+.new-input-panel {
+  flex: 0 0 380px;
+  background: #f8fafc;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 24px 18px 18px 18px;
+  min-width: 320px;
+}
+/* 响应式调整左侧面板宽度 */
+@media (max-width: 1600px) {
+  .new-input-panel {
+    flex: 0 0 350px;
+    min-width: 300px;
+  }
+}
+@media (max-width: 1400px) {
+  .new-input-panel {
+    flex: 0 0 320px;
+    min-width: 280px;
+    padding: 20px 14px 14px 14px;
+  }
+}
+@media (max-width: 1200px) {
+  .new-layout {
+    flex-direction: column;
+  }
+  .new-input-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: auto;
+  }
+  .input-actions-bar {
+    flex-wrap: wrap;
+  }
+}
+.new-output-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.output-columns {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  align-items: flex-start;
+}
+.output-block {
+  flex: 1 1 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 16px 12px 12px 12px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 120px;
+  max-height: 320px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.output-block-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3a4b;
+  margin-bottom: 8px;
+  position: relative;
+  min-height: 32px;
+}
+.translation-preview {
+  margin-top: 6px;
+}
+.translation-content {
+  background: #f8f8f8;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.translation-preview-empty {
+  color: #bbb;
+  font-size: 14px;
+  margin-top: 10px;
+}
+.rendered-output {
+  background: #f8f8f8;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  min-height: 48px;
+  margin-top: 6px;
+  word-break: break-word;
+}
+.output-actions-bar {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+/* 自动翻译区域美化 */
+.translate-section {
+  margin-top: 18px;
+  padding: 16px 18px 12px 18px;
+  background: #f5f7fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.translate-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.translate-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3a4b;
+}
+.btn-translate:disabled {
+  background-image: linear-gradient(90deg,#b3c6e2,#d0e6f7) !important;
+  color: #fff !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  filter: grayscale(0.3) brightness(1.08);
+  border: none !important;
+}
+.btn-download {
+  background: #fff;
+  color: #4f8cff;
+  border: 1px solid #4f8cff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: background 0.2s;
+}
+.btn-download:disabled {
+  color: #b3c6e2;
+  border-color: #b3c6e2;
+  cursor: not-allowed;
+}
+.translation-label {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 4px;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+}
+/* Toast 样式 */
+.custom-toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #323232;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 9999;
+  font-size: 16px;
+  opacity: 0.95;
+  pointer-events: none;
+}
 .solve-data-container {
   height: 100vh;
   display: flex;
@@ -1066,73 +1875,30 @@ button:disabled {
 .btn-small {
   padding: 6px 12px;
   background: white;
-  border: 1px solid #dee2e6;
-  color: #495057;
-  font-size: 13px;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
 }
 
 .btn-small:hover {
-  background: #e9ecef;
+  background: #667eea;
+  color: white;
 }
 
-.rendered-output {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #adb5bd;
-  font-size: 16px;
-}
-
-.rendered-output :deep(h2) {
-  color: #667eea;
-  border-bottom: 2px solid #667eea;
-  padding-bottom: 8px;
-  margin-top: 24px;
-  margin-bottom: 16px;
-}
-
-.rendered-output :deep(h3) {
-  color: #495057;
-  margin-top: 20px;
-  margin-bottom: 12px;
-}
-
-.rendered-output :deep(p) {
-  line-height: 1.8;
-  margin-bottom: 12px;
-}
-
-.rendered-output :deep(pre) {
-  background: #f8f9fa;
-  border-left: 4px solid #667eea;
-  padding: 16px;
+.btn-small-clear {
+  padding: 6px 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
   border-radius: 4px;
-  overflow-x: auto;
-  margin: 16px 0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
 }
 
-.rendered-output :deep(code) {
-  background: #f8f9fa;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 13px;
-}
-
-.rendered-output :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-
-.rendered-output :deep(ul), .rendered-output :deep(ol) {
-  margin-left: 20px;
-  line-height: 1.8;
+.btn-small-clear:hover {
+  background: #c82333;
 }
 </style>
