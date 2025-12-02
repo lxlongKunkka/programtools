@@ -10,5 +10,17 @@
     "role": "assistant",
     "content": "你好！很高兴见到你。请问有什么我可以帮助你的？",
     "time": "19:50:00"
+  },
+  {
+    "id": "minwydng-fvyv1t",
+    "role": "user",
+    "content": "你好啊",
+    "time": "09:42:45"
+  },
+  {
+    "id": "minwyh3m-yt9gp5",
+    "role": "assistant",
+    "content": "你好！很高兴再次见到你。请问有什么我可以帮助你的？",
+    "time": "09:42:50"
   }
 ]
