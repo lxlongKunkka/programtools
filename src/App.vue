@@ -5,9 +5,9 @@
       <nav>
         <router-link to="/">Home</router-link>
         <router-link to="/translate">Translate</router-link>
-        <router-link to="/check">Checker</router-link>
+        <router-link to="/checker">Checker</router-link>
         <router-link to="/solution">Solution</router-link>
-        <router-link to="/solve">Solve+Data</router-link>
+        <router-link to="/solvedata">Solve+Data</router-link>
         <router-link to="/chat">Chat</router-link>
       </nav>
     </header>

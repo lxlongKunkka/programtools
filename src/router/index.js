@@ -4,15 +4,14 @@ import Translate from '../pages/Translate.vue'
 import Checker from '../pages/Checker.vue'
 import Solution from '../pages/Solution.vue'
 import SolveData from '../pages/SolveData.vue'
-// Use Chat.vue (Chat2 was a temporary replacement)
 import Chat from '../pages/Chat.vue'
 
 const routes = [
   { path: '/', component: Home },
   { path: '/translate', component: Translate },
-  { path: '/check', component: Checker },
+  { path: '/checker', component: Checker },
   { path: '/solution', component: Solution },
-  { path: '/solve', component: SolveData },
+  { path: '/solvedata', component: SolveData },
   { path: '/chat', component: Chat }
 ]
 
