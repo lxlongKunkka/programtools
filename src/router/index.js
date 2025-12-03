@@ -11,13 +11,22 @@ const routes = [
   { path: '/translate', component: Translate },
   { path: '/checker', component: Checker },
   { path: '/solution', component: Solution },
-  { path: '/solvedata', component: SolveData },
+  { path: '/solvedata', component: SolveData, meta: { requiresPro: true } },
   { path: '/chat', component: Chat }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// 简易前端守卫：Solvedata 需本地通过验证
+router.beforeEach((to, from, next) => {
+  if (to.meta && to.meta.requiresPro) {
+    const ok = localStorage.getItem('pro_ok') === '1'
+    if (!ok) return next('/')
+  }
+  next()
 })
 
 export default router

@@ -27,6 +27,17 @@ const port = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
+// 简易权限：游客可用 translate/checker/solution/chat；SolveData 需验证
+const PRO_KEY = process.env.PRO_KEY || 'let-me-in'
+function requirePro(req, res, next) {
+  try {
+    const key = (req.headers['x-pro-key'] || req.query.key || '').toString()
+    if (key && key === PRO_KEY) return next()
+    return res.status(403).json({ error: 'forbidden', required: 'pro-key' })
+  } catch (e) {
+    return res.status(403).json({ error: 'forbidden', required: 'pro-key' })
+  }
+}
 
 // --- Usage logging ---
 const LOGS_DIR = path.join(__dirname, 'logs')
@@ -359,7 +370,6 @@ app.post('/api/solution', async (req, res) => {
    - 行内公式使用单个美元符号 ($...$)，例如 $O(n)$、$n^2$、$10^9$
    - 数组下标、变量、数学符号都要用美元符号，例如 $a[i]$、$n$、$k$、$\leq$、$\geq$
    - 数字范围、不等式等也要包裹，例如 $1 \leq n \leq 10^5$
-   - 块级公式使用双美元符号 ($$...$$)
 2. 保持题解原意
 3. 专业术语翻译准确
 4. 中文表达流畅自然
@@ -786,7 +796,7 @@ app.post('/api/generate-problem-meta', async (req, res) => {
 })
 
 // Generate Data 生成测试数据脚本接口
-app.post('/api/generate-data', async (req, res) => {
+app.post('/api/generate-data', requirePro, async (req, res) => {
   try {
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
@@ -908,7 +918,7 @@ ${cyaronDocs}
 })
 
 // 运行数据生成脚本并返回测试数据
-app.post('/api/run-data-generator', async (req, res) => {
+app.post('/api/run-data-generator', requirePro, async (req, res) => {
   try {
     const { stdCode, dataScript, language } = req.body
     if (!stdCode || !dataScript) {

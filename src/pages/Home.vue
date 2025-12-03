@@ -46,6 +46,10 @@
         <li>problem.yaml 自动生成标题与 Level 标签。</li>
         <li>run.py 自动处理工作目录并打包 zip。</li>
       </ul>
+      <div class="pro-verify">
+        <button class="btn primary" @click="setProAccess">解锁 SolveData 功能</button>
+        <span class="hint">游客可用翻译/题解/校验/聊天；SolveData 需验证。</span>
+      </div>
     </section>
   </div>
 </template>
@@ -53,6 +57,21 @@
 <script>
 export default {
   name: 'HomePage'
+  ,methods: {
+    async setProAccess() {
+      const key = prompt('请输入访问密钥（找管理员获取）：', '')
+      if (!key) return
+      try {
+        // 简易校验：调用一个开放接口验证格式（或直接存储）
+        // 这里直接存储，后端在 SolveData 接口用 x-pro-key 校验
+        localStorage.setItem('pro_ok', '1')
+        localStorage.setItem('pro_key', key)
+        alert('已解锁 SolveData 功能')
+      } catch (e) {
+        alert('设置失败：' + (e?.message || e))
+      }
+    }
+  }
 }
 </script>
 
@@ -148,6 +167,8 @@ export default {
 .tips h3 { margin: 0 0 8px; }
 .tips ul { margin: 0; padding-left: 18px; color: #374151; }
 .tips li { line-height: 1.8; }
+.pro-verify { margin-top: 12px; display:flex; gap:12px; align-items:center }
+.hint { font-size: 12px; color:#6b7280 }
 
 @media (max-width: 1024px) {
   .features .grid { grid-template-columns: repeat(2, 1fr); }

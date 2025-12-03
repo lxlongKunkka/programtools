@@ -407,7 +407,7 @@ export default {
             }),
             fetch('/api/generate-data', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-pro-key': localStorage.getItem('pro_key') || '' },
               body: JSON.stringify({
                 text: this.problemText,
                 model: this.selectedModel
@@ -435,7 +435,7 @@ export default {
           requests = [
             fetch('/api/generate-data', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-pro-key': localStorage.getItem('pro_key') || '' },
               body: JSON.stringify({
                 text: this.problemText,
                 model: this.selectedModel
@@ -583,7 +583,7 @@ export default {
         const [dataResponse, metaResponse] = await Promise.all([
           fetch('/api/generate-data', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-pro-key': localStorage.getItem('pro_key') || '' },
             body: JSON.stringify({
               text: textForData,
               model: this.selectedModel
