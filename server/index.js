@@ -795,7 +795,10 @@ app.post('/api/generate-data', async (req, res) => {
       debugLog('Failed to read cyaron docs', e)
     }
 
-    const DATA_GEN_PROMPT = `你是一个专业的算法竞赛测试数据生成专家，请根据题目描述生成使用 CYaRon 库的 Python 数据生成脚本。
+     const DATA_GEN_PROMPT = `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
+
+【目标】
+- 生成速度极快，支持 n=1e5~2e5；避免任何低效写, 根据题意生成多组测试数据的数据生成脚本。如果题目要求的数据范围太大, 适当的缩小数据范围
 
 以下是 CYaRon 库的文档：
 
@@ -812,21 +815,18 @@ ${cyaronDocs}
 [说明如何分组生成数据，考虑哪些边界情况]
 
 ## Cyaron 脚本
-
 \`\`\`python
-[完整的 Python 数据生成脚本]
+[完整 Python 脚本]
 \`\`\`
-
-请确保：
 
 1. **导入库的正确方式（重要！）**：
    - 先导入 \`from cyaron import *\`
    - 再导入 \`import random as py_random\` （使用别名避免与 CYaRon 的 random 冲突）
    - 如需要数学函数，导入 \`import math\`
-   - 如果需要使用标准库的 random 函数（如 shuffle、choice、seed），使用 \`py_random.shuffle()\`、\`py_random.seed()\` 等
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
    - 优先使用 CYaRon 提供的随机数生成函数
+   - 
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
 4. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）

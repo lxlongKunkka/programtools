@@ -921,7 +921,17 @@ export default {
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = 'test_data_project.zip'
+                // 使用 problem.yaml 的标题作为下载名
+                const problemTitle = (() => {
+                  try {
+                    if (this.problemMeta && this.problemMeta.title) return this.problemMeta.title
+                    const src = (this.translationText || this.problemText || '').trim()
+                    const firstLine = src.split('\n')[0].trim()
+                    return firstLine || 'problem'
+                  } catch { return 'problem' }
+                })()
+                const zipName = `${problemTitle.replace(/[\\/:*?"<>|]/g, '_')}.zip`
+                a.download = zipName
                 a.click()
                 URL.revokeObjectURL(url)
 
@@ -940,17 +950,7 @@ export default {
                     return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
                   })()
 
-                  const problemTitle = (() => {
-                    try {
-                      if (this.problemMeta && this.problemMeta.title) return this.problemMeta.title
-                      // 从翻译或题面首行提取标题
-                      const src = (this.translationText || this.problemText || '').trim()
-                      const firstLine = src.split('\n')[0].trim()
-                      return firstLine || 'problem'
-                    } catch { return 'problem' }
-                  })()
-
-                  const filename = `${problemTitle.replace(/[\\/:*?"<>|]/g, '_')}.zip`
+                  const filename = zipName
                   const subject = `SolveData 项目包: ${problemTitle}`
 
                   fetch('/api/admin/send-package', {
