@@ -1,15 +1,73 @@
+@media (max-width: 900px) {
+	.chat-root {
+		max-width: 100vw;
+		padding: 10px 2vw 10px 2vw;
+		min-height: 90vh;
+	}
+	.chat-window {
+		height: 36vh;
+		min-height: 160px;
+		max-height: 40vh;
+		padding: 10px 2px 10px 2px;
+	}
+	.chat-input-area textarea {
+		font-size: 14px;
+		min-height: 36px;
+		max-height: 120px;
+		padding: 8px;
+	}
+	.chat-content {
+		font-size: 14px;
+		padding: 10px 8px;
+	}
+	.settings-panel {
+		padding: 10px 4px 8px 4px;
+	}
+}
+@media (max-width: 600px) {
+	.chat-root {
+		border-radius: 0;
+		box-shadow: none;
+		padding: 2vw 0 2vw 0;
+	}
+	.chat-toolbar {
+		flex-direction: column;
+		gap: 6px;
+		align-items: stretch;
+	}
+	.chat-toolbar > div {
+		flex-direction: column;
+		gap: 4px;
+		align-items: stretch;
+	}
+	.chat-window {
+		min-height: 100px;
+		height: 28vh;
+		max-height: 32vh;
+		padding: 4px 0 4px 0;
+	}
+	.chat-input-area {
+		flex-direction: column;
+		gap: 6px;
+	}
+	.input-actions button {
+		width: 100%;
+		padding: 10px 0;
+		font-size: 15px;
+	}
+}
+
 <template>
 	<div class="chat-root">
-		<h2>对话 (上下文模式)</h2>
-
 		<div class="chat-toolbar">
-			<div>
+			<div class="toolbar-left">
+				<span class="chat-title">对话 (上下文模式)</span>
 				<label class="label">模型:</label>
 				<select v-model="model">
 					<option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
 				</select>
 			</div>
-			<div>
+			<div class="toolbar-right">
 				<button @click="showSettings = !showSettings">{{ showSettings ? '隐藏设置' : '高级设置' }}</button>
 				<button @click="clearChat">清空对话</button>
 			</div>
@@ -189,26 +247,225 @@ export default {
 </script>
 
 <style scoped>
-.chat-root { display:flex; flex-direction:column; gap:8px }
-.chat-toolbar { display:flex; justify-content:space-between; align-items:center; gap:8px }
-.chat-toolbar > div { display:flex; gap:8px; align-items:center }
-.label { margin-right:6px; font-weight:600 }
-.settings-panel { border:1px solid #e0e0e0; padding:16px; background:#f5f5f5; border-radius:8px; margin-bottom:8px }
-.setting-row { margin-bottom:12px }
-.setting-row label { display:block; font-weight:600; margin-bottom:6px; color:#333 }
-.setting-row textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; resize:vertical }
-.setting-actions { display:flex; gap:8px; margin-top:8px }
-.setting-actions button { padding:6px 12px }
-.chat-window { border:1px solid #ddd; padding:12px; height:520px; overflow:auto; background:#f9fbff; border-radius:6px }
-.chat-line { margin-bottom:12px }
-.chat-meta { font-size:12px; color:#666; margin-bottom:6px }
-.chat-bubble { display:flex; justify-content:space-between; gap:8px }
-.chat-content { flex:1; white-space:pre-wrap; padding:10px; border-radius:8px; background:#fff }
-.chat-line.user .chat-content { background:#e6f7ff }
-.chat-line.assistant .chat-content { background:#fff7e6 }
-.chat-line.system .chat-content { background:#fff1f0 }
-.chat-actions { display:flex; align-items:center }
-.chat-input-area { display:flex; gap:8px; align-items:flex-end }
-.chat-input-area textarea { flex:1; height:120px; padding:10px; border-radius:8px; border:1px solid #ccc; resize:vertical }
-.input-actions button { padding:8px 14px }
+.chat-root {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100vw;
+	min-width: 0;
+	min-height: 80vh;
+	background: #f4f7fb;
+	border-radius: 0;
+	box-shadow: none;
+	padding: 32px 3vw 18px 3vw;
+	font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+	box-sizing: border-box;
+}
+.chat-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: 8px;
+	padding: 0;
+}
+.toolbar-left {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+.toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.chat-title {
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin-right: 18px;
+	color: #3a4a6b;
+}
+.chat-toolbar button {
+	background: linear-gradient(90deg,#4f8cff,#6edfff);
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	padding: 7px 16px;
+	font-size: 15px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: background 0.2s, color 0.2s;
+	box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.chat-toolbar button:hover {
+	background: linear-gradient(90deg,#6edfff,#4f8cff);
+}
+.label {
+	margin-right: 6px;
+	font-weight: 600;
+	color: #4f8cff;
+}
+.settings-panel {
+	border: 1.5px solid #e0e6ef;
+	padding: 18px 14px 14px 14px;
+	background: #fafdff;
+	border-radius: 12px;
+	margin-bottom: 12px;
+	box-shadow: 0 1px 6px rgba(80,120,200,0.04);
+}
+.setting-row {
+	margin-bottom: 14px;
+}
+.setting-row label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+	color: #4f8cff;
+}
+.setting-row textarea {
+	width: 100%;
+	padding: 10px;
+	border: 1.5px solid #b3c6e2;
+	border-radius: 8px;
+	font-family: inherit;
+	resize: vertical;
+	font-size: 15px;
+	background: #fafdff;
+	transition: border 0.2s;
+}
+.setting-row textarea:focus {
+	border: 1.5px solid #4f8cff;
+	outline: none;
+}
+.setting-actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 10px;
+}
+.setting-actions button {
+	padding: 8px 18px;
+	background: linear-gradient(90deg,#4f8cff,#6edfff);
+	color: #fff;
+	border: none;
+	border-radius: 8px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+	transition: background 0.2s, color 0.2s;
+}
+.setting-actions button:hover {
+	background: linear-gradient(90deg,#6edfff,#4f8cff);
+}
+.chat-window {
+	border: 1.5px solid #e0e6ef;
+	padding: 18px 12px 18px 12px;
+	height: 48vh;
+	min-height: 260px;
+	max-height: 60vh;
+	overflow-y: auto;
+	background: #f9fbff;
+	border-radius: 12px;
+	box-shadow: 0 2px 12px rgba(80,120,200,0.06);
+	margin-bottom: 8px;
+	transition: box-shadow 0.2s;
+}
+.chat-window::-webkit-scrollbar {
+	width: 8px;
+	background: #f0f4fa;
+}
+.chat-window::-webkit-scrollbar-thumb {
+	background: #dbeafe;
+	border-radius: 6px;
+}
+.chat-line {
+	margin-bottom: 18px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+.chat-meta {
+	font-size: 12px;
+	color: #888;
+	margin-bottom: 4px;
+	margin-left: 2px;
+}
+.chat-bubble {
+	display: flex;
+	justify-content: flex-start;
+	gap: 8px;
+	width: 100%;
+}
+.chat-content {
+	flex: 1;
+	white-space: pre-wrap;
+	padding: 14px 16px;
+	border-radius: 14px;
+	background: #fff;
+	font-size: 16px;
+	box-shadow: 0 1px 6px rgba(80,120,200,0.04);
+	word-break: break-word;
+	line-height: 1.7;
+	max-width: 90%;
+}
+.chat-line.user .chat-content {
+	background: linear-gradient(90deg,#e0f7fa,#e6f7ff);
+	align-self: flex-end;
+}
+.chat-line.assistant .chat-content {
+	background: linear-gradient(90deg,#fffbe6,#fff7e6);
+	align-self: flex-start;
+}
+.chat-line.system .chat-content {
+	background: #f0f1f5;
+	color: #888;
+}
+.chat-actions {
+	display: flex;
+	align-items: center;
+	margin-left: 8px;
+}
+.chat-input-area {
+	display: flex;
+	gap: 10px;
+	align-items: flex-end;
+	margin-top: 10px;
+	flex-wrap: wrap;
+}
+.chat-input-area textarea {
+	flex: 1 1 200px;
+	min-height: 48px;
+	max-height: 180px;
+	padding: 12px;
+	border-radius: 10px;
+	border: 1.5px solid #b3c6e2;
+	font-size: 15px;
+	resize: vertical;
+	background: #fafdff;
+	transition: border 0.2s;
+	box-shadow: 0 1px 4px rgba(80,120,200,0.04);
+}
+.chat-input-area textarea:focus {
+	border: 1.5px solid #4f8cff;
+	outline: none;
+}
+.input-actions button {
+	padding: 10px 22px;
+	background: linear-gradient(90deg,#4f8cff,#6edfff);
+	color: #fff;
+	border: none;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+	transition: background 0.2s, color 0.2s;
+}
+.input-actions button:disabled {
+	background: #b3c6e2;
+	color: #fff;
+	cursor: not-allowed;
+}
 </style>

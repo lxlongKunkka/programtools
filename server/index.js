@@ -5,6 +5,8 @@ import dotenv from 'dotenv'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import nodemailer from 'nodemailer'
+import cron from 'node-cron'
 
 // 确保从 server 目录下的 .env 加载（当以项目根为 cwd 启动时）
 const __filename = fileURLToPath(import.meta.url)
@@ -25,6 +27,88 @@ const port = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
+
+// --- Usage logging ---
+const LOGS_DIR = path.join(__dirname, 'logs')
+async function ensureLogsDir() {
+  try { await fs.promises.mkdir(LOGS_DIR, { recursive: true }) } catch {}
+}
+
+function nowISO() { return new Date().toISOString() }
+
+async function appendUsageLog(entry) {
+  try {
+    await ensureLogsDir()
+    const date = new Date()
+    const fname = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}.log`
+    const file = path.join(LOGS_DIR, fname)
+    await fs.promises.appendFile(file, JSON.stringify(entry) + '\n', 'utf8')
+  } catch (e) {
+    debugLog('appendUsageLog failed', e)
+  }
+}
+
+// 中间件：记录所有 API 使用情况
+app.use(async (req, res, next) => {
+  const start = Date.now()
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
+  const ua = req.headers['user-agent'] || ''
+  const method = req.method
+  const pathName = req.path
+  // 仅记录 /api/* 路径
+  const shouldLog = pathName && pathName.startsWith('/api/')
+  if (!shouldLog) return next()
+
+  const chunks = []
+  const origJson = res.json.bind(res)
+  res.json = (body) => {
+    try { chunks.push(body) } catch {}
+    return origJson(body)
+  }
+
+  res.on('finish', async () => {
+    try {
+      const durationMs = Date.now() - start
+      let status = res.statusCode
+      let model = undefined
+      try {
+        // 尝试从请求体提取 model 字段
+        if (req.body && typeof req.body === 'object') model = req.body.model
+      } catch {}
+      // 序列化请求/响应内容（限制长度，避免日志过大）
+      const bodyText = (() => {
+        try {
+          const b = req.body
+          const s = typeof b === 'string' ? b : JSON.stringify(b)
+          return (s || '').slice(0, 5000)
+        } catch { return '' }
+      })()
+      const respText = (() => {
+        try {
+          const c = chunks.length ? chunks[chunks.length - 1] : null
+          const s = typeof c === 'string' ? c : JSON.stringify(c)
+          return (s || '').slice(0, 5000)
+        } catch { return '' }
+      })()
+
+      const entry = {
+        ts: nowISO(),
+        method,
+        path: pathName,
+        status,
+        ip,
+        ua,
+        duration_ms: durationMs,
+        model: model || null,
+        req_body: bodyText,
+        res_body: respText
+      }
+      await appendUsageLog(entry)
+    } catch (e) { debugLog('log finish failed', e) }
+  })
+
+  next()
+})
 
 // sessions storage directory
 const SESSIONS_DIR = path.join(__dirname, 'sessions')
@@ -68,6 +152,10 @@ async function clearSession(sessionId) {
 
 // 系统提示（从你提供的 desktop 模板转换为 web 后端使用）
 const SYSTEM_PROMPT = `你是一个专业的算法题目翻译器，专门修改题目。请将题目准确地翻译成中文，并按照以下要求进行格式化和内容替换：
+
+【语言要求：必须使用简体中文输出】
+- 所有输出内容均为简体中文，不得出现日文、英文或其他语言。
+- 若原题或示例代码中包含非中文文本，需将叙述性文字与注释翻译为中文；代码的标识符可保留原样，不强制改动。
 
 1. 角色替换规则：
    - 面条老师 → 大魏
@@ -242,6 +330,10 @@ app.post('/api/solution', async (req, res) => {
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const SOLUTION_PROMPT = `你是一个专业的题目解析翻译器，请根据题意和AC代码, 给出解题思路，并按照以下Markdown格式输出, 要注意的是markdown代码标记块 '\`\`\`' 后要换行再继续输出
+
+  【语言要求：必须使用简体中文输出】
+  - 全部内容（题意、思路、说明、注释等）均使用简体中文。
+  - 若源代码中存在非中文的注释或输出文本，请翻译注释与说明为中文；保留代码的标识符与语法不变。
 
 ## 题意
 
@@ -1039,6 +1131,145 @@ app.listen(port, () => {
   console.log(`Translation server listening at http://localhost:${port}`)
 })
 
+// --- Daily email report ---
+// 配置环境变量：
+// MAIL_HOST, MAIL_PORT, MAIL_SECURE(可选: 'true'|'false'), MAIL_USER, MAIL_PASS, MAIL_FROM, MAIL_TO
+// 邮件每日发送时间（CRON表达式，默认 55 23 每天）：MAIL_CRON (如 "55 23 * * *")
+async function sendDailyReport(dateStr) {
+  await ensureLogsDir()
+  // dateStr 形如 YYYY-MM-DD；若未提供，则取昨天
+  let d
+  if (dateStr) {
+    const [y,m,dd] = dateStr.split('-').map(x=>parseInt(x,10))
+    d = new Date(y, (m||1)-1, dd||1)
+  } else {
+    const now = new Date()
+    d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-1)
+  }
+  const fname = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.log`
+  const file = path.join(LOGS_DIR, fname)
+  let raw = ''
+  try { raw = await fs.promises.readFile(file, 'utf8') } catch {}
+
+  // 统计汇总
+  const lines = raw ? raw.trim().split(/\n+/) : []
+  const total = lines.length
+  let byPath = {}
+  let byModel = {}
+  let byStatus = {}
+  let ipCount = {}
+  let avgMs = 0
+  let sumMs = 0
+  for (const ln of lines) {
+    try {
+      const obj = JSON.parse(ln)
+      sumMs += Number(obj.duration_ms)||0
+      const p = obj.path || 'unknown'
+      byPath[p] = (byPath[p]||0)+1
+      const m = obj.model || 'unknown'
+      byModel[m] = (byModel[m]||0)+1
+      const s = Number(obj.status)||0
+      byStatus[s] = (byStatus[s]||0)+1
+      const ip = (obj.ip||'unknown')
+      ipCount[ip] = (ipCount[ip]||0)+1
+    } catch {}
+  }
+  avgMs = total ? Math.round(sumMs/total) : 0
+
+  const topIPs = Object.entries(ipCount)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,10)
+
+  const reportText = [
+    `日期: ${fname.replace('.log','')}`,
+    `总请求数: ${total}`,
+    `平均耗时(ms): ${avgMs}`,
+    `失败请求数(状态>=400): ${Object.entries(byStatus).filter(([k])=>Number(k)>=400).reduce((acc, [,v])=>acc+v,0)}`,
+    '',
+    '按路径统计:',
+    ...Object.entries(byPath).map(([k,v])=>`- ${k}: ${v}`),
+    '',
+    '按模型统计:',
+    ...Object.entries(byModel).map(([k,v])=>`- ${k}: ${v}`),
+    '',
+    '按状态统计:',
+    ...Object.entries(byStatus).map(([k,v])=>`- ${k}: ${v}`),
+    '',
+    'Top IP (前10):',
+    ...topIPs.map(([k,v])=>`- ${k}: ${v}`)
+  ].join('\n')
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.MAIL_HOST,
+    port: Number(process.env.MAIL_PORT||465),
+    secure: String(process.env.MAIL_SECURE||'true')==='true',
+    auth: process.env.MAIL_USER ? {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS
+    } : undefined
+  })
+
+  const from = process.env.MAIL_FROM || process.env.MAIL_USER || 'noreply@example.com'
+  const to = process.env.MAIL_TO || ''
+  if (!to) { debugLog('MAIL_TO missing; skip sending') ; return }
+
+  const attachments = raw ? [{ filename: fname, content: raw }] : []
+  // 生成 CSV（每行：ts,method,path,status,duration_ms,model,req_body,res_body）
+  let csv = 'ts,method,path,status,duration_ms,model,req_body,res_body\n'
+  try {
+    for (const ln of lines) {
+      try {
+        const o = JSON.parse(ln)
+        const esc = (v) => {
+          const s = (v === undefined || v === null) ? '' : String(v)
+          const needsQuote = /[",\r\n]/.test(s)
+          const q = s.replace(/"/g, '""')
+          return needsQuote ? `"${q}"` : q
+        }
+        csv += [
+          esc(o.ts), esc(o.method), esc(o.path), esc(o.status), esc(o.duration_ms), esc(o.model), esc(o.req_body), esc(o.res_body)
+        ].join(',') + '\n'
+      } catch {}
+    }
+  } catch {}
+
+  if (lines.length) {
+    const csvWithBOM = "\uFEFF" + csv
+    attachments.push({ filename: fname.replace('.log', '.csv'), content: csvWithBOM })
+  }
+  const info = await transporter.sendMail({
+    from,
+    to,
+    subject: `程序工具 - 使用日志日报 (${fname.replace('.log','')})`,
+    text: reportText,
+    attachments
+  })
+  debugLog('Daily report sent:', info.messageId)
+}
+
+// 手动触发日报发送（可用于测试）
+app.post('/api/admin/send-daily-report', async (req, res) => {
+  try {
+    const { date } = req.body || {}
+    await sendDailyReport(date)
+    return res.json({ ok: true })
+  } catch (e) {
+    console.error('send-daily-report error:', e)
+    return res.status(500).json({ ok: false, error: e.message })
+  }
+})
+
+// 定时任务：每天 23:55 发送昨天的日志汇总
+try {
+  const cronExp = process.env.MAIL_CRON || '55 23 * * *'
+  cron.schedule(cronExp, async () => {
+    try { await sendDailyReport() } catch (e) { console.error('cron sendDailyReport failed:', e) }
+  })
+  debugLog('Cron scheduled:', cronExp)
+} catch (e) {
+  debugLog('cron init failed', e)
+}
+
 // models endpoint: serve models JSON from frontend config
 app.get('/api/models', async (req, res) => {
   try {
@@ -1081,6 +1312,72 @@ app.post('/api/sessions/:id/clear', async (req, res) => {
     return res.json({ ok: true })
   } catch (e) {
     return res.status(500).json({ ok: false })
+  }
+})
+
+// 发送测试邮件（快速验证 SMTP 配置）
+app.post('/api/admin/send-test-email', async (req, res) => {
+  try {
+    const to = (req.body && req.body.to) || process.env.MAIL_TO || ''
+    if (!to) return res.status(400).json({ ok: false, error: '缺少收件人：请在 body.to 或 MAIL_TO 配置' })
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: Number(process.env.MAIL_PORT||465),
+      secure: String(process.env.MAIL_SECURE||'true')==='true',
+      auth: process.env.MAIL_USER ? {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      } : undefined
+    })
+
+    const from = process.env.MAIL_FROM || process.env.MAIL_USER || 'noreply@example.com'
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject: '程序工具 - 测试邮件',
+      text: `这是一封测试邮件。时间：${new Date().toISOString()}`
+    })
+    return res.json({ ok: true, messageId: info.messageId })
+  } catch (e) {
+    console.error('send-test-email error:', e)
+    return res.status(500).json({ ok: false, error: e.message })
+  }
+})
+
+// 发送项目包附件邮件（用于 SolveData 的“下载完整项目包”行为后同时发送邮件给管理员）
+// 请求体：{ filename: string, contentBase64: string, to?: string, subject?: string, text?: string }
+app.post('/api/admin/send-package', async (req, res) => {
+  try {
+    const { filename, contentBase64, to, subject, text } = req.body || {}
+    const target = to || process.env.MAIL_TO || ''
+    if (!target) return res.status(400).json({ ok: false, error: '缺少收件人：请在 body.to 或 MAIL_TO 配置' })
+    if (!filename || !contentBase64) return res.status(400).json({ ok: false, error: '缺少附件：需要 filename 与 contentBase64' })
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: Number(process.env.MAIL_PORT||465),
+      secure: String(process.env.MAIL_SECURE||'true')==='true',
+      auth: process.env.MAIL_USER ? {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      } : undefined
+    })
+
+    const from = process.env.MAIL_FROM || process.env.MAIL_USER || 'noreply@example.com'
+    const info = await transporter.sendMail({
+      from,
+      to: target,
+      subject: subject || `程序工具 - 完整项目包 (${filename})`,
+      text: text || `自动发送：完整项目包已生成，见附件 ${filename}`,
+      attachments: [
+        { filename, content: Buffer.from(contentBase64, 'base64') }
+      ]
+    })
+    return res.json({ ok: true, messageId: info.messageId })
+  } catch (e) {
+    console.error('send-package error:', e)
+    return res.status(500).json({ ok: false, error: e.message })
   }
 })
 

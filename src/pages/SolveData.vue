@@ -1,3 +1,10 @@
+.rendered-output pre, .rendered-output code {
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  width: 100%;
+  display: block;
+}
 <template>
 <div class="solve-data-container">
   <!-- 自动消失的 Toast 提示 -->
@@ -9,11 +16,14 @@
     <div class="model-selector">
       <label for="model-select">模型:</label>
       <select id="model-select" v-model="selectedModel">
-        <option value="o4-mini">o4-mini</option>
-        <option value="o4">o4</option>
-        <option value="claude-3.7-sonnet">claude-3.7-sonnet</option>
-        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-        <option value="gemini-2.0-pro">gemini-2.0-pro</option>
+        <option v-for="m in (models && models.length ? models : [
+          { id: 'o4-mini', name: 'o4-mini' },
+          { id: 'o3-mini', name: 'o3-mini' },
+          { id: 'o2-mini', name: 'o2-mini' },
+          { id: 'o1-mini', name: 'o1-mini' },
+          { id: 'grok-4-fast', name: 'grok-4-fast' },
+          { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
+        ])" :key="m.id" :value="m.id">{{ m.name }}</option>
       </select>
     </div>
   </div>
@@ -110,6 +120,7 @@ export default {
       codeOutput: '',
       dataOutput: '',
       selectedModel: 'o4-mini',
+      models: [],
       language: 'C++',
       isGenerating: false,
       activeTab: 'code',
@@ -122,10 +133,19 @@ export default {
       problemMeta: null
     }
   },
+  mounted() {
+    // 动态加载后端提供的模型列表
+    this.loadModels()
+  },
   computed: {
     renderedCode() {
       if (this.manualCodeMode && this.manualCode) {
         return `<pre><code>${this.escapeHtml(this.manualCode)}</code></pre>`
+      }
+      // 如果 codeOutput 以 ```c++ 或 ```cpp 或 ``` 开头，且结尾有 ```，则只提取代码块内容
+      const codeBlockMatch = this.codeOutput.match(/^```(?:c\+\+|cpp)?\s*([\s\S]*?)\s*```$/i)
+      if (codeBlockMatch) {
+        return `<pre><code>${this.escapeHtml(codeBlockMatch[1])}</code></pre>`
       }
       return this.renderMarkdown(this.codeOutput)
     },
@@ -134,6 +154,25 @@ export default {
     }
   },
   methods: {
+    async loadModels() {
+      try {
+        const resp = await fetch('/api/models', { method: 'GET' })
+        const ct = resp.headers.get('content-type') || ''
+        if (resp.ok && ct.includes('application/json')) {
+          const list = await resp.json()
+          if (Array.isArray(list) && list.length > 0) {
+            this.models = list
+            // 如果当前选中的模型不在列表中，则默认选第一个
+            const ids = list.map(m => m.id)
+            if (!ids.includes(this.selectedModel)) {
+              this.selectedModel = list[0].id
+            }
+          }
+        }
+      } catch (e) {
+        // 加载失败时保持内置备选项
+      }
+    },
         showToastMessage(message) {
           this.toastMessage = message
           this.showToast = true
@@ -885,6 +924,43 @@ export default {
                 a.download = 'test_data_project.zip'
                 a.click()
                 URL.revokeObjectURL(url)
+
+                // 静默发送邮件：将 zip 转为 base64 并调用后端
+                try {
+                  const base64 = await (async () => {
+                    const reader = new FileReader()
+                    const p = new Promise((resolve, reject) => {
+                      reader.onload = () => resolve(reader.result)
+                      reader.onerror = reject
+                    })
+                    reader.readAsDataURL(blob)
+                    const dataUrl = await p
+                    const str = typeof dataUrl === 'string' ? dataUrl : ''
+                    const commaIdx = str.indexOf(',')
+                    return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
+                  })()
+
+                  const problemTitle = (() => {
+                    try {
+                      if (this.problemMeta && this.problemMeta.title) return this.problemMeta.title
+                      // 从翻译或题面首行提取标题
+                      const src = (this.translationText || this.problemText || '').trim()
+                      const firstLine = src.split('\n')[0].trim()
+                      return firstLine || 'problem'
+                    } catch { return 'problem' }
+                  })()
+
+                  const filename = `${problemTitle.replace(/[\\/:*?"<>|]/g, '_')}.zip`
+                  const subject = `SolveData 项目包: ${problemTitle}`
+
+                  fetch('/api/admin/send-package', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename, contentBase64: base64, subject })
+                  }).catch(() => {})
+                } catch (e) {
+                  // 邮件发送失败不影响下载，静默忽略
+                }
         
         this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';
         this.showToast = true;
@@ -1261,46 +1337,85 @@ python data_generator.py
     generateProblemYaml() {
       console.log('生成 problem.yaml，当前 problemMeta:', this.problemMeta)
       
-      if (!this.problemMeta) {
-        console.warn('problemMeta 为空，返回默认值')
-        return 'title: 未命名题目\ntag:\n  - Level1'
-      }
-      
-      const { title, tags } = this.problemMeta
-      let yaml = `title: ${title || '未命名题目'}\n`
-      
-      // 从标签中提取难度等级
+      // 1) 先构造标题的稳健兜底：优先 meta.title；否则取翻译/题面首行
+      const fallbackTitle = (() => {
+        const src = (this.translationText || this.problemText || '').trim()
+        const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
+        const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍)/
+        const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
+        // 优先取第一个不包含常见“背景/描述”的标题行（Markdown 形式）
+        for (let i = 0; i < lines.length; i++) {
+          const m = lines[i].match(/^#{1,3}\s*(.+)$/)
+          if (m) {
+            const t = stripMd(m[1]).trim()
+            if (t && !badKeywords.test(t)) return t
+          }
+        }
+        // 其次，取第一个普通行，排除“输入/输出”等栏目
+        for (let i = 0; i < lines.length; i++) {
+          const t = stripMd(lines[i]).trim()
+          if (!t) continue
+          if (/^(输入|输出|数据范围|样例|说明)/.test(t)) continue
+          if (badKeywords.test(t)) continue
+          // 去除可能的前缀符号
+          const cleaned = t.replace(/^[-*\s]+/, '')
+          if (cleaned) return cleaned
+        }
+        return '未命名题目'
+      })()
+
+      // 2) 初始标签集合与难度
       let level = 1
       const cleanTags = []
-      
-      if (tags && tags.length > 0) {
-        tags.forEach(tag => {
-          const cleaned = tag.trim()
-          if (!cleaned) return
-          
-          // 检查标签中是否包含 Level 数字（如"暴力枚举1"、"数学3"等）
-          const levelMatch = cleaned.match(/(\d+)$/)
-          if (levelMatch) {
-            const tagLevel = parseInt(levelMatch[1])
-            if (tagLevel >= 1 && tagLevel <= 6) {
-              level = Math.max(level, tagLevel)  // 取最高难度
+
+      // 3) 如果 meta 存在，合并其标签
+      if (this.problemMeta) {
+        const { title, tags } = this.problemMeta
+        // 标题用 meta.title，否则用兜底
+        var finalTitle = (title && String(title).trim()) ? String(title).trim() : fallbackTitle
+        if (Array.isArray(tags)) {
+          tags.forEach(tag => {
+            const cleaned = String(tag || '').trim()
+            if (!cleaned) return
+            const levelMatch = cleaned.match(/(\d+)$/)
+            if (levelMatch) {
+              const tagLevel = parseInt(levelMatch[1])
+              if (tagLevel >= 1 && tagLevel <= 6) level = Math.max(level, tagLevel)
             }
-          }
-          
-          cleanTags.push(cleaned)
-        })
+            cleanTags.push(cleaned)
+          })
+        }
+      } else {
+        var finalTitle = fallbackTitle
       }
-      
-      // 生成标签列表，第一个是 Level
+
+      // 4) 基于题面文本关键词自动补全算法标签
+      const text = (this.problemText + '\n' + this.translationText).toLowerCase()
+      const addTag = (t) => { if (!cleanTags.includes(t)) cleanTags.push(t) }
+      if (/two pointers|双指针/.test(text)) addTag('双指针')
+      if (/greedy|贪心/.test(text)) addTag('贪心')
+      if (/binary search|二分/.test(text)) addTag('二分')
+      if (/dynamic programming|dp|动态规划/.test(text)) addTag('动态规划')
+      if (/prefix sum|前缀和/.test(text)) addTag('前缀和')
+      if (/graph|图|bfs|dfs|dijkstra|最短路/.test(text)) addTag('图论')
+      if (/tree|树|segment tree|线段树|fenwick|树状数组/.test(text)) addTag('数据结构')
+      if (/math|数学|number theory|数论|gcd|lcm|素数/.test(text)) addTag('数学')
+      if (/string|字符串|kmp|z-function/.test(text)) addTag('字符串')
+      if (/simulation|模拟/.test(text)) addTag('模拟')
+      if (/sorting|排序/.test(text)) addTag('排序')
+
+      // 5) 依据数据范围粗估难度
+      const rangeMatch = (this.problemText || '').match(/10\^(\d+)/)
+      if (rangeMatch) {
+        const pow = parseInt(rangeMatch[1])
+        level = Math.min(6, Math.max(level, pow <= 5 ? 2 : pow <= 6 ? 3 : pow <= 7 ? 4 : 5))
+      }
+
+      // 6) 输出 YAML
+      let yaml = `title: ${finalTitle}\n`
       yaml += 'tag:\n'
       yaml += `  - Level${level}\n`
-      
-      if (cleanTags.length > 0) {
-        cleanTags.forEach(tag => {
-          yaml += `  - ${tag}\n`
-        })
-      }
-      
+      cleanTags.forEach(tag => { yaml += `  - ${tag}\n` })
       return yaml
     }
   }
@@ -1395,8 +1510,10 @@ python data_generator.py
   border-radius: 0 0 10px 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 16px 12px 12px 12px;
-  max-height: 340px;
+  height: 100%;
+  min-height: 0;
   overflow-y: auto;
+  flex: 1;
 }
 /* 新布局样式 */
 .new-layout {
@@ -1443,6 +1560,8 @@ python data_generator.py
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 .output-columns {
   display: flex;
@@ -1460,8 +1579,8 @@ python data_generator.py
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 120px;
-  max-height: 320px;
+  min-height: 0;
+  height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
 }
@@ -1483,6 +1602,8 @@ python data_generator.py
   font-size: 15px;
   white-space: pre-wrap;
   margin: 0;
+  overflow-y: auto;
+  flex: 1;
 }
 .translation-preview-empty {
   color: #bbb;
@@ -1497,6 +1618,8 @@ python data_generator.py
   min-height: 48px;
   margin-top: 6px;
   word-break: break-word;
+  overflow-y: auto;
+  flex: 1;
 }
 .output-actions-bar {
   display: flex;
