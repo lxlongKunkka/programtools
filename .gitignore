@@ -7,6 +7,16 @@ server/.env
 
 # build outputs
 dist/
+.vite/
+
+# logs (do not push request logs)
+server/logs/
+server/logs/*.log
+logs/
+*.log
 
 # OS
 .DS_Store
+
+# IDE/editor
+.vscode/
