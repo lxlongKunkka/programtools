@@ -308,6 +308,10 @@ export default {
       this.activeTab = 'code'
       
       try {
+        // 确保有翻译文本，保证后续的元数据基于译文
+        if (!(this.translationText && this.translationText.trim())) {
+          await this.autoTranslate()
+        }
         // 同时生成代码和题目元数据
         const [codeResponse, metaResponse] = await Promise.all([
           fetch('/api/solve', {
@@ -322,10 +326,10 @@ export default {
           fetch('/api/generate-problem-meta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: this.problemText,
-              model: this.selectedModel
-            })
+              body: JSON.stringify({
+                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
+                model: this.selectedModel
+              })
           })
         ])
         
@@ -390,6 +394,10 @@ export default {
       this.activeTab = 'code'
       
       try {
+        // 如果没有翻译，先执行翻译，保证后续元数据使用译文
+        if (!(this.translationText && this.translationText.trim())) {
+          await this.autoTranslate()
+        }
         // 如果是手动输入代码模式，跳过代码生成
         let requests = []
         
@@ -413,25 +421,22 @@ export default {
                 model: this.selectedModel
               })
             }),
-            fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: this.problemText,
-                model: this.selectedModel
-              })
-            }),
+            // translate 已经执行过，跳过重复调用
             fetch('/api/generate-problem-meta', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                text: this.problemText,
+                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
                 model: this.selectedModel
               })
             })
           ]
         } else {
           // 手动输入模式：只生成数据、翻译和元数据
+          // 手动模式下也先保证翻译可用（以便生成元数据使用译文）
+          if (!(this.translationText && this.translationText.trim())) {
+            await this.autoTranslate()
+          }
           requests = [
             fetch('/api/generate-data', {
               method: 'POST',
@@ -441,19 +446,12 @@ export default {
                 model: this.selectedModel
               })
             }),
-            fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: this.problemText,
-                model: this.selectedModel
-              })
-            }),
+            // translate 已在上面执行过
             fetch('/api/generate-problem-meta', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                text: this.problemText,
+                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
                 model: this.selectedModel
               })
             })
@@ -463,8 +461,8 @@ export default {
         const responses = await Promise.all(requests)
         
         if (!isManualMode) {
-          // 自动生成模式：解析所有4个响应
-          const [codeResponse, dataResponse, translateResponse, metaResponse] = responses
+          // 自动生成模式：解析响应（code, data, meta）
+          const [codeResponse, dataResponse, metaResponse] = responses
           
           // 解析代码生成结果
           const codeContentType = codeResponse.headers.get('content-type') || ''
@@ -488,18 +486,9 @@ export default {
             }
           }
           
-          // 解析翻译结果
-          const translateContentType = translateResponse.headers.get('content-type') || ''
-          if (translateContentType.includes('application/json')) {
-            const translateData = await translateResponse.json()
-            if (translateResponse.ok) {
-              this.translationText = translateData.result || ''
-            }
-          }
-          
           // 解析元数据结果
-          const metaContentType = metaResponse.headers.get('content-type') || ''
-          if (metaContentType.includes('application/json')) {
+          const metaContentType = metaResponse && metaResponse.headers ? metaResponse.headers.get('content-type') || '' : ''
+          if (metaResponse && metaContentType.includes('application/json')) {
             const metaData = await metaResponse.json()
             if (metaResponse.ok && metaData) {
               this.problemMeta = metaData
@@ -508,7 +497,7 @@ export default {
           }
         } else {
           // 手动输入模式：只解析3个响应
-          const [dataResponse, translateResponse, metaResponse] = responses
+          const [dataResponse, metaResponse] = responses
           
           // 解析数据生成结果
           const dataContentType = dataResponse.headers.get('content-type') || ''
@@ -521,18 +510,9 @@ export default {
             }
           }
           
-          // 解析翻译结果
-          const translateContentType = translateResponse.headers.get('content-type') || ''
-          if (translateContentType.includes('application/json')) {
-            const translateData = await translateResponse.json()
-            if (translateResponse.ok) {
-              this.translationText = translateData.result || ''
-            }
-          }
-          
           // 解析元数据结果
-          const metaContentType = metaResponse.headers.get('content-type') || ''
-          if (metaContentType.includes('application/json')) {
+          const metaContentType = metaResponse && metaResponse.headers ? metaResponse.headers.get('content-type') || '' : ''
+          if (metaResponse && metaContentType.includes('application/json')) {
             const metaData = await metaResponse.json()
             console.log('手动模式 - 元数据响应:', metaResponse.ok, metaData)
             if (metaResponse.ok && metaData) {
@@ -579,6 +559,10 @@ export default {
       this.activeTab = 'data'
       
       try {
+        // 确保有翻译文本，保证元数据基于译文
+        if (!(this.translationText && this.translationText.trim())) {
+          await this.autoTranslate()
+        }
         // 同时生成数据脚本和题目元数据
         const [dataResponse, metaResponse] = await Promise.all([
           fetch('/api/generate-data', {
@@ -593,7 +577,7 @@ export default {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              text: textForData,
+              text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
               model: this.selectedModel
             })
           })
@@ -893,7 +877,17 @@ export default {
         console.log('脚本行数:', modifiedScript.split('\n').length)
         
         zip.file('data_generator.py', modifiedScript)
-        
+        // 将 codeOutput 一并打包：作为 Markdown 保存，并尝试提取纯源码写入合适扩展名
+        try {
+          if (this.codeOutput && this.codeOutput.toString().trim()) {
+            // 写入原始 codeOutput Markdown（如果是 Markdown 则保留）
+            zip.file('solution.md', this.codeOutput)
+
+          }
+        } catch (e) {
+          console.warn('打包 codeOutput 时出错:', e)
+        }
+
         const readme = this.generateReadme()
         zip.file('README.md', readme)
         

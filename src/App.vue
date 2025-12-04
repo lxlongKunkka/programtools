@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <header class="header">
-      <h1>Program Tools</h1>
+      <h1>Acjudge Tools</h1>
       <nav>
         <router-link to="/">Home</router-link>
         <router-link to="/translate">Translate</router-link>

@@ -187,6 +187,28 @@ const SYSTEM_PROMPT = `你是一个专业的算法题目翻译器，专门修改
 
 4. 输出格式如下:
 
+    # 题目标题
+
+    [提取或总结一个简洁、准确、有吸引力的中文题目标题，8-15字以内，要能体现题目的核心内容]
+
+    ### 算法标签
+
+    [根据题目的核心算法和解题思路，从下面的标签列表中选择1-3个最匹配的标签。必须从列表中选择，不要自己创造标签。]
+
+    可选标签（按难度分级）：
+
+    **Level1**: 顺序结构, 条件结构, 循环结构, 暴力枚举1, 数学1
+
+    **Level2**: 数组, 函数, 字符串, 结构体, 排序, 模拟2, 暴力枚举2, 数学2, 二维数组
+
+    **Level3**: STL, 暴力枚举3, 模拟3, 数学3, 贪心3, 思维3
+
+    **Level4**: 递推, 递归, 前缀和, 差分, 二分, 三分, BFS, DFS, 双指针, 栈, 链表, 离散化, ST表, 贪心4, 数学4, 思维4, 优先队列
+
+    **Level5**: DP, DP变形, 线性DP, 背包DP, 区间DP, BFS进阶, DFS进阶, 树形结构, 倍增, 反悔贪心, 哈希, KMP, 字典树, 并查集, 数学5, 思维5, 环, 搜索进阶, 树的直径
+
+    **Level6**: 树状数组, 线段树, 概率DP, 期望DP, 单调队列优化DP, 数位DP, 状压DP, 树上DP, 换根DP, 单源最短路径, floyd, 差分约束, 最小生成树, AC自动机, 平衡树, 二分图, 博弈论, 分块, 莫队, 矩阵, 数学6, 思维6
+
     ## 题目背景
 
     [根据题目描述给出一个有趣的题目背景，去掉核桃相关内容]
@@ -587,6 +609,10 @@ app.post('/api/solve', async (req, res) => {
 
 请按照以下格式输出：
 
+## 题意描述
+
+[简易描述下题目和数据范围]
+
 ## 算法思路
 
 [简要说明解题思路和算法]
@@ -670,120 +696,7 @@ app.post('/api/solve', async (req, res) => {
   }
 })
 
-// Generate problem.yaml 生成题目元数据接口
-app.post('/api/generate-problem-meta', async (req, res) => {
-  try {
-    const { text, model } = req.body
-    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
-
-    const PROBLEM_META_PROMPT = `你是一个专业的算法竞赛题目分析专家，请根据题目描述分析题目并生成元数据。
-
-请仔细阅读题目，分析题目的核心算法和知识点，然后按照以下格式输出：
-
-## 题目标题
-
-[提取或总结一个简洁、准确、有吸引力的中文题目标题，8-15字以内，要能体现题目的核心内容]
-
-## 知识点标签
-
-[根据题目的核心算法和解题思路，从下面的标签列表中选择1-3个最匹配的标签。必须从列表中选择，不要自己创造标签。]
-
-可选标签（按难度分级）：
-
-**Level1**: 顺序结构, 条件结构, 循环结构, 暴力枚举1, 数学1
-
-**Level2**: 数组, 函数, 字符串, 结构体, 排序, 模拟2, 暴力枚举2, 数学2, 二维数组
-
-**Level3**: STL, 暴力枚举3, 模拟3, 数学3, 贪心3, 思维3
-
-**Level4**: 递推, 递归, 前缀和, 差分, 二分, 三分, BFS, DFS, 双指针, 栈, 链表, 离散化, ST表, 贪心4, 数学4, 思维4, 优先队列
-
-**Level5**: DP, DP变形, 线性DP, 背包DP, 区间DP, BFS进阶, DFS进阶, 树形结构, 倍增, 反悔贪心, 哈希, KMP, 字典树, 并查集, 数学5, 思维5, 环, 搜索进阶, 树的直径
-
-**Level6**: 树状数组, 线段树, 概率DP, 期望DP, 单调队列优化DP, 数位DP, 状压DP, 树上DP, 换根DP, 单源最短路径, floyd, 差分约束, 最小生成树, AC自动机, 平衡树, 二分图, 博弈论, 分块, 莫队, 矩阵, 数学6, 思维6
-
-**重要提示**：
-1. 标题要能准确反映题目的主题和场景，不要太泛泛
-2. 仔细分析题目需要的核心算法和数据结构，选择最相关的标签
-3. 标签难度要和题目实际难度匹配
-4. 每个题目选择1-3个标签，标签之间用逗号分隔
-5. 标签必须严格从上述列表中选择，保持原有格式（如"暴力枚举1"、"DP"、"排序"等）
-6. 输出格式严格按照上述模板，不要添加额外内容`
-
-    const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
-    const apiKey = process.env.YUN_API_KEY
-    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
-
-    const messages = [
-      { role: 'system', content: PROBLEM_META_PROMPT },
-      { role: 'user', content: text }
-    ]
-
-    const payload = {
-      model: model || 'o4-mini',
-      messages,
-      temperature: 0.3,
-      max_tokens: 2000
-    }
-
-    const resp = await axios.post(apiUrl, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      timeout: 60000
-    })
-
-    const data = resp.data
-    let content = ''
-    try {
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
-      } else if (data.choices && data.choices[0] && data.choices[0].text) {
-        content = data.choices[0].text
-      } else if (data.data && data.data[0] && data.data[0].text) {
-        content = data.data[0].text
-      } else {
-        content = JSON.stringify(data)
-      }
-    } catch (e) {
-      content = JSON.stringify(data)
-    }
-
-    // 解析返回内容，提取标题和标签
-    let title = '未命名题目'
-    let tags = []
-    
-    try {
-      // 提取标题
-      const titleMatch = content.match(/##\s*题目标题\s*\n+(.+?)(?:\n|$)/i)
-      if (titleMatch) {
-        title = titleMatch[1].trim()
-      }
-      
-      // 提取标签
-      const tagsMatch = content.match(/##\s*知识点标签\s*\n+([\s\S]+?)(?:\n##|\n\n|$)/i)
-      if (tagsMatch) {
-        const tagsText = tagsMatch[1]
-        // 先按照逗号、顿号、换行符等分隔符拆分
-        const rawTags = tagsText.split(/[,，、\n]+/)
-        tags = rawTags
-          .map(t => t.trim())
-          .map(t => t.replace(/^[-\s*]+/, ''))  // 移除开头的破折号、星号、空格
-          .map(t => t.replace(/[、，,]+$/, ''))  // 移除结尾的标点
-          .filter(t => t && t.length > 1 && !/^[\s\p{P}]+$/u.test(t))  // 过滤空值和纯标点
-      }
-    } catch (e) {
-      debugLog('Failed to parse problem meta:', e)
-    }
-
-    return res.json({ title, tags, rawContent: content })
-  } catch (err) {
-    console.error('Generate problem meta error:', err?.response?.data || err.message || err)
-    const message = err?.response?.data || err.message || 'unknown error'
-    return res.status(500).json({ error: 'Problem meta generation failed', detail: message })
-  }
-})
+// Generate Data 生成测试数据脚本接口
 
 // Generate Data 生成测试数据脚本接口
 app.post('/api/generate-data', async (req, res) => {
@@ -817,14 +730,6 @@ ${cyaronDocs}
 
 请按照以下格式输出：
 
-## 输入格式分析
-
-[分析题目的输入格式和数据范围]
-
-## 数据生成策略
-
-[说明如何分组生成数据，考虑哪些边界情况]
-
 ## Cyaron 脚本
 \`\`\`python
 [完整 Python 脚本]
@@ -837,7 +742,6 @@ ${cyaronDocs}
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
    - 优先使用 CYaRon 提供的随机数生成函数
-   - 
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
 4. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
@@ -908,149 +812,141 @@ ${cyaronDocs}
 })
 
 // 运行数据生成脚本并返回测试数据
-app.post('/api/run-data-generator', async (req, res) => {
+app.post('/api/generate-problem-meta', async (req, res) => {
   try {
-    const { stdCode, dataScript, language } = req.body
-    if (!stdCode || !dataScript) {
-      return res.status(400).json({ error: '缺少代码或脚本' })
-    }
+    // 该接口改为：不再调用外部模型，而是**从传入的（已翻译）文本中解析标题和标签**。
+    // 前端应将 translate 接口得到的翻译结果（Markdown 格式）传入到这里的 text 字段。
+    const { text } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const workDir = path.join(__dirname, '../temp', `gen_${Date.now()}`)
-    await fs.promises.mkdir(workDir, { recursive: true })
-    await fs.promises.mkdir(path.join(workDir, 'data'), { recursive: true })
+    const raw = String(text || '').trim()
+
+    // 可选标签列表（与前端/提示中一致）
+    const ALLOWED_TAGS = [
+      '顺序结构','条件结构','循环结构','暴力枚举1','数学1',
+      '数组','函数','字符串','结构体','排序','模拟2','暴力枚举2','数学2','二维数组',
+      'STL','暴力枚举3','模拟3','数学3','贪心3','思维3',
+      '递推','递归','前缀和','差分','二分','三分','BFS','DFS','双指针','栈','链表','离散化','ST表','贪心4','数学4','思维4','优先队列',
+      'DP','DP变形','线性DP','背包DP','区间DP','BFS进阶','DFS进阶','树形结构','倍增','反悔贪心','哈希','KMP','字典树','并查集','数学5','思维5','环','搜索进阶','树的直径',
+      '树状数组','线段树','概率DP','期望DP','单调队列优化DP','数位DP','状压DP','树上DP','换根DP','单源最短路径','floyd','差分约束','最小生成树','AC自动机','平衡树','二分图','博弈论','分块','莫队','矩阵','数学6','思维6'
+    ]
+
+    let title = ''
+    let tags = []
 
     try {
-      // 1. 保存标准程序
-      let stdFile, execCmd
-      if (language === 'C++') {
-        stdFile = path.join(workDir, 'std.cpp')
-        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
-        
-        // 编译 C++ 代码
-        debugLog('Compiling C++ code...')
-        const { exec } = require('child_process')
-        const compileCmd = `g++ "${stdFile}" -o "${path.join(workDir, 'std.exe')}" -std=c++17`
-        
-        await new Promise((resolve, reject) => {
-          exec(compileCmd, (error, stdout, stderr) => {
-            if (error) {
-              debugLog('Compile error:', stderr)
-              reject(new Error(`编译失败: ${stderr}`))
-            } else {
-              debugLog('Compilation successful')
-              resolve()
-            }
-          })
-        })
-        
-        execCmd = './std.exe'
-      } else if (language === 'Python') {
-        stdFile = path.join(workDir, 'std.py')
-        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
-        execCmd = 'python std.py'
-      } else if (language === 'Java') {
-        stdFile = path.join(workDir, 'Main.java')
-        await fs.promises.writeFile(stdFile, stdCode, 'utf8')
-        
-        // 编译 Java 代码
-        debugLog('Compiling Java code...')
-        const { exec } = require('child_process')
-        const compileCmd = `javac "${stdFile}"`
-        
-        await new Promise((resolve, reject) => {
-          exec(compileCmd, { cwd: workDir }, (error, stdout, stderr) => {
-            if (error) {
-              debugLog('Compile error:', stderr)
-              reject(new Error(`编译失败: ${stderr}`))
-            } else {
-              debugLog('Compilation successful')
-              resolve()
-            }
-          })
-        })
-        
-        execCmd = 'java Main'
-      }
+      const textNormalized = raw.replace(/\r\n/g, '\n')
 
-      // 2. 修改脚本中的路径和 output_gen 调用
-      let modifiedScript = dataScript
-        .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
-        .replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('${execCmd}')`)
-      
-      const scriptFile = path.join(workDir, 'data_generator.py')
-      await fs.promises.writeFile(scriptFile, modifiedScript, 'utf8')
-
-      // 3. 运行数据生成脚本
-      debugLog('Running data generator...')
-      const { exec } = require('child_process')
-      
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('数据生成超时（30秒）'))
-        }, 30000)
-        
-        exec(`python "${scriptFile}"`, { cwd: workDir }, (error, stdout, stderr) => {
-          clearTimeout(timeout)
-          if (error) {
-            debugLog('Script error:', stderr)
-            reject(new Error(`脚本执行失败: ${stderr || error.message}`))
-          } else {
-            debugLog('Script output:', stdout)
-            resolve()
-          }
-        })
-      })
-
-      // 4. 读取生成的测试数据
-      const dataDir = path.join(workDir, 'data')
-      const files = await fs.promises.readdir(dataDir)
-      const testFiles = files.filter(f => f.endsWith('.in') || f.endsWith('.out'))
-      
-      if (testFiles.length === 0) {
-        throw new Error('未生成任何测试数据文件')
-      }
-
-      // 5. 读取所有测试数据内容
-      const fileContents = {}
-      for (const file of testFiles) {
-        const content = await fs.promises.readFile(path.join(dataDir, file), 'utf8')
-        fileContents[file] = content
-      }
-
-      debugLog(`Generated ${testFiles.length} test files`)
-
-      // 6. 清理临时文件（延迟清理，确保响应已发送）
-      setTimeout(async () => {
+      // 1) 尝试查找 JSON 块（例如前端或模型可能包含的 JSON）
+      const jsonBlock = textNormalized.match(/```json\s*([\s\S]{0,10000}?)\s*```/i)
+      if (jsonBlock) {
         try {
-          await fs.promises.rm(workDir, { recursive: true, force: true })
-          debugLog('Cleaned up temp directory:', workDir)
+          const parsed = JSON.parse(jsonBlock[1])
+          if (parsed && parsed.title) title = String(parsed.title).trim()
+          if (parsed && Array.isArray(parsed.tags)) tags = parsed.tags.map(t => String(t).trim()).filter(Boolean)
         } catch (e) {
-          debugLog('Failed to cleanup:', e)
+          // ignore parse error
         }
-      }, 5000)
-
-      return res.json({ 
-        success: true, 
-        files: fileContents,
-        fileCount: testFiles.length / 2
-      })
-
-    } catch (err) {
-      // 清理临时文件
-      try {
-        await fs.promises.rm(workDir, { recursive: true, force: true })
-      } catch (e) {
-        debugLog('Failed to cleanup after error:', e)
       }
-      throw err
-    }
 
+      // 2) 如果没有 title，再尝试从常见 Markdown 标题中提取
+      if (!title) {
+        // 支持 # 题目标题、## 题目标题、## 题目 等形式
+        const mdTitleMatch = textNormalized.match(/#{1,3}\s*(?:题目标题|题目|Title|Problem)[\s:：-]*\n?([^\n]{1,200})/i)
+        if (mdTitleMatch) title = mdTitleMatch[1].trim()
+      }
+
+      // 3) 尝试行内形式：例如 "题目：xxx" 或 "Title: xxx"
+      if (!title) {
+        const inline = textNormalized.match(/(?:题目标题|题目|Title|Problem)[\s:：-]+([^\n]{1,200})/i)
+        if (inline) title = inline[1].trim()
+      }
+
+      // 4) 兜底：取第一条合理的非小节说明行
+      if (!title) {
+        const lines = textNormalized.split('\n').map(l => l.trim()).filter(Boolean)
+        for (const ln of lines) {
+          if (/^(?:题目背景|题目描述|输入格式|输出格式|样例|样例解释|数据范围)/i.test(ln)) continue
+          if (/^#{1,6}\s*/.test(ln)) continue
+          // 如果该行不太长，就当标题
+          if (ln.length > 3 && ln.length <= 200) { title = ln; break }
+        }
+      }
+
+      // 5) 提取标签：优先寻找知识点/算法标签小节
+      const tagsSection = textNormalized.match(/(?:知识点标签|知识点|算法标签|算法标签列表)[\s:\：-]*\n?([\s\S]{0,400}?)(?:\n#{1,6}|\n\n|$)/i)
+      if (tagsSection) {
+        const rawTags = (tagsSection[1] || '').split(/[,，、\n;；]+/)
+        tags = rawTags.map(t => t.trim()).map(t => t.replace(/^[-\s*]+/, '')).map(t => t.replace(/[。.,，、;；]+$/, '')).filter(Boolean)
+      }
+
+      // 6) 如果还没有 tags，从全文中尝试匹配允许标签名称（关键词匹配）
+      if (!tags || tags.length === 0) {
+        const found = new Set()
+        const lower = textNormalized
+        for (const t of ALLOWED_TAGS) {
+          try {
+            const re = new RegExp('\\b' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i')
+            if (re.test(lower)) found.add(t)
+          } catch (e) { /* ignore invalid tag regex */ }
+          if (found.size >= 3) break
+        }
+        if (found.size) tags = Array.from(found).slice(0, 3)
+      }
+
+      // 最终清理：优先使用翻译文本的第一非空行作为 title（去掉开头的 '#'）
+      if (!title) {
+        const lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
+        // 跳过常见的小节标题（例如：背景、题目背景、题目描述、输入格式 等）
+        const skipPattern = /^(?:背景|题目背景|题目描述|描述|输入格式|输出格式|样例|样例解释|数据范围|注释)$/i
+        let firstLine = ''
+        for (const ln of lines) {
+          if (skipPattern.test(ln)) continue
+          // also skip lines that are only markdown headers like '#' or '## 背景'
+          const withoutHashes = ln.replace(/^#+\s*/, '')
+          if (skipPattern.test(withoutHashes)) continue
+          firstLine = ln
+          break
+        }
+        if (!firstLine) firstLine = lines.find(Boolean) || ''
+        title = firstLine.replace(/^#+\s*/, '') || '题目'
+      }
+
+      // 如果解析出的 title 只是短小的章节标题（例如：背景/题目背景/说明），则视为无效并清空以便走兜底逻辑
+      const skipTitlePattern = /^(?:背景|题目背景|题目描述|描述|说明|介绍|样例|样例解释)$/i
+      if (title && skipTitlePattern.test(String(title).replace(/^#+\s*/, '').trim())) {
+        title = ''
+      }
+
+      // 限制 title 长度
+      if (title.length > 120) title = title.slice(0, 120)
+
+      // 只保留在 ALLOWED_TAGS 中的标签（按出现顺序保留最多 3 个）
+      const finalTags = []
+      for (const t of tags) {
+        const clean = String(t || '').trim()
+        if (!clean) continue
+        // 如果标签完全匹配 ALLOWED_TAGS，则保留；否则尝试按关键字匹配
+        if (ALLOWED_TAGS.includes(clean)) {
+          if (!finalTags.includes(clean)) finalTags.push(clean)
+        } else {
+          // 尝试在 ALLOWED_TAGS 中找到包含该关键词的项
+          const found = ALLOWED_TAGS.find(a => a.toLowerCase().includes(clean.toLowerCase()))
+          if (found && !finalTags.includes(found)) finalTags.push(found)
+        }
+        if (finalTags.length >= 3) break
+      }
+
+      // 如果完全没有匹配到合法标签，返回空数组而不是随机/默认标签
+      return res.json({ title: title.trim(), tags: finalTags, rawContent: raw })
+    } catch (e) {
+      debugLog('generate-problem-meta local parse failed:', e)
+      const fallbackTitle = raw.split('\n').map(l => l.trim()).find(Boolean) || '题目'
+      return res.json({ title: fallbackTitle, tags: [], rawContent: raw })
+    }
   } catch (err) {
-    console.error('Run data generator error:', err.message || err)
-    return res.status(500).json({ 
-      error: '数据生成失败', 
-      detail: err.message || 'unknown error' 
-    })
+    console.error('Generate problem meta (local) error:', err)
+    return res.status(500).json({ error: 'Problem meta parsing failed', detail: err?.message || String(err) })
   }
 })
 
