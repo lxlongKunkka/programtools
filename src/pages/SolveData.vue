@@ -1183,7 +1183,7 @@ def main():
             
             # 创建 zip 文件名（去除特殊字符）
             import re
-            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', zip_name)
+            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', zip_name) + "ed"
             zip_path = os.path.join('..', f"{zip_name}.zip")
             
             print(f"\\n正在打包到: {zip_path}")
