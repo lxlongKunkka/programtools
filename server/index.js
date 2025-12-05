@@ -313,13 +313,23 @@ app.post('/api/translate', async (req, res) => {
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
+    // 预处理：抽取所有三反引号代码块，替换为占位符，防止模型翻译其中的测试数据/样例
+    const codeBlocks = []
+    const CODE_PLACE = '___CODEBLOCK_PLACEHOLDER_'
+    const originalText = String(text)
+    const textForModel = originalText.replace(/```[\s\S]*?```/g, (m) => {
+      const idx = codeBlocks.length
+      codeBlocks.push(m)
+      return CODE_PLACE + idx + '___'
+    })
+
     const apiUrl = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
     const apiKey = process.env.YUN_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: text }
+      { role: 'user', content: textForModel }
     ]
 
     const payload = {
@@ -356,10 +366,27 @@ app.post('/api/translate', async (req, res) => {
 
     // 做一些简单清理（保留服务端原始返回）
     try {
-      const fixed = wrapLatexIfNeeded(content)
+      // 在将结果返回给前端前，恢复原始的代码块（如果模型保留了占位符）
+      let fixed = wrapLatexIfNeeded(content)
+      if (codeBlocks.length) {
+        fixed = fixed.replace(new RegExp(CODE_PLACE + "(\\d+)___", 'g'), (_, idx) => {
+          try { return codeBlocks[Number(idx)] || '' } catch (e) { return '' }
+        })
+      }
       return res.json({ result: fixed })
     } catch (e) {
-      return res.json({ result: content })
+      // fallback: 尝试恢复并返回原始 content
+      try {
+        let fallback = content
+        if (codeBlocks.length) {
+          fallback = fallback.replace(new RegExp(CODE_PLACE + "(\\d+)___", 'g'), (_, idx) => {
+            try { return codeBlocks[Number(idx)] || '' } catch (e) { return '' }
+          })
+        }
+        return res.json({ result: fallback })
+      } catch (e2) {
+        return res.json({ result: content })
+      }
     }
   } catch (err) {
     console.error('Translate error:', err?.response?.data || err.message || err)
