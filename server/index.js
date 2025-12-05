@@ -280,6 +280,29 @@ function wrapLatexIfNeeded(text) {
     }
   }
 
+  // 如果文本以单独的 $$ 开头并以单独的 $$ 结尾（或多余的首尾 $$），去掉多余的重复包裹
+  try {
+    // 去除开头/结尾多余空白后检查是否被 $$ 包裹两次
+    const trim = (s) => s.replace(/^\s+|\s+$/g, '')
+    const t0 = trim(text)
+    if (t0.startsWith('$$') && t0.endsWith('$$')) {
+      // 剥离外层的 $$ 并再次检查内部是否仍以 $$ 开头或结尾（防止重复层）
+      let inner = t0.slice(2, -2)
+      inner = inner.replace(/^\s+|\s+$/g, '')
+      if (inner.startsWith('$$') && inner.endsWith('$$')) {
+        // 内部仍有 $$，则去掉外层只保留内部一对
+        text = inner
+      } else {
+        // 正常的一对 $$，无需额外处理（保持原样）
+        text = t0
+      }
+    }
+    // 如果文本恰好以一个 $$ 开头，而结尾又有另一个单独的 $$（分别在首尾独立出现），合并为一对
+    // 例子："$$\n..." 在末尾又有 "\n$$" 的情况已被上面处理
+  } catch (e) {
+    // 忽略处理错误
+  }
+
   // 恢复 code blocks
   text = text.replace(new RegExp(placeholder + '(\\d+)___', 'g'), (_, idx) => codeBlocks[Number(idx)] || '')
   return text
