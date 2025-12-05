@@ -2,7 +2,7 @@
   <div class="home">
     <section class="hero">
       <div class="hero-content">
-        <h1>Program Tools</h1>
+        <h1>Acjudge Tools</h1>
         <p class="subtitle">一站式题目处理、代码生成与数据脚本平台</p>
         <div class="hero-actions">
           <router-link class="btn primary" to="/solution">开始题解生成</router-link>
