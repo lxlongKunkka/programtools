@@ -1,6 +1,5 @@
 [
   { "id": "o4-mini", "name": "o4-mini" },
-  { "id": "gpt-4o", "name": "gpt-4o" },
   { "id": "gpt-5", "name": "gpt-5" },
   { "id": "o3-mini", "name": "o3-mini" },
   { "id": "o2-mini", "name": "o2-mini" },
