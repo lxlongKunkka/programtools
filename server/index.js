@@ -650,7 +650,7 @@ app.post('/api/solve', async (req, res) => {
     const payload = {
       model: model || 'o4-mini',
       messages,
-      temperature: 0.3,
+      temperature: 0.2,
       max_tokens: 32767
     }
 
@@ -684,7 +684,13 @@ app.post('/api/solve', async (req, res) => {
       fixed = fixed.replace(/^#\s/gm, '## ')
       fixed = fixed.replace(/\n{3,}/g, '\n\n')
       fixed = fixed.replace(/```(\w*?)([^\n])/g, '```$1\n$2')
-      
+
+      // 规范化 output_gen / io.output_gen 的调用，确保使用 'std.exe'（避免 './std.exe' 等变体）
+      try {
+        fixed = fixed.replace(/io\.output_gen\s*\(\s*['"][^'"]*['"]\s*\)/g, "io.output_gen('std.exe')")
+        fixed = fixed.replace(/output_gen\s*\(\s*['"][^'"]*['"]\s*\)/g, "output_gen('std.exe')")
+      } catch (e) {}
+
       return res.json({ result: fixed })
     } catch (e) {
       return res.json({ result: content })
@@ -744,7 +750,7 @@ ${cyaronDocs}
    - 优先使用 CYaRon 提供的随机数生成函数
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
-4. 脚本中需要调用 \`io.output_gen('./std.exe')\` 或 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
+4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
 5. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
 6. 生成 10-20 组数据（可根据题目复杂度调整）
 7. 考虑特殊情况：边界值、极端情况、随机数据
