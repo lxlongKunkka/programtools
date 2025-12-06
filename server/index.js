@@ -831,7 +831,8 @@ ${cyaronDocs}
    - 如需要数学函数，导入 \`import math\`
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
-   - 优先使用 CYaRon 提供的随机数生成函数
+   - 生成随机整数需要使用 CYaRon 提供的随机数生成函数 randint
+   - 生成一维数组使用CYaRon 提供的 Vector.random 函数
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
 4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
