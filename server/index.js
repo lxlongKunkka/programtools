@@ -827,17 +827,17 @@ ${cyaronDocs}
 
 1. **导入库的正确方式（重要！）**：
    - 先导入 \`from cyaron import *\`
-   - 再导入 \`import random as py_random\` （使用别名避免与 CYaRon 的 random 冲突）
+   - 再导入 \`import random as py_random\`
    - 如需要数学函数，导入 \`import math\`
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
    - 生成随机整数需要使用 CYaRon 提供的随机数生成函数 randint
-   - 生成一维数组使用CYaRon 提供的 Vector.random 函数
+   - 生成一维数组使用 [random.randint(0, 100000) for _ in range(n)] 这种方式
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
 4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
 5. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
-6. 生成 10-20 组数据（可根据题目复杂度调整）
+6. 生成 20 组数据
 7. 考虑特殊情况：边界值、极端情况、随机数据
 8. 代码要包含注释，说明每组数据的特点
 9. **所有数学表达式用美元符号包裹**，例如 $n$、$10^5$
