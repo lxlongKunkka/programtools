@@ -775,10 +775,44 @@ app.post('/api/generate-data', async (req, res) => {
       debugLog('Failed to read cyaron docs', e)
     }
 
-     const DATA_GEN_PROMPT = `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
+    // 检查用户输入中是否包含测试点分组与约束表格
+    let testpointTable = ''
+    let tableMatch = String(text).match(/\|\s*测试点\s*\|[\s\S]{0,2000}?\|\s*约束条件\s*\|[\s\S]{0,2000}?\|/)
+    if (!tableMatch) {
+      // 兼容英文或其他格式
+      tableMatch = String(text).match(/\|\s*(Testcase|Test Point|测试点)[^|]*\|[\s\S]{0,2000}?\|\s*(Constraint|约束)[^|]*\|[\s\S]{0,2000}?\|/i)
+    }
+    if (tableMatch) {
+      testpointTable = tableMatch[0]
+    }
+
+    // 拼接到提示中
+    let extraConstraintPrompt = ''
+    if (testpointTable) {
+      // 统计分组数量
+      const groupCountMatch = testpointTable.match(/\|\s*([0-9]+)\s*\\sim\\s*([0-9]+)\s*\|/g)
+      let groupCount = 0
+      if (groupCountMatch) {
+        for (const m of groupCountMatch) {
+          const nums = m.match(/([0-9]+)\s*\\sim\\s*([0-9]+)/)
+          if (nums) {
+            groupCount += Number(nums[2]) - Number(nums[1]) + 1
+          }
+        }
+      }
+      // 强制要求组数与题目一致
+      extraConstraintPrompt = `\n\n【测试点分组与约束】\n请严格按照下表的分组和约束条件生成数据脚本：\n- 必须严格生成 ${groupCount || 20} 组测试点，编号与分组需与表格一致，不可多也不可少。\n- 每组数据需满足对应约束条件。\n- 每组脚本需用注释标明分组编号和约束。\n${testpointTable}\n`
+    } else {
+      // 无表格时也强制20组
+      extraConstraintPrompt = '\n\n【没有分组表格时】请仔细阅读题目描述中的数据范围和约束条件，自动合理分组测试点（如小数据、大数据、边界、特殊情况等），必须严格生成20组测试点，每组数据需覆盖不同范围和典型情况，脚本需包含分组编号和分组注释。'
+    }
+
+    const DATA_GEN_PROMPT = `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
 
 【目标】
-- 生成速度极快，支持 n=1e5~2e5；避免任何低效写, 根据题意生成多组测试数据的数据生成脚本。如果题目要求的数据范围太大, 适当的缩小数据范围
+- 生成速度极快，支持 n=1e5~2e5；避免任何低效写, 根据题意生成多组测试数据的数据生成脚本。
+
+${extraConstraintPrompt}
 
 以下是 CYaRon 库的文档：
 
