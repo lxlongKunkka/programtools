@@ -373,6 +373,35 @@ app.post('/api/translate', async (req, res) => {
           try { return codeBlocks[Number(idx)] || '' } catch (e) { return '' }
         })
       }
+      // 合并同名 input/output 代码块
+      fixed = fixed.replace(/(```input\d+)([\s\S]*?)(```)(?=```input\d+)/g, (m, start, body) => {
+        // 合并所有连续的 input 块
+        return ''
+      })
+      fixed = fixed.replace(/(```output\d+)([\s\S]*?)(```)(?=```output\d+)/g, (m, start, body) => {
+        // 合并所有连续的 output 块
+        return ''
+      })
+      // 简单合并实现：将所有 input1 块内容合并为一个
+      fixed = fixed.replace(/(```input1[\s\S]*?```)/g, (m) => {
+        const all = [...fixed.matchAll(/```input1[\s\S]*?```/g)].map(x => x[0])
+        if (all.length > 1) {
+          const merged = all.map(x => x.replace(/```input1|```/g, '').trim()).join('\n')
+          fixed = fixed.replace(/```input1[\s\S]*?```/g, '')
+          return '```input1\n' + merged + '\n```'
+        }
+        return m
+      })
+      // 同理合并 output1
+      fixed = fixed.replace(/(```output1[\s\S]*?```)/g, (m) => {
+        const all = [...fixed.matchAll(/```output1[\s\S]*?```/g)].map(x => x[0])
+        if (all.length > 1) {
+          const merged = all.map(x => x.replace(/```output1|```/g, '').trim()).join('\n')
+          fixed = fixed.replace(/```output1[\s\S]*?```/g, '')
+          return '```output1\n' + merged + '\n```'
+        }
+        return m
+      })
       return res.json({ result: fixed })
     } catch (e) {
       // fallback: 尝试恢复并返回原始 content
