@@ -76,7 +76,7 @@
             <button @click="downloadTranslation" :disabled="!translationText" class="btn-download" style="float:right; margin-right:8px;">💾 下载</button>
           </div>
           <div v-if="translationText" class="translation-preview">
-            <pre class="translation-content">{{ translationText }}</pre>
+            <div ref="translationPreview" class="translation-content md-preview" v-html="renderedTranslation"></div>
           </div>
           <div v-else class="translation-preview-empty">暂无翻译内容</div>
         </div>
@@ -110,10 +110,66 @@
 <script>
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import katex from 'katex'
+import { nextTick } from 'vue'
+import renderMathInElement from 'katex/contrib/auto-render'
+import 'katex/dist/katex.min.css'
+
+// 完全复用 translate 页的 markdown 预处理
+function preprocessMarkdown(raw) {
+  let s = raw || ''
+  s = s.replace(/```\s*input(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
+    const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return `\n<div class=\"sample-block\">\n<div class=\"sample-label\">输入样例${n}</div>\n<pre class=\"sample-code\">${esc}</pre>\n</div>\n`
+  })
+  s = s.replace(/```\s*output(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
+    const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return `\n<div class=\"sample-block\">\n<div class=\"sample-label\">输出样例${n}</div>\n<pre class=\"sample-code\">${esc}</pre>\n</div>\n`
+  })
+  s = s.replace(/\$\$([\s\S]*?)\$\$/g, (m, content) => {
+    return `\n<div class=\"math-block\">\n$$${content}$$\n</div>\n`
+  })
+  return s
+}
+
+// computed 和 watch 逻辑
+const computed = {
+  renderedTranslation() {
+    try {
+      const raw = this.translationText || ''
+      const pre = preprocessMarkdown(raw)
+      const html = marked.parse(pre)
+      return DOMPurify.sanitize(html)
+    } catch (e) {
+      return '<pre>无法渲染 Markdown</pre>'
+    }
+  }
+}
+
+const watch = {
+  translationText: async function() {
+    await nextTick()
+    try {
+      const previewEl = this.$refs.translationPreview
+      if (previewEl) {
+        renderMathInElement(previewEl, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false,
+          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        })
+      }
+    } catch (e) {
+      console.warn('KaTeX render error', e)
+    }
+  }
+}
 
 export default {
   name: 'SolveData',
+  computed: { ...computed },
+  watch: { ...watch },
   data() {
     return {
       problemText: '',
@@ -248,14 +304,23 @@ export default {
     
     renderMarkdown(text) {
       if (!text) return ''
-      
+
       // 先保护代码块，避免其中的 $ 被当作数学公式
       const codeBlocks = []
       let tempText = text.replace(/```[\s\S]*?```/g, (match) => {
         codeBlocks.push(match)
         return `__CODE_BLOCK_${codeBlocks.length - 1}__`
       })
-      
+
+      // 移除最外层包裹的 $$...$$（仅首尾）
+      tempText = tempText.trim()
+      if (/^\$\$[\s\S]*\$\$$/.test(tempText)) {
+        tempText = tempText.replace(/^\$\$[\s\S]*?\$\$$/, (m) => {
+          // 尝试只去掉首尾的 $$
+          return m.replace(/^\$\$\s*/, '').replace(/\s*\$\$$/, '')
+        })
+      }
+
       // 处理行内数学公式 $...$
       tempText = tempText.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
         try {
@@ -264,7 +329,7 @@ export default {
           return match
         }
       })
-      
+
       // 处理块级数学公式 $$...$$
       tempText = tempText.replace(/\$\$([^\$]+?)\$\$/g, (match, formula) => {
         try {
@@ -273,7 +338,7 @@ export default {
           return match
         }
       })
-      
+
       // 恢复代码块
       codeBlocks.forEach((block, index) => {
         tempText = tempText.replace(`__CODE_BLOCK_${index}__`, block)
