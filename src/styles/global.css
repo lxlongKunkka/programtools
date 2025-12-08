@@ -1,0 +1,93 @@
+:root {
+  --bg-panel: #f9fafb;
+  --bg-surface: #ffffff;
+  --bg-page: #f3f4f6;
+  --border: #e5e7eb;
+  --border-hover: #4299e1;
+  --title: #2d3748;
+  --text: #4a5568;
+  --muted: #718096;
+  --primary: #4299e1;
+  --radius: 8px;
+  --shadow-panel: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft YaHei", "PingFang SC", "Source Han Sans SC", sans-serif;
+  background: var(--bg-page);
+  color: var(--text);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Common Button Styles */
+button {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--primary);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+button.primary:hover:not(:disabled) {
+  background: #3182ce;
+  border-color: #3182ce;
+  color: white;
+}
+
+/* Common Input Styles */
+input, select, textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-hover);
+  box-shadow: 0 0 0 2px rgba(66,153,225,0.15);
+}
+
+/* Common Layout */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 60px); /* Adjust based on header height */
+}
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  padding: 16px;
+}

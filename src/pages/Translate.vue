@@ -1,8 +1,5 @@
 <template>
   <div>
-    <div v-if="showToast" class="custom-toast">
-      <span v-html="toastMessage"></span>
-    </div>
     <textarea v-model="prompt" rows="6" cols="80" placeholder="在此输入题面或文本"></textarea>
     <div class="top-bar">
       <div class="top-left">
@@ -25,7 +22,7 @@
       </div>
       <div class="result-panel">
         <div class="panel-header">渲染预览</div>
-        <div ref="preview" class="panel-body md-preview" v-html="renderedHtml"></div>
+        <MarkdownViewer :content="result" class="panel-body md-preview" />
       </div>
     </div>
   </div>
@@ -33,98 +30,40 @@
 
 
 <script>
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import request from '../utils/request'
+import { getModels } from '../utils/models'
 import { nextTick } from 'vue'
-import renderMathInElement from 'katex/contrib/auto-render'
-import 'katex/dist/katex.min.css'
-// model configuration now served from backend
 
 export default {
-  data() { return { showToast: false, toastMessage: '', prompt: '', result: '', loading: false, model: 'o4-mini', modelOptions: [] } },
+  inject: ['showToastMessage'],
+  data() { return { prompt: '', result: '', loading: false, model: 'o4-mini', modelOptions: [] } },
   async mounted() {
     try {
-      const r = await fetch('/api/models')
-      if (r.ok) this.modelOptions = await r.json()
+      const list = await getModels()
+      if (Array.isArray(list)) this.modelOptions = list
     } catch (e) { console.warn('failed to load models', e) }
   },
 
   computed: {
-    renderedHtml() {
-      try {
-        const raw = this.result || ''
-        const pre = this.preprocessMarkdown(raw)
-        const html = marked.parse(pre)
-        return DOMPurify.sanitize(html)
-      } catch (e) {
-        return '<pre>无法渲染 Markdown</pre>'
-      }
-    }
-    ,
     modelOptions() {
       return this.modelOptions || []
     }
   },
   methods: {
-    showToastMessage(message) {
-      this.toastMessage = message
-      this.showToast = true
-      setTimeout(() => {
-        this.showToast = false
-      }, 2500)
-    },
-    preprocessMarkdown(raw) {
-      let s = raw
-
-      // 把 ```inputN ... ``` 转换为带标签的 HTML 区块
-      s = s.replace(/```\s*input(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
-        // escape HTML inside code block to keep as preformatted text
-        const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        return `\n<div class="sample-block">\n<div class="sample-label">输入样例${n}</div>\n<pre class="sample-code">${esc}</pre>\n</div>\n`
-      })
-
-      // 把 ```outputN ... ``` 转换为带标签的 HTML 区块
-      s = s.replace(/```\s*output(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
-        const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        return `\n<div class="sample-block">\n<div class="sample-label">输出样例${n}</div>\n<pre class="sample-code">${esc}</pre>\n</div>\n`
-      })
-
-      // 将 $$...$$ 包裹为公式块，以便 KaTeX 渲染后我们能样式化
-      s = s.replace(/\$\$([\s\S]*?)\$\$/g, (m, content) => {
-        return `\n<div class="math-block">\n$$${content}$$\n</div>\n`
-      })
-
-      return s
-    },
     async translate() {
       if (!this.prompt.trim()) { this.result = '请输入要翻译的题面或文本。'; return }
       this.loading = true
       this.result = '正在翻译，请稍候...'
       try {
-        const resp = await fetch('/api/translate', {
+        const data = await request('/api/translate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: this.prompt, model: this.model })
         })
 
-        const ct = resp.headers.get('content-type') || ''
-        let data = null
-        if (ct.includes('application/json')) {
-          try { data = await resp.json() } catch (e) { data = null }
-        } else {
-          try { const txt = await resp.text(); data = { rawText: txt } } catch (e) { data = null }
-        }
+        this.result = data.result || data.rawText || '(无返回内容)'
 
-        if (resp.ok) {
-          if (data && data.result) this.result = data.result
-          else if (data && data.rawText) this.result = data.rawText || '(空响应)'
-          else this.result = '(无返回内容)'
-        } else {
-          if (data) this.result = `翻译失败: ${JSON.stringify(data)}`
-          else this.result = `翻译失败: HTTP ${resp.status}`
-        }
       } catch (e) {
-        this.result = '请求错误: ' + e.toString()
+        this.result = '请求错误: ' + e.message
       } finally {
         this.loading = false
       }
@@ -153,68 +92,11 @@ export default {
       a.click()
       URL.revokeObjectURL(url)
     }
-  },
-
-  watch: {
-    result: async function() {
-      // wait for DOM update then render math in preview
-      await nextTick()
-      try {
-        const previewEl = this.$refs.preview
-        if (previewEl) {
-          renderMathInElement(previewEl, {
-            // delimiters for block and inline math
-            delimiters: [
-              { left: '$$', right: '$$', display: true },
-              { left: '$', right: '$', display: false }
-            ],
-            throwOnError: false,
-            ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-          })
-        }
-      } catch (e) {
-        // silently ignore render errors
-      }
-    }
   }
 }
 </script>
 
 <style scoped>
-/* 全局统一 toast 样式 */
-.custom-toast {
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(40,40,40,0.97);
-  color: #fff;
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 17px;
-  z-index: 9999;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
-  pointer-events: none;
-  opacity: 0.98;
-  transition: opacity 0.3s;
-}
-
-/* 同款化的中性专业风基础变量 */
-:root {
-  --bg-panel: #f9fafb;
-  --bg-surface: #ffffff;
-  --bg-page: #f3f4f6;
-  --border: #e5e7eb;
-  --border-hover: #4299e1;
-  --title: #2d3748;
-  --text: #4a5568;
-  --muted: #718096;
-  --primary: #4299e1;
-  --radius: 8px;
-  --shadow-panel: 0 1px 3px rgba(0,0,0,0.05);
-  --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.03);
-}
-
 /* 页面基调：字体与背景 */
 :host, .translate-page-root {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft YaHei", "PingFang SC", "Source Han Sans SC", sans-serif;

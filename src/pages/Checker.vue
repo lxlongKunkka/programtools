@@ -1,8 +1,5 @@
 <template>
 	<div class="checker-root">
-    <div v-if="showToast" class="custom-toast">
-      <span v-html="toastMessage"></span>
-    </div>
 		<h2>AI 代码查错助手</h2>
 		
 		<div class="toolbar">
@@ -55,7 +52,10 @@
 					<h3>错误分析与建议</h3>
 					<span class="hint">定位问题，指导调试</span>
 				</div>
-				<div class="result-area" v-if="result" v-html="renderedResult"></div>
+				      <div class="result-area" v-if="result">
+        <MarkdownViewer :content="result" />
+      </div>
+
 				<div class="result-area empty" v-else>
 					<p>🔍 分析结果将显示在这里</p>
 					<p class="tip">AI 会指出错误位置和原因，给出修改建议，但不直接提供完整答案</p>
@@ -67,24 +67,15 @@
 </template>
 
 <script>
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-import renderMathInElement from 'katex/contrib/auto-render'
-import 'katex/dist/katex.min.css'
-
-marked.setOptions({
-	mangle: false,
-	headerIds: false,
-	breaks: true
-})
+import request from '../utils/request'
+import { getModels } from '../utils/models'
 
 export default {
+  inject: ['showToastMessage'],
 	data() {
 		return {
       leftWidth: 40,
       isDragging: false,
-      showToast: false,
-      toastMessage: '',
 			problemText: '',
 			codeText: '',
 			result: '',
@@ -103,43 +94,15 @@ export default {
 				combined += '选手代码：\n' + this.codeText.trim()
 			}
 			return combined
-		},
-		renderedResult() {
-			if (!this.result) return ''
-			try {
-				const html = marked.parse(this.result)
-				return DOMPurify.sanitize(html)
-			} catch (e) {
-				return `<pre>${this.result}</pre>`
-			}
 		}
 	},
 	async mounted() {
 		try {
-			const r = await fetch('/api/models')
-			if (r.ok) this.modelOptions = await r.json()
+			const list = await getModels()
+			if (Array.isArray(list)) this.modelOptions = list
 		} catch (e) {
 			console.warn('failed to load models', e)
 		}
-	},
-	updated() {
-		this.$nextTick(() => {
-			const el = this.$el.querySelector('.result-area')
-			if (el && this.result) {
-				try {
-					renderMathInElement(el, {
-						delimiters: [
-							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: false }
-						],
-						throwOnError: false,
-						ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-					})
-				} catch (e) {
-					console.warn('KaTeX render error', e)
-				}
-			}
-		})
 	},
 	methods: {
     startResize() {
@@ -164,13 +127,6 @@ export default {
       document.removeEventListener('mouseup', this.stopResize)
       document.body.style.userSelect = ''
     },
-    showToastMessage(message) {
-      this.toastMessage = message
-      this.showToast = true
-      setTimeout(() => {
-        this.showToast = false
-      }, 2500)
-    },
 		async check() {
 			const text = this.inputText.trim()
 			if (!text) return
@@ -179,21 +135,14 @@ export default {
 			this.result = ''
 
 			try {
-				const resp = await fetch('/api/checker', {
+				const data = await request('/api/checker', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						text: text,
 						model: this.model
 					})
 				})
 
-				if (!resp.ok) {
-					const errData = await resp.json().catch(() => ({}))
-					throw new Error(errData.error || `HTTP ${resp.status}`)
-				}
-
-				const data = await resp.json()
 				this.result = data.result || ''
 
 			} catch (e) {
@@ -234,24 +183,6 @@ export default {
 </script>
 
 <style scoped>
-/* 全局统一 toast 样式 */
-.custom-toast {
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(40,40,40,0.97);
-  color: #fff;
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 17px;
-  z-index: 9999;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
-  pointer-events: none;
-  opacity: 0.98;
-  transition: opacity 0.3s;
-}
-
 .checker-root {
 	max-width: 1400px;
 	margin: 0 auto;

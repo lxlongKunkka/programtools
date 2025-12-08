@@ -1,9 +1,5 @@
 <template>
 <div class="solve-data-container">
-  <!-- 自动消失的 Toast 提示 -->
-  <div v-if="showToast" class="custom-toast">
-    <span v-html="toastMessage"></span>
-  </div>
   <div class="top-bar">
     <h2>Solve + Data 生成器</h2>
     <div class="model-selector">
@@ -72,7 +68,7 @@
             <button @click="downloadTranslation" :disabled="!translationText" class="btn-download" style="float:right; margin-right:8px;">💾 下载</button>
           </div>
           <div v-if="translationText" class="translation-preview">
-            <div ref="translationPreview" class="translation-content md-preview" v-html="renderedTranslation"></div>
+            <MarkdownViewer :content="translationText" class="translation-content" />
           </div>
           <div v-else class="translation-preview-empty">暂无翻译内容</div>
         </div>
@@ -82,7 +78,9 @@
             <button @click="copyCode" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
             <button @click="saveCode" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
           </div>
-          <div class="rendered-output" v-if="manualCodeMode ? manualCode : codeOutput" v-html="renderedCode"></div>
+          <div class="rendered-output" v-if="manualCodeMode ? manualCode : codeOutput">
+            <MarkdownViewer :content="displayCode" />
+          </div>
           <div v-else class="translation-preview-empty">暂无解题代码</div>
         </div>
         <div v-show="activeTab === 'data'" class="output-block">
@@ -91,7 +89,9 @@
             <button @click="copyData" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
             <button @click="saveData" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
           </div>
-          <div class="rendered-output" v-if="dataOutput" v-html="renderedData"></div>
+          <div class="rendered-output" v-if="dataOutput">
+            <MarkdownViewer :content="dataOutput" />
+          </div>
           <div v-else class="translation-preview-empty">暂无数据脚本</div>
         </div>
       </div>
@@ -104,67 +104,13 @@
 </template>
 
 <script>
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
 import { nextTick } from 'vue'
-import renderMathInElement from 'katex/contrib/auto-render'
-import 'katex/dist/katex.min.css'
-
-// 完全复用 translate 页的 markdown 预处理
-function preprocessMarkdown(raw) {
-  let s = raw || ''
-  s = s.replace(/```\s*input(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
-    const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    return `\n<div class=\"sample-block\">\n<div class=\"sample-label\">输入样例${n}</div>\n<pre class=\"sample-code\">${esc}</pre>\n</div>\n`
-  })
-  s = s.replace(/```\s*output(\d+)\s*\n([\s\S]*?)```/g, (m, n, code) => {
-    const esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    return `\n<div class=\"sample-block\">\n<div class=\"sample-label\">输出样例${n}</div>\n<pre class=\"sample-code\">${esc}</pre>\n</div>\n`
-  })
-  s = s.replace(/\$\$([\s\S]*?)\$\$/g, (m, content) => {
-    return `\n<div class=\"math-block\">\n$$${content}$$\n</div>\n`
-  })
-  return s
-}
-
-// computed 和 watch 逻辑
-const computed = {
-  renderedTranslation() {
-    try {
-      const raw = this.translationText || ''
-      const pre = preprocessMarkdown(raw)
-      const html = marked.parse(pre)
-      return DOMPurify.sanitize(html)
-    } catch (e) {
-      return '<pre>无法渲染 Markdown</pre>'
-    }
-  }
-}
-
-const watch = {
-  translationText: async function() {
-    await nextTick()
-    try {
-      const previewEl = this.$refs.translationPreview
-      if (previewEl) {
-        renderMathInElement(previewEl, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false }
-          ],
-          throwOnError: false,
-          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-        })
-      }
-    } catch (e) {
-      console.warn('KaTeX render error', e)
-    }
-  }
-}
+import request from '../utils/request'
+import { getModels } from '../utils/models'
 
 export default {
   name: 'SolveData',
-  watch: { ...watch },
+  inject: ['showToastMessage'],
   data() {
     return {
       leftWidth: 40,
@@ -179,8 +125,6 @@ export default {
       activeTab: 'code',
       manualCodeMode: false,
       manualCode: '',
-      showToast: false,
-      toastMessage: '',
       isTranslating: false,
       translationText: '',
       problemMeta: null
@@ -191,20 +135,11 @@ export default {
     this.loadModels()
   },
   computed: {
-    ...computed,
-    renderedCode() {
+    displayCode() {
       if (this.manualCodeMode && this.manualCode) {
-        return `<pre><code>${this.escapeHtml(this.manualCode)}</code></pre>`
+        return '```\n' + this.manualCode + '\n```'
       }
-      // 如果 codeOutput 以 ```c++ 或 ```cpp 或 ``` 开头，且结尾有 ```，则只提取代码块内容
-      const codeBlockMatch = this.codeOutput.match(/^```(?:c\+\+|cpp)?\s*([\s\S]*?)\s*```$/i)
-      if (codeBlockMatch) {
-        return `<pre><code>${this.escapeHtml(codeBlockMatch[1])}</code></pre>`
-      }
-      return this.renderMarkdown(this.codeOutput)
-    },
-    renderedData() {
-      return this.renderMarkdown(this.dataOutput)
+      return this.codeOutput
     }
   },
   methods: {
@@ -232,58 +167,35 @@ export default {
     },
     async loadModels() {
       try {
-        const resp = await fetch('/api/models', { method: 'GET' })
-        const ct = resp.headers.get('content-type') || ''
-        if (resp.ok && ct.includes('application/json')) {
-          const list = await resp.json()
-          if (Array.isArray(list) && list.length > 0) {
-            this.models = list
-            // 如果当前选中的模型不在列表中，则默认选第一个
-            const ids = list.map(m => m.id)
-            if (!ids.includes(this.selectedModel)) {
-              this.selectedModel = list[0].id
-            }
+        const list = await getModels()
+        if (Array.isArray(list) && list.length > 0) {
+          this.models = list
+          // 如果当前选中的模型不在列表中，则默认选第一个
+          const ids = list.map(m => m.id)
+          if (!ids.includes(this.selectedModel)) {
+            this.selectedModel = list[0].id
           }
         }
       } catch (e) {
         // 加载失败时保持内置备选项
       }
     },
-        showToastMessage(message) {
-          this.toastMessage = message
-          this.showToast = true
-          setTimeout(() => {
-            this.showToast = false
-          }, 2500)
-        },
-        
+
         async autoTranslate() {
           if (!this.problemText.trim()) return;
           this.isTranslating = true;
           this.translationText = '';
           try {
-            const resp = await fetch('/api/translate', {
+            const data = await request('/api/translate', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ text: this.problemText, model: this.selectedModel })
             });
-            const ct = resp.headers.get('content-type') || '';
-            let data = null;
-            if (ct.includes('application/json')) {
-              try { data = await resp.json(); } catch (e) { data = null; }
-            } else {
-              try { const txt = await resp.text(); data = { rawText: txt }; } catch (e) { data = null; }
-            }
-            if (resp.ok) {
-              if (data && data.result) this.translationText = data.result;
-              else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
-              else this.translationText = '(无返回内容)';
-            } else {
-              if (data) this.translationText = `翻译失败: ${JSON.stringify(data)}`;
-              else this.translationText = `翻译失败: HTTP ${resp.status}`;
-            }
+            
+            if (data && data.result) this.translationText = data.result;
+            else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
+            else this.translationText = '(无返回内容)';
           } catch (e) {
-            this.translationText = '请求错误: ' + e.toString();
+            this.translationText = '请求错误: ' + e.message;
           } finally {
             this.isTranslating = false;
           }
@@ -306,12 +218,6 @@ export default {
             this.showToastMessage('✅ 已复制翻译到剪贴板');
           });
         },
-    escapeHtml(text) {
-      const div = document.createElement('div')
-      div.textContent = text
-      return div.innerHTML
-    },
-    
     onModeChange() {
       if (this.manualCodeMode) {
         this.activeTab = 'code'
@@ -320,66 +226,6 @@ export default {
     
     clearManualCode() {
       this.manualCode = ''
-    },
-    
-    renderMarkdown(text) {
-      if (!text) return ''
-
-      // 先保护代码块，避免其中的 $ 被当作数学公式
-      const codeBlocks = []
-      let tempText = text.replace(/```[\s\S]*?```/g, (match) => {
-        codeBlocks.push(match)
-        return `__CODE_BLOCK_${codeBlocks.length - 1}__`
-      })
-
-      // 移除最外层包裹的 $$...$$（仅首尾）
-      tempText = tempText.trim()
-      if (/^\$\$[\s\S]*\$\$$/.test(tempText)) {
-        tempText = tempText.replace(/^\$\$[\s\S]*?\$\$$/, (m) => {
-          // 尝试只去掉首尾的 $$
-          return m.replace(/^\$\$\s*/, '').replace(/\s*\$\$$/, '')
-        })
-      }
-
-      // 处理行内数学公式 $...$
-      tempText = tempText.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
-        try {
-          return katex.renderToString(formula, { throwOnError: false })
-        } catch (e) {
-          return match
-        }
-      })
-
-      // 处理块级数学公式 $$...$$
-      tempText = tempText.replace(/\$\$([^\$]+?)\$\$/g, (match, formula) => {
-        try {
-          return katex.renderToString(formula, { displayMode: true, throwOnError: false })
-        } catch (e) {
-          return match
-        }
-      })
-
-      // 恢复代码块
-      codeBlocks.forEach((block, index) => {
-        tempText = tempText.replace(`__CODE_BLOCK_${index}__`, block)
-      })
-      
-      // 转换 Markdown
-      const rawHtml = marked.parse(tempText)
-      const sanitized = DOMPurify.sanitize(rawHtml)
-      
-      // 移除代码块的语言标签显示（多种情况处理）
-      let result = sanitized
-        // 1. 移除 class="language-*" 属性（包括 c++, cpp, python 等）
-        .replace(/<pre><code class="language-[\w\+\-]+"/g, '<pre><code')
-        // 2. 移除 <pre> 标签前可能出现的语言标签段落
-        .replace(/<p>([\w\+\-]+)<\/p>\s*<pre>/g, '<pre>')
-        // 3. 移除 <pre> 内部开头的语言标签
-        .replace(/<pre>([\w\+\-]+)\s*<code>/g, '<pre><code>')
-        // 4. 移除 code 标签后紧跟的任意语言名（包括换行）
-        .replace(/<code>(\s*[\r\n]*)([\w\+\-]+)(\s*[\r\n]+)/gi, '<code>$1')
-      
-      return result
     },
     
     async generateCode() {
@@ -398,53 +244,29 @@ export default {
           await this.autoTranslate()
         }
         // 同时生成代码和题目元数据
-        const [codeResponse, metaResponse] = await Promise.all([
-          fetch('/api/solve', {
+        const [codeData, metaData] = await Promise.all([
+          request('/api/solve', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text: this.problemText,
               model: this.selectedModel,
               language: this.language
             })
           }),
-          fetch('/api/generate-problem-meta', {
+          request('/api/generate-problem-meta', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
-                model: this.selectedModel
-              })
-          })
+            body: JSON.stringify({
+              text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
+              model: this.selectedModel
+            })
+          }).catch(e => null) // 元数据生成失败不影响主流程
         ])
         
-        // 检查响应类型并安全解析
-        let codeData, metaData
-        
-        const codeContentType = codeResponse.headers.get('content-type') || ''
-        if (codeContentType.includes('application/json')) {
-          codeData = await codeResponse.json()
-        } else {
-          const textContent = await codeResponse.text()
-          console.error('代码生成API返回非JSON:', textContent.substring(0, 200))
-          throw new Error('服务器返回了错误的响应格式，请检查后端服务是否正常运行')
-        }
-        
-        const metaContentType = metaResponse.headers.get('content-type') || ''
-        if (metaContentType.includes('application/json')) {
-          metaData = await metaResponse.json()
-        } else {
-          console.warn('元数据API返回非JSON，跳过')
-          metaData = null
-        }
-        
-        if (codeResponse.ok) {
+        if (codeData && codeData.result) {
           this.codeOutput = codeData.result
-        } else {
-          this.showToastMessage('生成失败: ' + (codeData.error || '未知错误'))
         }
         
-        if (metaResponse.ok && metaData) {
+        if (metaData) {
           this.problemMeta = metaData
           console.log('题目元数据:', metaData)
         }
@@ -489,32 +311,29 @@ export default {
         if (!isManualMode) {
           // 自动生成模式：生成代码、数据、翻译和元数据
           requests = [
-            fetch('/api/solve', {
+            request('/api/solve', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: this.problemText,
                 model: this.selectedModel,
                 language: this.language
               })
             }),
-            fetch('/api/generate-data', {
+            request('/api/generate-data', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: this.problemText,
                 model: this.selectedModel
               })
             }),
             // translate 已经执行过，跳过重复调用
-            fetch('/api/generate-problem-meta', {
+            request('/api/generate-problem-meta', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
                 model: this.selectedModel
               })
-            })
+            }).catch(e => null)
           ]
         } else {
           // 手动输入模式：只生成数据、翻译和元数据
@@ -523,23 +342,21 @@ export default {
             await this.autoTranslate()
           }
           requests = [
-            fetch('/api/generate-data', {
+            request('/api/generate-data', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: this.problemText,
                 model: this.selectedModel
               })
             }),
             // translate 已在上面执行过
-            fetch('/api/generate-problem-meta', {
+            request('/api/generate-problem-meta', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
                 model: this.selectedModel
               })
-            })
+            }).catch(e => null)
           ]
         }
         
@@ -547,67 +364,31 @@ export default {
         
         if (!isManualMode) {
           // 自动生成模式：解析响应（code, data, meta）
-          const [codeResponse, dataResponse, metaResponse] = responses
+          const [codeData, dataData, metaData] = responses
           
-          // 解析代码生成结果
-          const codeContentType = codeResponse.headers.get('content-type') || ''
-          if (codeContentType.includes('application/json')) {
-            const codeData = await codeResponse.json()
-            if (codeResponse.ok) {
-              this.codeOutput = codeData.result
-            } else {
-              console.error('代码生成失败:', codeData.error)
-            }
+          if (codeData && codeData.result) {
+            this.codeOutput = codeData.result
           }
           
-          // 解析数据生成结果
-          const dataContentType = dataResponse.headers.get('content-type') || ''
-          if (dataContentType.includes('application/json')) {
-            const dataData = await dataResponse.json()
-            if (dataResponse.ok) {
-              this.dataOutput = dataData.result
-            } else {
-              console.error('数据生成失败:', dataData.error)
-            }
+          if (dataData && dataData.result) {
+            this.dataOutput = dataData.result
           }
           
-          // 解析元数据结果
-          const metaContentType = metaResponse && metaResponse.headers ? metaResponse.headers.get('content-type') || '' : ''
-          if (metaResponse && metaContentType.includes('application/json')) {
-            const metaData = await metaResponse.json()
-            if (metaResponse.ok && metaData) {
-              this.problemMeta = metaData
-              console.log('题目元数据:', metaData)
-            }
+          if (metaData) {
+            this.problemMeta = metaData
+            console.log('题目元数据:', metaData)
           }
         } else {
-          // 手动输入模式：只解析3个响应
-          const [dataResponse, metaResponse] = responses
+          // 手动输入模式：只解析2个响应 (data, meta)
+          const [dataData, metaData] = responses
           
-          // 解析数据生成结果
-          const dataContentType = dataResponse.headers.get('content-type') || ''
-          if (dataContentType.includes('application/json')) {
-            const dataData = await dataResponse.json()
-            if (dataResponse.ok) {
-              this.dataOutput = dataData.result
-            } else {
-              console.error('数据生成失败:', dataData.error)
-            }
+          if (dataData && dataData.result) {
+            this.dataOutput = dataData.result
           }
           
-          // 解析元数据结果
-          const metaContentType = metaResponse && metaResponse.headers ? metaResponse.headers.get('content-type') || '' : ''
-          if (metaResponse && metaContentType.includes('application/json')) {
-            const metaData = await metaResponse.json()
-            console.log('手动模式 - 元数据响应:', metaResponse.ok, metaData)
-            if (metaResponse.ok && metaData) {
-              this.problemMeta = metaData
-              console.log('手动模式 - 保存的元数据:', this.problemMeta)
-            } else {
-              console.error('手动模式 - 元数据响应失败或为空')
-            }
-          } else {
-            console.error('手动模式 - 元数据响应非JSON格式:', metaContentType)
+          if (metaData) {
+            this.problemMeta = metaData
+            console.log('手动模式 - 保存的元数据:', this.problemMeta)
           }
         }
         
@@ -649,51 +430,30 @@ export default {
           await this.autoTranslate()
         }
         // 同时生成数据脚本和题目元数据
-        const [dataResponse, metaResponse] = await Promise.all([
-          fetch('/api/generate-data', {
+        const [dataData, metaData] = await Promise.all([
+          request('/api/generate-data', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text: textForData,
               model: this.selectedModel
             })
           }),
-          fetch('/api/generate-problem-meta', {
+          request('/api/generate-problem-meta', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
               model: this.selectedModel
             })
-          })
+          }).catch(e => null)
         ])
         
-        // 解析数据生成结果
-        const dataContentType = dataResponse.headers.get('content-type') || ''
-        let dataData
-        
-        if (dataContentType.includes('application/json')) {
-          dataData = await dataResponse.json()
-        } else {
-          const textContent = await dataResponse.text()
-          console.error('数据生成API返回非JSON:', textContent.substring(0, 200))
-          throw new Error('服务器返回了错误的响应格式，请检查后端服务是否正常运行')
-        }
-        
-        if (dataResponse.ok) {
+        if (dataData && dataData.result) {
           this.dataOutput = dataData.result
-        } else {
-          this.showToastMessage('生成失败: ' + (dataData.error || '未知错误'))
         }
         
-        // 解析元数据结果
-        const metaContentType = metaResponse.headers.get('content-type') || ''
-        if (metaContentType.includes('application/json')) {
-          const metaData = await metaResponse.json()
-          if (metaResponse.ok && metaData) {
-            this.problemMeta = metaData
-            console.log('题目元数据:', metaData)
-          }
+        if (metaData) {
+          this.problemMeta = metaData
+          console.log('题目元数据:', metaData)
         }
       } catch (error) {
         console.error('Generate data error:', error)
@@ -1776,22 +1536,7 @@ python data_generator.py
 .fade-enter, .fade-leave-to {
   opacity: 0;
 }
-/* Toast 样式 */
-.custom-toast {
-  position: fixed;
-  top: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #323232;
-  color: #fff;
-  padding: 14px 28px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 9999;
-  font-size: 16px;
-  opacity: 0.95;
-  pointer-events: none;
-}
+
 .solve-data-container {
   height: 100vh;
   display: flex;

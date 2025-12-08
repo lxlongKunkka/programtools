@@ -59,9 +59,6 @@
 
 <template>
 	<div class="chat-root">
-    <div v-if="showToast" class="custom-toast">
-      <span v-html="toastMessage"></span>
-    </div>
 		<div class="chat-toolbar">
 			<div class="toolbar-left">
 				<span class="chat-title">对话 (上下文模式)</span>
@@ -96,7 +93,7 @@
 			<div v-for="(m, i) in messages" :key="m.id" :id="'msg-'+m.id" :class="['chat-line', m.role]">
 				<div class="chat-meta">{{ m.role === 'user' ? '你' : (m.role === 'assistant' ? 'AI' : m.role) }} <span class="time">{{ m.time || '' }}</span></div>
 				<div class="chat-bubble">
-					<div class="chat-content" v-html="renderMessage(m)"></div>
+					<MarkdownViewer :content="m.content" class="chat-content" />
 					<div class="chat-actions">
 						<button @click="copyMessage(m)">复制</button>
 					</div>
@@ -114,16 +111,13 @@
 </template>
 
 <script>
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-import renderMathInElement from 'katex/contrib/auto-render'
-import 'katex/dist/katex.min.css'
+import request from '../utils/request'
+import { getModels } from '../utils/models'
 
 export default {
+  inject: ['showToastMessage'],
 	data() {
 		return {
-      showToast: false,
-      toastMessage: '',
 			inputText: '',
 			messages: [],
 			loading: false,
@@ -138,8 +132,8 @@ export default {
 	async mounted() {
 		// load models
 		try {
-			const r = await fetch('/api/models')
-			if (r.ok) this.modelOptions = await r.json()
+			const list = await getModels()
+			if (Array.isArray(list)) this.modelOptions = list
 		} catch (e) { console.warn('failed to load models', e) }
 
 		// 从 localStorage 加载设置
@@ -156,40 +150,12 @@ export default {
 		this.sessionId = sid
 		localStorage.setItem('chat_sessionId', sid)
 		try {
-			const resp = await fetch(`/api/sessions/${sid}`)
-			if (resp.ok) {
-				const data = await resp.json()
-				if (Array.isArray(data) && data.length > 0) this.messages = data
-			}
+			const data = await request(`/api/sessions/${sid}`)
+			if (Array.isArray(data) && data.length > 0) this.messages = data
 		} catch (e) { console.warn('failed to load session', e) }
 	},
 	methods: {
-    showToastMessage(message) {
-      this.toastMessage = message
-      this.showToast = true
-      setTimeout(() => {
-        this.showToast = false
-      }, 2500)
-    },
 		makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}` },
-		renderMessage(m) {
-			const raw = m.content || ''
-			try {
-				const html = marked.parse(raw, { mangle: false, headerIds: false })
-				return DOMPurify.sanitize(html)
-			} catch (e) { return `<pre>${raw}</pre>` }
-		},
-		renderMathForMessage(id) {
-			try {
-				const el = this.$el && this.$el.querySelector && this.$el.querySelector(`#msg-${id}`)
-				if (!el) return
-				setTimeout(() => {
-					try {
-						renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }], throwOnError: false, ignoredTags: ['script','noscript','style','textarea','pre','code'] })
-					} catch (e) { console.warn('KaTeX render error for single message', e) }
-				}, 40)
-			} catch (e) { console.warn('renderMathForMessage error', e) }
-		},
 		async send() {
 			const text = this.inputText.trim()
 			if (!text || this.loading) return
@@ -198,7 +164,7 @@ export default {
 			const userContent = (!text.includes('$') && looksLikeLatex) ? `$$${text}$$` : text
 			const uid = this.makeId()
 			this.messages.push({ id: uid, role: 'user', content: userContent, time: now })
-			this.$nextTick(() => { this.renderMathForMessage(uid); const el = this.$el.querySelector('.chat-window'); if (el) el.scrollTop = el.scrollHeight })
+			this.$nextTick(() => { const el = this.$el.querySelector('.chat-window'); if (el) el.scrollTop = el.scrollHeight })
 
 			// 构建发送给后端的消息数组，插入 system 和 initial assistant
 			const apiMessages = []
@@ -216,16 +182,13 @@ export default {
 			this.inputText = ''
 			this.loading = true
 			try {
-				const resp = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-				let data = null
-				const ct = resp.headers.get('content-type') || ''
-				try { if (ct.includes('application/json')) data = await resp.json(); else { const txt = await resp.text(); data = { rawText: txt } } } catch (e) { try { const txt = await resp.text(); data = { rawText: txt } } catch (e2) { data = null } }
+				const data = await request('/api/chat', { method: 'POST', body: JSON.stringify(payload) })
 				
-				if (resp.ok && data && data.result) {
+				if (data && data.result) {
 					const assistantContent = data.result
 					const aid = this.makeId()
 					this.messages.push({ id: aid, role: 'assistant', content: assistantContent, time: new Date().toLocaleTimeString() })
-					this.$nextTick(() => { this.renderMathForMessage(aid); const el = this.$el.querySelector('.chat-window'); if (el) el.scrollTop = el.scrollHeight })
+					this.$nextTick(() => { const el = this.$el.querySelector('.chat-window'); if (el) el.scrollTop = el.scrollHeight })
 				} else {
 					const err = (data && (data.error || data.detail)) || 'Chat request failed'
 					this.showToastMessage(`Error: ${err}`)
@@ -239,7 +202,7 @@ export default {
 		},
 		newline(e) { const textarea = e.target; const pos = textarea.selectionStart; this.inputText = this.inputText.slice(0,pos) + '\n' + this.inputText.slice(pos); this.$nextTick(() => { textarea.selectionStart = textarea.selectionEnd = pos + 1 }) },
 		copyMessage(m) { const text = m.content || ''; navigator.clipboard.writeText(text).then(()=>{ this.showToastMessage('已复制消息到剪贴板') }).catch(err => { console.error('copy failed', err); this.showToastMessage('复制失败: ' + err) }) },
-		clearChat() { this.messages = []; fetch(`/api/sessions/${this.sessionId}/clear`, { method: 'POST' }).catch(()=>{}) },
+		clearChat() { this.messages = []; request(`/api/sessions/${this.sessionId}/clear`, { method: 'POST' }).catch(()=>{}) },
 		applySettings() {
 			// 保存设置到 localStorage
 			localStorage.setItem('chat_system_prompt', this.systemPrompt)
@@ -258,22 +221,6 @@ export default {
 </script>
 
 <style scoped>
-.custom-toast {
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(40,40,40,0.97);
-  color: #fff;
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 17px;
-  z-index: 9999;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
-  pointer-events: none;
-  opacity: 0.98;
-  transition: opacity 0.3s;
-}
 .chat-root {
 	display: flex;
 	flex-direction: column;
