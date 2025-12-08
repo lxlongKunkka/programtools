@@ -1,10 +1,3 @@
-.rendered-output pre, .rendered-output code {
-  max-height: 100%;
-  overflow-y: auto;
-  box-sizing: border-box;
-  width: 100%;
-  display: block;
-}
 <template>
 <div class="solve-data-container">
   <!-- 自动消失的 Toast 提示 -->
@@ -27,7 +20,7 @@
       </select>
     </div>
   </div>
-  <div class="main-layout new-layout">
+  <div class="main-layout new-layout" :style="{ '--left-width': leftWidth + '%' }">
     <!-- 左侧输入区域，仅题目描述和手动代码 -->
     <div class="input-panel new-input-panel">
       <div class="panel-header">
@@ -62,6 +55,9 @@
             <button @click="clearAll" class="btn-clear">清空</button>
           </div>
     </div>
+
+    <div class="resizer" @mousedown="startResize"></div>
+
     <!-- 右侧分栏输出区域 -->
     <div class="output-panel new-output-panel">
       <div class="output-tabs">
@@ -168,10 +164,11 @@ const watch = {
 
 export default {
   name: 'SolveData',
-  computed: { ...computed },
   watch: { ...watch },
   data() {
     return {
+      leftWidth: 40,
+      isDragging: false,
       problemText: '',
       codeOutput: '',
       dataOutput: '',
@@ -194,6 +191,7 @@ export default {
     this.loadModels()
   },
   computed: {
+    ...computed,
     renderedCode() {
       if (this.manualCodeMode && this.manualCode) {
         return `<pre><code>${this.escapeHtml(this.manualCode)}</code></pre>`
@@ -210,6 +208,28 @@ export default {
     }
   },
   methods: {
+    startResize() {
+      this.isDragging = true
+      document.addEventListener('mousemove', this.onMouseMove)
+      document.addEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = 'none'
+    },
+    onMouseMove(e) {
+      if (!this.isDragging) return
+      const container = this.$el.querySelector('.main-layout')
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100
+      if (newWidth > 20 && newWidth < 80) {
+        this.leftWidth = newWidth
+      }
+    },
+    stopResize() {
+      this.isDragging = false
+      document.removeEventListener('mousemove', this.onMouseMove)
+      document.removeEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = ''
+    },
     async loadModels() {
       try {
         const resp = await fetch('/api/models', { method: 'GET' })
@@ -364,7 +384,7 @@ export default {
     
     async generateCode() {
       if (!this.problemText.trim()) {
-        alert('请先输入题目描述')
+        this.showToastMessage('请先输入题目描述')
         return
       }
       
@@ -421,7 +441,7 @@ export default {
         if (codeResponse.ok) {
           this.codeOutput = codeData.result
         } else {
-          alert('生成失败: ' + (codeData.error || '未知错误'))
+          this.showToastMessage('生成失败: ' + (codeData.error || '未知错误'))
         }
         
         if (metaResponse.ok && metaData) {
@@ -430,7 +450,7 @@ export default {
         }
       } catch (error) {
         console.error('Generate code error:', error)
-        alert('生成失败: ' + error.message)
+        this.showToastMessage('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
       }
@@ -438,7 +458,7 @@ export default {
     
     async generateAll() {
       if (!this.problemText.trim()) {
-        alert('请先输入题目描述')
+        this.showToastMessage('请先输入题目描述')
         return
       }
       
@@ -599,11 +619,11 @@ export default {
         if (hasContent) {
           this.showToastMessage('✅ 全部生成完成！')
         } else {
-          alert('生成失败，请检查网络连接和后端服务')
+          this.showToastMessage('生成失败，请检查网络连接和后端服务')
         }
       } catch (error) {
         console.error('Generate all error:', error)
-        alert('生成失败: ' + error.message)
+        this.showToastMessage('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
       }
@@ -615,7 +635,7 @@ export default {
         : this.problemText
         
       if (!textForData.trim()) {
-        alert('请先输入题目描述')
+        this.showToastMessage('请先输入题目描述')
         return
       }
       
@@ -663,7 +683,7 @@ export default {
         if (dataResponse.ok) {
           this.dataOutput = dataData.result
         } else {
-          alert('生成失败: ' + (dataData.error || '未知错误'))
+          this.showToastMessage('生成失败: ' + (dataData.error || '未知错误'))
         }
         
         // 解析元数据结果
@@ -677,7 +697,7 @@ export default {
         }
       } catch (error) {
         console.error('Generate data error:', error)
-        alert('生成失败: ' + error.message)
+        this.showToastMessage('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
       }
@@ -789,7 +809,7 @@ export default {
       const hasCode = this.manualCodeMode ? this.manualCode : this.codeOutput
       
       if (!hasCode || !this.dataOutput) {
-        alert(this.manualCodeMode 
+        this.showToastMessage(this.manualCodeMode 
           ? '请先输入代码并生成数据脚本' 
           : '请先生成代码和数据脚本')
         return
@@ -901,7 +921,7 @@ export default {
           console.error('提取失败:', errorMsg)
           console.log('stdCode:', stdCode)
           console.log('dataScript 长度:', dataScript ? dataScript.length : 0)
-          alert(errorMsg)
+          this.showToastMessage(errorMsg)
           return
         }
         
@@ -1027,7 +1047,7 @@ export default {
         
       } catch (error) {
         console.error('Package error:', error)
-        alert('❌ 打包失败: ' + error.message)
+        this.showToastMessage('❌ 打包失败: ' + error.message)
       } finally {
         this.isGenerating = false
       }
@@ -1522,6 +1542,15 @@ python data_generator.py
   flex-shrink: 0;
   font-size: 14px;
   padding: 8px 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-actions-bar button:not(.btn-clear),
+.input-actions-bar .btn-translate {
+  flex: 1;
+  min-width: 120px;
 }
 /* 在较小屏幕上调整按钮 */
 @media (max-width: 1600px) {
@@ -1576,35 +1605,42 @@ python data_generator.py
 }
 /* 新布局样式 */
 .new-layout {
-  display: flex;
-  gap: 32px;
+  /* display: flex; */ /* Removed to use grid from main-layout */
+  /* gap: 32px; */ /* Removed */
   margin-top: 18px;
 }
 .new-input-panel {
-  flex: 0 0 380px;
+  /* flex: 0 0 380px; */ /* Removed fixed width */
   background: #f8fafc;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 24px 18px 18px 18px;
-  min-width: 320px;
+  min-width: 0; /* Allow shrinking */
 }
 /* 响应式调整左侧面板宽度 */
 @media (max-width: 1600px) {
   .new-input-panel {
-    flex: 0 0 350px;
-    min-width: 300px;
+    /* flex: 0 0 350px; */
+    /* min-width: 300px; */
   }
 }
 @media (max-width: 1400px) {
   .new-input-panel {
-    flex: 0 0 320px;
-    min-width: 280px;
+    /* flex: 0 0 320px; */
+    /* min-width: 280px; */
     padding: 20px 14px 14px 14px;
   }
 }
 @media (max-width: 1200px) {
-  .new-layout {
+  .main-layout {
+    display: flex;
     flex-direction: column;
+  }
+  .resizer {
+    display: none;
+  }
+  .new-layout {
+    /* flex-direction: column; */
   }
   .new-input-panel {
     flex: 0 0 auto;
@@ -1798,10 +1834,35 @@ python data_generator.py
 
 .main-layout {
   flex: 1;
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: var(--left-width, 40%) 12px 1fr;
+  gap: 0;
   padding: 20px;
   overflow: hidden;
+}
+
+.resizer {
+  width: 12px;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer:hover, .resizer:active {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.resizer::after {
+  content: '||';
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  letter-spacing: 1px;
+  user-select: none;
 }
 
 .input-panel, .output-panel {
@@ -2082,5 +2143,13 @@ button:disabled {
 
 .btn-small-clear:hover {
   background: #c82333;
+}
+
+.rendered-output pre, .rendered-output code {
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  width: 100%;
+  display: block;
 }
 </style>

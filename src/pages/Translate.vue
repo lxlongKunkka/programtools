@@ -1,5 +1,8 @@
 <template>
   <div>
+    <div v-if="showToast" class="custom-toast">
+      <span v-html="toastMessage"></span>
+    </div>
     <textarea v-model="prompt" rows="6" cols="80" placeholder="在此输入题面或文本"></textarea>
     <div class="top-bar">
       <div class="top-left">
@@ -12,6 +15,7 @@
         </select>
         <button @click="translate" :disabled="loading">翻译为中文 (调用 AI)</button>
         <button @click="copyMarkdown">复制 Markdown</button>
+        <button @click="downloadMarkdown">下载 Markdown</button>
       </div>
     </div>
     <div class="result-area">
@@ -37,7 +41,7 @@ import 'katex/dist/katex.min.css'
 // model configuration now served from backend
 
 export default {
-  data() { return { prompt: '', result: '', loading: false, model: 'o4-mini', modelOptions: [] } },
+  data() { return { showToast: false, toastMessage: '', prompt: '', result: '', loading: false, model: 'o4-mini', modelOptions: [] } },
   async mounted() {
     try {
       const r = await fetch('/api/models')
@@ -62,6 +66,13 @@ export default {
     }
   },
   methods: {
+    showToastMessage(message) {
+      this.toastMessage = message
+      this.showToast = true
+      setTimeout(() => {
+        this.showToast = false
+      }, 2500)
+    },
     preprocessMarkdown(raw) {
       let s = raw
 
@@ -122,11 +133,25 @@ export default {
     copyMarkdown() {
       const text = this.result || ''
       navigator.clipboard.writeText(text).then(() => {
-        this.$root.$emit && this.$root.$emit('message', '已复制 Markdown 到剪贴板')
+        this.showToastMessage('✅ 已复制 Markdown 到剪贴板')
       }).catch(err => {
         console.error('copy failed', err)
-        alert('复制失败: ' + err)
+        this.showToastMessage('复制失败: ' + err)
       })
+    },
+    downloadMarkdown() {
+      const text = this.result || ''
+      if (!text) {
+        this.showToastMessage('没有可下载的内容！')
+        return
+      }
+      const blob = new Blob([text], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'translation.md'
+      a.click()
+      URL.revokeObjectURL(url)
     }
   },
 
@@ -149,7 +174,6 @@ export default {
         }
       } catch (e) {
         // silently ignore render errors
-        console.warn('KaTeX render error', e)
       }
     }
   }
@@ -157,6 +181,24 @@ export default {
 </script>
 
 <style scoped>
+/* 全局统一 toast 样式 */
+.custom-toast {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(40,40,40,0.97);
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 17px;
+  z-index: 9999;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  pointer-events: none;
+  opacity: 0.98;
+  transition: opacity 0.3s;
+}
+
 /* 同款化的中性专业风基础变量 */
 :root {
   --bg-panel: #f9fafb;

@@ -59,6 +59,9 @@
 
 <template>
 	<div class="chat-root">
+    <div v-if="showToast" class="custom-toast">
+      <span v-html="toastMessage"></span>
+    </div>
 		<div class="chat-toolbar">
 			<div class="toolbar-left">
 				<span class="chat-title">对话 (上下文模式)</span>
@@ -119,6 +122,8 @@ import 'katex/dist/katex.min.css'
 export default {
 	data() {
 		return {
+      showToast: false,
+      toastMessage: '',
 			inputText: '',
 			messages: [],
 			loading: false,
@@ -159,6 +164,13 @@ export default {
 		} catch (e) { console.warn('failed to load session', e) }
 	},
 	methods: {
+    showToastMessage(message) {
+      this.toastMessage = message
+      this.showToast = true
+      setTimeout(() => {
+        this.showToast = false
+      }, 2500)
+    },
 		makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}` },
 		renderMessage(m) {
 			const raw = m.content || ''
@@ -208,45 +220,60 @@ export default {
 				let data = null
 				const ct = resp.headers.get('content-type') || ''
 				try { if (ct.includes('application/json')) data = await resp.json(); else { const txt = await resp.text(); data = { rawText: txt } } } catch (e) { try { const txt = await resp.text(); data = { rawText: txt } } catch (e2) { data = null } }
-				if (resp.ok) {
-					let reply = (data && (data.result || data.rawText)) || (typeof data === 'string' ? data : JSON.stringify(data))
-					const replyLooksLikeLatex = typeof reply === 'string' && /\\[a-zA-Z]+|\\\(|\\\)|\^\{|\\frac|\\int|\\sum|\\sqrt/.test(reply)
-					if (replyLooksLikeLatex && !reply.includes('$')) reply = `$$${reply}$$`
+				
+				if (resp.ok && data && data.result) {
+					const assistantContent = data.result
 					const aid = this.makeId()
-					this.messages.push({ id: aid, role: 'assistant', content: reply, time: new Date().toLocaleTimeString() })
+					this.messages.push({ id: aid, role: 'assistant', content: assistantContent, time: new Date().toLocaleTimeString() })
 					this.$nextTick(() => { this.renderMathForMessage(aid); const el = this.$el.querySelector('.chat-window'); if (el) el.scrollTop = el.scrollHeight })
 				} else {
 					const err = (data && (data.error || data.detail)) || 'Chat request failed'
-					alert(`Error: ${err}`)
+					this.showToastMessage(`Error: ${err}`)
 				}
 			} catch (e) {
 				console.error('chat request error', e)
-				alert('Network error: ' + e.message)
+				this.showToastMessage('Network error: ' + e.message)
 			} finally {
 				this.loading = false
 			}
 		},
 		newline(e) { const textarea = e.target; const pos = textarea.selectionStart; this.inputText = this.inputText.slice(0,pos) + '\n' + this.inputText.slice(pos); this.$nextTick(() => { textarea.selectionStart = textarea.selectionEnd = pos + 1 }) },
-		copyMessage(m) { const text = m.content || ''; navigator.clipboard.writeText(text).then(()=>{ alert('已复制消息到剪贴板') }).catch(err => { console.error('copy failed', err); alert('复制失败: ' + err) }) },
+		copyMessage(m) { const text = m.content || ''; navigator.clipboard.writeText(text).then(()=>{ this.showToastMessage('已复制消息到剪贴板') }).catch(err => { console.error('copy failed', err); this.showToastMessage('复制失败: ' + err) }) },
 		clearChat() { this.messages = []; fetch(`/api/sessions/${this.sessionId}/clear`, { method: 'POST' }).catch(()=>{}) },
 		applySettings() {
 			// 保存设置到 localStorage
 			localStorage.setItem('chat_system_prompt', this.systemPrompt)
 			localStorage.setItem('chat_initial_assistant', this.initialAssistant)
-			alert('设置已保存')
+			this.showToastMessage('设置已保存')
 		},
 		resetSettings() {
 			this.systemPrompt = ''
 			this.initialAssistant = ''
 			localStorage.removeItem('chat_system_prompt')
 			localStorage.removeItem('chat_initial_assistant')
-			alert('设置已重置')
+			this.showToastMessage('设置已重置')
 		}
 	}
 }
 </script>
 
 <style scoped>
+.custom-toast {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(40,40,40,0.97);
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 17px;
+  z-index: 9999;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  pointer-events: none;
+  opacity: 0.98;
+  transition: opacity 0.3s;
+}
 .chat-root {
 	display: flex;
 	flex-direction: column;

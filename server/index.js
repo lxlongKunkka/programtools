@@ -1288,8 +1288,7 @@ app.post('/api/admin/send-daily-report', async (req, res) => {
 
 // 定时任务：每天 23:55 发送昨天的日志汇总
 try {
-  // 每天早上9:00发送前一天日志
-  const cronExp = '0 9 * * *'
+  const cronExp = process.env.MAIL_CRON || '55 23 * * *'
   cron.schedule(cronExp, async () => {
     try { await sendDailyReport() } catch (e) { console.error('cron sendDailyReport failed:', e) }
   })

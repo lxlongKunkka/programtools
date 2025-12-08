@@ -2,6 +2,7 @@
   <div class="home">
     <section class="hero">
       <div class="hero-content">
+        <img src="https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202403271535417.png" alt="Logo" class="logo" />
         <h1>Acjudge Tools</h1>
         <p class="subtitle">一站式题目处理、代码生成与数据脚本平台</p>
         <div class="hero-actions">
@@ -73,6 +74,14 @@ export default {
 .hero-content {
   max-width: 960px;
   margin: 0 auto;
+}
+
+.logo {
+  height: 80px;
+  width: auto;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .hero h1 {

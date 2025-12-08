@@ -1,5 +1,8 @@
 <template>
 	<div class="solution-root">
+    <div v-if="showToast" class="custom-toast">
+      <span v-html="toastMessage"></span>
+    </div>
 		<h2>AI 题解整理助手</h2>
 		
 		<div class="toolbar">
@@ -19,8 +22,8 @@
 			</div>
 		</div>
 
-		<div class="content-area">
-			<div class="input-panel">
+			<div class="content-area" :style="{ '--left-width': leftWidth + '%' }">
+				<div class="input-panel">
 				<div class="panel-header">
 					<h3>输入原题解析</h3>
 					<span class="hint">分别粘贴题目和代码</span>
@@ -44,6 +47,8 @@
 					</div>
 				</div>
 			</div>
+
+        <div class="resizer" @mousedown="startResize"></div>
 
 			<div class="output-panel">
 				<div class="panel-header">
@@ -76,6 +81,10 @@ marked.setOptions({
 export default {
 	data() {
 		return {
+      leftWidth: 40,
+      isDragging: false,
+      showToast: false,
+      toastMessage: '',
 			problemText: '',
 			codeText: '',
 			result: '',
@@ -136,6 +145,35 @@ export default {
 		})
 	},
 	methods: {
+    startResize() {
+      this.isDragging = true
+      document.addEventListener('mousemove', this.onMouseMove)
+      document.addEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = 'none'
+    },
+    onMouseMove(e) {
+      if (!this.isDragging) return
+      const container = this.$el.querySelector('.content-area')
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100
+      if (newWidth > 20 && newWidth < 80) {
+        this.leftWidth = newWidth
+      }
+    },
+    stopResize() {
+      this.isDragging = false
+      document.removeEventListener('mousemove', this.onMouseMove)
+      document.removeEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = ''
+    },
+    showToastMessage(message) {
+      this.toastMessage = message
+      this.showToast = true
+      setTimeout(() => {
+        this.showToast = false
+      }, 2500)
+    },
 		async generate() {
 			const text = this.inputText.trim()
 			if (!text) return
@@ -155,7 +193,7 @@ export default {
 
 				if (!resp.ok) {
 					const errData = await resp.json().catch(() => ({}))
-					throw new Error(errData.error || `HTTP ${resp.status}`)
+					throw new Error(errData.error || 'Request failed')
 				}
 
 				const data = await resp.json()
@@ -163,7 +201,7 @@ export default {
 
 			} catch (e) {
 				console.error('Solution error:', e)
-				alert(`整理失败: ${e.message}`)
+				this.showToastMessage(`整理失败: ${e.message}`)
 			} finally {
 				this.loading = false
 			}
@@ -176,10 +214,10 @@ export default {
 		copyResult() {
 			if (!this.result) return
 			navigator.clipboard.writeText(this.result)
-				.then(() => alert('✅ 结果已复制到剪贴板'))
+				.then(() => this.showToastMessage('✅ 结果已复制到剪贴板'))
 				.catch(err => {
 					console.error('copy failed', err)
-					alert('复制失败: ' + err.message)
+					this.showToastMessage('复制失败: ' + err.message)
 				})
 		},
 		saveResult() {
@@ -192,12 +230,31 @@ export default {
 			a.download = `solution_${Date.now()}.md`
 			a.click()
 			URL.revokeObjectURL(url)
+			this.showToastMessage('已下载文件')
 		}
 	}
 }
 </script>
 
 <style scoped>
+/* 全局统一 toast 样式 */
+.custom-toast {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(40,40,40,0.97);
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 17px;
+  z-index: 9999;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  pointer-events: none;
+  opacity: 0.98;
+  transition: opacity 0.3s;
+}
+
 .solution-root {
 	max-width: 1400px;
 	margin: 0 auto;
@@ -284,10 +341,34 @@ button {
 
 .content-area {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 16px;
+	grid-template-columns: var(--left-width, 40%) 12px 1fr;
+	gap: 0;
 	flex: 1;
 	min-height: 0;
+}
+
+.resizer {
+  width: 12px;
+  cursor: col-resize;
+  background: #f0f2f5;
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer:hover, .resizer:active {
+  background: #d1d5db;
+}
+
+.resizer::after {
+  content: '||';
+  color: #9ca3af;
+  font-size: 10px;
+  letter-spacing: 1px;
+  user-select: none;
 }
 
 .input-panel, .output-panel {
@@ -435,8 +516,11 @@ textarea:focus {
 /* 响应式 */
 @media (max-width: 1024px) {
 	.content-area {
-		grid-template-columns: 1fr;
-		grid-template-rows: 1fr 1fr;
+		display: flex;
+		flex-direction: column;
 	}
+  .resizer {
+    display: none;
+  }
 }
 </style>
