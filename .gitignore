@@ -20,3 +20,5 @@ logs/
 
 # IDE/editor
 .vscode/
+
+server/sessions/

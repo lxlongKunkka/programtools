@@ -9,6 +9,12 @@ export async function request(url, options = {}) {
     'Content-Type': 'application/json'
   }
 
+  // Add Authorization header if token exists
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`
+  }
+
   const config = {
     ...options,
     headers: {
@@ -19,6 +25,16 @@ export async function request(url, options = {}) {
 
   try {
     const response = await fetch(url, config)
+
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_info')
+      // Optional: Redirect to login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
+    }
+
     const contentType = response.headers.get('content-type') || ''
     
     let data

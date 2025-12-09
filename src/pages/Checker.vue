@@ -80,11 +80,24 @@ export default {
 			codeText: '',
 			result: '',
 			loading: false,
-			model: 'o4-mini',
-			modelOptions: []
+			model: 'gemini-2.0-flash',
+			rawModelOptions: []
 		}
 	},
 	computed: {
+    user() {
+      try {
+        return JSON.parse(localStorage.getItem('user_info'))
+      } catch (e) { return null }
+    },
+    isPremium() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.priv === -1)
+    },
+    modelOptions() {
+      const all = this.rawModelOptions || []
+      if (this.isPremium) return all
+      return all.filter(m => m.id === 'gemini-2.0-flash')
+    },
 		inputText() {
 			let combined = ''
 			if (this.problemText.trim()) {
@@ -99,7 +112,14 @@ export default {
 	async mounted() {
 		try {
 			const list = await getModels()
-			if (Array.isArray(list)) this.modelOptions = list
+			if (Array.isArray(list)) this.rawModelOptions = list
+      
+      if (this.modelOptions.length > 0) {
+        const current = this.modelOptions.find(m => m.id === this.model)
+        if (!current) {
+          this.model = this.modelOptions[0].id
+        }
+      }
 		} catch (e) {
 			console.warn('failed to load models', e)
 		}

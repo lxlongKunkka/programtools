@@ -5,19 +5,56 @@ import Checker from '../pages/Checker.vue'
 import Solution from '../pages/Solution.vue'
 import SolveData from '../pages/SolveData.vue'
 import Chat from '../pages/Chat.vue'
+import Login from '../pages/Login.vue'
+import Profile from '../pages/Profile.vue'
+import Admin from '../pages/Admin.vue'
 
 const routes = [
   { path: '/', component: Home },
+  { path: '/login', component: Login },
+  { path: '/profile', component: Profile, meta: { requiresAuth: true } },
+  { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },
-  { path: '/checker', component: Checker },
-  { path: '/solution', component: Solution },
-  { path: '/solvedata', component: SolveData },
-  { path: '/chat', component: Chat }
+  { path: '/checker', component: Checker, meta: { requiresAuth: true } },
+  { path: '/solution', component: Solution, meta: { requiresAuth: true } },
+  { path: '/solvedata', component: SolveData, meta: { requiresAuth: true, requiresPremium: true } },
+  { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const userStr = localStorage.getItem('user_info')
+  let user = null
+  try {
+    user = JSON.parse(userStr)
+  } catch (e) {}
+
+  if (to.meta.requiresAuth && !user) {
+    return next('/login')
+  }
+
+  if (to.meta.requiresAdmin) {
+    const isAdmin = user && (user.role === 'admin' || user.priv === -1)
+    if (!isAdmin) {
+      return next('/')
+    }
+  }
+
+  if (to.meta.requiresPremium) {
+    const isPremium = user && (user.role === 'admin' || user.role === 'premium' || user.priv === -1)
+    if (!isPremium) {
+      // Redirect to home or show alert? 
+      // Better to redirect to home or stay put.
+      // I'll redirect to home for now.
+      return next('/')
+    }
+  }
+
+  next()
 })
 
 export default router

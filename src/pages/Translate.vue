@@ -36,17 +36,39 @@ import { nextTick } from 'vue'
 
 export default {
   inject: ['showToastMessage'],
-  data() { return { prompt: '', result: '', loading: false, model: 'o4-mini', modelOptions: [] } },
+  data() { return { prompt: '', result: '', loading: false, model: 'gemini-2.0-flash', rawModelOptions: [] } },
   async mounted() {
     try {
       const list = await getModels()
-      if (Array.isArray(list)) this.modelOptions = list
+      if (Array.isArray(list)) this.rawModelOptions = list
+      
+      // Ensure valid model is selected
+      if (this.modelOptions.length > 0) {
+        const current = this.modelOptions.find(m => m.id === this.model)
+        if (!current) {
+          this.model = this.modelOptions[0].id
+        }
+      }
     } catch (e) { console.warn('failed to load models', e) }
   },
 
   computed: {
+    user() {
+      try {
+        return JSON.parse(localStorage.getItem('user_info'))
+      } catch (e) { return null }
+    },
+    isPremium() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.priv === -1)
+    },
     modelOptions() {
-      return this.modelOptions || []
+      const all = this.rawModelOptions || []
+      if (this.isPremium) return all
+      // Guest/Normal user: only gemini-2.0-flash
+      // If gemini-2.0-flash is not in the list (e.g. fetch failed or not configured), show empty or fallback
+      // We should probably ensure gemini-2.0-flash is available or mock it if missing for guests?
+      // Assuming getModels returns it.
+      return all.filter(m => m.id === 'gemini-2.0-flash')
     }
   },
   methods: {

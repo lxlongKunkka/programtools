@@ -3,6 +3,11 @@ import { request } from './request'
 let cachedModels = null
 let fetchPromise = null
 
+export function clearModelCache() {
+  cachedModels = null
+  fetchPromise = null
+}
+
 /**
  * 获取模型列表，优先使用缓存
  * @returns {Promise<Array>} 模型列表
