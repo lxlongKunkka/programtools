@@ -9,6 +9,7 @@
       </div>
       <nav>
         <router-link to="/translate">Translate</router-link>
+        <router-link to="/typing">Typing</router-link>
         <router-link v-if="user" to="/checker">Checker</router-link>
         <router-link v-if="user" to="/solution">Solution</router-link>
         <router-link v-if="isPremium" to="/solvedata">Data</router-link>

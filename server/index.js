@@ -3,6 +3,8 @@ import cors from 'cors'
 import mongoose from 'mongoose'
 import { PORT, MONGODB_URI, YUN_API_KEY, DEBUG_LOG } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
+import { createServer } from 'http'
+import { setupSocket } from './socket/index.js'
 
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
@@ -16,9 +18,9 @@ else debugLog('YUN_API_KEY not found in server/.env')
 // --- MongoDB Connection ---
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err))
-
 const app = express()
+const httpServer = createServer(app)
+setupSocket(httpServer)
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -42,12 +44,10 @@ app.use((err, req, res, next) => {
     detail: DEBUG_LOG ? err.stack : undefined
   })
 })
-
-// 404处理 - 返回JSON而不是HTML
 app.use((req, res) => {
   res.status(404).json({ error: 'API endpoint not found', path: req.path })
 })
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`)
 })
