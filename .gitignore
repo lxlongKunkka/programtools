@@ -22,3 +22,9 @@ logs/
 .vscode/
 
 server/sessions/
+
+# Ignore accidental lock file copy inside node_modules
+node_modules/.package-lock.json
+
+# Ignore runtime sensitive data
+server/premium_users.json
