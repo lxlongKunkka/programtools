@@ -1,0 +1,248 @@
+<template>
+  <div class="learning-map-container">
+    <div class="header">
+      <h1>C++ 闯关学习</h1>
+      <div class="progress-summary" v-if="userProgress">
+        当前等级: Level {{ userProgress.currentLevel }}
+      </div>
+    </div>
+
+    <div v-if="loading" class="loading">加载中...</div>
+    <div v-else class="levels-container">
+      <div v-for="level in levels" :key="level._id" class="level-card">
+        <div class="level-header">
+          <div class="level-info">
+            <h2>Level {{ level.level }}</h2>
+            <p>{{ level.title }}</p>
+          </div>
+          <div class="level-status">
+            <span v-if="isLevelCompleted(level)" class="badge completed">已完成</span>
+            <span v-else-if="isLevelUnlocked(level)" class="badge unlocked">进行中</span>
+            <span v-else class="badge locked">未解锁</span>
+          </div>
+        </div>
+        
+        <div class="level-description">{{ level.description }}</div>
+
+        <div class="chapters-grid">
+          <div 
+            v-for="chapter in level.chapters" 
+            :key="chapter.id" 
+            class="chapter-card"
+            :class="getChapterStatusClass(level, chapter)"
+            @click="goToChapter(level, chapter)"
+          >
+            <div class="chapter-icon">
+              <span v-if="isChapterCompleted(level, chapter)">✅</span>
+              <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+              <span v-else>🔒</span>
+            </div>
+            <div class="chapter-info">
+              <h3>Chapter {{ chapter.id }}</h3>
+              <p>{{ chapter.title }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import request from '../utils/request'
+
+export default {
+  data() {
+    return {
+      levels: [],
+      userProgress: null,
+      loading: true
+    }
+  },
+  mounted() {
+    this.fetchData()
+  },
+  methods: {
+    async fetchData() {
+      this.loading = true
+      try {
+        const [levelsData, progressData] = await Promise.all([
+          request('/api/course/levels'),
+          request('/api/course/progress')
+        ])
+        this.levels = levelsData
+        this.userProgress = progressData
+      } catch (e) {
+        console.error('Failed to fetch course data', e)
+      } finally {
+        this.loading = false
+      }
+    },
+    isLevelUnlocked(level) {
+      if (!this.userProgress) return false
+      const lvl = level.level || level.levelId
+      return lvl <= this.userProgress.currentLevel
+    },
+    isLevelCompleted(level) {
+      if (!this.userProgress) return false
+      const lvl = level.level || level.levelId
+      return lvl < this.userProgress.currentLevel
+    },
+    isChapterUnlocked(level, chapter) {
+      if (!this.userProgress) return false
+      const lvl = level.level || level.levelId
+      if (lvl < this.userProgress.currentLevel) return true
+      if (lvl > this.userProgress.currentLevel) return false
+      
+      return this.userProgress.unlockedChapters.includes(chapter.id)
+    },
+    isChapterCompleted(level, chapter) {
+      if (!this.userProgress) return false
+      const lvl = level.level || level.levelId
+      if (lvl < this.userProgress.currentLevel) return true
+      if (lvl > this.userProgress.currentLevel) return false
+      
+      return this.userProgress.completedChapters.includes(chapter.id)
+    },
+    getChapterStatusClass(level, chapter) {
+      if (this.isChapterCompleted(level, chapter)) return 'status-completed'
+      if (this.isChapterUnlocked(level, chapter)) return 'status-unlocked'
+      return 'status-locked'
+    },
+    goToChapter(level, chapter) {
+      if (!this.isChapterUnlocked(level, chapter) && !this.isChapterCompleted(level, chapter)) {
+        return // Locked
+      }
+      // Use level.level instead of level.levelId if levelId is not present
+      const lvl = level.level || level.levelId
+      this.$router.push(`/course/${lvl}/${chapter.id}`)
+    }
+  }
+}
+</script>
+
+<style scoped>
+.learning-map-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  font-size: 36px;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+.progress-summary {
+  font-size: 18px;
+  color: #7f8c8d;
+}
+
+.levels-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.level-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+}
+
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+.level-info h2 {
+  font-size: 24px;
+  color: #34495e;
+  margin: 0 0 5px 0;
+}
+.level-info p {
+  font-size: 16px;
+  color: #7f8c8d;
+  margin: 0;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.badge.completed { background-color: #2ecc71; color: white; }
+.badge.unlocked { background-color: #3498db; color: white; }
+.badge.locked { background-color: #95a5a6; color: white; }
+
+.level-description {
+  color: #555;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.chapters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.chapter-card {
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.chapter-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.chapter-card.status-completed {
+  border-color: #2ecc71;
+  background-color: #eafaf1;
+}
+.chapter-card.status-unlocked {
+  border-color: #3498db;
+  background-color: #ebf5fb;
+}
+.chapter-card.status-locked {
+  border-color: #e0e0e0;
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.chapter-card.status-locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.chapter-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+.chapter-info h3 {
+  font-size: 16px;
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+}
+.chapter-info p {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin: 0;
+}
+</style>

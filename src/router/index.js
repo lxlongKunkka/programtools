@@ -10,6 +10,8 @@ import Profile from '../pages/Profile.vue'
 import Admin from '../pages/Admin.vue'
 import ProblemManager from '../pages/ProblemManager.vue'
 import Typing from '../pages/Typing.vue'
+import LearningMap from '../pages/LearningMap.vue'
+import ChapterDetail from '../pages/ChapterDetail.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -22,7 +24,9 @@ const routes = [
   { path: '/solution', component: Solution, meta: { requiresAuth: true } },
   { path: '/solvedata', component: SolveData, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
-  { path: '/typing', component: Typing }
+  { path: '/typing', component: Typing },
+  { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
+  { path: '/course/:levelId/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

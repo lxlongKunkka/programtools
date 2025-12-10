@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 
 const documentSchema = new mongoose.Schema({
+  docId: Number, // Explicitly define docId as Number
   title: String,
   content: String,
   domainId: String,
