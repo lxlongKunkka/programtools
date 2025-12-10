@@ -129,6 +129,7 @@
                   <span v-if="chapter.optional" class="badge-optional">选做</span>
                 </span>
                 <div class="chapter-actions">
+                  <button @click="openChapterModal(level, null, level.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
                   <button @click="openChapterModal(level, chapter)" class="btn-small btn-edit">编辑</button>
                   <button @click="deleteChapter(level._id, chapter.id)" class="btn-small btn-delete">删除</button>
                 </div>
@@ -179,8 +180,9 @@
       <div class="modal-content large-modal">
         <h3>{{ editingChapter.isNew ? '添加章节' : '编辑章节' }} (Level {{ editingLevelForChapter.level }})</h3>
         <div class="form-group">
-          <label>Chapter ID (例如 1-1):</label>
-          <input v-model="editingChapter.id" class="form-input">
+          <label>Chapter ID (自动生成):</label>
+          <input v-model="editingChapter.id" class="form-input" disabled style="background-color: #f5f5f5; cursor: not-allowed;">
+          <p style="font-size: 12px; color: #666; margin-top: 4px;">章节 ID 会根据章节顺序自动维护 (例如 1-1, 1-2)。</p>
         </div>
         <div class="form-group">
           <label>标题:</label>
@@ -239,6 +241,7 @@ export default {
       editingLevel: {},
       editingChapter: {},
       editingLevelForChapter: null, // The level object the chapter belongs to
+      insertIndex: null, // For inserting chapters
       selectedSubject: 'C++',
       availableSubjects: ['C++', 'Python', 'Web']
     }
@@ -429,8 +432,10 @@ export default {
         this.showToastMessage('删除失败: ' + e.message)
       }
     },
-    openChapterModal(level, chapter = null) {
+    openChapterModal(level, chapter = null, insertIndex = null) {
       this.editingLevelForChapter = level
+      this.insertIndex = insertIndex // Store insert index
+
       if (chapter) {
         // Convert populated problem objects back to string format
         const problemIdsStr = (chapter.problemIds || []).map(p => {
@@ -449,8 +454,15 @@ export default {
           isNew: false
         }
       } else {
-        const nextIndex = (level.chapters ? level.chapters.length : 0) + 1
-        const nextId = `${level.level}-${nextIndex}`
+        // New Chapter
+        let nextId = 'Auto'
+        if (insertIndex === null) {
+           const nextIndex = (level.chapters ? level.chapters.length : 0) + 1
+           nextId = `${level.level}-${nextIndex}`
+        } else {
+           nextId = `${level.level}-${insertIndex + 1} (Auto)`
+        }
+
         this.editingChapter = { 
           id: nextId, 
           title: '', 
@@ -480,6 +492,10 @@ export default {
         }
 
         if (this.editingChapter.isNew) {
+          // Pass insertIndex if available
+          if (this.insertIndex !== null) {
+            chapterData.insertIndex = this.insertIndex
+          }
           await request(`/api/course/levels/${this.editingLevelForChapter._id}/chapters`, {
             method: 'POST',
             body: JSON.stringify(chapterData)
@@ -604,6 +620,14 @@ export default {
 .btn-add:hover {
   background-color: #27ae60;
   transform: translateY(-1px);
+}
+
+.btn-insert {
+  background-color: #9b59b6;
+  color: white;
+}
+.btn-insert:hover {
+  background-color: #8e44ad;
 }
 
 .level-list {

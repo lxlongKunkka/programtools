@@ -122,14 +122,23 @@ export default {
       if (lvl < currentLvl) return true
       if (lvl > currentLvl) return false
       
+      // Check by UID first (Robust)
+      if (this.userProgress.unlockedChapterUids && chapter._id) {
+        if (this.userProgress.unlockedChapterUids.includes(chapter._id)) return true
+      }
+      
+      // Fallback to String ID (Legacy)
       return this.userProgress.unlockedChapters.includes(chapter.id)
     },
     isChapterCompleted(level, chapter) {
       if (!this.userProgress) return false
-      const lvl = level.level || level.levelId
-      if (lvl < this.userProgress.currentLevel) return true
-      if (lvl > this.userProgress.currentLevel) return false
       
+      // Check by UID first (Robust)
+      if (this.userProgress.completedChapterUids && chapter._id) {
+        if (this.userProgress.completedChapterUids.includes(chapter._id)) return true
+      }
+
+      // Fallback to String ID (Legacy)
       return this.userProgress.completedChapters.includes(chapter.id)
     },
     getChapterStatusClass(level, chapter) {

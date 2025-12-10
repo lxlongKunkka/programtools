@@ -12,12 +12,19 @@ const userProgressSchema = new mongoose.Schema({
     default: {}
   },
 
-  // Store unlocked chapter IDs (e.g., "1-1", "1-2")
+  // Store unlocked chapter IDs (e.g., "1-1", "1-2") - LEGACY / DISPLAY
   unlockedChapters: { type: [String], default: ['1-1'] },
-  // Store completed chapter IDs
+  // Store completed chapter IDs - LEGACY / DISPLAY
   completedChapters: { type: [String], default: [] },
+
+  // NEW: Store immutable MongoDB _ids for robustness
+  unlockedChapterUids: { type: [mongoose.Schema.Types.ObjectId], default: [] },
+  completedChapterUids: { type: [mongoose.Schema.Types.ObjectId], default: [] },
+
   // Track solved problems per chapter to avoid re-solving
-  // Map chapterId -> { solvedProblems: [String] }
+  // Map chapterId (String) -> { solvedProblems: [String] }
+  // Note: We keep using String ID for map keys for now to avoid complex migration of Map keys, 
+  // but we should rely on Uids for completion status.
   chapterProgress: {
     type: Map,
     of: new mongoose.Schema({

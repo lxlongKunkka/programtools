@@ -67,6 +67,18 @@ async function unlockNext(progress, currentChapterId) {
   const level = await CourseLevel.findOne({ 'chapters.id': currentChapterId })
   if (level) {
     let currentIdx = level.chapters.findIndex(c => c.id === currentChapterId)
+    const currentChapterObj = level.chapters[currentIdx]
+
+    // --- NEW: Update UIDs ---
+    if (currentChapterObj && currentChapterObj._id) {
+      if (!progress.completedChapterUids) progress.completedChapterUids = []
+      // Add to completed UIDs if not present
+      const uidStr = currentChapterObj._id.toString()
+      if (!progress.completedChapterUids.some(id => id.toString() === uidStr)) {
+        progress.completedChapterUids.push(currentChapterObj._id)
+      }
+    }
+    // ------------------------
     
     // Loop to unlock subsequent chapters if they are optional
     // We use a loop to handle consecutive optional chapters
@@ -74,9 +86,14 @@ async function unlockNext(progress, currentChapterId) {
       if (currentIdx !== -1 && currentIdx < level.chapters.length - 1) {
         const nextChapter = level.chapters[currentIdx + 1]
         
-        // Unlock the next chapter
+        // Unlock the next chapter (Legacy String ID)
         if (!progress.unlockedChapters.includes(nextChapter.id)) {
           progress.unlockedChapters.push(nextChapter.id)
+        }
+        // Unlock the next chapter (New UID)
+        if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+        if (nextChapter._id && !progress.unlockedChapterUids.some(id => id.toString() === nextChapter._id.toString())) {
+          progress.unlockedChapterUids.push(nextChapter._id)
         }
         
         // If next chapter is optional, we treat it as "virtually completed" for unlocking purposes
@@ -117,8 +134,14 @@ async function unlockNext(progress, currentChapterId) {
            let nextLvlIdx = 0
            while (nextLvlIdx < nextLevel.chapters.length) {
              const ch = nextLevel.chapters[nextLvlIdx]
+             // Legacy
              if (!progress.unlockedChapters.includes(ch.id)) {
                progress.unlockedChapters.push(ch.id)
+             }
+             // UID
+             if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+             if (ch._id && !progress.unlockedChapterUids.some(id => id.toString() === ch._id.toString())) {
+               progress.unlockedChapterUids.push(ch._id)
              }
              
              if (ch.optional) {
@@ -354,13 +377,25 @@ async function resolveProblemIds(ids) {
 // Add a Chapter
 router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, problemIds, optional } = req.body
+    const { id, title, content, problemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     const resolvedIds = await resolveProblemIds(problemIds || [])
     
-    level.chapters.push({ id, title, content, problemIds: resolvedIds, optional: !!optional })
+    const newChapter = { id, title, content, problemIds: resolvedIds, optional: !!optional }
+
+    if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.chapters.length) {
+      level.chapters.splice(insertIndex, 0, newChapter)
+    } else {
+      level.chapters.push(newChapter)
+    }
+
+    // Auto-renumber chapters to keep IDs consistent (e.g. 1-1, 1-2, 1-3)
+    level.chapters.forEach((ch, index) => {
+      ch.id = `${level.level}-${index + 1}`
+    })
+
     await level.save()
     res.json(level)
   } catch (e) {
@@ -385,6 +420,8 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['a
     chapter.problemIds = resolvedIds
     chapter.optional = !!optional
     
+    // No renumbering needed for update unless we support moving chapters (not yet)
+    
     await level.save()
     res.json(level)
   } catch (e) {
@@ -399,6 +436,12 @@ router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     level.chapters = level.chapters.filter(c => c.id !== req.params.chapterId)
+    
+    // Auto-renumber chapters after deletion
+    level.chapters.forEach((ch, index) => {
+      ch.id = `${level.level}-${index + 1}`
+    })
+
     await level.save()
     res.json(level)
   } catch (e) {
