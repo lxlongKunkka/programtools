@@ -1378,12 +1378,12 @@ python data_generator.py
   min-width: 0; /* Allow shrinking */
 }
 /* 响应式调整左侧面板宽度 */
-@media (max-width: 1600px) {
+/* @media (max-width: 1600px) {
   .new-input-panel {
-    /* flex: 0 0 350px; */
-    /* min-width: 300px; */
+    flex: 0 0 350px;
+    min-width: 300px;
   }
-}
+} */
 @media (max-width: 1400px) {
   .new-input-panel {
     /* flex: 0 0 320px; */
@@ -1399,9 +1399,9 @@ python data_generator.py
   .resizer {
     display: none;
   }
-  .new-layout {
-    /* flex-direction: column; */
-  }
+  /* .new-layout {
+    flex-direction: column;
+  } */
   .new-input-panel {
     flex: 0 0 auto;
     width: 100%;
