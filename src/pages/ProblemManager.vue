@@ -146,7 +146,7 @@ export default {
         const res = await request('/api/models')
         this.models = res || []
         if (this.models.length > 0) {
-          const defaultModel = this.models.find(m => m.id === 'gemini-2.0-flash')
+          const defaultModel = this.models.find(m => m.id === 'gemini-2.5-flash')
           this.selectedModel = defaultModel ? defaultModel.id : this.models[0].id
         }
       } catch (e) {

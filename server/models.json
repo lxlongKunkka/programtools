@@ -5,5 +5,6 @@
   { "id": "o2-mini", "name": "o2-mini", "role": "user" },
   { "id": "o1-mini", "name": "o1-mini", "role": "admin" },
   { "id": "grok-4-fast", "name": "grok-4-fast", "role": "user" },
-  { "id": "gemini-2.0-flash", "name": "gemini-2.0-flash", "role": "user" }
+  { "id": "gemini-2.0-flash", "name": "gemini-2.0-flash", "role": "user" },
+  { "id": "gemini-2.5-flash", "name": "gemini-2.5-flash", "role": "user" }
 ]
