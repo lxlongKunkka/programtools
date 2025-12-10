@@ -39,6 +39,7 @@ router.post('/login', async (req, res) => {
 
     let role = 'user'
     if (user.priv === -1 || user.uname === 'admin') role = 'admin'
+    else if (user.role === 'teacher') role = 'teacher'
     else if (await isPremium(user._id)) role = 'premium'
 
     const token = jwt.sign({ 

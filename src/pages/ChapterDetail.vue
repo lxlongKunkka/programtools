@@ -165,7 +165,55 @@ export default {
   mounted() {
     this.fetchData()
   },
+  updated() {
+    this.secureContent()
+  },
   methods: {
+    secureContent() {
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.tutorial-section')
+        if (!container) return
+        
+        // 1. 保护视频
+        const videos = container.querySelectorAll('video')
+        videos.forEach(video => {
+          if (!video.hasAttribute('controlsList')) {
+            video.setAttribute('controlsList', 'nodownload')
+          }
+          video.oncontextmenu = (e) => {
+            e.preventDefault()
+            return false
+          }
+        })
+
+        // 2. 保护图片
+        const images = container.querySelectorAll('img')
+        images.forEach(img => {
+          img.setAttribute('draggable', 'false')
+          img.oncontextmenu = (e) => {
+            e.preventDefault()
+            return false
+          }
+        })
+
+        // 3. 保护 Iframe (PDF/PPT)
+        const iframes = container.querySelectorAll('iframe')
+        iframes.forEach(iframe => {
+          iframe.oncontextmenu = (e) => {
+            e.preventDefault()
+            return false
+          }
+          
+          // PDF 特殊处理
+          try {
+            const src = iframe.getAttribute('src')
+            if (src && src.toLowerCase().includes('.pdf') && !src.includes('#toolbar=0')) {
+              iframe.setAttribute('src', src + '#toolbar=0')
+            }
+          } catch (e) {}
+        })
+      })
+    },
     async fetchData() {
       this.loading = true
       try {

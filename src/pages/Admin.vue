@@ -2,6 +2,7 @@
   <div class="admin-container">
     <div class="admin-tabs">
       <button 
+        v-if="isAdmin"
         :class="['tab-btn', { active: activeTab === 'users' }]" 
         @click="activeTab = 'users'"
       >
@@ -54,8 +55,11 @@
               <td>{{ u.priv }}</td>
               <td>
                 <div class="actions">
-                  <button v-if="u.role !== 'premium' && u.role !== 'admin'" @click="setRole(u, 'premium')" class="btn-small btn-premium">设为高级用户</button>
+                  <button v-if="u.role !== 'premium' && u.role !== 'admin' && u.role !== 'teacher'" @click="setRole(u, 'premium')" class="btn-small btn-premium">设为高级用户</button>
                   <button v-if="u.role === 'premium'" @click="setRole(u, 'user')" class="btn-small btn-user">取消高级用户</button>
+                  
+                  <button v-if="u.role !== 'teacher' && u.role !== 'admin'" @click="setRole(u, 'teacher')" class="btn-small btn-teacher">设为教师</button>
+                  <button v-if="u.role === 'teacher'" @click="setRole(u, 'user')" class="btn-small btn-user">取消教师</button>
                 </div>
               </td>
             </tr>
@@ -102,7 +106,10 @@
           <div class="chapter-list">
             <div v-for="chapter in level.chapters" :key="chapter.id" class="chapter-item">
               <div class="chapter-header">
-                <span class="chapter-title">Chapter {{ chapter.id }}: {{ chapter.title }}</span>
+                <span class="chapter-title">
+                  Chapter {{ chapter.id }}: {{ chapter.title }}
+                  <span v-if="chapter.optional" class="badge-optional">选做</span>
+                </span>
                 <div class="chapter-actions">
                   <button @click="openChapterModal(level, chapter)" class="btn-small btn-edit">编辑</button>
                   <button @click="deleteChapter(level._id, chapter.id)" class="btn-small btn-delete">删除</button>
@@ -163,6 +170,12 @@
           <label>题目 ID (逗号分隔，支持 "domain:id" 或 "id"):</label>
           <input v-model="editingChapter.problemIdsStr" class="form-input" placeholder="例如: system:1001, 1002 (默认system域)">
         </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" v-model="editingChapter.optional"> 选做章节 (Optional)
+          </label>
+          <p style="font-size: 12px; color: #666; margin-top: 4px;">选做章节不会阻塞后续章节的解锁。</p>
+        </div>
         <div class="modal-actions">
           <button @click="showChapterModal = false" class="btn-cancel">取消</button>
           <button @click="saveChapter" class="btn-save">保存</button>
@@ -180,6 +193,7 @@ export default {
   inject: ['showToastMessage'],
   data() {
     return {
+      currentUser: null,
       // Tabs
       activeTab: 'users',
 
@@ -203,8 +217,28 @@ export default {
       editingLevelForChapter: null // The level object the chapter belongs to
     }
   },
+  computed: {
+    isAdmin() {
+      return this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.priv === -1)
+    }
+  },
   mounted() {
-    this.fetchUsers()
+    const userStr = localStorage.getItem('user_info')
+    if (userStr) {
+      try {
+        this.currentUser = JSON.parse(userStr)
+      } catch (e) {}
+    }
+
+    if (!this.isAdmin) {
+      this.activeTab = 'courses'
+    }
+
+    if (this.activeTab === 'users') {
+      this.fetchUsers()
+    } else {
+      this.fetchLevels()
+    }
   },
   methods: {
     switchTab(tab) {
@@ -354,6 +388,7 @@ export default {
         this.editingChapter = { 
           ...chapter, 
           problemIdsStr: problemIdsStr,
+          optional: !!chapter.optional,
           isNew: false
         }
       } else {
@@ -364,6 +399,7 @@ export default {
           title: '', 
           content: '', 
           problemIdsStr: '',
+          optional: false,
           isNew: true
         }
       }
@@ -382,7 +418,8 @@ export default {
           id: this.editingChapter.id,
           title: this.editingChapter.title,
           content: this.editingChapter.content,
-          problemIds: problemIds
+          problemIds: problemIds,
+          optional: this.editingChapter.optional
         }
 
         if (this.editingChapter.isNew) {
@@ -687,7 +724,19 @@ export default {
 }
 .role-badge.admin { background-color: #e74c3c; color: white; }
 .role-badge.premium { background-color: #f1c40f; color: #333; }
+.role-badge.teacher { background-color: #8e44ad; color: white; }
 .role-badge.user { background-color: #95a5a6; color: white; }
+
+.badge-optional {
+  display: inline-block;
+  background-color: #9b59b6;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
 
 .actions {
   display: flex;
@@ -703,6 +752,8 @@ export default {
 }
 .btn-premium { background-color: #f1c40f; color: #333; }
 .btn-premium:hover { background-color: #f39c12; }
+.btn-teacher { background-color: #8e44ad; color: white; }
+.btn-teacher:hover { background-color: #9b59b6; }
 .btn-user { background-color: #e0e0e0; color: #333; }
 .btn-user:hover { background-color: #d0d0d0; }
 

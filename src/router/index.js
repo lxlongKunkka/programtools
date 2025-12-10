@@ -17,7 +17,7 @@ const routes = [
   { path: '/', component: Home },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
-  { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/problems', component: ProblemManager, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },
   { path: '/checker', component: Checker, meta: { requiresAuth: true } },
@@ -48,6 +48,14 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAdmin) {
     const isAdmin = user && (user.role === 'admin' || user.priv === -1)
     if (!isAdmin) {
+      return next('/')
+    }
+  }
+
+  if (to.meta.allowedRoles) {
+    const isAdmin = user && (user.role === 'admin' || user.priv === -1)
+    const hasRole = user && to.meta.allowedRoles.includes(user.role)
+    if (!isAdmin && !hasRole) {
       return next('/')
     }
   }

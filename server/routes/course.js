@@ -42,23 +42,52 @@ router.get('/progress', authenticateToken, async (req, res) => {
 async function unlockNext(progress, currentChapterId) {
   const level = await CourseLevel.findOne({ 'chapters.id': currentChapterId })
   if (level) {
-    const currentIdx = level.chapters.findIndex(c => c.id === currentChapterId)
-    if (currentIdx !== -1 && currentIdx < level.chapters.length - 1) {
-      const nextChapter = level.chapters[currentIdx + 1]
-      if (!progress.unlockedChapters.includes(nextChapter.id)) {
-        progress.unlockedChapters.push(nextChapter.id)
-      }
-    } else {
-      // Level completed? Unlock next level's first chapter?
-      const nextLevel = await CourseLevel.findOne({ level: level.level + 1 })
-      if (nextLevel && nextLevel.chapters.length > 0) {
-         const nextChapter = nextLevel.chapters[0]
-         if (!progress.unlockedChapters.includes(nextChapter.id)) {
-           progress.unlockedChapters.push(nextChapter.id)
-         }
-         if (progress.currentLevel < nextLevel.level) {
-           progress.currentLevel = nextLevel.level
-         }
+    let currentIdx = level.chapters.findIndex(c => c.id === currentChapterId)
+    
+    // Loop to unlock subsequent chapters if they are optional
+    // We use a loop to handle consecutive optional chapters
+    while (true) {
+      if (currentIdx !== -1 && currentIdx < level.chapters.length - 1) {
+        const nextChapter = level.chapters[currentIdx + 1]
+        
+        // Unlock the next chapter
+        if (!progress.unlockedChapters.includes(nextChapter.id)) {
+          progress.unlockedChapters.push(nextChapter.id)
+        }
+        
+        // If next chapter is optional, we treat it as "virtually completed" for unlocking purposes
+        // so we move to the next one immediately
+        if (nextChapter.optional) {
+          currentIdx++
+          continue
+        } else {
+          // If next chapter is required, we stop here. User must complete it.
+          break
+        }
+      } else {
+        // End of level reached. Unlock next level.
+        const nextLevel = await CourseLevel.findOne({ level: level.level + 1 })
+        if (nextLevel && nextLevel.chapters.length > 0) {
+           if (progress.currentLevel < nextLevel.level) {
+             progress.currentLevel = nextLevel.level
+           }
+           
+           // Unlock chapters in the next level, handling initial optional chapters
+           let nextLvlIdx = 0
+           while (nextLvlIdx < nextLevel.chapters.length) {
+             const ch = nextLevel.chapters[nextLvlIdx]
+             if (!progress.unlockedChapters.includes(ch.id)) {
+               progress.unlockedChapters.push(ch.id)
+             }
+             
+             if (ch.optional) {
+               nextLvlIdx++
+             } else {
+               break
+             }
+           }
+        }
+        break // Break the outer loop
       }
     }
   }
@@ -215,7 +244,7 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
 // --- Admin Routes ---
 
 // Create a Level
-router.post('/levels', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { level, title, description } = req.body
     const newLevel = new CourseLevel({ level, title, description, chapters: [] })
@@ -227,7 +256,7 @@ router.post('/levels', authenticateToken, requireRole('admin'), async (req, res)
 })
 
 // Update a Level
-router.put('/levels/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { level, title, description } = req.body
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
@@ -242,7 +271,7 @@ router.put('/levels/:id', authenticateToken, requireRole('admin'), async (req, r
 })
 
 // Delete a Level
-router.delete('/levels/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     await CourseLevel.findByIdAndDelete(req.params.id)
     res.json({ success: true })
@@ -282,15 +311,15 @@ async function resolveProblemIds(ids) {
 }
 
 // Add a Chapter
-router.post('/levels/:id/chapters', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, problemIds } = req.body
+    const { id, title, content, problemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     const resolvedIds = await resolveProblemIds(problemIds || [])
     
-    level.chapters.push({ id, title, content, problemIds: resolvedIds })
+    level.chapters.push({ id, title, content, problemIds: resolvedIds, optional: !!optional })
     await level.save()
     res.json(level)
   } catch (e) {
@@ -299,9 +328,9 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole('admin'), asy
 })
 
 // Update a Chapter
-router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole('admin'), async (req, res) => {
+router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, problemIds } = req.body
+    const { title, content, problemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -313,6 +342,7 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole('ad
     chapter.title = title
     chapter.content = content
     chapter.problemIds = resolvedIds
+    chapter.optional = !!optional
     
     await level.save()
     res.json(level)
@@ -322,7 +352,7 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole('ad
 })
 
 // Delete a Chapter
-router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole('admin'), async (req, res) => {
+router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })

@@ -38,7 +38,10 @@
               <span v-else>🔒</span>
             </div>
             <div class="chapter-info">
-              <h3>Chapter {{ chapter.id }}</h3>
+              <h3>
+                Chapter {{ chapter.id }}
+                <span v-if="chapter.optional" class="tag-optional">选做</span>
+              </h3>
               <p>{{ chapter.title }}</p>
             </div>
           </div>
@@ -239,6 +242,18 @@ export default {
   font-size: 16px;
   margin: 0 0 5px 0;
   color: #2c3e50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.tag-optional {
+  font-size: 10px;
+  background-color: #9b59b6;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: normal;
 }
 .chapter-info p {
   font-size: 14px;

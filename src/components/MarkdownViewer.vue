@@ -44,8 +44,53 @@ export default {
   },
   updated() {
     this.renderMath()
+    this.secureContent()
   },
   methods: {
+    secureContent() {
+      const el = this.$refs.content
+      if (!el) return
+
+      // 1. 保护视频
+      const videos = el.querySelectorAll('video')
+      videos.forEach(video => {
+        video.setAttribute('controlsList', 'nodownload')
+        video.oncontextmenu = (e) => {
+          e.preventDefault()
+          return false
+        }
+      })
+
+      // 2. 保护图片
+      const images = el.querySelectorAll('img')
+      images.forEach(img => {
+        img.setAttribute('draggable', 'false')
+        img.oncontextmenu = (e) => {
+          e.preventDefault()
+          return false
+        }
+      })
+
+      // 3. 保护 Iframe (PDF/PPT)
+      const iframes = el.querySelectorAll('iframe')
+      iframes.forEach(iframe => {
+        // 禁用右键
+        iframe.oncontextmenu = (e) => {
+          e.preventDefault()
+          return false
+        }
+        
+        // PDF 特殊处理：隐藏工具栏
+        try {
+          const src = iframe.getAttribute('src')
+          if (src && src.toLowerCase().includes('.pdf') && !src.includes('#toolbar=0')) {
+            iframe.setAttribute('src', src + '#toolbar=0')
+          }
+        } catch (e) {
+          // 忽略跨域等错误
+        }
+      })
+    },
     escapeHtml(text) {
       if (!text) return ''
       return text

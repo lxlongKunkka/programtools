@@ -67,9 +67,11 @@ export const requireRole = (role) => {
   return (req, res, next) => {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.priv === -1 || req.user.priv === 1)
     
-    if (role === 'admin' && isAdmin) {
-      next()
-    } else if (req.user && req.user.role === role) {
+    if (isAdmin) return next()
+
+    const allowedRoles = Array.isArray(role) ? role : [role]
+    
+    if (req.user && allowedRoles.includes(req.user.role)) {
       next()
     } else {
       res.status(403).json({ error: 'Access denied: insufficient permissions' })

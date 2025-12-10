@@ -61,7 +61,7 @@ router.get('/users', async (req, res) => {
     }
 
     const total = await User.countDocuments(query)
-    const users = await User.find(query, 'uname priv mail _id')
+    const users = await User.find(query, 'uname priv mail _id role')
       .sort({ _id: 1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
@@ -70,6 +70,7 @@ router.get('/users', async (req, res) => {
     const usersWithRoles = users.map(u => {
       let r = 'user'
       if (u.priv === -1 || u.uname === 'admin') r = 'admin'
+      else if (u.role === 'teacher') r = 'teacher'
       else if (premiumIds.includes(u._id)) r = 'premium'
       return { ...u, role: r }
     })
@@ -89,7 +90,7 @@ router.get('/users', async (req, res) => {
 router.post('/users/:id/role', async (req, res) => {
   try {
     const { role } = req.body
-    if (!['user', 'premium', 'admin'].includes(role)) {
+    if (!['user', 'premium', 'admin', 'teacher'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' })
     }
     
@@ -98,9 +99,17 @@ router.post('/users/:id/role', async (req, res) => {
     
     debugLog(`Updating user ${user.uname} (${user._id}) role to ${role}`)
     
-    if (role === 'premium') {
+    if (role === 'teacher') {
+      user.role = 'teacher'
+      await user.save()
+      await removePremium(user._id)
+    } else if (role === 'premium') {
+      user.role = undefined
+      await user.save()
       await addPremium(user._id)
     } else if (role === 'user') {
+      user.role = undefined
+      await user.save()
       await removePremium(user._id)
     }
     // Admin role is handled by DB priv/uname, ignoring here for now or we could support it if we wanted to modify DB for admin only.
