@@ -11,6 +11,7 @@ import chatRoutes from './routes/chat.js'
 import aiRoutes from './routes/ai.js'
 import dataRoutes from './routes/data.js'
 import adminRoutes from './routes/admin.js'
+import typingRoutes from './routes/typing.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
@@ -33,6 +34,7 @@ app.use('/api', authRoutes)
 app.use('/api', chatRoutes)
 app.use('/api', aiRoutes)
 app.use('/api', dataRoutes)
+app.use('/api/typing', typingRoutes)
 app.use('/api/admin', adminRoutes)
 
 // 全局错误处理中间件 - 确保所有错误都返回JSON
