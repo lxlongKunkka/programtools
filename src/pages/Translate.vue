@@ -1,288 +1,586 @@
-<template>
-  <div>
-    <textarea v-model="prompt" rows="6" cols="80" placeholder="在此输入题面或文本"></textarea>
-    <div class="top-bar">
-      <div class="top-left">
-        <h2>翻译</h2>
-      </div>
-      <div class="top-right">
-        <label>模型</label>
-        <select v-model="model">
-          <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
-        </select>
-        <button @click="translate" :disabled="loading">翻译为中文 (调用 AI)</button>
-        <button @click="copyMarkdown">复制 Markdown</button>
-        <button @click="downloadMarkdown">下载 Markdown</button>
-      </div>
-    </div>
-    <div class="result-area">
-      <div class="result-panel">
-        <div class="panel-header">原始 Markdown</div>
-        <pre class="panel-body code-body">{{result}}</pre>
-      </div>
-      <div class="result-panel">
-        <div class="panel-header">渲染预览</div>
-        <MarkdownViewer :content="result" class="panel-body md-preview" />
-      </div>
-    </div>
-  </div>
-</template>
+﻿<template>
+<div class="translate-root">
+<h2>AI 智能翻译助手</h2>
 
+<div class="toolbar">
+<div class="toolbar-left">
+<label class="label">模型:</label>
+<select v-model="model">
+<option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+</select>
+</div>
+<div class="toolbar-right">
+<button @click="translate" :disabled="loading || !prompt.trim()" class="btn-primary">
+{{ loading ? '⏳ 翻译中...' : '🌐 开始翻译' }}
+</button>
+<button @click="clear" class="btn-secondary">🧹 清空</button>
+<button @click="copyResult" :disabled="!result" class="btn-secondary">📋 复制结果</button>
+<button @click="saveResult" :disabled="!result" class="btn-secondary">💾 保存 Markdown</button>
+</div>
+</div>
+
+    <div class="content-area" ref="contentArea">
+      <div class="input-panel" :style="{ width: leftWidth + '%' }">
+        <div class="panel-header">
+          <h3>输入原文</h3>
+          <span class="hint">支持各种语言的题目或文本</span>
+        </div>
+        <div class="input-group">
+          <div class="input-section">
+            <textarea 
+              v-model="prompt" 
+              placeholder="在此输入需要翻译的题面或文本...&#10;&#10;示例：&#10;You are given an array of integers..."
+              :disabled="loading"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer" @mousedown="startResize"></div>
+
+      <div class="output-panel">
+        <div class="panel-header">
+          <div class="header-left">
+            <h3>翻译结果</h3>
+          </div>
+          <div class="header-tabs">
+            <button 
+              :class="['tab-btn', { active: activeTab === 'preview' }]" 
+              @click="activeTab = 'preview'"
+            >预览</button>
+            <button 
+              :class="['tab-btn', { active: activeTab === 'raw' }]" 
+              @click="activeTab = 'raw'"
+            >源码</button>
+          </div>
+        </div>
+        
+        <div class="result-area" v-if="result">
+          <MarkdownViewer v-if="activeTab === 'preview'" :content="result" />
+          <textarea v-else class="raw-output" readonly :value="result"></textarea>
+        </div>
+
+        <div class="result-area empty" v-else>
+          <p>✨ 翻译结果将显示在这里</p>
+          <p class="tip">AI 会自动识别源语言并翻译成流畅的中文</p>
+        </div>
+      </div>
+    </div>
+</div>
+</template>
 
 <script>
 import request from '../utils/request'
 import { getModels } from '../utils/models'
-import { nextTick } from 'vue'
+import MarkdownViewer from '../components/MarkdownViewer.vue'
 
 export default {
+  components: { MarkdownViewer },
   inject: ['showToastMessage'],
-  data() { return { prompt: '', result: '', loading: false, model: 'gemini-2.0-flash', rawModelOptions: [] } },
-  async mounted() {
-    try {
-      const list = await getModels()
-      if (Array.isArray(list)) this.rawModelOptions = list
-      
-      // Ensure valid model is selected
-      if (this.modelOptions.length > 0) {
-        const current = this.modelOptions.find(m => m.id === this.model)
-        if (!current) {
-          this.model = this.modelOptions[0].id
-        }
-      }
-    } catch (e) { console.warn('failed to load models', e) }
-  },
-
-  computed: {
+data() {
+return {
+      leftWidth: 40,
+      isDragging: false,
+      activeTab: 'preview',
+prompt: '',
+result: '',
+loading: false,
+model: 'gemini-2.0-flash',
+rawModelOptions: []
+}
+},
+computed: {
     user() {
       try {
         return JSON.parse(localStorage.getItem('user_info'))
       } catch (e) { return null }
     },
     isPremium() {
-      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.priv === -1)
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher' || this.user.priv === -1)
     },
     modelOptions() {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
-      // Guest/Normal user: only gemini-2.0-flash
-      // If gemini-2.0-flash is not in the list (e.g. fetch failed or not configured), show empty or fallback
-      // We should probably ensure gemini-2.0-flash is available or mock it if missing for guests?
-      // Assuming getModels returns it.
       return all.filter(m => m.id === 'gemini-2.0-flash')
     }
-  },
-  methods: {
-    async translate() {
-      if (!this.prompt.trim()) { this.result = '请输入要翻译的题面或文本。'; return }
-      this.loading = true
-      this.result = '正在翻译，请稍候...'
-      try {
-        const data = await request('/api/translate', {
-          method: 'POST',
-          body: JSON.stringify({ text: this.prompt, model: this.model })
-        })
-
-        this.result = data.result || data.rawText || '(无返回内容)'
-
-      } catch (e) {
-        this.result = '请求错误: ' + e.message
-      } finally {
-        this.loading = false
+},
+async mounted() {
+try {
+const list = await getModels()
+if (Array.isArray(list)) this.rawModelOptions = list
+      
+      if (this.modelOptions.length > 0) {
+        const current = this.modelOptions.find(m => m.id === this.model)
+        if (!current) {
+          this.model = this.modelOptions[0].id
+        }
+      }
+} catch (e) {
+console.warn('failed to load models', e)
+}
+},
+methods: {
+    startResize() {
+      this.isDragging = true
+      document.addEventListener('mousemove', this.onMouseMove)
+      document.addEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = 'none'
+      document.body.style.cursor = 'col-resize'
+    },
+    onMouseMove(e) {
+      if (!this.isDragging) return
+      const container = this.$refs.contentArea
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100
+      if (newWidth > 20 && newWidth < 80) {
+        this.leftWidth = newWidth
       }
     },
-
-    copyMarkdown() {
-      const text = this.result || ''
-      navigator.clipboard.writeText(text).then(() => {
-        this.showToastMessage('✅ 已复制 Markdown 到剪贴板')
-      }).catch(err => {
-        console.error('copy failed', err)
-        this.showToastMessage('复制失败: ' + err)
-      })
+    stopResize() {
+      this.isDragging = false
+      document.removeEventListener('mousemove', this.onMouseMove)
+      document.removeEventListener('mouseup', this.stopResize)
+      document.body.style.userSelect = ''
+      document.body.style.cursor = ''
     },
-    downloadMarkdown() {
-      const text = this.result || ''
-      if (!text) {
-        this.showToastMessage('没有可下载的内容！')
-        return
-      }
-      const blob = new Blob([text], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'translation.md'
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-  }
+async translate() {
+if (!this.prompt.trim()) return
+
+this.loading = true
+this.result = ''
+
+try {
+const data = await request('/api/translate', {
+method: 'POST',
+body: JSON.stringify({
+text: this.prompt,
+model: this.model
+})
+})
+
+this.result = data.result || data.rawText || ''
+
+} catch (e) {
+console.error('Translate error:', e)
+this.showToastMessage(`翻译失败: ${e.message}`)
+} finally {
+this.loading = false
+}
+},
+clear() {
+this.prompt = ''
+this.result = ''
+},
+copyResult() {
+if (!this.result) return
+navigator.clipboard.writeText(this.result)
+.then(() => this.showToastMessage('✅ 结果已复制到剪贴板'))
+.catch(err => {
+console.error('copy failed', err)
+this.showToastMessage('复制失败: ' + err.message)
+})
+},
+saveResult() {
+if (!this.result) return
+
+const blob = new Blob([this.result], { type: 'text/markdown;charset=utf-8' })
+const url = URL.createObjectURL(blob)
+const a = document.createElement('a')
+a.href = url
+a.download = `translation_${Date.now()}.md`
+a.click()
+URL.revokeObjectURL(url)
+this.showToastMessage('已下载文件')
+}
+}
 }
 </script>
 
 <style scoped>
-/* 页面基调：字体与背景 */
-:host, .translate-page-root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft YaHei", "PingFang SC", "Source Han Sans SC", sans-serif;
-  background: var(--bg-page);
-  color: var(--text);
+.translate-root {
+  height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #f8f9fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* 标题与基础排版 */
-h2 { margin: 0; color: var(--title); font-weight: 700; font-size: 18px; letter-spacing: .2px }
-h3, h4 { color: var(--title); font-weight: 700; margin: 8px 0 }
-label { color: var(--text); font-weight: 600 }
-/* 细灰小标题样式的 label，与 SolveData 更贴近 */
-.top-bar label {
+h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 24px;
   font-weight: 600;
-  color: #6b7280; /* 灰度更柔和 */
-  padding-left: 0;
-  margin-left: 0;
-}
-/* 仅在存在控件分组时显示分隔线：非第一个 label 作为分组标题 */
-.top-right label:not(:first-child) {
-  border-left: 1px solid var(--border);
-  padding-left: 10px;
-  margin-left: 8px;
 }
 
-/* 全局正文排版微调 */
-* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale }
-body, .md-preview { line-height: 1.7 }
-p { margin: 0 0 10px 0 }
-ul, ol { margin: 6px 0 10px 22px }
-code { font-family: Consolas, Monaco, "SFMono-Regular", Menlo, monospace; font-size: 13px }
-
-/* 顶部工具栏：粘性 + 背景与分隔线 */
-.top-bar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 10px 0;
-  background: var(--bg-surface);
-  backdrop-filter: saturate(180%) blur(4px);
-  border-bottom: 1px solid var(--border);
-}
-/* 让标题与控件紧凑排布，SolveData 风格 */
-.top-bar h2 { margin-right: 8px }
-/* 顶部标题以按钮同款风格呈现（轻量渐变徽章） */
-.top-left h2 {
-  background: linear-gradient(90deg,#667eea,#764ba2);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 700;
-}
-.top-left { display: flex; align-items: center }
-.top-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
-.top-right button,
-.top-right select {
-  flex: 0 0 auto;
+  margin-bottom: 20px;
+  background: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
 }
 
-/* 窄屏断点适配：按钮与选择器全宽排列，提升可用性 */
-@media (max-width: 768px) {
-  .top-bar { gap: 6px 8px; padding: 8px 0 }
-  .top-left, .top-right { width: 100% }
-  .top-right { gap: 6px }
-  .top-right button,
-  .top-right select {
-    width: 100%;
-    height: 36px;
-  }
-}
-/* 大屏轻微收紧间距，保持紧凑视觉 */
-@media (min-width: 1024px) {
-  .top-bar { gap: 8px 10px }
-  .top-right { gap: 8px }
-  .result-area { gap: 12px }
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* 输入控件：textarea 与 select */
-textarea {
-  width: 100%;
-  border: 1px solid #cbd5e1; /* 更高对比度的默认边框 */
-  border-radius: var(--radius);
-  background: #ffffff;
-  color: var(--text);
-  padding: 12px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02); /* 轻微内阴影，未聚焦也更立体 */
-  line-height: 1.6;
-  transition: border-color .15s ease, box-shadow .15s ease;
+.label {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 14px;
 }
-textarea::placeholder { color: #9ca3af; font-style: italic }
-textarea:hover { border-color: var(--border-hover) }
-textarea:focus { outline: none; border-color: var(--border-hover); box-shadow: 0 0 0 2px rgba(66,153,225,0.15) inset }
 
 select {
-  height: 30px;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--radius);
-  background: #ffffff;
-  color: var(--text);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-select:hover { border-color: var(--border-hover) }
-select:focus { outline: none; border-color: var(--border-hover); box-shadow: 0 0 0 2px rgba(66,153,225,0.15) inset }
-.top-bar select { align-self: center }
-
-/* 按钮：第一个为主按钮，其余为次级按钮 */
-button {
-  height: 30px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: linear-gradient(90deg,#667eea,#764ba2);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter .15s ease;
-}
-button:hover { filter: brightness(.97) }
-button[disabled] { opacity: .6; cursor: not-allowed }
-/* 顶部所有按钮统一渐变为主按钮风格 */
-.top-bar button { background: linear-gradient(90deg,#667eea,#764ba2); color: #fff; border-color: transparent }
-.top-bar button:hover { filter: brightness(.97) }
-
-/* 面板内表面：预览区域和样例块 */
-.md-preview {
-  border: 1px solid var(--border);
-  padding: 12px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
   border-radius: 6px;
-  background: #f8fafc; /* 更柔和的浅灰底 */
+  font-size: 14px;
+  color: #2c3e50;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-width: 150px;
 }
-.result-area { display: flex; gap: 16px; align-items: stretch }
-.result-panel { flex: 1; display: flex; flex-direction: column; gap: 0; background: var(--bg-surface); border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06) }
-.panel-header { padding: 10px 12px; font-weight: 700; color: #fff; background: linear-gradient(90deg,#667eea,#764ba2); border-bottom: 1px solid #cbd5e1; border-radius: 10px 10px 0 0 }
-.panel-body { border-top: none; border-radius: 0 0 10px 10px; background: #ffffff; padding: 12px }
-/* 更高的面板内容高度与空态可见性 */
-.code-body { white-space: pre-wrap; max-height: 640px; min-height: 200px; overflow: auto; background: #f8fafc; border-top: 1px solid #eef2f7; border-radius: 6px }
-/* 渲染预览对话框的内容底色与边界更明显 */
-.md-preview { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 6px; min-height: 200px; max-height: 640px; overflow: auto }
-/* 自适应高度：小屏更低，中屏适中，大屏更高 */
-@media (max-width: 640px) {
-  .code-body { max-height: 420px; min-height: 160px }
-  .md-preview { max-height: 420px; min-height: 160px }
-}
-@media (min-width: 641px) and (max-width: 1024px) {
-  .code-body { max-height: 560px; min-height: 180px }
-  .md-preview { max-height: 560px; min-height: 180px }
-}
-@media (min-width: 1025px) {
-  .code-body { max-height: 720px; min-height: 220px }
-  .md-preview { max-height: 720px; min-height: 220px }
-}
-@media (max-width: 768px) {
-  .result-area { flex-direction: column }
-}
-.sample-block { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 12px; background: #ffffff }
-.sample-label { font-weight: 700; margin-bottom: 6px; color: var(--title) }
-.sample-code { background: #f5f5f5; padding: 10px; border-radius: 6px; border: 1px solid var(--border); white-space: pre-wrap; overflow: auto; font-family: 'Consolas','Menlo','Monaco',monospace; font-size: 13px }
-.math-block { border-left: 4px solid var(--primary); padding: 8px 12px; background: #f6fbff; margin: 12px 0 }
-</style>
 
+select:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 12px;
+}
+
+button {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-size: 14px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background-color: #ecf0f1;
+  color: #7f8c8d;
+}
+
+.btn-secondary:hover {
+  background-color: #bdc3c7;
+  color: #2c3e50;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+  overflow: hidden;
+}
+
+.input-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: #fff;
+  min-width: 200px;
+}
+
+.resizer {
+  width: 6px;
+  background-color: #f0f0f0;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  z-index: 10;
+}
+
+.resizer:hover, .resizer:active {
+  background-color: #3498db;
+}
+
+.output-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: #fff;
+  min-width: 200px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-left h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.header-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f0f2f5;
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.tab-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.tab-btn.active {
+  background: white;
+  color: #3498db;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.hint {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 0;
+}
+
+.input-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+textarea {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  min-height: 0;
+  transition: border-color 0.2s;
+  background-color: #fcfcfc;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #3498db;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.raw-output {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #f8f9fa;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  color: #333;
+  resize: none;
+  padding: 0;
+}
+
+.raw-output:focus {
+  box-shadow: none;
+  background: #f8f9fa;
+}
+
+.result-area {
+  flex: 1;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.result-area.empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #95a5a6;
+  background-color: #f9f9f9;
+  border: 2px dashed #eee;
+}
+
+.result-area.empty p {
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.result-area.empty .tip {
+  font-size: 13px;
+  color: #bdc3c7;
+}
+
+/* Markdown Styles */
+.result-area :deep(h2) {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0f0f0;
+  color: #2c3e50;
+  font-size: 20px;
+}
+
+.result-area :deep(h3) {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: #e67e22;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.result-area :deep(h4) {
+  margin-top: 16px;
+  margin-bottom: 10px;
+  color: #f39c12;
+  font-size: 16px;
+}
+
+.result-area :deep(p) {
+  margin: 12px 0;
+  line-height: 1.8;
+  color: #34495e;
+  font-size: 15px;
+}
+
+.result-area :deep(strong) {
+  color: #e67e22;
+  font-weight: 600;
+}
+
+.result-area :deep(pre) {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 16px 0;
+  border: 1px solid #eee;
+  border-left: 4px solid #3498db;
+}
+
+.result-area :deep(code) {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  background: #f0f7ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #2980b9;
+}
+
+.result-area :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.result-area :deep(ul), .result-area :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+  color: #34495e;
+}
+
+.result-area :deep(li) {
+  margin: 6px 0;
+  line-height: 1.6;
+}
+
+.result-area :deep(blockquote) {
+  border-left: 4px solid #f1c40f;
+  margin: 16px 0;
+  color: #7f8c8d;
+  background: #fef9e7;
+  padding: 12px 16px;
+  border-radius: 4px;
+}
+
+@media (max-width: 1024px) {
+  .translate-root {
+    height: auto;
+    min-height: 100vh;
+  }
+  .content-area {
+    flex-direction: column;
+    height: auto;
+  }
+  .input-panel, .output-panel {
+    width: 100% !important;
+    height: 600px;
+  }
+  .resizer {
+    display: none;
+  }
+}
+</style>

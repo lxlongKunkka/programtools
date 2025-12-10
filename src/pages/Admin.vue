@@ -29,6 +29,9 @@
         <button @click="togglePremiumFilter" :class="['btn-filter', { active: filterRole === 'premium' }]">
           {{ filterRole === 'premium' ? '显示全部用户' : '只看高级用户' }}
         </button>
+        <button @click="toggleTeacherFilter" :class="['btn-filter', { active: filterRole === 'teacher' }]">
+          {{ filterRole === 'teacher' ? '显示全部用户' : '只看教师' }}
+        </button>
       </div>
 
       <div v-if="loading">加载中...</div>
@@ -50,16 +53,21 @@
               <td>{{ u.uname }}</td>
               <td>{{ u.mail }}</td>
               <td>
-                <span :class="['role-badge', u.role]">{{ u.role || 'user' }}</span>
+                <div class="role-badges">
+                  <span v-if="u.isAdmin" class="role-badge admin">ADMIN</span>
+                  <span v-if="u.isTeacher" class="role-badge teacher">TEACHER</span>
+                  <span v-if="u.isPremium" class="role-badge premium">PREMIUM</span>
+                  <span v-if="!u.isAdmin && !u.isTeacher && !u.isPremium" class="role-badge user">USER</span>
+                </div>
               </td>
               <td>{{ u.priv }}</td>
               <td>
                 <div class="actions">
-                  <button v-if="u.role !== 'premium' && u.role !== 'admin' && u.role !== 'teacher'" @click="setRole(u, 'premium')" class="btn-small btn-premium">设为高级用户</button>
-                  <button v-if="u.role === 'premium'" @click="setRole(u, 'user')" class="btn-small btn-user">取消高级用户</button>
+                  <button v-if="!u.isPremium && !u.isAdmin" @click="toggleRole(u, 'premium', true)" class="btn-small btn-premium">设为高级用户</button>
+                  <button v-if="u.isPremium && !u.isAdmin" @click="toggleRole(u, 'premium', false)" class="btn-small btn-user">取消高级用户</button>
                   
-                  <button v-if="u.role !== 'teacher' && u.role !== 'admin'" @click="setRole(u, 'teacher')" class="btn-small btn-teacher">设为教师</button>
-                  <button v-if="u.role === 'teacher'" @click="setRole(u, 'user')" class="btn-small btn-user">取消教师</button>
+                  <button v-if="!u.isTeacher && !u.isAdmin" @click="toggleRole(u, 'teacher', true)" class="btn-small btn-teacher">设为教师</button>
+                  <button v-if="u.isTeacher && !u.isAdmin" @click="toggleRole(u, 'teacher', false)" class="btn-small btn-user">取消教师</button>
                 </div>
               </td>
             </tr>
@@ -257,6 +265,11 @@ export default {
       this.page = 1
       this.fetchUsers()
     },
+    toggleTeacherFilter() {
+      this.filterRole = this.filterRole === 'teacher' ? '' : 'teacher'
+      this.page = 1
+      this.fetchUsers()
+    },
     async changePage(newPage) {
       if (newPage < 1 || newPage > this.totalPages) return
       this.page = newPage
@@ -289,6 +302,27 @@ export default {
         this.loading = false
       }
     },
+    async toggleRole(user, role, enable) {
+      try {
+        await request(`/api/admin/users/${user._id}/role`, {
+          method: 'POST',
+          body: JSON.stringify({ role, enable })
+        })
+        const actionText = enable ? '设置' : '取消'
+        const roleText = role === 'premium' ? '高级用户' : '教师'
+        this.showToastMessage(`已${actionText}用户 ${user.uname} 为 ${roleText}`)
+        
+        // Update local state
+        if (role === 'premium') user.isPremium = enable
+        if (role === 'teacher') user.isTeacher = enable
+        
+        // Refresh list to be safe or just update local
+        // this.fetchUsers() 
+      } catch (e) {
+        this.showToastMessage('设置失败: ' + e.message)
+      }
+    },
+    // Deprecated but kept for reference if needed, replaced by toggleRole
     async setRole(user, role) {
       try {
         await request(`/api/admin/users/${user._id}/role`, {
@@ -467,35 +501,38 @@ export default {
 
 <style scoped>
 .admin-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 30px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Tabs */
 .admin-tabs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 10px;
+  gap: 20px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 0;
 }
 .tab-btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   cursor: pointer;
   font-size: 16px;
-  font-weight: 500;
-  color: #666;
+  font-weight: 600;
+  color: #7f8c8d;
+  transition: all 0.3s ease;
+  margin-bottom: -2px;
 }
 .tab-btn.active {
-  color: #2b9af3;
-  border-bottom-color: #2b9af3;
+  color: #3498db;
+  border-bottom-color: #3498db;
 }
-.tab-btn:hover {
-  color: #2b9af3;
+.tab-btn:hover:not(.active) {
+  color: #34495e;
 }
 
 /* Course Management */
@@ -503,61 +540,77 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 .btn-add {
-  padding: 8px 16px;
-  background-color: #27ae60;
+  padding: 10px 20px;
+  background-color: #2ecc71;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(46, 204, 113, 0.2);
+  transition: all 0.2s;
 }
+.btn-add:hover {
+  background-color: #27ae60;
+  transform: translateY(-1px);
+}
+
 .level-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 .level-item {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
   background: #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transition: box-shadow 0.3s;
+}
+.level-item:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
 }
 .level-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f5f5f5;
 }
 .level-title {
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 700;
   color: #2c3e50;
 }
 .level-desc {
   color: #7f8c8d;
-  margin-bottom: 15px;
-  font-size: 14px;
+  margin-bottom: 20px;
+  font-size: 15px;
+  line-height: 1.5;
 }
 .level-actions, .chapter-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chapter-list {
-  margin-left: 20px;
-  border-left: 2px solid #eee;
-  padding-left: 15px;
+  margin-left: 15px;
+  padding-left: 20px;
+  border-left: 3px solid #f0f0f0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 .chapter-item {
-  background: #f9f9f9;
-  padding: 10px;
-  border-radius: 4px;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
 }
 .chapter-header {
   display: flex;
@@ -567,29 +620,39 @@ export default {
 .chapter-title {
   font-weight: 600;
   color: #34495e;
+  font-size: 16px;
 }
 .chapter-problems {
-  font-size: 12px;
+  font-size: 13px;
   color: #95a5a6;
-  margin-top: 5px;
+  margin-top: 8px;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  display: inline-block;
+  border: 1px solid #eee;
 }
 .no-chapters {
   color: #bdc3c7;
   font-style: italic;
+  padding: 10px;
 }
 
 .btn-add-sub {
   background-color: #3498db;
   color: white;
 }
+.btn-add-sub:hover { background-color: #2980b9; }
 .btn-edit {
   background-color: #f39c12;
   color: white;
 }
+.btn-edit:hover { background-color: #d35400; }
 .btn-delete {
   background-color: #e74c3c;
   color: white;
 }
+.btn-delete:hover { background-color: #c0392b; }
 
 /* Modals */
 .modal-overlay {
@@ -598,7 +661,8 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -606,202 +670,284 @@ export default {
 }
 .modal-content {
   background: white;
-  padding: 25px;
-  border-radius: 8px;
+  padding: 30px;
+  border-radius: 12px;
   width: 500px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  font-size: 22px;
 }
 .modal-content.large-modal {
   width: 800px;
 }
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 .form-group label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #34495e;
 }
 .form-input {
   width: 100%;
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+.form-input:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
 }
 .btn-save {
-  padding: 8px 20px;
-  background-color: #2b9af3;
+  padding: 10px 24px;
+  background-color: #3498db;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-save:hover {
+  background-color: #2980b9;
 }
 .btn-cancel {
-  padding: 8px 20px;
-  background-color: #95a5a6;
-  color: white;
+  padding: 10px 24px;
+  background-color: #ecf0f1;
+  color: #7f8c8d;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-cancel:hover {
+  background-color: #bdc3c7;
+  color: #2c3e50;
 }
 
 /* Existing Styles */
 .search-bar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 25px;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
 }
 .search-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 15px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
+  transition: all 0.2s;
+}
+.search-input:focus {
+  border-color: #3498db;
+  outline: none;
 }
 .btn-search {
-  padding: 8px 16px;
-  background-color: #2b9af3;
+  padding: 10px 20px;
+  background-color: #3498db;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
 }
 .btn-search:hover {
-  background-color: #1a89e2;
+  background-color: #2980b9;
 }
 .btn-filter {
-  padding: 8px 16px;
+  padding: 10px 20px;
   background-color: #fff;
   color: #666;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 .btn-filter:hover {
   background-color: #f5f5f5;
+  border-color: #ccc;
 }
 .btn-filter.active {
   background-color: #f1c40f;
   color: #333;
   border-color: #f39c12;
   font-weight: bold;
+  box-shadow: 0 2px 5px rgba(241, 196, 15, 0.2);
 }
 .user-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 20px;
   background: white;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
 }
 .user-table th, .user-table td {
-  padding: 12px 15px;
+  padding: 15px 20px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f0f0f0;
 }
 .user-table th {
   background-color: #f8f9fa;
   font-weight: 600;
-  color: #333;
+  color: #2c3e50;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+.user-table tr:last-child td {
+  border-bottom: none;
+}
+.user-table tr:hover td {
+  background-color: #fcfcfc;
+}
+.role-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .role-badge {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .role-badge.admin { background-color: #e74c3c; color: white; }
 .role-badge.premium { background-color: #f1c40f; color: #333; }
 .role-badge.teacher { background-color: #8e44ad; color: white; }
-.role-badge.user { background-color: #95a5a6; color: white; }
+.role-badge.user { background-color: #ecf0f1; color: #7f8c8d; }
 
 .badge-optional {
   display: inline-block;
   background-color: #9b59b6;
   color: white;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 8px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
   vertical-align: middle;
+  font-weight: normal;
 }
 
 .actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .btn-small {
-  padding: 4px 8px;
+  padding: 6px 12px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
-  transition: background 0.2s;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 .btn-premium { background-color: #f1c40f; color: #333; }
-.btn-premium:hover { background-color: #f39c12; }
+.btn-premium:hover { background-color: #f39c12; transform: translateY(-1px); }
 .btn-teacher { background-color: #8e44ad; color: white; }
-.btn-teacher:hover { background-color: #9b59b6; }
-.btn-user { background-color: #e0e0e0; color: #333; }
-.btn-user:hover { background-color: #d0d0d0; }
+.btn-teacher:hover { background-color: #9b59b6; transform: translateY(-1px); }
+.btn-user { background-color: #ecf0f1; color: #7f8c8d; }
+.btn-user:hover { background-color: #bdc3c7; color: #2c3e50; }
 
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-top: 20px;
+  gap: 20px;
+  margin-top: 30px;
 }
 .btn-page {
-  padding: 6px 12px;
+  padding: 8px 16px;
   background-color: #fff;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
 }
 .btn-page:disabled {
-  background-color: #f5f5f5;
-  color: #999;
+  background-color: #f9f9f9;
+  color: #ccc;
   cursor: not-allowed;
+  border-color: #eee;
 }
 .btn-page:not(:disabled):hover {
   background-color: #f0f0f0;
+  border-color: #ccc;
+  color: #333;
 }
 .page-info {
   font-size: 14px;
-  color: #666;
+  color: #7f8c8d;
+  font-weight: 500;
 }
 
 .system-tools {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+  margin-top: 50px;
+  padding: 30px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+.system-tools h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 18px;
+  margin-bottom: 20px;
 }
 .tool-group {
   display: flex;
   gap: 15px;
-  margin-top: 15px;
+  flex-wrap: wrap;
 }
 .btn-tool {
-  padding: 10px 20px;
-  background-color: #2c3e50;
+  padding: 12px 24px;
+  background-color: #34495e;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  box-shadow: 0 2px 5px rgba(52, 73, 94, 0.2);
+}
+.btn-tool:hover {
+  background-color: #2c3e50;
+  transform: translateY(-1px);
 }
 .btn-tool:hover {
   background-color: #34495e;

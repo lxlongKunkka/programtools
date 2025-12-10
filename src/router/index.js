@@ -61,7 +61,7 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresPremium) {
-    const isPremium = user && (user.role === 'admin' || user.role === 'premium' || user.priv === -1)
+    const isPremium = user && (user.role === 'admin' || user.role === 'premium' || user.role === 'teacher' || user.priv === -1)
     if (!isPremium) {
       // Redirect to home or show alert? 
       // Better to redirect to home or stay put.

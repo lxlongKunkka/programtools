@@ -310,126 +310,281 @@ export default {
 
 <style scoped>
 .problem-manager {
-  padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 30px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+h2 {
+  color: #2c3e50;
+  margin-bottom: 25px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Controls */
 .controls {
   display: flex;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   align-items: center;
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+  flex-wrap: wrap;
 }
 .control-group {
   display: flex;
   gap: 10px;
   align-items: center;
 }
+.control-group label {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 14px;
+}
+select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2c3e50;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+select:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+/* Buttons */
+button {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+.btn-refresh {
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+}
+.btn-refresh:hover { background-color: #2980b9; }
+
+.btn-batch {
+  padding: 8px 16px;
+  background-color: #9b59b6;
+  color: white;
+}
+.btn-batch:hover { background-color: #8e44ad; }
+.btn-batch:disabled {
+  background-color: #d7bde2;
+  cursor: not-allowed;
+}
+
+.btn-stop {
+  padding: 8px 16px;
+  background-color: #e74c3c;
+  color: white;
+}
+.btn-stop:hover { background-color: #c0392b; }
+
+/* Status Bar */
+.status-bar {
+  background: #e8f5e9;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  color: #2e7d32;
+  font-weight: 500;
+  border: 1px solid #c8e6c9;
+  display: flex;
+  align-items: center;
+}
+.status-bar::before {
+  content: 'ℹ';
+  display: inline-block;
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+/* Table */
+.table-container {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+  overflow: hidden;
+}
 .doc-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
 }
 .doc-table th, .doc-table td {
-  border: 1px solid #eee;
-  padding: 8px;
+  padding: 12px 15px;
   text-align: left;
+  border-bottom: 1px solid #f0f0f0;
 }
 .doc-table th {
-  background: #f1f1f1;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #2c3e50;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
 }
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+.doc-table tr:hover td {
+  background-color: #fcfcfc;
+}
+.doc-table tr.modified td {
+  background-color: #fff8e1;
+}
+
 .id-col {
-  font-family: monospace;
-  color: #666;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: #7f8c8d;
+  font-size: 12px;
 }
+
 .input-title {
   width: 100%;
-  padding: 4px;
+  padding: 8px;
   border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: border-color 0.2s;
 }
+.input-title:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
 .content-preview {
-  color: #666;
-  font-size: 12px;
+  color: #7f8c8d;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 300px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .links-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .link-item {
   display: inline-block;
   font-size: 12px;
-  color: #007bff;
+  color: #3498db;
   text-decoration: none;
+  font-weight: 500;
 }
 .link-item:hover {
   text-decoration: underline;
+  color: #2980b9;
 }
 .link-item.ref {
-  color: #28a745;
+  color: #27ae60;
+}
+.link-item.ref:hover {
+  color: #219150;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .tag-badge {
   display: inline-block;
   background: #e1f5fe;
   color: #0277bd;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-right: 4px;
-  margin-bottom: 2px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
 }
+
 .actions {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .btn-small {
-  padding: 4px 8px;
+  padding: 6px 12px;
   font-size: 12px;
-  cursor: pointer;
+  border-radius: 4px;
 }
 .btn-process {
-  background: #2196f3;
+  background: #3498db;
   color: white;
-  border: none;
-  border-radius: 4px;
 }
+.btn-process:hover { background-color: #2980b9; }
 .btn-process:disabled {
-  background: #ccc;
+  background: #bdc3c7;
+  cursor: not-allowed;
 }
 .btn-process.processing {
-  background: #ff9800;
+  background: #f39c12;
   color: white;
-  opacity: 1;
+  animation: pulse 2s infinite;
 }
+
 .btn-save {
-  background: #4caf50;
+  background: #2ecc71;
   color: white;
-  border: none;
-  border-radius: 4px;
 }
+.btn-save:hover { background-color: #27ae60; }
 .btn-save:disabled {
-  background: #ccc;
+  background: #bdc3c7;
+  cursor: not-allowed;
 }
-.modified {
-  background-color: #fff3e0;
-}
+
+/* Pagination */
 .pagination {
-  margin-top: 20px;
+  margin-top: 25px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  align-items: center;
+  gap: 15px;
 }
-.status-bar {
-  background: #e8f5e9;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  color: #2e7d32;
+.pagination button {
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  color: #666;
+}
+.pagination button:disabled {
+  background-color: #f9f9f9;
+  color: #ccc;
+  cursor: not-allowed;
+}
+.pagination button:not(:disabled):hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+.pagination span {
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 </style>

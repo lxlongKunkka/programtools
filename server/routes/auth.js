@@ -6,6 +6,7 @@ import User from '../models/User.js'
 import { JWT_SECRET } from '../config.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { isPremium } from '../utils/premium.js'
+import { isTeacher } from '../utils/teacher.js'
 
 const router = express.Router()
 
@@ -39,7 +40,7 @@ router.post('/login', async (req, res) => {
 
     let role = 'user'
     if (user.priv === -1 || user.uname === 'admin') role = 'admin'
-    else if (user.role === 'teacher') role = 'teacher'
+    else if (await isTeacher(user._id)) role = 'teacher'
     else if (await isPremium(user._id)) role = 'premium'
 
     const token = jwt.sign({ 

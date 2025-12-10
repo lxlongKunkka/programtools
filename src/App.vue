@@ -64,7 +64,7 @@ export default {
   },
   computed: {
     isPremium() {
-      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.priv === -1)
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher' || this.user.priv === -1)
     },
     isAdmin() {
       return this.user && (this.user.role === 'admin' || this.user.priv === -1)

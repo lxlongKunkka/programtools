@@ -57,7 +57,7 @@ export const authenticateToken = (req, res, next) => {
   if (!token) return res.sendStatus(401)
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403)
+    if (err) return res.sendStatus(401)
     req.user = user
     next()
   })
@@ -85,6 +85,9 @@ export const requirePremium = (req, res, next) => {
   
   // Admin is always premium
   if (user.role === 'admin' || user.priv === -1) return next()
+  
+  // Teacher is also premium
+  if (user.role === 'teacher') return next()
   
   // Premium role
   if (user.role === 'premium') return next()
