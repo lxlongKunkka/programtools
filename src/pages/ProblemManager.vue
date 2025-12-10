@@ -24,6 +24,7 @@
           <option :value="20">20条</option>
           <option :value="50">50条</option>
           <option :value="100">100条</option>
+          <option :value="500">500条</option>
         </select>
       </div>
       
