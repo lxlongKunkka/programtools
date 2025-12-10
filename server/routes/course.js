@@ -13,7 +13,17 @@ const router = express.Router()
 // Get all course levels (structure)
 router.get('/levels', async (req, res) => {
   try {
-    const levels = await CourseLevel.find().sort({ level: 1 }).populate('chapters.problemIds', 'title docId domainId')
+    const { subject } = req.query
+    const query = {}
+    if (subject) {
+      if (subject === 'C++') {
+        // Handle legacy data where subject might be missing
+        query.$or = [{ subject: 'C++' }, { subject: { $exists: false } }]
+      } else {
+        query.subject = subject
+      }
+    }
+    const levels = await CourseLevel.find(query).sort({ level: 1 }).populate('chapters.problemIds', 'title docId domainId')
     res.json(levels)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -29,7 +39,18 @@ router.get('/progress', authenticateToken, async (req, res) => {
     if (!progress) {
       // Initialize progress for new user
       progress = new UserProgress({ userId })
+      // Initialize default subject levels
+      progress.subjectLevels.set('C++', 1)
       await progress.save()
+    } else {
+      // Migration: Ensure subjectLevels has C++ if missing
+      if (!progress.subjectLevels) {
+        progress.subjectLevels = new Map()
+      }
+      if (!progress.subjectLevels.has('C++')) {
+        progress.subjectLevels.set('C++', progress.currentLevel || 1)
+        await progress.save()
+      }
     }
     
     res.json(progress)
@@ -40,6 +61,9 @@ router.get('/progress', authenticateToken, async (req, res) => {
 
 // Helper to unlock next chapter
 async function unlockNext(progress, currentChapterId) {
+  // Find the level containing this chapter. 
+  // Note: If multiple subjects have the same chapter ID, this might pick the wrong one.
+  // We assume chapter IDs are unique across the system or at least across active courses.
   const level = await CourseLevel.findOne({ 'chapters.id': currentChapterId })
   if (level) {
     let currentIdx = level.chapters.findIndex(c => c.id === currentChapterId)
@@ -66,10 +90,27 @@ async function unlockNext(progress, currentChapterId) {
         }
       } else {
         // End of level reached. Unlock next level.
-        const nextLevel = await CourseLevel.findOne({ level: level.level + 1 })
+        const currentSubject = level.subject || 'C++'
+        const nextLevelQuery = { level: level.level + 1 }
+        if (currentSubject === 'C++') {
+             nextLevelQuery.$or = [{ subject: 'C++' }, { subject: { $exists: false } }]
+        } else {
+             nextLevelQuery.subject = currentSubject
+        }
+        
+        const nextLevel = await CourseLevel.findOne(nextLevelQuery)
         if (nextLevel && nextLevel.chapters.length > 0) {
-           if (progress.currentLevel < nextLevel.level) {
-             progress.currentLevel = nextLevel.level
+           // Update subject-specific level
+           if (!progress.subjectLevels) progress.subjectLevels = new Map()
+           
+           const currentSubjectLevel = progress.subjectLevels.get(currentSubject) || 1
+           if (currentSubjectLevel < nextLevel.level) {
+             progress.subjectLevels.set(currentSubject, nextLevel.level)
+             
+             // Sync legacy currentLevel if it's C++
+             if (currentSubject === 'C++') {
+               progress.currentLevel = nextLevel.level
+             }
            }
            
            // Unlock chapters in the next level, handling initial optional chapters
@@ -246,8 +287,8 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
 // Create a Level
 router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description } = req.body
-    const newLevel = new CourseLevel({ level, title, description, chapters: [] })
+    const { level, title, description, subject } = req.body
+    const newLevel = new CourseLevel({ level, title, description, subject: subject || 'C++', chapters: [] })
     await newLevel.save()
     res.json(newLevel)
   } catch (e) {
@@ -258,10 +299,10 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
 // Update a Level
 router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description } = req.body
+    const { level, title, description, subject } = req.body
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
       req.params.id, 
-      { level, title, description },
+      { level, title, description, subject },
       { new: true }
     )
     res.json(updatedLevel)

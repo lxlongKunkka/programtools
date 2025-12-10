@@ -95,6 +95,16 @@
     <div v-if="activeTab === 'courses'" class="course-management">
       <div class="course-header">
         <h3>课程关卡管理</h3>
+        <div class="subject-selector">
+          <button 
+            v-for="sub in availableSubjects" 
+            :key="sub"
+            :class="['btn-subject', { active: selectedSubject === sub }]"
+            @click="selectedSubject = sub; fetchLevels()"
+          >
+            {{ sub }}
+          </button>
+        </div>
         <button @click="openLevelModal()" class="btn-add">添加等级 (Level)</button>
       </div>
 
@@ -140,7 +150,13 @@
       <div class="modal-content">
         <h3>{{ editingLevel._id ? '编辑等级' : '添加等级' }}</h3>
         <div class="form-group">
-          <label>Level (数字 1-6):</label>
+          <label>科目 (Subject):</label>
+          <select v-model="editingLevel.subject" class="form-input">
+            <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Level (数字):</label>
           <input v-model.number="editingLevel.level" type="number" class="form-input">
         </div>
         <div class="form-group">
@@ -222,7 +238,9 @@ export default {
       showChapterModal: false,
       editingLevel: {},
       editingChapter: {},
-      editingLevelForChapter: null // The level object the chapter belongs to
+      editingLevelForChapter: null, // The level object the chapter belongs to
+      selectedSubject: 'C++',
+      availableSubjects: ['C++', 'Python', 'Web']
     }
   },
   computed: {
@@ -358,7 +376,7 @@ export default {
     async fetchLevels() {
       this.loadingCourses = true
       try {
-        const data = await request('/api/course/levels')
+        const data = await request(`/api/course/levels?subject=${encodeURIComponent(this.selectedSubject)}`)
         this.levels = data
       } catch (e) {
         this.showToastMessage('加载课程失败: ' + e.message)
@@ -370,7 +388,12 @@ export default {
       if (level) {
         this.editingLevel = { ...level }
       } else {
-        this.editingLevel = { level: this.levels.length + 1, title: '', description: '' }
+        this.editingLevel = { 
+          level: this.levels.length + 1, 
+          title: '', 
+          description: '',
+          subject: this.selectedSubject
+        }
       }
       this.showLevelModal = true
     },
@@ -541,7 +564,32 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
+.subject-selector {
+  display: flex;
+  gap: 10px;
+}
+.btn-subject {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  transition: all 0.2s;
+}
+.btn-subject.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+.btn-subject:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
 .btn-add {
   padding: 10px 20px;
   background-color: #2ecc71;

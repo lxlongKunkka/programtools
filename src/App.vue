@@ -15,7 +15,7 @@
         <router-link v-if="user" to="/solution">Solution</router-link>
         <router-link v-if="isPremium" to="/solvedata">Data</router-link>
         <router-link v-if="isPremium" to="/chat">Chat</router-link>
-        <router-link v-if="isAdmin" to="/admin">Admin</router-link>
+        <router-link v-if="isAdmin || isTeacher" to="/admin">Admin</router-link>
         <div v-if="user" class="user-menu">
           <router-link to="/profile" class="username-link">{{ user.username }}</router-link>
           <button @click="logout" class="btn-logout">退出</button>
@@ -68,6 +68,9 @@ export default {
     },
     isAdmin() {
       return this.user && (this.user.role === 'admin' || this.user.priv === -1)
+    },
+    isTeacher() {
+      return this.user && (this.user.role === 'teacher')
     }
   },
   methods: {

@@ -9,10 +9,14 @@ const chapterSchema = new mongoose.Schema({
 })
 
 const courseLevelSchema = new mongoose.Schema({
-  level: { type: Number, required: true, unique: true }, // 1 to 6
+  level: { type: Number, required: true }, // 1 to 6
+  subject: { type: String, default: 'C++' }, // Course subject (e.g., 'C++', 'Python')
   title: { type: String, required: true },
   description: { type: String },
   chapters: [chapterSchema]
 })
+
+// Compound index to ensure level is unique per subject
+courseLevelSchema.index({ level: 1, subject: 1 }, { unique: true })
 
 export default mongoose.model('CourseLevel', courseLevelSchema)

@@ -1,9 +1,19 @@
 <template>
   <div class="learning-map-container">
     <div class="header">
-      <h1>C++ 闯关学习</h1>
+      <h1>{{ selectedSubject }} 闯关学习</h1>
+      <div class="subject-selector">
+        <button 
+          v-for="sub in availableSubjects" 
+          :key="sub"
+          :class="['btn-subject', { active: selectedSubject === sub }]"
+          @click="selectedSubject = sub; fetchData()"
+        >
+          {{ sub }}
+        </button>
+      </div>
       <div class="progress-summary" v-if="userProgress">
-        当前等级: Level {{ userProgress.currentLevel }}
+        当前等级: Level {{ getCurrentSubjectLevel() }}
       </div>
     </div>
 
@@ -59,7 +69,9 @@ export default {
     return {
       levels: [],
       userProgress: null,
-      loading: true
+      loading: true,
+      selectedSubject: 'C++',
+      availableSubjects: ['C++', 'Python', 'Web']
     }
   },
   mounted() {
@@ -70,7 +82,7 @@ export default {
       this.loading = true
       try {
         const [levelsData, progressData] = await Promise.all([
-          request('/api/course/levels'),
+          request(`/api/course/levels?subject=${encodeURIComponent(this.selectedSubject)}`),
           request('/api/course/progress')
         ])
         this.levels = levelsData
@@ -81,21 +93,34 @@ export default {
         this.loading = false
       }
     },
+    getCurrentSubjectLevel() {
+      if (!this.userProgress) return 1
+      if (this.userProgress.subjectLevels && this.userProgress.subjectLevels[this.selectedSubject]) {
+        return this.userProgress.subjectLevels[this.selectedSubject]
+      }
+      // Fallback for legacy or default
+      if (this.selectedSubject === 'C++') {
+        return this.userProgress.currentLevel || 1
+      }
+      return 1
+    },
     isLevelUnlocked(level) {
       if (!this.userProgress) return false
       const lvl = level.level || level.levelId
-      return lvl <= this.userProgress.currentLevel
+      return lvl <= this.getCurrentSubjectLevel()
     },
     isLevelCompleted(level) {
       if (!this.userProgress) return false
       const lvl = level.level || level.levelId
-      return lvl < this.userProgress.currentLevel
+      return lvl < this.getCurrentSubjectLevel()
     },
     isChapterUnlocked(level, chapter) {
       if (!this.userProgress) return false
       const lvl = level.level || level.levelId
-      if (lvl < this.userProgress.currentLevel) return true
-      if (lvl > this.userProgress.currentLevel) return false
+      const currentLvl = this.getCurrentSubjectLevel()
+      
+      if (lvl < currentLvl) return true
+      if (lvl > currentLvl) return false
       
       return this.userProgress.unlockedChapters.includes(chapter.id)
     },
@@ -139,6 +164,32 @@ export default {
   color: #2c3e50;
   margin-bottom: 10px;
 }
+.subject-selector {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+.btn-subject {
+  padding: 10px 20px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+  transition: all 0.2s;
+}
+.btn-subject.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+  box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+}
+.btn-subject:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
 .progress-summary {
   font-size: 18px;
   color: #7f8c8d;

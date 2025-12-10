@@ -2,7 +2,16 @@ import mongoose from 'mongoose'
 
 const userProgressSchema = new mongoose.Schema({
   userId: { type: Number, required: true, unique: true },
-  currentLevel: { type: Number, default: 1 },
+  currentLevel: { type: Number, default: 1 }, // Legacy: Global level (mapped to C++)
+  
+  // Track current level per subject
+  // e.g., { "C++": 6, "Python": 1 }
+  subjectLevels: {
+    type: Map,
+    of: Number,
+    default: {}
+  },
+
   // Store unlocked chapter IDs (e.g., "1-1", "1-2")
   unlockedChapters: { type: [String], default: ['1-1'] },
   // Store completed chapter IDs
