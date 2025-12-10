@@ -4,6 +4,7 @@ const documentSchema = new mongoose.Schema({
   docId: Number, // Explicitly define docId as Number
   title: String,
   content: String,
+  contentbak: String,
   domainId: String,
   pid: String, // To be deleted
   tag: [String],

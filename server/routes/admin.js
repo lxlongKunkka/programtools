@@ -268,40 +268,6 @@ router.post('/send-test-email', async (req, res) => {
   }
 })
 
-router.post('/send-package', async (req, res) => {
-  try {
-    const { filename, contentBase64, to, subject, text } = req.body || {}
-    const target = to || MAIL_CONFIG.to || ''
-    if (!target) return res.status(400).json({ ok: false, error: '缺少收件人：请在 body.to 或 MAIL_TO 配置' })
-    if (!filename || !contentBase64) return res.status(400).json({ ok: false, error: '缺少附件：需要 filename 与 contentBase64' })
-
-    const transporter = nodemailer.createTransport({
-      host: MAIL_CONFIG.host,
-      port: MAIL_CONFIG.port,
-      secure: MAIL_CONFIG.secure,
-      auth: MAIL_CONFIG.user ? {
-        user: MAIL_CONFIG.user,
-        pass: MAIL_CONFIG.pass
-      } : undefined
-    })
-
-    const from = MAIL_CONFIG.from
-    const info = await transporter.sendMail({
-      from,
-      to: target,
-      subject: subject || `程序工具 - 完整项目包 (${filename})`,
-      text: text || `自动发送：完整项目包已生成，见附件 ${filename}`,
-      attachments: [
-        { filename, content: Buffer.from(contentBase64, 'base64') }
-      ]
-    })
-    return res.json({ ok: true, messageId: info.messageId })
-  } catch (e) {
-    console.error('send-package error:', e)
-    return res.status(500).json({ ok: false, error: e.message })
-  }
-})
-
 // Init cron
 try {
   const cronExp = MAIL_CONFIG.cron

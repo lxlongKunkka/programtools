@@ -53,6 +53,7 @@
           <tr>
             <th><input type="checkbox" @change="toggleSelectAll" :checked="allSelected"></th>
             <th>ID</th>
+            <th>DocID</th>
             <th>Domain</th>
             <th width="20%">标题</th>
             <th width="10%">链接</th>
@@ -65,6 +66,7 @@
           <tr v-for="doc in documents" :key="doc._id" :class="{ modified: doc._modified }">
             <td><input type="checkbox" v-model="selectedIds" :value="doc._id"></td>
             <td class="id-col">{{ doc._id }}</td>
+            <td>{{ doc.docId }}</td>
             <td>{{ doc.domainId }}</td>
             <td>
               <input v-model="doc.title" class="input-title" placeholder="标题">
@@ -195,6 +197,11 @@ export default {
       doc._processing = true
       this.statusMsg = `正在处理: ${doc._id}...`
       try {
+        // Backup content if not already backed up
+        if (!doc.contentbak && doc.content) {
+          doc.contentbak = doc.content
+        }
+
         // 1. Translate Content
         // Check if content is English (simple check)
         const isEnglish = /[a-zA-Z]{5,}/.test(doc.content || '')
@@ -258,6 +265,7 @@ export default {
           body: JSON.stringify({
             title: doc.title,
             content: doc.content,
+            contentbak: doc.contentbak,
             tag: doc.tag,
             removePid: true // Requirement: remove pid
           })

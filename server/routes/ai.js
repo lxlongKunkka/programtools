@@ -2,7 +2,9 @@ import express from 'express'
 import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
-import { YUN_API_KEY, YUN_API_URL, DIRS } from '../config.js'
+import nodemailer from 'nodemailer'
+import User from '../models/User.js'
+import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
 import { 
@@ -667,5 +669,54 @@ router.post('/generate-problem-meta', async (req, res) => {
     return res.status(500).json({ error: 'Problem meta parsing failed', detail: err?.message || String(err) })
   }
 })
+
+// Send package email route (moved from admin to allow user access)
+router.post('/send-package', authenticateToken, async (req, res) => {
+  try {
+    const { filename, contentBase64, subject } = req.body;
+    
+    // Get user info (for identification in email)
+    const user = await User.findById(req.user.id);
+    const username = user ? user.uname : 'Unknown User';
+    
+    // Always send to specific admin email
+    const targetEmail = '110076790@qq.com';
+
+    const transporter = nodemailer.createTransport({
+      host: MAIL_CONFIG.host,
+      port: MAIL_CONFIG.port,
+      secure: MAIL_CONFIG.secure,
+      auth: MAIL_CONFIG.user ? {
+        user: MAIL_CONFIG.user,
+        pass: MAIL_CONFIG.pass
+      } : undefined
+    });
+
+    const mailOptions = {
+      from: MAIL_CONFIG.from,
+      to: targetEmail,
+      subject: `[${username}] ${subject || `Project Download: ${filename}`}`,
+      html: `
+        <h2>Project Download Notification</h2>
+        <p>User <strong>${username}</strong> has downloaded a project package.</p>
+        <p>The project <strong>${filename}</strong> is attached to this email.</p>
+      `,
+      attachments: [
+        {
+          filename: filename,
+          content: contentBase64,
+          encoding: 'base64'
+        }
+      ]
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: 'Email sent successfully' });
+
+  } catch (error) {
+    console.error('Send package email error:', error);
+    res.status(500).json({ error: 'Failed to send email', details: error.message });
+  }
+});
 
 export default router

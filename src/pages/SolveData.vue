@@ -792,13 +792,26 @@ export default {
                   const filename = zipName
                   const subject = `SolveData 项目包: ${problemTitle}`
 
-                  fetch('/api/admin/send-package', {
+                  fetch('/api/send-package', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                    },
                     body: JSON.stringify({ filename, contentBase64: base64, subject })
-                  }).catch(() => {})
+                  })
+                  .then(async res => {
+                    if (!res.ok) {
+                      const err = await res.json();
+                      console.warn('邮件发送失败:', err);
+                      if (err.error === 'User email not found') {
+                        this.showToastMessage('⚠️ 包已下载，但未发送邮件：当前账号未绑定邮箱');
+                      }
+                    }
+                  })
+                  .catch(e => console.error('邮件请求错误:', e))
                 } catch (e) {
-                  // 邮件发送失败不影响下载，静默忽略
+                  console.error('邮件准备失败:', e);
                 }
         
         this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';

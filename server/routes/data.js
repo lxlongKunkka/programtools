@@ -31,7 +31,7 @@ router.get('/documents', authenticateToken, requireRole('admin'), async (req, re
     
     // Only fetch necessary fields for list to save bandwidth
     const docs = await Document.find(query)
-      .select('title content domainId tag pid docId reference')
+      .select('title content contentbak domainId tag pid docId reference')
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .lean()
@@ -49,11 +49,12 @@ router.get('/documents', authenticateToken, requireRole('admin'), async (req, re
 router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params
-    const { title, content, tag, removePid } = req.body
+    const { title, content, contentbak, tag, removePid } = req.body
     
     const update = {}
     if (title !== undefined) update.title = title
     if (content !== undefined) update.content = content
+    if (contentbak !== undefined) update.contentbak = contentbak
     if (tag !== undefined) update.tag = tag
     
     const ops = { $set: update }
