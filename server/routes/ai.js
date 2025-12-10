@@ -455,6 +455,102 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
   }
 })
 
+router.post('/generate-tags', authenticateToken, checkModelPermission, async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const ALLOWED_TAGS = [
+      '顺序结构','条件结构','循环结构','暴力枚举1','数学1',
+      '数组','函数','字符串','结构体','排序','模拟2','暴力枚举2','数学2','二维数组',
+      'STL','暴力枚举3','模拟3','数学3','贪心3','思维3',
+      '递推','递归','前缀和','差分','二分','三分','BFS','DFS','双指针','栈','链表','离散化','ST表','贪心4','数学4','思维4','优先队列',
+      'DP','DP变形','线性DP','背包DP','区间DP','BFS进阶','DFS进阶','树形结构','倍增','反悔贪心','哈希','KMP','字典树','并查集','数学5','思维5','环','搜索进阶','树的直径',
+      '树状数组','线段树','概率DP','期望DP','单调队列优化DP','数位DP','状压DP','树上DP','换根DP','单源最短路径','floyd','差分约束','最小生成树','AC自动机','平衡树','二分图','博弈论','分块','莫队','矩阵','数学6','思维6'
+    ]
+
+    const prompt = `请阅读以下算法题目内容，完成两个任务：
+    1. 从给定的标签列表中选出最合适的 1 到 3 个标签。
+    2. 根据题目内容生成一个简洁的中文标题（不超过20字）。
+    
+    可选标签列表：
+    ${JSON.stringify(ALLOWED_TAGS)}
+    
+    要求：
+    只返回 JSON 对象格式，例如：
+    {
+      "tags": ["数组", "模拟2"],
+      "title": "数组求和问题"
+    }
+    不要包含任何其他文字或 Markdown 格式。
+    
+    题目内容：
+    ${text.slice(0, 2000)}
+    `
+
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
+
+    const messages = [
+      { role: 'user', content: prompt }
+    ]
+
+    const payload = {
+      model: model || 'gemini-2.0-flash',
+      messages,
+      temperature: 0.1,
+      max_tokens: 1000
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 60000
+    })
+
+    const data = resp.data
+    let content = ''
+    if (data.choices && data.choices[0]?.message?.content) {
+      content = data.choices[0].message.content
+    } else if (data.data && data.data[0]?.text) {
+      content = data.data[0].text
+    } else {
+      content = '{}'
+    }
+
+    // Parse JSON
+    let result = {}
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0])
+      } else {
+        result = JSON.parse(content)
+      }
+    } catch (e) {
+      // Fallback
+      result = { tags: [], title: '' }
+    }
+
+    // Filter valid tags
+    let tags = result.tags
+    if (Array.isArray(tags)) {
+      tags = tags.filter(t => ALLOWED_TAGS.includes(t)).slice(0, 3)
+    } else {
+      tags = []
+    }
+
+    return res.json({ tags, title: result.title || '' })
+
+  } catch (err) {
+    console.error('Generate tags error:', err)
+    return res.status(500).json({ error: 'Tag generation failed' })
+  }
+})
+
 router.post('/generate-problem-meta', async (req, res) => {
   try {
     const { text } = req.body

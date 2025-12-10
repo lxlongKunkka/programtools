@@ -4,8 +4,70 @@ import jwt from 'jsonwebtoken'
 import { DIRS, JWT_SECRET } from '../config.js'
 import { loadSession, saveSession, clearSession } from '../utils/session.js'
 import { debugLog } from '../utils/logger.js'
+import Document from '../models/Document.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
+
+// --- Document Management Routes ---
+
+// Get all unique domainIds
+router.get('/documents/domains', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const domains = await Document.distinct('domainId', { docType: 10 })
+    return res.json(domains.filter(Boolean).sort())
+  } catch (e) {
+    console.error('Get domains error:', e)
+    return res.status(500).json({ error: e.message })
+  }
+})
+
+// Get documents by domainId
+router.get('/documents', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { domainId, page = 1, limit = 50 } = req.query
+    const query = { docType: 10 }
+    if (domainId) query.domainId = domainId
+    
+    // Only fetch necessary fields for list to save bandwidth
+    const docs = await Document.find(query)
+      .select('title content domainId tag pid docId reference')
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .lean()
+      
+    const total = await Document.countDocuments(query)
+    
+    return res.json({ docs, total, page: Number(page), totalPages: Math.ceil(total / limit) })
+  } catch (e) {
+    console.error('Get documents error:', e)
+    return res.status(500).json({ error: e.message })
+  }
+})
+
+// Update a document
+router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { title, content, tag, removePid } = req.body
+    
+    const update = {}
+    if (title !== undefined) update.title = title
+    if (content !== undefined) update.content = content
+    if (tag !== undefined) update.tag = tag
+    
+    const ops = { $set: update }
+    if (removePid) {
+      ops.$unset = { pid: "" }
+    }
+    
+    const doc = await Document.findByIdAndUpdate(id, ops, { new: true })
+    return res.json(doc)
+  } catch (e) {
+    console.error('Update document error:', e)
+    return res.status(500).json({ error: e.message })
+  }
+})
 
 router.get('/models', async (req, res) => {
   try {

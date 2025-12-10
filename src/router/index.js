@@ -8,6 +8,7 @@ import Chat from '../pages/Chat.vue'
 import Login from '../pages/Login.vue'
 import Profile from '../pages/Profile.vue'
 import Admin from '../pages/Admin.vue'
+import ProblemManager from '../pages/ProblemManager.vue'
 import Typing from '../pages/Typing.vue'
 
 const routes = [
@@ -15,6 +16,7 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/problems', component: ProblemManager, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },
   { path: '/checker', component: Checker, meta: { requiresAuth: true } },
   { path: '/solution', component: Solution, meta: { requiresAuth: true } },

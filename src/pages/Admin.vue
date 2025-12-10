@@ -60,6 +60,7 @@
       <div class="tool-group">
         <button @click="sendTestEmail" class="btn-tool">发送测试邮件</button>
         <button @click="sendDailyReport" class="btn-tool">发送昨日日报</button>
+        <button @click="$router.push('/problems')" class="btn-tool">题目管理 (翻译/标签)</button>
       </div>
     </div>
   </div>
