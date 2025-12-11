@@ -58,14 +58,7 @@ router.post('/translate', checkModelPermission, async (req, res) => {
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const codeBlocks = []
-    const CODE_PLACE = '___CODEBLOCK_PLACEHOLDER_'
-    const originalText = String(text)
-    const textForModel = originalText.replace(/```[\s\S]*?```/g, (m) => {
-      const idx = codeBlocks.length
-      codeBlocks.push(m)
-      return CODE_PLACE + idx + '___'
-    })
+    const textForModel = String(text)
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
@@ -109,11 +102,6 @@ router.post('/translate', checkModelPermission, async (req, res) => {
 
     try {
       let fixed = wrapLatexIfNeeded(content)
-      if (codeBlocks.length) {
-        fixed = fixed.replace(new RegExp(CODE_PLACE + "(\\d+)___", 'g'), (_, idx) => {
-          try { return codeBlocks[Number(idx)] || '' } catch (e) { return '' }
-        })
-      }
       fixed = fixed.replace(/(```input\d+)([\s\S]*?)(```)(?=```input\d+)/g, (m, start, body) => {
         return ''
       })
@@ -138,15 +126,14 @@ router.post('/translate', checkModelPermission, async (req, res) => {
         }
         return m
       })
+
+      fixed = fixed.replace(/(```)\s*(#+\s+)/g, '$1\n\n$2')
+      fixed = fixed.replace(/([^\n])\s*(##+\s+)/g, '$1\n\n$2')
+
       return res.json({ result: fixed })
     } catch (e) {
       try {
         let fallback = content
-        if (codeBlocks.length) {
-          fallback = fallback.replace(new RegExp(CODE_PLACE + "(\\d+)___", 'g'), (_, idx) => {
-            try { return codeBlocks[Number(idx)] || '' } catch (e) { return '' }
-          })
-        }
         return res.json({ result: fallback })
       } catch (e2) {
         return res.json({ result: content })

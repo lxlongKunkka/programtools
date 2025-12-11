@@ -30,11 +30,11 @@ npm run server
 - `MAIL_PASS`: SMTP 密码
 - `MAIL_FROM`: 发件人邮箱（默认使用 `MAIL_USER`）
 - `MAIL_TO`: 管理员收件人邮箱（支持逗号分隔多个地址）
-- `MAIL_CRON`: 邮件定时表达式（可选，默认 `55 23 * * *` 每日 23:55）
+- `MAIL_CRON`: 邮件定时表达式（可选，默认 `00 09 * * *` 每日 09:00）
 
 ### 使用日志与邮件日报
 
-后端会在 `server/logs/YYYY-MM-DD.log` 写入每天的使用日志（每行 JSON）。并在每日 23:55 自动汇总昨日日志，发送到 `MAIL_TO` 指定邮箱：
+后端会在 `server/logs/YYYY-MM-DD.log` 写入每天的使用日志（每行 JSON）。并在每日 09:00 自动汇总昨日日志，发送到 `MAIL_TO` 指定邮箱：
 
 - 正文：总请求数、平均耗时、按路径与模型统计
 - 附件：原始日志文件 `YYYY-MM-DD.log`
