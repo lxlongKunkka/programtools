@@ -75,11 +75,10 @@ router.get('/progress', authenticateToken, async (req, res) => {
           
           // Check topics first (New Structure)
           if (levelDoc.topics && levelDoc.topics.length > 0) {
-             // Only unlock the first chapter of the FIRST topic that has chapters
+             // Unlock the first chapter of EVERY topic
              for (const topic of levelDoc.topics) {
                  if (topic.chapters && topic.chapters.length > 0) {
                      chaptersToUnlock.push(topic.chapters[0])
-                     break // Stop after finding the first one
                  }
              }
           } 
@@ -171,16 +170,8 @@ async function unlockNext(progress, currentChapterId) {
         return level.topics[loopTIdx].chapters[loopCIdx]
       }
       
-      // End of topic: Jump to next topic's first chapter
-      let nextTIdx = loopTIdx + 1
-      while (nextTIdx < level.topics.length) {
-          if (level.topics[nextTIdx].chapters && level.topics[nextTIdx].chapters.length > 0) {
-              loopTIdx = nextTIdx
-              loopCIdx = 0
-              return level.topics[nextTIdx].chapters[0]
-          }
-          nextTIdx++
-      }
+      // End of topic: Do NOT automatically jump to next topic's first chapter
+      // because topics are independent and their first chapters are unlocked by default.
       return null 
     } else {
       // Legacy
