@@ -724,10 +724,11 @@ export default {
       
       // If relative path, assume it's served by our backend
       // Append token for protected resources (like courseware)
-      if (url.startsWith('/public/courseware')) {
+      if (url.indexOf('public/courseware') !== -1) {
         const token = localStorage.getItem('auth_token')
         if (token) {
-          return `${url}?token=${token}`
+          const separator = url.includes('?') ? '&' : '?'
+          return `${url}${separator}token=${token}`
         }
       }
       
