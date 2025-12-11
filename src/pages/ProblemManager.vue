@@ -63,8 +63,16 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="doc in documents" :key="doc._id" :class="{ modified: doc._modified }">
-            <td><input type="checkbox" v-model="selectedIds" :value="doc._id"></td>
+          <tr v-for="(doc, index) in documents" :key="doc._id" :class="{ modified: doc._modified }">
+            <td>
+              <input 
+                type="checkbox" 
+                v-model="selectedIds" 
+                :value="doc._id"
+                class="checkbox-large"
+                @click="handleRangeSelect($event, index)"
+              >
+            </td>
             <td class="id-col">{{ doc._id }}</td>
             <td>{{ doc.docId }}</td>
             <td>{{ doc.domainId }}</td>
@@ -90,6 +98,7 @@
                 <button @click="processOne(doc)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing }">
                   {{ doc._processing ? '处理中...' : '智能处理' }}
                 </button>
+                <button v-if="doc.contentbak" @click="restoreBackup(doc)" class="btn-small btn-restore">恢复备份</button>
                 <button @click="saveDoc(doc)" :disabled="!doc._modified" class="btn-small btn-save">保存</button>
               </div>
             </td>
@@ -126,7 +135,8 @@ export default {
       processing: false,
       processedCount: 0,
       stopFlag: false,
-      statusMsg: ''
+      statusMsg: '',
+      lastCheckedIndex: null
     }
   },
   computed: {
@@ -192,6 +202,28 @@ export default {
       }
     },
     
+    handleRangeSelect(event, index) {
+      if (event.shiftKey && this.lastCheckedIndex !== null) {
+        const start = Math.min(this.lastCheckedIndex, index)
+        const end = Math.max(this.lastCheckedIndex, index)
+        const targetState = event.target.checked
+        
+        const rangeDocs = this.documents.slice(start, end + 1)
+        const rangeIds = rangeDocs.map(d => d._id)
+        
+        if (targetState) {
+          // Add range to selectedIds
+          const newSet = new Set(this.selectedIds)
+          rangeIds.forEach(id => newSet.add(id))
+          this.selectedIds = Array.from(newSet)
+        } else {
+          // Remove range from selectedIds
+          this.selectedIds = this.selectedIds.filter(id => !rangeIds.includes(id))
+        }
+      }
+      this.lastCheckedIndex = index
+    },
+
     // Core logic: Translate -> Extract Title -> Extract Tags -> Remove PID
     async processOne(doc) {
       doc._processing = true
@@ -275,6 +307,14 @@ export default {
       } catch (e) {
         this.showToastMessage('保存失败: ' + e.message)
       }
+    },
+
+    restoreBackup(doc) {
+      if (!doc.contentbak) return
+      if (!confirm('确定要恢复备份内容吗？当前内容将被覆盖。')) return
+      doc.content = doc.contentbak
+      doc._modified = true
+      this.showToastMessage('已恢复备份，请点击保存')
     },
     
     async batchProcess() {
@@ -420,10 +460,11 @@ button {
   border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
   border: 1px solid #eee;
-  overflow: hidden;
+  overflow-x: auto;
 }
 .doc-table {
   width: 100%;
+  min-width: 1000px; /* Ensure table has enough width to display content properly */
   border-collapse: separate;
   border-spacing: 0;
   font-size: 14px;
@@ -553,6 +594,18 @@ button {
   cursor: not-allowed;
 }
 
+.btn-restore {
+  background: #e67e22;
+  color: white;
+}
+.btn-restore:hover { background-color: #d35400; }
+
+.checkbox-large {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
 /* Pagination */
 .pagination {
   margin-top: 25px;
@@ -586,5 +639,30 @@ button {
   0% { opacity: 1; }
   50% { opacity: 0.7; }
   100% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .problem-manager {
+    padding: 10px;
+  }
+  
+  .controls {
+    padding: 15px;
+    gap: 15px;
+  }
+  
+  .control-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .control-group select {
+    flex: 1;
+    margin-left: 10px;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+  }
 }
 </style>
