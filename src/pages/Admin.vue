@@ -157,29 +157,6 @@
              </div>
              <button @click="openTopicModal(level)" class="btn-add-topic">添加知识点 (Topic)</button>
           </div>
-
-          <!-- Legacy Chapters -->
-          <div v-if="level.chapters && level.chapters.length > 0" class="legacy-chapters">
-            <h4>Legacy Chapters (Deprecated)</h4>
-            <div class="chapter-list">
-              <div v-for="chapter in level.chapters" :key="chapter.id" class="chapter-item">
-                <div class="chapter-header">
-                  <span class="chapter-title">
-                    Chapter {{ chapter.id }}: {{ chapter.title }}
-                    <span v-if="chapter.optional" class="badge-optional">选做</span>
-                  </span>
-                  <div class="chapter-actions">
-                    <button @click="openChapterModal(level, null, null, level.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
-                    <button @click="openChapterModal(level, null, chapter)" class="btn-small btn-edit">编辑</button>
-                    <button @click="deleteChapter(level._id, null, chapter.id)" class="btn-small btn-delete">删除</button>
-                  </div>
-                </div>
-                <div class="chapter-problems">
-                  <strong>题目ID:</strong> {{ formatProblemIds(chapter.problemIds) }}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1163,5 +1140,57 @@ export default {
 }
 .btn-tool:hover {
   background-color: #34495e;
+}
+
+/* Topic Styles */
+.topic-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.topic-item {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.topic-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+.topic-desc {
+  color: #7f8c8d;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+.topic-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-add-topic {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+.btn-add-topic:hover {
+  background-color: #2980b9;
 }
 </style>

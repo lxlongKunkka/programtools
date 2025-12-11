@@ -38,7 +38,41 @@
         <div v-show="isExpanded(level)" class="level-content">
           <div class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
 
-          <div class="chapters-grid">
+          <!-- Topics Rendering -->
+          <div v-if="level.topics && level.topics.length > 0" class="topics-container">
+            <div v-for="topic in level.topics" :key="topic._id" class="topic-section">
+              <div class="topic-header">
+                <h3>{{ topic.title }}</h3>
+                <p v-if="topic.description" class="topic-desc">{{ topic.description }}</p>
+              </div>
+              
+              <div class="chapters-grid">
+                <div 
+                  v-for="chapter in topic.chapters" 
+                  :key="chapter.id" 
+                  class="chapter-card"
+                  :class="getChapterStatusClass(level, chapter)"
+                  @click="goToChapter(level, chapter)"
+                >
+                  <div class="chapter-icon">
+                    <span v-if="isChapterCompleted(level, chapter)">✅</span>
+                    <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                    <span v-else>🔒</span>
+                  </div>
+                  <div class="chapter-info">
+                    <h4>
+                      {{ chapter.title }}
+                      <span v-if="chapter.optional" class="tag-optional">选做</span>
+                    </h4>
+                    <p class="chapter-id">Chapter {{ chapter.id }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legacy Chapters Fallback -->
+          <div v-else-if="level.chapters && level.chapters.length > 0" class="chapters-grid">
             <div 
               v-for="chapter in level.chapters" 
               :key="chapter.id" 
@@ -59,6 +93,10 @@
                 <p>{{ chapter.title }}</p>
               </div>
             </div>
+          </div>
+          
+          <div v-else class="no-content">
+            暂无内容
           </div>
         </div>
       </div>
@@ -370,6 +408,53 @@ export default {
   font-size: 14px;
   color: #7f8c8d;
   margin: 0;
+}
+
+/* Topic Styles */
+.topics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.topic-section {
+  background: #fff;
+  padding-top: 10px;
+}
+.topic-header {
+  margin-bottom: 15px;
+  border-left: 4px solid #3498db;
+  padding-left: 15px;
+}
+.topic-header h3 {
+  font-size: 20px;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+}
+.topic-desc {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin: 0;
+}
+.chapter-info h4 {
+  font-size: 16px;
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chapter-id {
+  font-size: 12px;
+  color: #95a5a6;
+  margin: 0;
+}
+.no-content {
+  text-align: center;
+  color: #bdc3c7;
+  padding: 20px;
+  font-style: italic;
 }
 
 .markdown-content {
