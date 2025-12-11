@@ -131,7 +131,7 @@
                       <button @click="openChapterModal(level, topic)" class="btn-small btn-add-sub">添加章节</button>
                    </div>
                 </div>
-                <div class="topic-desc">{{ topic.description }}</div>
+                <div class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
                 
                 <div class="chapter-list">
                   <div v-for="chapter in topic.chapters" :key="chapter.id" class="chapter-item">
@@ -199,8 +199,8 @@
           <input v-model="editingTopic.title" class="form-input">
         </div>
         <div class="form-group">
-          <label>描述:</label>
-          <textarea v-model="editingTopic.description" class="form-input" rows="3"></textarea>
+          <label>描述 (Markdown):</label>
+          <textarea v-model="editingTopic.description" class="form-input" rows="5"></textarea>
         </div>
         <div class="modal-actions">
           <button @click="showTopicModal = false" class="btn-cancel">取消</button>

@@ -43,7 +43,7 @@
             <div v-for="topic in level.topics" :key="topic._id" class="topic-section">
               <div class="topic-header">
                 <h3>{{ topic.title }}</h3>
-                <p v-if="topic.description" class="topic-desc">{{ topic.description }}</p>
+                <div v-if="topic.description" class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
               </div>
               
               <div class="chapters-grid">
