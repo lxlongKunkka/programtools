@@ -32,7 +32,7 @@
           </div>
         </div>
         
-        <div class="level-description">{{ level.description }}</div>
+        <div class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
 
         <div class="chapters-grid">
           <div 
@@ -63,6 +63,7 @@
 
 <script>
 import request from '../utils/request'
+import { marked } from 'marked'
 
 export default {
   data() {
@@ -153,6 +154,10 @@ export default {
       // Use level.level instead of level.levelId if levelId is not present
       const lvl = level.level || level.levelId
       this.$router.push(`/course/${lvl}/${chapter.id}`)
+    },
+    renderMarkdown(text) {
+      if (!text) return ''
+      return marked(text)
     }
   }
 }
@@ -319,5 +324,17 @@ export default {
   font-size: 14px;
   color: #7f8c8d;
   margin: 0;
+}
+
+.markdown-content {
+  line-height: 1.6;
+  color: #2c3e50;
+}
+.markdown-content :deep(p) {
+  margin-bottom: 10px;
+}
+.markdown-content :deep(ul), .markdown-content :deep(ol) {
+  padding-left: 20px;
+  margin-bottom: 10px;
 }
 </style>
