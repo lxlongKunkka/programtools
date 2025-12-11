@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 常用数学函数 - Chapter 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .func-table {
+            width: 90%;
+            margin: 0 auto;
+            border-collapse: collapse;
+            font-size: 0.8em;
+        }
+        .func-table th, .func-table td {
+            border: 1px solid #fff;
+            padding: 10px;
+            text-align: center;
+        }
+        .func-table th { background-color: #42b983; color: black; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>常用数学函数</h2>
+                <p>abs, sqrt, floor, ceil, round</p>
+            </section>
+
+            <!-- Slide 2: Header File -->
+            <section>
+                <h3>头文件</h3>
+                <p>要使用这些数学工具，必须先告诉编译器。</p>
+                <p>请在程序开头加上：</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;cmath&gt;</code></pre>
+                </div>
+                <p>或者使用万能头文件：</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;bits/stdc++.h&gt;</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 3: abs -->
+            <section>
+                <h3>绝对值 <code>abs()</code></h3>
+                <p>作用：把负数变成正数，正数不变。</p>
+                <p>数学符号：$|x|$</p>
+                <div class="code-box">
+                    <pre><code class="cpp">cout << abs(-5);    // 输出 5
+cout << abs(10);    // 输出 10
+cout << abs(-3.14); // 输出 3.14</code></pre>
+                </div>
+                <p class="fragment">常用于计算两个数的“距离”：<code>abs(a - b)</code></p>
+            </section>
+
+            <!-- Slide 4: sqrt -->
+            <section>
+                <h3>平方根 <code>sqrt()</code></h3>
+                <p>作用：求开根号。</p>
+                <p>数学符号：$\sqrt{x}$</p>
+                <div class="code-box">
+                    <pre><code class="cpp">cout << sqrt(16);  // 输出 4
+cout << sqrt(2);   // 输出 1.41421...</code></pre>
+                </div>
+                <p class="fragment highlight">注意：参数必须是非负数！<code>sqrt(-1)</code> 会报错 (NaN)。</p>
+            </section>
+
+            <!-- Slide 5: Rounding Functions Intro -->
+            <section>
+                <h3>取整三剑客</h3>
+                <p>把小数变成整数，我们有三种不同的方法。</p>
+                <table class="func-table">
+                    <thead>
+                        <tr>
+                            <th>函数</th>
+                            <th>含义</th>
+                            <th>记忆口诀</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>floor()</code></td>
+                            <td>向下取整</td>
+                            <td>地板 (Floor) 在下</td>
+                        </tr>
+                        <tr>
+                            <td><code>ceil()</code></td>
+                            <td>向上取整</td>
+                            <td>天花板 (Ceiling) 在上</td>
+                        </tr>
+                        <tr>
+                            <td><code>round()</code></td>
+                            <td>四舍五入</td>
+                            <td>最常用的</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Slide 6: floor & ceil examples -->
+            <section>
+                <h3>地板与天花板</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">double x = 3.14;
+double y = 3.99;
+
+// floor: 只要有小数，统统舍去 (往小了取)
+cout << floor(x); // 3
+cout << floor(y); // 3
+
+// ceil: 只要有小数，统统进位 (往大了取)
+cout << ceil(x);  // 4
+cout << ceil(y);  // 4</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 7: round examples -->
+            <section>
+                <h3>四舍五入 <code>round()</code></h3>
+                <p>符合我们数学上的四舍五入规则。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">cout << round(3.4); // 3 (舍)
+cout << round(3.5); // 4 (入)
+cout << round(3.6); // 4 (入)</code></pre>
+                </div>
+                <p class="fragment">思考：<code>(int)(x + 0.5)</code> 也能实现四舍五入吗？(对于正数是可以的)</p>
+            </section>
+
+            <!-- Slide 8: Quiz -->
+            <section>
+                <h3>小测验</h3>
+                <p>1. <code>ceil(2.1)</code> 的结果是？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 2</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 3</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 2.1</label>
+                </div>
+                <br>
+                <p>2. <code>floor(-3.5)</code> 的结果是？(注意是负数，往小了取)</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q2" id="q2a"> <label for="q2a">A. -3</label><br>
+                    <input type="radio" name="q2" id="q2b"> <label for="q2b">B. -4</label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+    </script>
+</body>
+</html>

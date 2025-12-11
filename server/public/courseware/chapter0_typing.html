@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>标准指法教学 - Chapter 0</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p { font-size: 30px; line-height: 1.6; }
+        .keyboard-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .key {
+            border: 2px solid #fff;
+            border-radius: 5px;
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            margin: 2px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        .key.home { background: #e74c3c; }
+        .key.left { background: #3498db; }
+        .key.right { background: #f1c40f; }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #42b983;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 24px;
+        }
+        .btn:hover { background: #3aa876; }
+        .finger-list { text-align: left; display: inline-block; font-size: 24px; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>标准指法教学</h2>
+                <p>打字快人一步的秘诀</p>
+            </section>
+
+            <!-- Slide 2: Why -->
+            <section>
+                <h3>为什么要学习标准指法？</h3>
+                <ul>
+                    <li class="fragment"><strong>速度快</strong>：盲打（不看键盘）是程序员的基本功。</li>
+                    <li class="fragment"><strong>更健康</strong>：减少手腕疲劳，预防腱鞘炎。</li>
+                    <li class="fragment"><strong>专注力</strong>：让你的思维不被寻找按键打断。</li>
+                </ul>
+            </section>
+
+            <!-- Slide 3: Home Row -->
+            <section>
+                <h3>基准键 (Home Row)</h3>
+                <p>手指永远放在这8个键上：</p>
+                <div class="keyboard-container">
+                    <div class="key home">A</div>
+                    <div class="key home">S</div>
+                    <div class="key home">D</div>
+                    <div class="key home">F</div>
+                    <div style="width: 20px;"></div>
+                    <div class="key home">J</div>
+                    <div class="key home">K</div>
+                    <div class="key home">L</div>
+                    <div class="key home">;</div>
+                </div>
+                <p class="fragment" style="font-size: 24px; margin-top: 20px;">
+                    提示：F 和 J 键上有小凸起，方便食指盲定位。
+                </p>
+            </section>
+
+            <!-- Slide 4: Finger Assignment -->
+            <section>
+                <h3>手指分工</h3>
+                <div style="display: flex; justify-content: space-around;">
+                    <div>
+                        <h4>左手</h4>
+                        <ul class="finger-list">
+                            <li><span style="color:#e74c3c">小指</span>: A, Q, Z, Shift, Ctrl</li>
+                            <li><span style="color:#e67e22">无名指</span>: S, W, X</li>
+                            <li><span style="color:#f1c40f">中指</span>: D, E, C</li>
+                            <li><span style="color:#2ecc71">食指</span>: F, R, V, G, T, B</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>右手</h4>
+                        <ul class="finger-list">
+                            <li><span style="color:#2ecc71">食指</span>: J, U, M, H, Y, N</li>
+                            <li><span style="color:#f1c40f">中指</span>: K, I, ,</li>
+                            <li><span style="color:#e67e22">无名指</span>: L, O, .</li>
+                            <li><span style="color:#e74c3c">小指</span>: ;, P, /, Enter, Backspace</li>
+                        </ul>
+                    </div>
+                </div>
+                <p style="margin-top: 20px;"><strong>大拇指</strong>：负责空格键 (Space)</p>
+            </section>
+
+            <!-- Slide 5: Posture -->
+            <section>
+                <h3>正确姿势</h3>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Computer_Workstation_Variables_cleanup.png/640px-Computer_Workstation_Variables_cleanup.png" alt="Posture" style="height: 300px; background: white; padding: 10px;">
+                <ul>
+                    <li>背部挺直，双脚平放地面。</li>
+                    <li>屏幕上沿与视线平齐。</li>
+                    <li>手腕悬空，不要压在桌沿上。</li>
+                </ul>
+            </section>
+
+            <!-- Slide 6: Practice -->
+            <section>
+                <h3>开始练习</h3>
+                <p>理论结合实践，从基准键开始。</p>
+                <br>
+                <a href="/typing" target="_top" class="btn">前往打字练习系统</a>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'convex'
+        });
+    </script>
+</body>
+</html>

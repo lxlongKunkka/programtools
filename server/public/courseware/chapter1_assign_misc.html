@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 赋值与特殊运算符 - Chapter 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .op-table {
+            width: 80%;
+            margin: 0 auto;
+            border-collapse: collapse;
+            font-size: 0.8em;
+        }
+        .op-table th, .op-table td {
+            border: 1px solid #fff;
+            padding: 10px;
+            text-align: center;
+        }
+        .op-table th { background-color: #42b983; color: black; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>赋值、复合运算与特殊符号</h2>
+                <p>=, +=, (), ,</p>
+            </section>
+
+            <!-- Slide 2: Assignment Operator -->
+            <section>
+                <h3>赋值运算符 <code>=</code></h3>
+                <p>在 C++ 中，<code>=</code> <strong>不是</strong> "相等"，而是 "赋值"。</p>
+                <p>意思是：把<strong>右边</strong>的值，计算出来，交给<strong>左边</strong>的变量。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int a = 10; // 把 10 给 a
+a = 20;     // 把 20 给 a，覆盖原来的 10
+a = a + 5;  // 先算 a+5 (25)，再把 25 给 a</code></pre>
+                </div>
+                <p class="fragment highlight">注意：<code>10 = a;</code> 是错误的！左边必须是变量。</p>
+            </section>
+
+            <!-- Slide 3: Compound Assignment -->
+            <section>
+                <h3>复合赋值运算符 (偷懒神器)</h3>
+                <p>程序员很懒，不想写 <code>a = a + 5</code> 这么长。</p>
+                <p>于是发明了 <code>+=</code>。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int money = 100;
+money += 50;  // 等价于 money = money + 50;
+// 现在 money 是 150</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 4: More Compound Operators -->
+            <section>
+                <h3>常见的复合运算符</h3>
+                <table class="op-table">
+                    <thead>
+                        <tr>
+                            <th>符号</th>
+                            <th>例子</th>
+                            <th>等价于</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>+=</code></td>
+                            <td><code>a += b</code></td>
+                            <td><code>a = a + b</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>-=</code></td>
+                            <td><code>a -= b</code></td>
+                            <td><code>a = a - b</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>*=</code></td>
+                            <td><code>a *= b</code></td>
+                            <td><code>a = a * b</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>/=</code></td>
+                            <td><code>a /= b</code></td>
+                            <td><code>a = a / b</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>%=</code></td>
+                            <td><code>a %= b</code></td>
+                            <td><code>a = a % b</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Slide 5: Parentheses -->
+            <section>
+                <h3>小括号 <code>()</code></h3>
+                <p>作用：<strong>改变运算优先级</strong>。</p>
+                <p>和数学里一样，括号里的先算。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int x = 2 + 3 * 4;   // 先乘除后加减 -> 2 + 12 = 14
+int y = (2 + 3) * 4; // 有括号先算括号 -> 5 * 4 = 20</code></pre>
+                </div>
+                <p>当你不确定优先级时，加上括号总没错！</p>
+            </section>
+
+            <!-- Slide 6: Comma Operator -->
+            <section>
+                <h3>逗号 <code>,</code></h3>
+                <p>作用：<strong>分隔符</strong>。</p>
+                <p>最常见用于一行定义多个变量。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int a, b, c;       // 定义三个变量
+int x = 1, y = 2;  // 定义并初始化</code></pre>
+                </div>
+                <p class="fragment" style="font-size: 0.8em; color: #aaa;">
+                    (进阶知识：逗号也可以作为运算符连接表达式，从左到右执行，取最后一个值，但初学阶段很少用。)
+                </p>
+            </section>
+
+            <!-- Slide 7: Quiz -->
+            <section>
+                <h3>小测验</h3>
+                <p>1. <code>int a = 10; a += 5;</code> 执行后 a 是多少？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 5</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 10</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 15</label>
+                </div>
+                <br>
+                <p>2. <code>int b = 10; b = b + 5;</code> 可以简写为？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q2" id="q2a"> <label for="q2a">A. <code>b =+ 5;</code></label><br>
+                    <input type="radio" name="q2" id="q2b"> <label for="q2b">B. <code>b += 5;</code></label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+    </script>
+</body>
+</html>

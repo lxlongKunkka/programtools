@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 基础运算(上) - Chapter 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .math-box {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .math-card {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 120px;
+            text-align: center;
+        }
+        .math-symbol { font-size: 50px; color: #42b983; display: block; }
+        .math-name { font-size: 20px; color: #ddd; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>C++ 基础运算 (上)</h2>
+                <p>加法、减法与乘法</p>
+            </section>
+
+            <!-- Slide 2: Overview -->
+            <section>
+                <h3>算术运算符</h3>
+                <div class="math-box">
+                    <div class="math-card">
+                        <span class="math-symbol">+</span>
+                        <span class="math-name">加法</span>
+                    </div>
+                    <div class="math-card">
+                        <span class="math-symbol">-</span>
+                        <span class="math-name">减法</span>
+                    </div>
+                    <div class="math-card">
+                        <span class="math-symbol">*</span>
+                        <span class="math-name">乘法</span>
+                    </div>
+                </div>
+                <p>注意：乘法使用的是星号 <code>*</code>，而不是 <code>x</code>。</p>
+            </section>
+
+            <!-- Slide 3: Addition & Subtraction -->
+            <section>
+                <h3>加法与减法</h3>
+                <p>用法和数学课上完全一样。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int a = 10;
+int b = 5;
+
+cout << a + b;  // 输出 15
+cout << a - b;  // 输出 5
+cout << a + 100; // 输出 110</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 4: Multiplication -->
+            <section>
+                <h3>乘法运算</h3>
+                <p>计算机键盘上没有 <code>×</code> 号，我们用 <code>*</code> (Shift + 8) 代表乘法。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int price = 5;
+int count = 3;
+int total = price * count; // 5 * 3 = 15
+
+cout << "总价是: " << total;</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 5: Priority -->
+            <section>
+                <h3>运算优先级</h3>
+                <p>和数学一样，<strong>先乘除，后加减</strong>。</p>
+                <p>如果有括号 <code>()</code>，先算括号里面的。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">cout << 2 + 3 * 4;    // 先算 3*4=12，再加2，结果 14
+cout << (2 + 3) * 4;  // 先算 2+3=5，再乘4，结果 20</code></pre>
+                </div>
+                <p class="fragment highlight">难点：不要把括号写成中文的 <code>（）</code>！</p>
+            </section>
+
+            <!-- Slide 6: Practice -->
+            <section>
+                <h3>随堂练习</h3>
+                <p>编写程序计算长方形的周长。</p>
+                <p>公式：<code>(长 + 宽) * 2</code></p>
+                <div class="code-box">
+                    <pre><code class="cpp">int length = 10;
+int width = 5;
+// 请补全代码
+int c = (length + width) * 2;
+cout << c;</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 7: Quiz -->
+            <section>
+                <h3>小测验</h3>
+                <p>1. C++ 中表示乘法的符号是？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. <code>x</code></label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. <code>*</code></label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. <code>.</code></label>
+                </div>
+                <br>
+                <p>2. <code>cout << 10 - 2 * 3;</code> 的输出结果是？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q2" id="q2a"> <label for="q2a">A. 24</label><br>
+                    <input type="radio" name="q2" id="q2b"> <label for="q2b">B. 4</label><br>
+                    <input type="radio" name="q2" id="q2c"> <label for="q2c">C. 16</label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 数位分离 - Chapter 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .step-box {
+            border: 2px solid #42b983;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>数位分离</h2>
+                <p>如何把一个整数“拆”开？</p>
+                <p>核心工具：<code>%</code> 和 <code>/</code></p>
+            </section>
+
+            <!-- Slide 2: The Two Magic Tools -->
+            <section>
+                <h3>两大核心工具</h3>
+                <div class="step-box">
+                    <h4>1. 取个位 (模 10)</h4>
+                    <p>任何整数 <code>% 10</code>，都能得到它的<strong>最后一位</strong>。</p>
+                    <pre><code class="cpp">123 % 10  ->  3
+4590 % 10 ->  0</code></pre>
+                </div>
+                <div class="step-box fragment">
+                    <h4>2. 删个位 (除 10)</h4>
+                    <p>任何整数 <code>/ 10</code>，都能<strong>砍掉最后一位</strong>。</p>
+                    <pre><code class="cpp">123 / 10  ->  12
+4590 / 10 ->  459</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 3: Step-by-Step Example -->
+            <section>
+                <h3>实战演练：拆解 385</h3>
+                <p>我们要依次取出 5, 8, 3。</p>
+                <div style="font-size: 0.8em;">
+                    <p class="fragment">1. <strong>取</strong>个位：<code>385 % 10 = 5</code> (得到 5)</p>
+                    <p class="fragment">2. <strong>删</strong>个位：<code>385 / 10 = 38</code> (剩下 38)</p>
+                    <hr class="fragment">
+                    <p class="fragment">3. <strong>取</strong>个位：<code>38 % 10 = 8</code> (得到 8)</p>
+                    <p class="fragment">4. <strong>删</strong>个位：<code>38 / 10 = 3</code> (剩下 3)</p>
+                    <hr class="fragment">
+                    <p class="fragment">5. <strong>取</strong>个位：<code>3 % 10 = 3</code> (得到 3)</p>
+                    <p class="fragment">6. <strong>删</strong>个位：<code>3 / 10 = 0</code> (结束)</p>
+                </div>
+            </section>
+
+            <!-- Slide 4: Formula for 3-digit numbers -->
+            <section>
+                <h3>三位数的通用公式</h3>
+                <p>假设有一个三位数 <code>n</code> (例如 385)</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int n = 385;
+
+int ge  = n % 10;          // 个位: 5
+int shi = n / 10 % 10;     // 十位: 38 % 10 = 8
+int bai = n / 100;         // 百位: 3</code></pre>
+                </div>
+                <p class="fragment">解释：</p>
+                <ul class="fragment">
+                    <li>十位：先除以10变成两位数(38)，再取个位(8)。</li>
+                    <li>百位：直接除以100，砍掉后两位(85)，剩下(3)。</li>
+                </ul>
+            </section>
+
+            <!-- Slide 5: Practice Problem -->
+            <section>
+                <h3>随堂练习：各位数之和</h3>
+                <p>输入一个三位数，输出它各位数字相加的和。</p>
+                <p>例如：输入 <code>123</code>，输出 <code>6</code> (1+2+3)</p>
+                <div class="code-box fragment">
+                    <pre><code class="cpp">int n;
+cin >> n;
+int g = n % 10;        // 个位
+int s = n / 10 % 10;   // 十位
+int b = n / 100;       // 百位
+cout << g + s + b;</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 6: Reverse Number -->
+            <section>
+                <h3>进阶：数字反转</h3>
+                <p>输入 <code>123</code>，输出 <code>321</code>。</p>
+                <p>思路：把拆出来的数字，重新组合。</p>
+                <div class="code-box fragment">
+                    <pre><code class="cpp">int n = 123;
+int g = n % 10;      // 3
+int s = n / 10 % 10; // 2
+int b = n / 100;     // 1
+
+// 重新组合: 个位*100 + 十位*10 + 百位
+int reverse = g * 100 + s * 10 + b; 
+cout << reverse; // 321</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 7: Quiz -->
+            <section>
+                <h3>小测验</h3>
+                <p>1. <code>5678 / 100</code> 的结果是？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 56.78</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 56</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 78</label>
+                </div>
+                <br>
+                <p>2. 想要取出 <code>int x</code> 的倒数第二位（十位），应该怎么写？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q2" id="q2a"> <label for="q2a">A. <code>x % 10</code></label><br>
+                    <input type="radio" name="q2" id="q2b"> <label for="q2b">B. <code>x / 10 % 10</code></label><br>
+                    <input type="radio" name="q2" id="q2c"> <label for="q2c">C. <code>x % 100</code></label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+    </script>
+</body>
+</html>

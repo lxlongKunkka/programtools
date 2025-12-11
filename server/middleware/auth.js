@@ -63,6 +63,24 @@ export const authenticateToken = (req, res, next) => {
   })
 }
 
+export const protectStatic = (req, res, next) => {
+  // Check Authorization header first
+  let token = req.headers['authorization'] && req.headers['authorization'].split(' ')[1]
+  
+  // If not found, check query parameter 'token'
+  if (!token && req.query.token) {
+    token = req.query.token
+  }
+
+  if (!token) return res.status(401).send('Unauthorized')
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).send('Forbidden')
+    req.user = user
+    next()
+  })
+}
+
 export const requireRole = (role) => {
   return (req, res, next) => {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.priv === -1 || req.user.priv === 1)

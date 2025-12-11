@@ -198,8 +198,9 @@ export default {
       if (lvl > currentLvl) return false
       
       // Check by UID first (Robust)
-      if (this.userProgress.unlockedChapterUids && chapter._id) {
-        if (this.userProgress.unlockedChapterUids.includes(chapter._id)) return true
+      // If user has UIDs recorded, we trust UIDs exclusively for chapters that have UIDs
+      if (this.userProgress.unlockedChapterUids && this.userProgress.unlockedChapterUids.length > 0 && chapter._id) {
+        return this.userProgress.unlockedChapterUids.includes(chapter._id)
       }
       
       // Fallback to String ID (Legacy)
@@ -209,8 +210,9 @@ export default {
       if (!this.userProgress) return false
       
       // Check by UID first (Robust)
-      if (this.userProgress.completedChapterUids && chapter._id) {
-        if (this.userProgress.completedChapterUids.includes(chapter._id)) return true
+      // If user has UIDs recorded, we trust UIDs exclusively for chapters that have UIDs
+      if (this.userProgress.completedChapterUids && this.userProgress.completedChapterUids.length > 0 && chapter._id) {
+        return this.userProgress.completedChapterUids.includes(chapter._id)
       }
 
       // Fallback to String ID (Legacy)

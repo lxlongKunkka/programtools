@@ -17,6 +17,7 @@ import courseRoutes from './routes/course.js'
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
 
+import { protectStatic } from './middleware/auth.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -34,6 +35,9 @@ app.use(cors())
 app.use(express.json({ limit: '5mb' }))
 
 // Serve static files
+// Protect /public/courseware
+app.use('/public/courseware', protectStatic, express.static(path.join(__dirname, 'public/courseware')))
+// Serve other static files normally
 app.use('/public', express.static(path.join(__dirname, 'public')))
 
 // --- Usage logging ---

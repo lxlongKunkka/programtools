@@ -71,33 +71,36 @@ router.get('/progress', authenticateToken, async (req, res) => {
 
         const levelDoc = await CourseLevel.findOne(query)
         if (levelDoc) {
-          let firstChapter = null
+          let chaptersToUnlock = []
+          
           // Check topics first (New Structure)
           if (levelDoc.topics && levelDoc.topics.length > 0) {
-             // Find first topic with chapters
-             const topicWithChapters = levelDoc.topics.find(t => t.chapters && t.chapters.length > 0)
-             if (topicWithChapters) {
-               firstChapter = topicWithChapters.chapters[0]
+             // Unlock the first chapter of EVERY topic
+             for (const topic of levelDoc.topics) {
+                 if (topic.chapters && topic.chapters.length > 0) {
+                     chaptersToUnlock.push(topic.chapters[0])
+                 }
              }
           } 
+          
           // Fallback to legacy chapters if no topic chapters found
-          if (!firstChapter && levelDoc.chapters && levelDoc.chapters.length > 0) {
-            firstChapter = levelDoc.chapters[0]
+          if (chaptersToUnlock.length === 0 && levelDoc.chapters && levelDoc.chapters.length > 0) {
+            chaptersToUnlock.push(levelDoc.chapters[0])
           }
           
-          if (firstChapter) {
+          for (const ch of chaptersToUnlock) {
             // Check ID (Legacy)
-            if (!progress.unlockedChapters.includes(firstChapter.id)) {
-              progress.unlockedChapters.push(firstChapter.id)
+            if (!progress.unlockedChapters.includes(ch.id)) {
+              progress.unlockedChapters.push(ch.id)
               progressChanged = true
             }
             // Check UID (New)
-            if (firstChapter._id) {
+            if (ch._id) {
               if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
-              const uidStr = firstChapter._id.toString()
+              const uidStr = ch._id.toString()
               const hasUid = progress.unlockedChapterUids.some(u => u.toString() === uidStr)
               if (!hasUid) {
-                progress.unlockedChapterUids.push(firstChapter._id)
+                progress.unlockedChapterUids.push(ch._id)
                 progressChanged = true
               }
             }
@@ -166,17 +169,10 @@ async function unlockNext(progress, currentChapterId) {
         loopCIdx++
         return level.topics[loopTIdx].chapters[loopCIdx]
       }
-      // Try next topic
-      let nextTIdx = loopTIdx + 1
-      while (nextTIdx < level.topics.length) {
-        if (level.topics[nextTIdx].chapters && level.topics[nextTIdx].chapters.length > 0) {
-          loopTIdx = nextTIdx
-          loopCIdx = 0
-          return level.topics[loopTIdx].chapters[0]
-        }
-        nextTIdx++
-      }
-      return null // End of level
+      // End of topic: Do NOT automatically jump to next topic's first chapter
+      // because topics are independent. The next topic's first chapter is already unlocked by default.
+      // So we return null to stop the chain here.
+      return null 
     } else {
       // Legacy
       if (loopCIdx < level.chapters.length - 1) {
@@ -235,12 +231,10 @@ async function unlockNext(progress, currentChapterId) {
          let firstChapters = []
          const collect = () => {
            if (nextLevel.topics && nextLevel.topics.length > 0) {
+             // Unlock first chapter of EVERY topic in the next level
              for (const topic of nextLevel.topics) {
-               if (topic.chapters) {
-                 for (const ch of topic.chapters) {
-                   firstChapters.push(ch)
-                   if (!ch.optional) return
-                 }
+               if (topic.chapters && topic.chapters.length > 0) {
+                 firstChapters.push(topic.chapters[0])
                }
              }
            } else if (nextLevel.chapters) {
@@ -621,10 +615,28 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       optional: !!optional 
     }
 
-    if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= topic.chapters.length) {
-      topic.chapters.splice(insertIndex, 0, newChapter)
+    let targetIndex = -1;
+    if (insertIndex !== undefined && insertIndex !== null) {
+        const parsed = Number(insertIndex);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= topic.chapters.length) {
+            targetIndex = parsed;
+        }
+    }
+
+    if (targetIndex !== -1) {
+      topic.chapters.splice(targetIndex, 0, newChapter)
     } else {
       topic.chapters.push(newChapter)
+    }
+
+    // Auto-renumber chapters
+    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
+    if (topicIndex !== -1) {
+        const prefix = `${level.level}-${topicIndex + 1}`
+        level.topics[topicIndex].chapters.forEach((ch, idx) => {
+            ch.id = `${prefix}-${idx + 1}`
+        })
+        level.markModified('topics');
     }
 
     await level.save()
@@ -681,12 +693,66 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
     // Try to remove by _id or id string
     let targetChapter = topic.chapters.id(req.params.chapterId)
     if (targetChapter) {
-        targetChapter.remove()
+        topic.chapters.pull(req.params.chapterId)
     } else {
         // Filter out by string ID
         const initialLen = topic.chapters.length
         topic.chapters = topic.chapters.filter(c => c.id !== req.params.chapterId)
         if (topic.chapters.length === initialLen) return res.status(404).json({ error: 'Chapter not found' })
+    }
+
+    // Auto-renumber chapters
+    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
+    if (topicIndex !== -1) {
+        const prefix = `${level.level}-${topicIndex + 1}`
+        level.topics[topicIndex].chapters.forEach((ch, idx) => {
+            ch.id = `${prefix}-${idx + 1}`
+        })
+        level.markModified('topics');
+    }
+
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Move a Chapter in a Topic
+router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { direction } = req.body // 'up' or 'down'
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+
+    const chapterIndex = topic.chapters.findIndex(c => c.id === req.params.chapterId || (c._id && c._id.toString() === req.params.chapterId))
+    if (chapterIndex === -1) return res.status(404).json({ error: 'Chapter not found' })
+
+    if (direction === 'up') {
+      if (chapterIndex > 0) {
+        const temp = topic.chapters[chapterIndex]
+        topic.chapters.splice(chapterIndex, 1)
+        topic.chapters.splice(chapterIndex - 1, 0, temp)
+      }
+    } else if (direction === 'down') {
+      if (chapterIndex < topic.chapters.length - 1) {
+        const temp = topic.chapters[chapterIndex]
+        topic.chapters.splice(chapterIndex, 1)
+        topic.chapters.splice(chapterIndex + 1, 0, temp)
+      }
+    }
+
+    // Auto-renumber chapters
+    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
+    if (topicIndex !== -1) {
+        const prefix = `${level.level}-${topicIndex + 1}`
+        topic.chapters.forEach((ch, idx) => {
+            ch.id = `${prefix}-${idx + 1}`
+        })
+        level.markModified('topics');
     }
 
     await level.save()

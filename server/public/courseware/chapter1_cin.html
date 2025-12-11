@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 输入流 cin - Chapter 1</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #42b983;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 24px;
+        }
+        .btn:hover { background: #3aa876; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>C++ 输入流: cin</h2>
+                <p>让程序“听懂”你的话</p>
+            </section>
+
+            <!-- Slide 2: What is cin -->
+            <section>
+                <h3>什么是 cin？</h3>
+                <p><code>cin</code> (Character Input) 是 C++ 中用于从键盘读取数据的工具。</p>
+                <p class="fragment">如果说 <code>cout</code> 是程序的嘴巴，那么 <code>cin</code> 就是程序的<strong>耳朵</strong>。</p>
+                <p class="fragment">它允许程序暂停下来，等待用户输入信息。</p>
+            </section>
+
+            <!-- Slide 3: Basic Syntax -->
+            <section>
+                <h3>基本语法</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">int a;
+cin >> a;</code></pre>
+                </div>
+                <ul>
+                    <li class="fragment"><code>cin</code>：输入命令。</li>
+                    <li class="fragment"><code>&gt;&gt;</code>：提取运算符，像一个箭头，把键盘输入的数据“送进”变量里。</li>
+                    <li class="fragment"><code>a</code>：接收数据的变量。</li>
+                </ul>
+                <p class="fragment" style="color: #e74c3c; font-size: 0.8em;">注意：箭头方向和 cout 是相反的！<br>cout &lt;&lt; (送出去), cin &gt;&gt; (拿进来)</p>
+            </section>
+
+            <!-- Slide 4: Input Process -->
+            <section>
+                <h3>输入的过程</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">cout << "请输入你的年龄: ";
+int age;
+cin >> age;  // 程序在这里暂停
+cout << "明年你就 " << age + 1 << " 岁了";</code></pre>
+                </div>
+                <p>当程序运行到 <code>cin</code> 时：</p>
+                <ol>
+                    <li class="fragment">光标闪烁，等待输入。</li>
+                    <li class="fragment">用户输入数字并按下<strong>回车键</strong>。</li>
+                    <li class="fragment">数字被存入变量 <code>age</code>，程序继续执行。</li>
+                </ol>
+            </section>
+
+            <!-- Slide 5: Multiple Inputs -->
+            <section>
+                <h3>一次输入多个数据</h3>
+                <p>你可以用多个 <code>&gt;&gt;</code> 连续接收输入。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int a, b;
+cin >> a >> b;</code></pre>
+                </div>
+                <p>用户输入时，可以用<strong>空格</strong>或<strong>回车</strong>来分隔两个数字。</p>
+                <div style="background: black; color: white; padding: 10px; font-family: monospace; width: 60%; margin: 0 auto;">
+                    10 20<br>
+                    (或者)<br>
+                    10<br>
+                    20
+                </div>
+            </section>
+
+            <!-- Slide 6: Example -->
+            <section>
+                <h3>实战：加法计算器</h3>
+                <p>让我们做一个真正的计算器！</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int num1, num2;
+    
+    cout << "请输入两个数字: ";
+    cin >> num1 >> num2;
+    
+    int sum = num1 + num2;
+    cout << "它们的和是: " << sum << endl;
+    
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 7: Practice -->
+            <section>
+                <h3>动手试一试</h3>
+                <p>编写一个程序：</p>
+                <ol>
+                    <li>定义两个变量 <code>a</code> 和 <code>b</code></li>
+                    <li>使用 <code>cin</code> 输入这两个变量的值</li>
+                    <li>输出它们的乘积 (<code>a * b</code>)</li>
+                </ol>
+                <div class="code-box">
+                    <pre><code class="cpp">int a, b;
+cin >> a >> b;
+cout << a * b;</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 8: Quiz -->
+            <section>
+                <h3>小测验</h3>
+                <p>1. <code>cin</code> 使用的运算符是？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. <code>&lt;&lt;</code></label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. <code>&gt;&gt;</code></label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. <code>==</code></label>
+                </div>
+                <br>
+                <p>2. 输入多个数字时，可以用什么分隔？</p>
+                <div style="text-align: left; width: 60%; margin: 0 auto; font-size: 0.8em;">
+                    <input type="radio" name="q2" id="q2a"> <label for="q2a">A. 逗号</label><br>
+                    <input type="radio" name="q2" id="q2b"> <label for="q2b">B. 空格或回车</label><br>
+                    <input type="radio" name="q2" id="q2c"> <label for="q2c">C. 顿号</label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+    </script>
+</body>
+</html>

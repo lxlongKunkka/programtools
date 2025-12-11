@@ -123,36 +123,52 @@
           <!-- Topics List -->
           <div class="topic-list">
              <div v-for="topic in level.topics" :key="topic._id" class="topic-item">
-                <div class="topic-header">
+                <div class="topic-header" @click="toggleTopicCollapse(topic)" style="cursor: pointer; user-select: none;">
+                   <span class="collapse-icon" style="margin-right: 8px; display: inline-block; width: 24px; text-align: center; font-weight: bold; color: #666;">
+                     {{ topic.collapsed ? '▶' : '▼' }}
+                   </span>
                    <span class="topic-title">{{ topic.title }}</span>
-                   <div class="topic-actions">
+                   <div class="topic-actions" @click.stop>
                       <button @click="openTopicModal(level, null, level.topics.indexOf(topic))" class="btn-small btn-insert" title="在此之前插入">插入</button>
                       <button @click="openTopicModal(level, topic)" class="btn-small btn-edit">编辑</button>
                       <button @click="deleteTopic(level._id, topic._id)" class="btn-small btn-delete">删除</button>
                       <button @click="openChapterModal(level, topic)" class="btn-small btn-add-sub">添加章节</button>
                    </div>
                 </div>
-                <div class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
-                
-                <div class="chapter-list">
-                  <div v-for="chapter in topic.chapters" :key="chapter.id" class="chapter-item">
-                    <div class="chapter-header">
-                      <span class="chapter-title">
-                        Chapter {{ chapter.id }}: {{ chapter.title }}
-                        <span v-if="chapter.optional" class="badge-optional">选做</span>
-                      </span>
-                      <div class="chapter-actions">
-                        <button @click="openChapterModal(level, topic, null, topic.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
-                        <button @click="openChapterModal(level, topic, chapter)" class="btn-small btn-edit">编辑</button>
-                        <button @click="deleteChapter(level._id, topic._id, chapter._id || chapter.id)" class="btn-small btn-delete">删除</button>
+                <div v-show="!topic.collapsed">
+                  <div class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
+                  
+                  <div class="chapter-list">
+                    <div v-for="chapter in topic.chapters" :key="chapter.id" class="chapter-item">
+                      <div class="chapter-header">
+                        <span class="chapter-title">
+                          Chapter {{ chapter.id }}: {{ chapter.title }}
+                          <span v-if="chapter.optional" class="badge-optional">选做</span>
+                        </span>
+                        <div class="chapter-actions">
+                          <button @click="moveChapter(level._id, topic._id, chapter._id || chapter.id, 'up')" class="btn-small btn-move" :disabled="topic.chapters.indexOf(chapter) === 0">↑</button>
+                          <button @click="moveChapter(level._id, topic._id, chapter._id || chapter.id, 'down')" class="btn-small btn-move" :disabled="topic.chapters.indexOf(chapter) === topic.chapters.length - 1">↓</button>
+                          <button @click="openChapterModal(level, topic, null, topic.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
+                          <button @click="openChapterModal(level, topic, chapter)" class="btn-small btn-edit">编辑</button>
+                          <button @click="deleteChapter(level._id, topic._id, chapter._id || chapter.id)" class="btn-small btn-delete">删除</button>
+                        </div>
+                      </div>
+                      <div class="chapter-problems">
+                        <strong>题目ID:</strong>
+                        <span v-if="!chapter.problemIds || chapter.problemIds.length === 0">无 (纯阅读章节)</span>
+                        <span v-else>
+                          <span v-for="(p, index) in chapter.problemIds" :key="index">
+                            <a :href="getProblemLink(p)" target="_blank" class="problem-link" style="color: #3498db; text-decoration: none;">
+                              {{ getProblemLabel(p) }}
+                            </a>
+                            <span v-if="index < chapter.problemIds.length - 1">, </span>
+                          </span>
+                        </span>
                       </div>
                     </div>
-                    <div class="chapter-problems">
-                      <strong>题目ID:</strong> {{ formatProblemIds(chapter.problemIds) }}
+                    <div v-if="!topic.chapters || topic.chapters.length === 0" class="no-chapters">
+                      暂无章节
                     </div>
-                  </div>
-                  <div v-if="!topic.chapters || topic.chapters.length === 0" class="no-chapters">
-                    暂无章节
                   </div>
                 </div>
              </div>
@@ -446,14 +462,45 @@ export default {
     // --- Course Management Methods ---
     async fetchLevels() {
       this.loadingCourses = true
+      // Save current collapsed state
+      const collapsedState = {}
+      if (this.levels) {
+        this.levels.forEach(l => {
+            if (l.topics) l.topics.forEach(t => {
+                if (t._id) collapsedState[t._id] = t.collapsed
+            })
+        })
+      }
+
       try {
         const data = await request(`/api/course/levels?subject=${encodeURIComponent(this.selectedSubject)}`)
+        // Initialize collapsed state
+        if (Array.isArray(data)) {
+          data.forEach(level => {
+            if (level.topics) {
+              level.topics.forEach(topic => {
+                // Restore state or default to true
+                if (topic._id && collapsedState[topic._id] !== undefined) {
+                    topic.collapsed = collapsedState[topic._id]
+                } else {
+                    topic.collapsed = true
+                }
+              })
+            }
+          })
+        }
         this.levels = data
       } catch (e) {
         this.showToastMessage('加载课程失败: ' + e.message)
       } finally {
         this.loadingCourses = false
       }
+    },
+    toggleTopicCollapse(topic) {
+      // Use $set to ensure reactivity if needed, though usually direct assignment works if initialized
+      // But since we initialized it before assigning to this.levels, direct assignment is fine.
+      // However, if we add new topics, we need to make sure they have this property.
+      topic.collapsed = !topic.collapsed
     },
     openTopicModal(level, topic = null, insertIndex = null) {
       this.editingLevelForTopic = level
@@ -584,7 +631,23 @@ export default {
         this.editingChapter = { 
           id: nextId, 
           title: '', 
-          content: '', 
+          content: `### 视频教程 (Bilibili)
+<iframe src="//player.bilibili.com/player.html?bvid=BV1GJ411x7h7&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width: 100%; height: 500px;"> </iframe>
+
+### 视频教程 (MP4)
+<video controls width="100%" style="max-height: 500px; background: #000;">
+  <source src="/public/videos/sample.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+### 课件预览 (PDF)
+<iframe src="/public/pdfs/sample.pdf" width="100%" height="600px" style="border: none;">
+</iframe>
+
+===NEXT===
+
+### 知识点讲解
+在此处输入正文内容...`, 
           contentType: 'markdown',
           resourceUrl: '',
           problemIdsStr: '',
@@ -658,10 +721,29 @@ export default {
     },
     getPreviewUrl(url) {
       if (!url) return ''
-      // If it's a relative path starting with /, prepend current origin if needed, 
-      // but usually iframe handles relative paths fine relative to the page.
-      // However, for local dev proxy, it should work.
+      
+      // If relative path, assume it's served by our backend
+      // Append token for protected resources (like courseware)
+      if (url.startsWith('/public/courseware')) {
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          return `${url}?token=${token}`
+        }
+      }
+      
       return url
+    },
+    async moveChapter(levelId, topicId, chapterId, direction) {
+      try {
+        await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}/move`, {
+          method: 'PUT',
+          body: JSON.stringify({ direction })
+        })
+        this.showToastMessage('移动成功')
+        this.fetchLevels()
+      } catch (e) {
+        this.showToastMessage('移动失败: ' + e.message)
+      }
     },
     async deleteChapter(levelId, topicId, chapterId) {
       if (!confirm('确定要删除这个章节吗？')) return
@@ -687,6 +769,31 @@ export default {
         }
         return p.docId || p._id
       }).join(', ')
+    },
+    getProblemLink(p) {
+      let domainId = 'system'
+      let docId = ''
+      
+      if (typeof p === 'string') {
+        if (p.includes(':')) {
+          [domainId, docId] = p.split(':')
+        } else {
+          docId = p
+        }
+      } else {
+        // Object
+        domainId = p.domainId || 'system'
+        docId = p.docId || p._id
+      }
+      
+      return `https://acjudge.com/d/${domainId}/p/${docId}`
+    },
+    getProblemLabel(p) {
+      if (typeof p === 'string') return p
+      if (p.domainId && p.domainId !== 'system') {
+        return `${p.domainId}:${p.docId}`
+      }
+      return p.docId || p._id
     }
   }
 }

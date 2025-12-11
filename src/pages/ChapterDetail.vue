@@ -11,10 +11,24 @@
       
       <!-- Left: Tutorial Content -->
       <div class="tutorial-section">
+        <!-- Watermark -->
+        <div class="watermark-container" v-if="userInfo">
+          <div class="watermark-text" v-for="n in 30" :key="n">
+            {{ watermarkText }}
+          </div>
+        </div>
+
         <h1 class="chapter-title">{{ chapter.title }}</h1>
         
         <!-- HTML Content Mode -->
         <div v-if="chapter.contentType === 'html'" :class="['html-content-container', { maximized: isMaximized }]">
+           <!-- Watermark for Fullscreen -->
+           <div class="watermark-container" v-if="userInfo">
+             <div class="watermark-text" v-for="n in 30" :key="n">
+               {{ watermarkText }}
+             </div>
+           </div>
+           
            <button @click="isMaximized = !isMaximized" class="btn-maximize">
              {{ isMaximized ? '退出全屏' : '全屏显示' }}
            </button>
@@ -140,6 +154,18 @@ export default {
     },
     chapterId() {
       return this.$route.params.chapterId // String ID
+    },
+    userInfo() {
+      try {
+        return JSON.parse(localStorage.getItem('user_info')) || null
+      } catch (e) {
+        return null
+      }
+    },
+    watermarkText() {
+      const user = this.userInfo
+      if (!user) return ''
+      return `${user.uname || user.username || 'User'} (${user.uid || user._id || 'ID'})`
     },
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
@@ -300,8 +326,16 @@ export default {
     getHtmlUrl(url) {
       if (!url) return ''
       if (url.startsWith('http')) return url
+      
       // If relative path, assume it's served by our backend
-      // In dev, we proxy /public to backend, so relative path works if it starts with /public
+      // Append token for protected resources (like courseware)
+      if (url.startsWith('/public/courseware')) {
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          return `${url}?token=${token}`
+        }
+      }
+      
       return url
     },
     async checkStatus(problem) {
@@ -485,7 +519,35 @@ export default {
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   overflow-y: auto;
+  position: relative; /* For watermark */
 }
+
+.watermark-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-content: space-around;
+  opacity: 0.08;
+  overflow: hidden;
+}
+
+.watermark-text {
+  transform: rotate(-30deg);
+  font-size: 24px;
+  color: #000;
+  font-weight: bold;
+  white-space: nowrap;
+  margin: 80px;
+  user-select: none;
+}
+
 .chapter-title {
   margin-top: 0;
   margin-bottom: 20px;
