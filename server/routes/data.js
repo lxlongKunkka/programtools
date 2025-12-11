@@ -51,10 +51,18 @@ router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req
     const { id } = req.params
     const { title, content, contentbak, tag, removePid } = req.body
     
+    const doc = await Document.findById(id)
+    if (!doc) return res.status(404).json({ error: 'Document not found' })
+
     const update = {}
     if (title !== undefined) update.title = title
     if (content !== undefined) update.content = content
-    if (contentbak !== undefined) update.contentbak = contentbak
+    
+    // Only update contentbak if it doesn't exist in DB
+    if (contentbak !== undefined && !doc.contentbak) {
+      update.contentbak = contentbak
+    }
+    
     if (tag !== undefined) update.tag = tag
     
     const ops = { $set: update }
@@ -62,8 +70,8 @@ router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req
       ops.$unset = { pid: "" }
     }
     
-    const doc = await Document.findByIdAndUpdate(id, ops, { new: true })
-    return res.json(doc)
+    const updatedDoc = await Document.findByIdAndUpdate(id, ops, { new: true })
+    return res.json(updatedDoc)
   } catch (e) {
     console.error('Update document error:', e)
     return res.status(500).json({ error: e.message })
