@@ -8,12 +8,20 @@ const chapterSchema = new mongoose.Schema({
   optional: { type: Boolean, default: false } // Whether the chapter is optional
 })
 
+const topicSchema = new mongoose.Schema({
+  title: { type: String, required: true }, // e.g. "Basic Syntax"
+  description: { type: String },
+  chapters: [chapterSchema]
+})
+
 const courseLevelSchema = new mongoose.Schema({
   level: { type: Number, required: true }, // 1 to 6
   subject: { type: String, default: 'C++' }, // Course subject (e.g., 'C++', 'Python')
   title: { type: String, required: true },
   description: { type: String },
-  chapters: [chapterSchema]
+  topics: [topicSchema],
+  // Legacy support (optional, can be removed if migration is done)
+  chapters: [chapterSchema] 
 })
 
 // Compound index to ensure level is unique per subject

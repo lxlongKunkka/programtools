@@ -116,30 +116,68 @@
             <div class="level-actions">
               <button @click="openLevelModal(level)" class="btn-small btn-edit">编辑</button>
               <button @click="deleteLevel(level._id)" class="btn-small btn-delete">删除</button>
-              <button @click="openChapterModal(level)" class="btn-small btn-add-sub">添加章节</button>
             </div>
           </div>
           <div class="level-desc markdown-content" v-html="renderMarkdown(level.description)"></div>
           
-          <div class="chapter-list">
-            <div v-for="chapter in level.chapters" :key="chapter.id" class="chapter-item">
-              <div class="chapter-header">
-                <span class="chapter-title">
-                  Chapter {{ chapter.id }}: {{ chapter.title }}
-                  <span v-if="chapter.optional" class="badge-optional">选做</span>
-                </span>
-                <div class="chapter-actions">
-                  <button @click="openChapterModal(level, null, level.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
-                  <button @click="openChapterModal(level, chapter)" class="btn-small btn-edit">编辑</button>
-                  <button @click="deleteChapter(level._id, chapter.id)" class="btn-small btn-delete">删除</button>
+          <!-- Topics List -->
+          <div class="topic-list">
+             <div v-for="topic in level.topics" :key="topic._id" class="topic-item">
+                <div class="topic-header">
+                   <span class="topic-title">{{ topic.title }}</span>
+                   <div class="topic-actions">
+                      <button @click="openTopicModal(level, topic)" class="btn-small btn-edit">编辑</button>
+                      <button @click="deleteTopic(level._id, topic._id)" class="btn-small btn-delete">删除</button>
+                      <button @click="openChapterModal(level, topic)" class="btn-small btn-add-sub">添加章节</button>
+                   </div>
+                </div>
+                <div class="topic-desc">{{ topic.description }}</div>
+                
+                <div class="chapter-list">
+                  <div v-for="chapter in topic.chapters" :key="chapter.id" class="chapter-item">
+                    <div class="chapter-header">
+                      <span class="chapter-title">
+                        Chapter {{ chapter.id }}: {{ chapter.title }}
+                        <span v-if="chapter.optional" class="badge-optional">选做</span>
+                      </span>
+                      <div class="chapter-actions">
+                        <button @click="openChapterModal(level, topic, null, topic.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
+                        <button @click="openChapterModal(level, topic, chapter)" class="btn-small btn-edit">编辑</button>
+                        <button @click="deleteChapter(level._id, topic._id, chapter._id || chapter.id)" class="btn-small btn-delete">删除</button>
+                      </div>
+                    </div>
+                    <div class="chapter-problems">
+                      <strong>题目ID:</strong> {{ formatProblemIds(chapter.problemIds) }}
+                    </div>
+                  </div>
+                  <div v-if="!topic.chapters || topic.chapters.length === 0" class="no-chapters">
+                    暂无章节
+                  </div>
+                </div>
+             </div>
+             <button @click="openTopicModal(level)" class="btn-add-topic">添加知识点 (Topic)</button>
+          </div>
+
+          <!-- Legacy Chapters -->
+          <div v-if="level.chapters && level.chapters.length > 0" class="legacy-chapters">
+            <h4>Legacy Chapters (Deprecated)</h4>
+            <div class="chapter-list">
+              <div v-for="chapter in level.chapters" :key="chapter.id" class="chapter-item">
+                <div class="chapter-header">
+                  <span class="chapter-title">
+                    Chapter {{ chapter.id }}: {{ chapter.title }}
+                    <span v-if="chapter.optional" class="badge-optional">选做</span>
+                  </span>
+                  <div class="chapter-actions">
+                    <button @click="openChapterModal(level, null, null, level.chapters.indexOf(chapter))" class="btn-small btn-insert" title="在此之前插入">插入</button>
+                    <button @click="openChapterModal(level, null, chapter)" class="btn-small btn-edit">编辑</button>
+                    <button @click="deleteChapter(level._id, null, chapter.id)" class="btn-small btn-delete">删除</button>
+                  </div>
+                </div>
+                <div class="chapter-problems">
+                  <strong>题目ID:</strong> {{ formatProblemIds(chapter.problemIds) }}
                 </div>
               </div>
-              <div class="chapter-problems">
-                <strong>题目ID:</strong> {{ formatProblemIds(chapter.problemIds) }}
-              </div>
-            </div>
-            <div v-if="!level.chapters || level.chapters.length === 0" class="no-chapters">
-              暂无章节
             </div>
           </div>
         </div>
@@ -171,6 +209,25 @@
         <div class="modal-actions">
           <button @click="showLevelModal = false" class="btn-cancel">取消</button>
           <button @click="saveLevel" class="btn-save">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic Modal -->
+    <div v-if="showTopicModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>{{ editingTopic._id ? '编辑知识点' : '添加知识点' }}</h3>
+        <div class="form-group">
+          <label>标题:</label>
+          <input v-model="editingTopic.title" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>描述:</label>
+          <textarea v-model="editingTopic.description" class="form-input" rows="3"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button @click="showTopicModal = false" class="btn-cancel">取消</button>
+          <button @click="saveTopic" class="btn-save">保存</button>
         </div>
       </div>
     </div>
@@ -238,10 +295,14 @@ export default {
       levels: [],
       loadingCourses: false,
       showLevelModal: false,
+      showTopicModal: false,
       showChapterModal: false,
       editingLevel: {},
+      editingTopic: {},
       editingChapter: {},
+      editingLevelForTopic: null,
       editingLevelForChapter: null, // The level object the chapter belongs to
+      editingTopicForChapter: null,
       insertIndex: null, // For inserting chapters
       selectedSubject: 'C++',
       availableSubjects: ['C++', 'Python', 'Web']
@@ -388,6 +449,45 @@ export default {
         this.loadingCourses = false
       }
     },
+    openTopicModal(level, topic = null) {
+      this.editingLevelForTopic = level
+      if (topic) {
+        this.editingTopic = { ...topic }
+      } else {
+        this.editingTopic = { title: '', description: '' }
+      }
+      this.showTopicModal = true
+    },
+    async saveTopic() {
+      try {
+        if (this.editingTopic._id) {
+          await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}`, {
+            method: 'PUT',
+            body: JSON.stringify(this.editingTopic)
+          })
+        } else {
+          await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics`, {
+            method: 'POST',
+            body: JSON.stringify(this.editingTopic)
+          })
+        }
+        this.showToastMessage('保存知识点成功')
+        this.showTopicModal = false
+        this.fetchLevels()
+      } catch (e) {
+        this.showToastMessage('保存知识点失败: ' + e.message)
+      }
+    },
+    async deleteTopic(levelId, topicId) {
+      if (!confirm('确定要删除这个知识点吗？')) return
+      try {
+        await request(`/api/course/levels/${levelId}/topics/${topicId}`, { method: 'DELETE' })
+        this.showToastMessage('删除知识点成功')
+        this.fetchLevels()
+      } catch (e) {
+        this.showToastMessage('删除知识点失败: ' + e.message)
+      }
+    },
     openLevelModal(level = null) {
       if (level) {
         this.editingLevel = { ...level }
@@ -433,8 +533,9 @@ export default {
         this.showToastMessage('删除失败: ' + e.message)
       }
     },
-    openChapterModal(level, chapter = null, insertIndex = null) {
+    openChapterModal(level, topic = null, chapter = null, insertIndex = null) {
       this.editingLevelForChapter = level
+      this.editingTopicForChapter = topic
       this.insertIndex = insertIndex // Store insert index
 
       if (chapter) {
@@ -457,11 +558,13 @@ export default {
       } else {
         // New Chapter
         let nextId = 'Auto'
-        if (insertIndex === null) {
+        // Simple auto-id logic for display
+        if (topic) {
+           const nextIndex = (topic.chapters ? topic.chapters.length : 0) + 1
+           nextId = `${level.level}-${nextIndex} (Topic)`
+        } else {
            const nextIndex = (level.chapters ? level.chapters.length : 0) + 1
            nextId = `${level.level}-${nextIndex}`
-        } else {
-           nextId = `${level.level}-${insertIndex + 1} (Auto)`
         }
 
         this.editingChapter = { 
@@ -492,21 +595,38 @@ export default {
           optional: this.editingChapter.optional
         }
 
-        if (this.editingChapter.isNew) {
-          // Pass insertIndex if available
-          if (this.insertIndex !== null) {
-            chapterData.insertIndex = this.insertIndex
-          }
-          await request(`/api/course/levels/${this.editingLevelForChapter._id}/chapters`, {
-            method: 'POST',
-            body: JSON.stringify(chapterData)
-          })
+        if (this.editingTopicForChapter) {
+           // Topic-based Chapter
+           if (this.editingChapter.isNew) {
+             if (this.insertIndex !== null) chapterData.insertIndex = this.insertIndex
+             await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters`, {
+               method: 'POST',
+               body: JSON.stringify(chapterData)
+             })
+           } else {
+             // Use _id for update if available, else id string
+             const chId = this.editingChapter._id || this.editingChapter.id
+             await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters/${chId}`, {
+               method: 'PUT',
+               body: JSON.stringify(chapterData)
+             })
+           }
         } else {
-          await request(`/api/course/levels/${this.editingLevelForChapter._id}/chapters/${this.editingChapter.id}`, {
-            method: 'PUT',
-            body: JSON.stringify(chapterData)
-          })
+           // Legacy Level-based Chapter
+           if (this.editingChapter.isNew) {
+             if (this.insertIndex !== null) chapterData.insertIndex = this.insertIndex
+             await request(`/api/course/levels/${this.editingLevelForChapter._id}/chapters`, {
+               method: 'POST',
+               body: JSON.stringify(chapterData)
+             })
+           } else {
+             await request(`/api/course/levels/${this.editingLevelForChapter._id}/chapters/${this.editingChapter.id}`, {
+               method: 'PUT',
+               body: JSON.stringify(chapterData)
+             })
+           }
         }
+        
         this.showToastMessage('保存章节成功')
         this.showChapterModal = false
         this.fetchLevels()
@@ -514,10 +634,14 @@ export default {
         this.showToastMessage('保存章节失败: ' + e.message)
       }
     },
-    async deleteChapter(levelId, chapterId) {
+    async deleteChapter(levelId, topicId, chapterId) {
       if (!confirm('确定要删除这个章节吗？')) return
       try {
-        await request(`/api/course/levels/${levelId}/chapters/${chapterId}`, { method: 'DELETE' })
+        if (topicId) {
+           await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, { method: 'DELETE' })
+        } else {
+           await request(`/api/course/levels/${levelId}/chapters/${chapterId}`, { method: 'DELETE' })
+        }
         this.showToastMessage('删除章节成功')
         this.fetchLevels()
       } catch (e) {

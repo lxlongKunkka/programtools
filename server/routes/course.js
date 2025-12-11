@@ -23,7 +23,10 @@ router.get('/levels', async (req, res) => {
         query.subject = subject
       }
     }
-    const levels = await CourseLevel.find(query).sort({ level: 1 }).populate('chapters.problemIds', 'title docId domainId')
+    const levels = await CourseLevel.find(query)
+      .sort({ level: 1 })
+      .populate('topics.chapters.problemIds', 'title docId domainId')
+      .populate('chapters.problemIds', 'title docId domainId') // Legacy support
     res.json(levels)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -344,6 +347,56 @@ router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']
   }
 })
 
+// --- Topic Management ---
+
+// Add a Topic
+router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { title, description } = req.body
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    level.topics.push({ title, description, chapters: [] })
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Update a Topic
+router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { title, description } = req.body
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+    
+    topic.title = title
+    topic.description = description
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Delete a Topic
+router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    level.topics.pull(req.params.topicId)
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Helper to resolve problem IDs (ObjectId or domain:docId or docId)
 async function resolveProblemIds(ids) {
   const resolved = []
@@ -374,7 +427,105 @@ async function resolveProblemIds(ids) {
   return resolved
 }
 
-// Add a Chapter
+// --- Chapter Management (Topic Based) ---
+
+// Add a Chapter to a Topic
+router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { id, title, content, problemIds, optional, insertIndex } = req.body
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+
+    const resolvedIds = await resolveProblemIds(problemIds || [])
+    
+    const newChapter = { id, title, content, problemIds: resolvedIds, optional: !!optional }
+
+    if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= topic.chapters.length) {
+      topic.chapters.splice(insertIndex, 0, newChapter)
+    } else {
+      topic.chapters.push(newChapter)
+    }
+
+    // Auto-renumber chapters? Maybe not strictly required if ID is manual, but good for consistency if ID is auto-generated.
+    // If ID is passed, use it. If not, maybe generate?
+    // The frontend usually generates ID.
+
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Update a Chapter in a Topic
+router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { title, content, problemIds, optional } = req.body
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+
+    const chapter = topic.chapters.id(req.params.chapterId) // Use .id() for subdocument search by _id
+    // OR find by custom id string if that's what we use
+    // The schema has `id` (string) and `_id` (ObjectId).
+    // The route param `chapterId` usually refers to the custom string ID in legacy, but for subdocs it's better to use _id if possible.
+    // However, the frontend might send the string ID.
+    // Let's try to find by _id first, then by id string.
+    
+    let targetChapter = topic.chapters.id(req.params.chapterId)
+    if (!targetChapter) {
+       targetChapter = topic.chapters.find(c => c.id === req.params.chapterId)
+    }
+    
+    if (!targetChapter) return res.status(404).json({ error: 'Chapter not found' })
+    
+    const resolvedIds = await resolveProblemIds(problemIds || [])
+
+    targetChapter.title = title
+    targetChapter.content = content
+    targetChapter.problemIds = resolvedIds
+    targetChapter.optional = !!optional
+    
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Delete a Chapter from a Topic
+router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+    
+    // Try to remove by _id or id string
+    let targetChapter = topic.chapters.id(req.params.chapterId)
+    if (targetChapter) {
+        targetChapter.remove()
+    } else {
+        // Filter out by string ID
+        const initialLen = topic.chapters.length
+        topic.chapters = topic.chapters.filter(c => c.id !== req.params.chapterId)
+        if (topic.chapters.length === initialLen) return res.status(404).json({ error: 'Chapter not found' })
+    }
+
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Add a Chapter (Legacy)
 router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { id, title, content, problemIds, optional, insertIndex } = req.body
