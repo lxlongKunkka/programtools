@@ -28,3 +28,4 @@ node_modules/.package-lock.json
 
 # Ignore runtime sensitive data
 server/premium_users.json
+server/teachers.json
