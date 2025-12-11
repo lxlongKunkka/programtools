@@ -17,6 +17,12 @@ import courseRoutes from './routes/course.js'
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
 
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 // --- MongoDB Connection ---
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
@@ -26,6 +32,9 @@ setupSocket(httpServer)
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
+
+// Serve static files
+app.use('/public', express.static(path.join(__dirname, 'public')))
 
 // --- Usage logging ---
 app.use(requestLogger)

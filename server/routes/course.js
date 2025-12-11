@@ -55,6 +55,59 @@ router.get('/progress', authenticateToken, async (req, res) => {
         await progress.save()
       }
     }
+
+    // Self-healing: Ensure the first chapter of the current level is unlocked for each subject
+    if (progress.subjectLevels) {
+      let progressChanged = false
+      for (const [subject, levelNum] of progress.subjectLevels) {
+        // Find the course level
+        // Note: We use a loose query for C++ to handle legacy docs without subject field
+        const query = { level: levelNum }
+        if (subject === 'C++') {
+          query.$or = [{ subject: 'C++' }, { subject: { $exists: false } }]
+        } else {
+          query.subject = subject
+        }
+
+        const levelDoc = await CourseLevel.findOne(query)
+        if (levelDoc) {
+          let firstChapter = null
+          // Check topics first (New Structure)
+          if (levelDoc.topics && levelDoc.topics.length > 0) {
+             // Find first topic with chapters
+             const topicWithChapters = levelDoc.topics.find(t => t.chapters && t.chapters.length > 0)
+             if (topicWithChapters) {
+               firstChapter = topicWithChapters.chapters[0]
+             }
+          } 
+          // Fallback to legacy chapters if no topic chapters found
+          if (!firstChapter && levelDoc.chapters && levelDoc.chapters.length > 0) {
+            firstChapter = levelDoc.chapters[0]
+          }
+          
+          if (firstChapter) {
+            // Check ID (Legacy)
+            if (!progress.unlockedChapters.includes(firstChapter.id)) {
+              progress.unlockedChapters.push(firstChapter.id)
+              progressChanged = true
+            }
+            // Check UID (New)
+            if (firstChapter._id) {
+              if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+              const uidStr = firstChapter._id.toString()
+              const hasUid = progress.unlockedChapterUids.some(u => u.toString() === uidStr)
+              if (!hasUid) {
+                progress.unlockedChapterUids.push(firstChapter._id)
+                progressChanged = true
+              }
+            }
+          }
+        }
+      }
+      if (progressChanged) {
+        await progress.save()
+      }
+    }
     
     res.json(progress)
   } catch (e) {
@@ -64,98 +117,155 @@ router.get('/progress', authenticateToken, async (req, res) => {
 
 // Helper to unlock next chapter
 async function unlockNext(progress, currentChapterId) {
-  // Find the level containing this chapter. 
-  // Note: If multiple subjects have the same chapter ID, this might pick the wrong one.
-  // We assume chapter IDs are unique across the system or at least across active courses.
-  const level = await CourseLevel.findOne({ 'chapters.id': currentChapterId })
-  if (level) {
-    let currentIdx = level.chapters.findIndex(c => c.id === currentChapterId)
-    const currentChapterObj = level.chapters[currentIdx]
+  // 1. Find Level and Location
+  let level = await CourseLevel.findOne({ 'chapters.id': currentChapterId })
+  let isTopic = false
+  let tIdx = -1
+  let cIdx = -1
+  let currentChapterObj = null
 
-    // --- NEW: Update UIDs ---
-    if (currentChapterObj && currentChapterObj._id) {
-      if (!progress.completedChapterUids) progress.completedChapterUids = []
-      // Add to completed UIDs if not present
-      const uidStr = currentChapterObj._id.toString()
-      if (!progress.completedChapterUids.some(id => id.toString() === uidStr)) {
-        progress.completedChapterUids.push(currentChapterObj._id)
-      }
-    }
-    // ------------------------
-    
-    // Loop to unlock subsequent chapters if they are optional
-    // We use a loop to handle consecutive optional chapters
-    while (true) {
-      if (currentIdx !== -1 && currentIdx < level.chapters.length - 1) {
-        const nextChapter = level.chapters[currentIdx + 1]
-        
-        // Unlock the next chapter (Legacy String ID)
-        if (!progress.unlockedChapters.includes(nextChapter.id)) {
-          progress.unlockedChapters.push(nextChapter.id)
-        }
-        // Unlock the next chapter (New UID)
-        if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
-        if (nextChapter._id && !progress.unlockedChapterUids.some(id => id.toString() === nextChapter._id.toString())) {
-          progress.unlockedChapterUids.push(nextChapter._id)
-        }
-        
-        // If next chapter is optional, we treat it as "virtually completed" for unlocking purposes
-        // so we move to the next one immediately
-        if (nextChapter.optional) {
-          currentIdx++
-          continue
-        } else {
-          // If next chapter is required, we stop here. User must complete it.
+  if (level) {
+    cIdx = level.chapters.findIndex(c => c.id === currentChapterId)
+    currentChapterObj = level.chapters[cIdx]
+  } else {
+    level = await CourseLevel.findOne({ 'topics.chapters.id': currentChapterId })
+    if (level) {
+      isTopic = true
+      for (let t = 0; t < level.topics.length; t++) {
+        const idx = level.topics[t].chapters.findIndex(c => c.id === currentChapterId)
+        if (idx !== -1) {
+          tIdx = t
+          cIdx = idx
+          currentChapterObj = level.topics[t].chapters[idx]
           break
         }
-      } else {
-        // End of level reached. Unlock next level.
-        const currentSubject = level.subject || 'C++'
-        const nextLevelQuery = { level: level.level + 1 }
-        if (currentSubject === 'C++') {
-             nextLevelQuery.$or = [{ subject: 'C++' }, { subject: { $exists: false } }]
-        } else {
-             nextLevelQuery.subject = currentSubject
-        }
-        
-        const nextLevel = await CourseLevel.findOne(nextLevelQuery)
-        if (nextLevel && nextLevel.chapters.length > 0) {
-           // Update subject-specific level
-           if (!progress.subjectLevels) progress.subjectLevels = new Map()
-           
-           const currentSubjectLevel = progress.subjectLevels.get(currentSubject) || 1
-           if (currentSubjectLevel < nextLevel.level) {
-             progress.subjectLevels.set(currentSubject, nextLevel.level)
-             
-             // Sync legacy currentLevel if it's C++
-             if (currentSubject === 'C++') {
-               progress.currentLevel = nextLevel.level
-             }
-           }
-           
-           // Unlock chapters in the next level, handling initial optional chapters
-           let nextLvlIdx = 0
-           while (nextLvlIdx < nextLevel.chapters.length) {
-             const ch = nextLevel.chapters[nextLvlIdx]
-             // Legacy
-             if (!progress.unlockedChapters.includes(ch.id)) {
-               progress.unlockedChapters.push(ch.id)
-             }
-             // UID
-             if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
-             if (ch._id && !progress.unlockedChapterUids.some(id => id.toString() === ch._id.toString())) {
-               progress.unlockedChapterUids.push(ch._id)
-             }
-             
-             if (ch.optional) {
-               nextLvlIdx++
-             } else {
-               break
-             }
-           }
-        }
-        break // Break the outer loop
       }
+    }
+  }
+
+  if (!level || !currentChapterObj) return
+
+  // 2. Mark Current as Completed (UID)
+  if (currentChapterObj._id) {
+    if (!progress.completedChapterUids) progress.completedChapterUids = []
+    const uidStr = currentChapterObj._id.toString()
+    if (!progress.completedChapterUids.some(id => id.toString() === uidStr)) {
+      progress.completedChapterUids.push(currentChapterObj._id)
+    }
+  }
+
+  // 3. Find Next Chapter(s) to Unlock
+  let loopTIdx = tIdx
+  let loopCIdx = cIdx
+  let loopIsTopic = isTopic
+  
+  const advance = () => {
+    if (loopIsTopic) {
+      // Try next chapter in current topic
+      if (loopCIdx < level.topics[loopTIdx].chapters.length - 1) {
+        loopCIdx++
+        return level.topics[loopTIdx].chapters[loopCIdx]
+      }
+      // Try next topic
+      let nextTIdx = loopTIdx + 1
+      while (nextTIdx < level.topics.length) {
+        if (level.topics[nextTIdx].chapters && level.topics[nextTIdx].chapters.length > 0) {
+          loopTIdx = nextTIdx
+          loopCIdx = 0
+          return level.topics[loopTIdx].chapters[0]
+        }
+        nextTIdx++
+      }
+      return null // End of level
+    } else {
+      // Legacy
+      if (loopCIdx < level.chapters.length - 1) {
+        loopCIdx++
+        return level.chapters[loopCIdx]
+      }
+      return null // End of level
+    }
+  }
+
+  while (true) {
+    const nextChapter = advance()
+    
+    if (nextChapter) {
+      // Unlock it
+      if (!progress.unlockedChapters.includes(nextChapter.id)) {
+        progress.unlockedChapters.push(nextChapter.id)
+      }
+      if (nextChapter._id) {
+        if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+        const uidStr = nextChapter._id.toString()
+        if (!progress.unlockedChapterUids.some(id => id.toString() === uidStr)) {
+          progress.unlockedChapterUids.push(nextChapter._id)
+        }
+      }
+
+      if (nextChapter.optional) {
+        continue
+      } else {
+        break
+      }
+    } else {
+      // End of Level -> Unlock Next Level
+      const currentSubject = level.subject || 'C++'
+      const nextLevelQuery = { level: level.level + 1 }
+      if (currentSubject === 'C++') {
+           nextLevelQuery.$or = [{ subject: 'C++' }, { subject: { $exists: false } }]
+      } else {
+           nextLevelQuery.subject = currentSubject
+      }
+      
+      const nextLevel = await CourseLevel.findOne(nextLevelQuery)
+      if (nextLevel) {
+         // Update subject-specific level
+         if (!progress.subjectLevels) progress.subjectLevels = new Map()
+         
+         const currentSubjectLevel = progress.subjectLevels.get(currentSubject) || 1
+         if (currentSubjectLevel < nextLevel.level) {
+           progress.subjectLevels.set(currentSubject, nextLevel.level)
+           if (currentSubject === 'C++') {
+             progress.currentLevel = nextLevel.level
+           }
+         }
+         
+         // Unlock first chapter(s) of next level
+         let firstChapters = []
+         const collect = () => {
+           if (nextLevel.topics && nextLevel.topics.length > 0) {
+             for (const topic of nextLevel.topics) {
+               if (topic.chapters) {
+                 for (const ch of topic.chapters) {
+                   firstChapters.push(ch)
+                   if (!ch.optional) return
+                 }
+               }
+             }
+           } else if (nextLevel.chapters) {
+             for (const ch of nextLevel.chapters) {
+               firstChapters.push(ch)
+               if (!ch.optional) return
+             }
+           }
+         }
+         collect()
+
+         for (const ch of firstChapters) {
+           if (!progress.unlockedChapters.includes(ch.id)) {
+             progress.unlockedChapters.push(ch.id)
+           }
+           if (ch._id) {
+              if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+              const uidStr = ch._id.toString()
+              if (!progress.unlockedChapterUids.some(id => id.toString() === uidStr)) {
+                progress.unlockedChapterUids.push(ch._id)
+              }
+           }
+         }
+      }
+      break
     }
   }
 }
@@ -187,20 +297,37 @@ router.post('/submit-problem', authenticateToken, async (req, res) => {
     }
     
     // Check if chapter is completed
-    const level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+    let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+    let chapter = null
+    
     if (level) {
-      const chapter = level.chapters.find(c => c.id === chapterId)
-      if (chapter) {
+      chapter = level.chapters.find(c => c.id === chapterId)
+    } else {
+      level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
+      if (level) {
+        for (const topic of level.topics) {
+          chapter = topic.chapters.find(c => c.id === chapterId)
+          if (chapter) break
+        }
+      }
+    }
+
+    if (level && chapter) {
         const requiredIds = chapter.problemIds.map(p => p.toString())
         const solvedIds = chapterData.solvedProblems
         
         const allSolved = requiredIds.every(id => solvedIds.includes(id))
         
-        if (allSolved && !progress.completedChapters.includes(chapterId)) {
-          progress.completedChapters.push(chapterId)
+        const isCompletedLegacy = progress.completedChapters.includes(chapterId)
+        let isCompletedUid = false
+        if (chapter._id && progress.completedChapterUids) {
+           isCompletedUid = progress.completedChapterUids.some(id => id.toString() === chapter._id.toString())
+        }
+        
+        if (allSolved && (!isCompletedLegacy || (chapter._id && !isCompletedUid))) {
+          if (!isCompletedLegacy) progress.completedChapters.push(chapterId)
           await unlockNext(progress, chapterId)
         }
-      }
     }
     
     await progress.save()
@@ -223,15 +350,34 @@ router.post('/complete-chapter', authenticateToken, async (req, res) => {
     }
 
     // Verify chapter exists and has no problems (optional strictness)
-    const level = await CourseLevel.findOne({ 'chapters.id': chapterId })
-    if (!level) {
+    let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+    let chapter = null
+    
+    if (level) {
+      chapter = level.chapters.find(c => c.id === chapterId)
+    } else {
+      level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
+      if (level) {
+        for (const topic of level.topics) {
+          chapter = topic.chapters.find(c => c.id === chapterId)
+          if (chapter) break
+        }
+      }
+    }
+
+    if (!level || !chapter) {
       return res.status(404).json({ error: 'Chapter not found' })
     }
-    const chapter = level.chapters.find(c => c.id === chapterId)
     
     // Allow completion if it's not already completed
-    if (!progress.completedChapters.includes(chapterId)) {
-      progress.completedChapters.push(chapterId)
+    const isCompletedLegacy = progress.completedChapters.includes(chapterId)
+    let isCompletedUid = false
+    if (chapter._id && progress.completedChapterUids) {
+       isCompletedUid = progress.completedChapterUids.some(id => id.toString() === chapter._id.toString())
+    }
+
+    if (!isCompletedLegacy || (chapter._id && !isCompletedUid)) {
+      if (!isCompletedLegacy) progress.completedChapters.push(chapterId)
       await unlockNext(progress, chapterId)
     }
 
@@ -282,19 +428,36 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
        }
        
        // Check completion
-       const level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+       let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+       let chapter = null
+       
        if (level) {
-         const chapter = level.chapters.find(c => c.id === chapterId)
-         if (chapter) {
+         chapter = level.chapters.find(c => c.id === chapterId)
+       } else {
+         level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
+         if (level) {
+           for (const topic of level.topics) {
+             chapter = topic.chapters.find(c => c.id === chapterId)
+             if (chapter) break
+           }
+         }
+       }
+
+       if (level && chapter) {
            const requiredIds = chapter.problemIds.map(p => p.toString())
            const solvedIds = chapterData.solvedProblems
            const allSolved = requiredIds.every(id => solvedIds.includes(id))
            
-           if (allSolved && !progress.completedChapters.includes(chapterId)) {
-             progress.completedChapters.push(chapterId)
+           const isCompletedLegacy = progress.completedChapters.includes(chapterId)
+           let isCompletedUid = false
+           if (chapter._id && progress.completedChapterUids) {
+              isCompletedUid = progress.completedChapterUids.some(id => id.toString() === chapter._id.toString())
+           }
+           
+           if (allSolved && (!isCompletedLegacy || (chapter._id && !isCompletedUid))) {
+             if (!isCompletedLegacy) progress.completedChapters.push(chapterId)
              await unlockNext(progress, chapterId)
            }
-         }
        }
        
        await progress.save()
@@ -439,7 +602,7 @@ async function resolveProblemIds(ids) {
 // Add a Chapter to a Topic
 router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, problemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, problemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -448,17 +611,21 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 
     const resolvedIds = await resolveProblemIds(problemIds || [])
     
-    const newChapter = { id, title, content, problemIds: resolvedIds, optional: !!optional }
+    const newChapter = { 
+      id, 
+      title, 
+      content, 
+      contentType: contentType || 'markdown',
+      resourceUrl: resourceUrl || '',
+      problemIds: resolvedIds, 
+      optional: !!optional 
+    }
 
     if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= topic.chapters.length) {
       topic.chapters.splice(insertIndex, 0, newChapter)
     } else {
       topic.chapters.push(newChapter)
     }
-
-    // Auto-renumber chapters? Maybe not strictly required if ID is manual, but good for consistency if ID is auto-generated.
-    // If ID is passed, use it. If not, maybe generate?
-    // The frontend usually generates ID.
 
     await level.save()
     res.json(level)
@@ -470,7 +637,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 // Update a Chapter in a Topic
 router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, problemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, problemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -478,11 +645,6 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
     const chapter = topic.chapters.id(req.params.chapterId) // Use .id() for subdocument search by _id
-    // OR find by custom id string if that's what we use
-    // The schema has `id` (string) and `_id` (ObjectId).
-    // The route param `chapterId` usually refers to the custom string ID in legacy, but for subdocs it's better to use _id if possible.
-    // However, the frontend might send the string ID.
-    // Let's try to find by _id first, then by id string.
     
     let targetChapter = topic.chapters.id(req.params.chapterId)
     if (!targetChapter) {
@@ -495,6 +657,8 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
 
     targetChapter.title = title
     targetChapter.content = content
+    targetChapter.contentType = contentType || 'markdown'
+    targetChapter.resourceUrl = resourceUrl || ''
     targetChapter.problemIds = resolvedIds
     targetChapter.optional = !!optional
     
@@ -535,13 +699,21 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
 // Add a Chapter (Legacy)
 router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, problemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, problemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     const resolvedIds = await resolveProblemIds(problemIds || [])
     
-    const newChapter = { id, title, content, problemIds: resolvedIds, optional: !!optional }
+    const newChapter = { 
+      id, 
+      title, 
+      content, 
+      contentType: contentType || 'markdown',
+      resourceUrl: resourceUrl || '',
+      problemIds: resolvedIds, 
+      optional: !!optional 
+    }
 
     if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.chapters.length) {
       level.chapters.splice(insertIndex, 0, newChapter)
@@ -564,7 +736,7 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'te
 // Update a Chapter
 router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, problemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, problemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -575,6 +747,8 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['a
 
     chapter.title = title
     chapter.content = content
+    chapter.contentType = contentType || 'markdown'
+    chapter.resourceUrl = resourceUrl || ''
     chapter.problemIds = resolvedIds
     chapter.optional = !!optional
     

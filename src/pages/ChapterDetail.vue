@@ -13,14 +13,25 @@
       <div class="tutorial-section">
         <h1 class="chapter-title">{{ chapter.title }}</h1>
         
-        <div v-for="(stepHtml, index) in parsedSteps" :key="index">
-          <div v-if="index < visibleSteps" class="markdown-content step-container" v-html="stepHtml"></div>
+        <!-- HTML Content Mode -->
+        <div v-if="chapter.contentType === 'html'" :class="['html-content-container', { maximized: isMaximized }]">
+           <button @click="isMaximized = !isMaximized" class="btn-maximize">
+             {{ isMaximized ? '退出全屏' : '全屏显示' }}
+           </button>
+           <iframe :src="getHtmlUrl(chapter.resourceUrl)" class="courseware-iframe" allowfullscreen></iframe>
         </div>
-        
-        <div v-if="parsedSteps.length > visibleSteps" class="step-action">
-          <button @click="showNextStep" class="btn-next-step">
-            点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) ↓
-          </button>
+
+        <!-- Markdown Content Mode -->
+        <div v-else>
+            <div v-for="(stepHtml, index) in parsedSteps" :key="index">
+              <div v-if="index < visibleSteps" class="markdown-content step-container" v-html="stepHtml"></div>
+            </div>
+            
+            <div v-if="parsedSteps.length > visibleSteps" class="step-action">
+              <button @click="showNextStep" class="btn-next-step">
+                点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) ↓
+              </button>
+            </div>
         </div>
       </div>
 
@@ -110,6 +121,7 @@ export default {
       currentProblem: null,
       code: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello World" << endl;\n    return 0;\n}',
       submitting: false,
+      isMaximized: false,
       checking: null,
       visibleSteps: 1
     }
@@ -157,9 +169,33 @@ export default {
     },
     hasNextChapter() {
       // Simple check if there's a next chapter in the current level
-      if (!this.level) return false
-      const idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
-      return idx !== -1 && idx < this.level.chapters.length - 1
+      if (!this.level || !this.chapter) return false
+      
+      // Check legacy
+      let idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
+      if (idx !== -1) {
+        return idx < this.level.chapters.length - 1
+      }
+      
+      // Check topics
+      if (this.level.topics) {
+        for (let t = 0; t < this.level.topics.length; t++) {
+          const topic = this.level.topics[t]
+          idx = topic.chapters.findIndex(c => c.id === this.chapter.id)
+          if (idx !== -1) {
+            // Check next in topic
+            if (idx < topic.chapters.length - 1) return true
+            // Check next topic
+            let nextT = t + 1
+            while (nextT < this.level.topics.length) {
+               if (this.level.topics[nextT].chapters && this.level.topics[nextT].chapters.length > 0) return true
+               nextT++
+            }
+            return false
+          }
+        }
+      }
+      return false
     }
   },
   mounted() {
@@ -227,7 +263,19 @@ export default {
         this.level = levelsData.find(l => l.level === this.levelId)
         
         if (this.level) {
+          // Try legacy chapters
           this.chapter = this.level.chapters.find(c => c.id === this.chapterId)
+          
+          // Try topics if not found
+          if (!this.chapter && this.level.topics) {
+            for (const topic of this.level.topics) {
+              const found = topic.chapters.find(c => c.id === this.chapterId)
+              if (found) {
+                this.chapter = found
+                break
+              }
+            }
+          }
           this.visibleSteps = 1
         }
         
@@ -248,6 +296,13 @@ export default {
         return `https://acjudge.com/d/${problem.domainId}/p/${problem.docId}`
       }
       return '#'
+    },
+    getHtmlUrl(url) {
+      if (!url) return ''
+      if (url.startsWith('http')) return url
+      // If relative path, assume it's served by our backend
+      // In dev, we proxy /public to backend, so relative path works if it starts with /public
+      return url
     },
     async checkStatus(problem) {
       this.checking = problem._id
@@ -339,13 +394,40 @@ export default {
       }
     },
     goToNextChapter() {
-      if (!this.level) return
-      const idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
+      if (!this.level || !this.chapter) return
+      
+      let nextChapter = null
+      
+      // Check legacy
+      let idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
       if (idx !== -1 && idx < this.level.chapters.length - 1) {
-        const nextChapter = this.level.chapters[idx + 1]
+        nextChapter = this.level.chapters[idx + 1]
+      } else if (this.level.topics) {
+        // Check topics
+        for (let t = 0; t < this.level.topics.length; t++) {
+          const topic = this.level.topics[t]
+          idx = topic.chapters.findIndex(c => c.id === this.chapter.id)
+          if (idx !== -1) {
+            if (idx < topic.chapters.length - 1) {
+              nextChapter = topic.chapters[idx + 1]
+            } else {
+              // Find next topic with chapters
+              let nextT = t + 1
+              while (nextT < this.level.topics.length) {
+                if (this.level.topics[nextT].chapters && this.level.topics[nextT].chapters.length > 0) {
+                  nextChapter = this.level.topics[nextT].chapters[0]
+                  break
+                }
+                nextT++
+              }
+            }
+            break
+          }
+        }
+      }
+      
+      if (nextChapter) {
         this.$router.push(`/course/${this.level.level}/${nextChapter.id}`)
-        // Need to reload data because we are reusing the component
-        // Or watch $route
       }
     }
   },
@@ -415,6 +497,50 @@ export default {
 .markdown-content {
   line-height: 1.6;
   color: #333;
+}
+
+.html-content-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+.html-content-container.maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+  margin: 0;
+  border: none;
+  background: white;
+}
+.btn-maximize {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 10;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-maximize:hover {
+  background: rgba(0,0,0,0.8);
+}
+.courseware-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 .markdown-content {

@@ -223,9 +223,34 @@
           <label>标题:</label>
           <input v-model="editingChapter.title" class="form-input">
         </div>
+        
         <div class="form-group">
-          <label>内容 (Markdown):</label>
-          <textarea v-model="editingChapter.content" class="form-input" rows="10"></textarea>
+          <label>内容类型:</label>
+          <select v-model="editingChapter.contentType" class="form-input">
+            <option value="markdown">Markdown 文本</option>
+            <option value="html">HTML 课件 (Iframe)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+             <label style="margin-bottom: 0;">内容 ({{ editingChapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
+             <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
+               {{ showPreview ? '关闭预览' : '预览内容' }}
+             </button>
+          </div>
+
+          <div v-if="!showPreview">
+            <input v-if="editingChapter.contentType === 'html'" v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
+            <textarea v-else v-model="editingChapter.content" class="form-input" rows="10"></textarea>
+          </div>
+
+          <div v-else class="preview-container">
+             <iframe v-if="editingChapter.contentType === 'html'" :src="getPreviewUrl(editingChapter.resourceUrl)" class="preview-iframe"></iframe>
+             <div v-else class="markdown-preview">
+               <MarkdownViewer :content="editingChapter.content" />
+             </div>
+          </div>
         </div>
         <div class="form-group">
           <label>题目 ID (逗号分隔，支持 "domain:id" 或 "id"):</label>
@@ -250,8 +275,10 @@
 <script>
 import request from '../utils/request'
 import { marked } from 'marked'
+import MarkdownViewer from '../components/MarkdownViewer.vue'
 
 export default {
+  components: { MarkdownViewer },
   inject: ['showToastMessage'],
   data() {
     return {
@@ -283,7 +310,8 @@ export default {
       editingTopicForChapter: null,
       insertIndex: null, // For inserting chapters
       selectedSubject: 'C++',
-      availableSubjects: ['C++', 'Python', 'Web']
+      availableSubjects: ['C++', 'Python', 'Web'],
+      showPreview: false
     }
   },
   computed: {
@@ -537,6 +565,8 @@ export default {
           ...chapter, 
           problemIdsStr: problemIdsStr,
           optional: !!chapter.optional,
+          contentType: chapter.contentType || 'markdown',
+          resourceUrl: chapter.resourceUrl || '',
           isNew: false
         }
       } else {
@@ -555,6 +585,8 @@ export default {
           id: nextId, 
           title: '', 
           content: '', 
+          contentType: 'markdown',
+          resourceUrl: '',
           problemIdsStr: '',
           optional: false,
           isNew: true
@@ -575,6 +607,8 @@ export default {
           id: this.editingChapter.id,
           title: this.editingChapter.title,
           content: this.editingChapter.content,
+          contentType: this.editingChapter.contentType,
+          resourceUrl: this.editingChapter.resourceUrl,
           problemIds: problemIds,
           optional: this.editingChapter.optional
         }
@@ -618,6 +652,17 @@ export default {
         this.showToastMessage('保存章节失败: ' + e.message)
       }
     },
+    renderMarkdown(content) {
+      if (!content) return ''
+      return marked(content)
+    },
+    getPreviewUrl(url) {
+      if (!url) return ''
+      // If it's a relative path starting with /, prepend current origin if needed, 
+      // but usually iframe handles relative paths fine relative to the page.
+      // However, for local dev proxy, it should work.
+      return url
+    },
     async deleteChapter(levelId, topicId, chapterId) {
       if (!confirm('确定要删除这个章节吗？')) return
       try {
@@ -642,10 +687,6 @@ export default {
         }
         return p.docId || p._id
       }).join(', ')
-    },
-    renderMarkdown(text) {
-      if (!text) return ''
-      return marked(text)
     }
   }
 }
@@ -1199,5 +1240,37 @@ export default {
 }
 .btn-add-topic:hover {
   background-color: #2980b9;
+}
+
+.btn-preview {
+  background-color: #9b59b6;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-preview:hover {
+  background-color: #8e44ad;
+}
+.preview-container {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  background: #f9f9f9;
+  min-height: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+.preview-iframe {
+  width: 100%;
+  height: 400px;
+  border: none;
+  background: white;
+}
+.markdown-preview {
+  background: white;
+  padding: 15px;
 }
 </style>

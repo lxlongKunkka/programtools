@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广度优先搜索 (BFS) 算法详解</title>
+    <!-- Prism CSS for Syntax Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            --text-color: #ffffff;
+            --accent-color: #00d2ff;
+            --secondary-color: #3a7bd5;
+            --highlight-bg: rgba(255, 255, 255, 0.1);
+            --code-bg: #1e1e1e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Slide Container */
+        .slides-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slide {
+            position: absolute;
+            width: 80%;
+            height: 85%;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            pointer-events: none;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+            z-index: 10;
+        }
+
+        .slide.prev {
+            opacity: 0;
+            transform: translateX(-100px);
+            z-index: 0;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+
+        h3 {
+            font-size: 1.8rem;
+            margin: 20px 0;
+            color: #a8d0e6;
+        }
+
+        p, li {
+            font-size: 1.4rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+
+        ul {
+            margin-left: 40px;
+        }
+
+        /* Fragments (Bullet points reveal) */
+        .fragment {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        .fragment.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: var(--code-bg) !important;
+            border-radius: 10px;
+            padding: 20px !important;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            font-size: 1rem !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Visualizations */
+        .visual-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        /* Ripple Animation */
+        .ripple-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        .ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            animation: ripple 3s infinite linear;
+            opacity: 0;
+        }
+        .ripple:nth-child(2) { animation-delay: 1s; }
+        .ripple:nth-child(3) { animation-delay: 2s; }
+
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 1; border-width: 5px; }
+            100% { width: 300px; height: 300px; opacity: 0; border-width: 0px; }
+        }
+
+        /* Queue Visualization */
+        .queue-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 80px;
+            border: 2px dashed #666;
+            padding: 10px;
+            border-radius: 10px;
+            min-width: 400px;
+            background: rgba(0,0,0,0.3);
+        }
+        .queue-item {
+            width: 60px;
+            height: 60px;
+            background: var(--secondary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Graph SVG */
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        .node circle {
+            fill: #1e1e1e;
+            stroke: #fff;
+            stroke-width: 2;
+            transition: fill 0.5s, stroke 0.5s;
+        }
+        .node text {
+            fill: #fff;
+            font-size: 16px;
+            text-anchor: middle;
+            dominant-baseline: central;
+            font-family: monospace;
+        }
+        .edge {
+            stroke: #666;
+            stroke-width: 2;
+            transition: stroke 0.5s;
+        }
+        .node.visited circle {
+            fill: var(--secondary-color);
+            stroke: var(--accent-color);
+        }
+        .node.active circle {
+            fill: #ff9800;
+            stroke: #ff5722;
+            stroke-width: 4;
+        }
+        .node.in-queue circle {
+            fill: #4caf50;
+        }
+
+        /* Controls & Progress */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 1rem;
+        }
+        .btn:hover { background: rgba(255,255,255,0.2); }
+        
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+            z-index: 100;
+        }
+        
+        .slide-number {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+        .comparison-table th, .comparison-table td {
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 15px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background: rgba(255,255,255,0.1);
+            color: var(--accent-color);
+        }
+
+        /* Grid for 2-column layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            height: 100%;
+        }
+        .col {
+            display: flex;
+            flex-direction: column;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="slides-container">
+
+        <!-- Slide 1: Title -->
+        <div class="slide active" id="slide-1">
+            <div style="text-align: center; margin-top: 100px;">
+                <h1>广度优先搜索 (BFS)</h1>
+                <h2 style="border: none; color: #fff; font-weight: 300;">算法原理与实战应用</h2>
+                <div style="margin-top: 50px; font-size: 1.5rem; color: var(--accent-color);">
+                    <p>课程时长: 90 分钟</p>
+                    <p>讲师: 算法教研组</p>
+                </div>
+                <div style="margin-top: 50px; font-size: 1rem; opacity: 0.7;">
+                    按 <kbd>Space</kbd> 或 <kbd>→</kbd> 开始
+                </div>
+            </div>
+            <div class="slide-number">1 / 11</div>
+        </div>
+
+        <!-- Slide 2: Motivation -->
+        <div class="slide" id="slide-2">
+            <h2>1. 课程引入：迷宫逃脱</h2>
+            <div class="grid-2">
+                <div class="col">
+                    <p class="fragment">想象你被困在一个巨大的迷宫中...</p>
+                    <ul class="fragment">
+                        <li>你需要找到出口。</li>
+                        <li>不仅要找到，而且要找到<strong>最短</strong>的路径。</li>
+                        <li>如果你像无头苍蝇一样乱撞（DFS），可能会绕很远的路。</li>
+                    </ul>
+                    <p class="fragment" style="margin-top: 20px; color: var(--accent-color);">
+                        <strong>思考：</strong> 如何保证找到的路径是最短的？
+                    </p>
+                </div>
+                <div class="col visual-area" style="background: transparent;">
+                    <!-- Simple SVG Maze Icon -->
+                    <svg viewBox="0 0 100 100" style="width: 80%; height: 80%;">
+                        <rect x="10" y="10" width="80" height="80" fill="none" stroke="#fff" stroke-width="2"/>
+                        <path d="M10 30 H40 V60 H20 V80 H40 V90" stroke="#fff" stroke-width="2" fill="none"/>
+                        <path d="M60 10 V40 H90" stroke="#fff" stroke-width="2" fill="none"/>
+                        <path d="M60 60 H80 V80 H60 Z" fill="rgba(255,255,255,0.1)" stroke="#fff"/>
+                        <circle cx="20" cy="20" r="5" fill="#00d2ff">
+                            <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+                        </circle>
+                        <text x="20" y="20" dy="-10" fill="#00d2ff" font-size="8" text-anchor="middle">Start</text>
+                        <text x="90" y="90" dy="15" fill="#4caf50" font-size="8" text-anchor="middle">End</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="slide-number">2 / 11</div>
+        </div>
+
+        <!-- Slide 3: Core Concept -->
+        <div class="slide" id="slide-3">
+            <h2>2. 核心原理：层层推进</h2>
+            <div class="grid-2">
+                <div class="col">
+                    <p class="fragment">BFS 的核心思想类似于<strong>水波纹扩散</strong>。</p>
+                    <ul class="fragment">
+                        <li>从起点开始，首先访问所有距离为 1 的点。</li>
+                        <li>然后访问所有距离为 2 的点。</li>
+                        <li>以此类推，像地毯式搜索一样向外扩展。</li>
+                    </ul>
+                    <p class="fragment">或者想象成<strong>朋友圈</strong>：</p>
+                    <ul class="fragment">
+                        <li>先找你的直接朋友（第1层）。</li>
+                        <li>再找朋友的朋友（第2层）。</li>
+                    </ul>
+                </div>
+                <div class="col visual-area">
+                    <div class="ripple-container">
+                        <div class="ripple"></div>
+                        <div class="ripple"></div>
+                        <div class="ripple"></div>
+                        <div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); width: 20px; height: 20px; background: #fff; border-radius: 50%;"></div>
+                    </div>
+                    <p style="position: absolute; bottom: 20px;">由近及远，层层遍历</p>
+                </div>
+            </div>
+            <div class="slide-number">3 / 11</div>
+        </div>
+
+        <!-- Slide 4: Data Structure -->
+        <div class="slide" id="slide-4">
+            <h2>3. 数据结构：队列 (Queue)</h2>
+            <p>为了实现"层层推进"，我们需要一个<strong>先进先出 (FIFO)</strong> 的容器。</p>
+            
+            <div style="display: flex; justify-content: space-around; align-items: center; margin-top: 40px;">
+                <div style="width: 40%;">
+                    <ul>
+                        <li class="fragment"><strong>入队 (push)</strong>: 发现新节点时，加入队尾。</li>
+                        <li class="fragment"><strong>出队 (pop)</strong>: 处理当前节点时，从队首取出。</li>
+                        <li class="fragment"><strong>队首 (front)</strong>: 当前正在探索的中心点。</li>
+                    </ul>
+                    <div style="margin-top: 20px;">
+                        <button class="btn" onclick="demoQueuePush()">模拟入队</button>
+                        <button class="btn" onclick="demoQueuePop()">模拟出队</button>
+                    </div>
+                </div>
+                <div class="visual-area" style="flex-direction: column; padding: 20px;">
+                    <div style="margin-bottom: 10px; color: #aaa;">Queue (Front -> Rear)</div>
+                    <div class="queue-container" id="queueDemo">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">4 / 11</div>
+        </div>
+
+        <!-- Slide 5: Interactive Graph BFS -->
+        <div class="slide" id="slide-5">
+            <h2>4. 图的 BFS 演示</h2>
+            <div class="grid-2">
+                <div class="col" style="flex: 0 0 30%;">
+                    <p>点击"下一步"观察算法执行过程。</p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; font-family: monospace;">
+                        <p>当前队列: <span id="graph-queue-display" style="color: #4caf50;">[]</span></p>
+                        <p>当前节点: <span id="graph-current-display" style="color: #ff9800;">None</span></p>
+                        <p>已访问: <span id="graph-visited-display" style="color: var(--secondary-color);">[]</span></p>
+                    </div>
+                    <button class="btn" style="margin-top: 20px; background: var(--accent-color); color: #000; font-weight: bold;" onclick="stepGraphBFS()">下一步 (Step)</button>
+                    <button class="btn" style="margin-top: 10px;" onclick="resetGraphBFS()">重置 (Reset)</button>
+                    
+                    <div style="margin-top: 20px; font-size: 0.9rem;">
+                        图例:<br>
+                        <span style="color:#ff9800">●</span> 当前处理<br>
+                        <span style="color:#4caf50">●</span> 在队列中<br>
+                        <span style="color:#3a7bd5">●</span> 已完成
+                    </div>
+                </div>
+                <div class="col visual-area" id="graph-container">
+                    <!-- SVG Graph injected by JS -->
+                </div>
+            </div>
+            <div class="slide-number">5 / 11</div>
+        </div>
+
+        <!-- Slide 6: C++ Code (Graph) -->
+        <div class="slide" id="slide-6">
+            <h2>5. 代码实现：图的 BFS</h2>
+            <p>使用邻接表 (Adjacency List) 和 `std::queue`。</p>
+            <pre><code class="language-cpp">
+void bfs(int startNode, vector<vector<int>>& adj, int n) {
+    vector<bool> visited(n, false);
+    queue<int> q;
+
+    // 1. 起点入队并标记
+    visited[startNode] = true;
+    q.push(startNode);
+
+    while (!q.empty()) {
+        // 2. 取出队首
+        int u = q.front();
+        q.pop();
+        cout << u << " "; // 处理节点
+
+        // 3. 遍历所有邻居
+        for (int v : adj[u]) {
+            if (!visited[v]) {
+                visited[v] = true; // 关键：入队时立即标记
+                q.push(v);
+            }
+        }
+    }
+}
+            </code></pre>
+            <div class="slide-number">6 / 11</div>
+        </div>
+
+        <!-- Slide 7: 2D Grid Concept -->
+        <div class="slide" id="slide-7">
+            <h2>6. 二维网格 (Maze) BFS</h2>
+            <div class="grid-2">
+                <div class="col">
+                    <p class="fragment">在网格地图中，每个格子 `(x, y)` 是一个节点。</p>
+                    <p class="fragment">它的"邻居"是上下左右四个方向的格子。</p>
+                    <div class="fragment" style="background: var(--code-bg); padding: 15px; border-radius: 10px;">
+                        <strong>方向数组技巧：</strong>
+                        <pre style="margin:0; padding:0 !important; box-shadow:none; border:none; max-height:none;"><code class="language-cpp">
+int dx[] = {-1, 1, 0, 0}; // 上下
+int dy[] = {0, 0, -1, 1}; // 左右
+
+// 新坐标
+int nx = x + dx[i];
+int ny = y + dy[i];
+                        </code></pre>
+                    </div>
+                    <ul class="fragment" style="margin-top: 10px;">
+                        <li>检查边界: `nx >= 0 && nx < N`</li>
+                        <li>检查障碍物: `grid[nx][ny] != 1`</li>
+                    </ul>
+                </div>
+                <div class="col visual-area">
+                    <!-- Grid Visual -->
+                    <div style="display: grid; grid-template-columns: repeat(5, 50px); gap: 2px;">
+                        <!-- Generated by JS for simplicity or static HTML -->
+                        <div style="width:50px; height:50px; background:#4caf50; display:flex; justify-content:center; align-items:center;">(x,y)</div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        
+                        <div style="width:50px; height:50px; background:#00d2ff; opacity:0.5;">U</div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+
+                        <div style="width:50px; height:50px; background:#00d2ff; opacity:0.5;">L</div>
+                        <div style="width:50px; height:50px; background:#fff; color:#000; font-weight:bold; display:flex; justify-content:center; align-items:center;">Center</div>
+                        <div style="width:50px; height:50px; background:#00d2ff; opacity:0.5;">R</div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+
+                        <div style="width:50px; height:50px; background:#00d2ff; opacity:0.5;">D</div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                        <div style="width:50px; height:50px; background:#333;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">7 / 11</div>
+        </div>
+
+        <!-- Slide 8: C++ Code (Maze) -->
+        <div class="slide" id="slide-8">
+            <h2>7. 代码实现：迷宫最短路径</h2>
+            <pre><code class="language-cpp">
+struct Point { int x, y, dist; };
+
+int bfs_maze(vector<vector<int>>& grid, Point start, Point end) {
+    int rows = grid.size(), cols = grid[0].size();
+    vector<vector<bool>> visited(rows, vector<bool>(cols, false));
+    queue<Point> q;
+    
+    q.push({start.x, start.y, 0});
+    visited[start.x][start.y] = true;
+    
+    int dx[] = {-1, 1, 0, 0};
+    int dy[] = {0, 0, -1, 1};
+    
+    while (!q.empty()) {
+        Point curr = q.front(); q.pop();
+        
+        if (curr.x == end.x && curr.y == end.y) return curr.dist;
+        
+        for (int i = 0; i < 4; i++) {
+            int nx = curr.x + dx[i];
+            int ny = curr.y + dy[i];
+            
+            if (nx >= 0 && nx < rows && ny >= 0 && ny < cols && 
+                !visited[nx][ny] && grid[nx][ny] == 0) {
+                visited[nx][ny] = true;
+                q.push({nx, ny, curr.dist + 1});
+            }
+        }
+    }
+    return -1; // 无法到达
+}
+            </code></pre>
+            <div class="slide-number">8 / 11</div>
+        </div>
+
+        <!-- Slide 9: Applications -->
+        <div class="slide" id="slide-9">
+            <h2>8. BFS 的常见应用</h2>
+            <div class="grid-2">
+                <div class="col">
+                    <h3 class="fragment">1. 无权图最短路径</h3>
+                    <p class="fragment">迷宫问题、社交网络中的"六度分隔"。</p>
+                    
+                    <h3 class="fragment">2. 连通性检测 (Flood Fill)</h3>
+                    <p class="fragment">画图工具的油漆桶功能、岛屿数量问题。</p>
+                    
+                    <h3 class="fragment">3. 层序遍历</h3>
+                    <p class="fragment">二叉树的层序遍历、Web爬虫（限制深度）。</p>
+                </div>
+                <div class="col visual-area">
+                    <!-- Flood Fill Visual -->
+                    <svg viewBox="0 0 100 100" width="300" height="300">
+                        <rect x="10" y="10" width="30" height="30" fill="#3a7bd5" class="flood-anim" style="animation-delay:0s"/>
+                        <rect x="40" y="10" width="30" height="30" fill="#3a7bd5" class="flood-anim" style="animation-delay:0.5s"/>
+                        <rect x="10" y="40" width="30" height="30" fill="#3a7bd5" class="flood-anim" style="animation-delay:0.5s"/>
+                        <rect x="40" y="40" width="30" height="30" fill="#3a7bd5" class="flood-anim" style="animation-delay:1s"/>
+                        <rect x="70" y="40" width="30" height="30" fill="#3a7bd5" class="flood-anim" style="animation-delay:1.5s"/>
+                        <style>
+                            .flood-anim { opacity: 0; animation: floodFade 2s infinite; }
+                            @keyframes floodFade { 0% { opacity: 0.2; fill: #fff; } 50% { opacity: 1; fill: #3a7bd5; } 100% { opacity: 1; fill: #3a7bd5; } }
+                        </style>
+                    </svg>
+                    <p>油漆桶算法演示</p>
+                </div>
+            </div>
+            <div class="slide-number">9 / 11</div>
+        </div>
+
+        <!-- Slide 10: BFS vs DFS -->
+        <div class="slide" id="slide-10">
+            <h2>9. 对比：BFS vs DFS</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>特性</th>
+                        <th>BFS (广度优先)</th>
+                        <th>DFS (深度优先)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="fragment">
+                        <td><strong>数据结构</strong></td>
+                        <td>队列 (Queue)</td>
+                        <td>栈 (Stack) / 递归</td>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>搜索方式</strong></td>
+                        <td>层层扩散，由近及远</td>
+                        <td>一条路走到黑，回溯</td>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>最短路径</strong></td>
+                        <td><span style="color:#4caf50">保证最短</span> (无权图)</td>
+                        <td>不保证最短</td>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>空间复杂度</strong></td>
+                        <td>较大 (需存储整层节点)</td>
+                        <td>较小 (仅存储路径)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="slide-number">10 / 11</div>
+        </div>
+
+        <!-- Slide 11: Summary & Homework -->
+        <div class="slide" id="slide-11">
+            <h2>10. 总结与作业</h2>
+            <div class="grid-2">
+                <div class="col">
+                    <h3>本课重点</h3>
+                    <ul>
+                        <li>理解 BFS 的"层序"特性。</li>
+                        <li>掌握 Queue 的使用和 `visited` 数组的重要性。</li>
+                        <li>熟练编写图和网格的 BFS 模板。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h3>课后作业 (LeetCode)</h3>
+                    <ul>
+                        <li><a href="#" style="color:var(--accent-color)">#200. 岛屿数量 (Number of Islands)</a></li>
+                        <li><a href="#" style="color:var(--accent-color)">#994. 腐烂的橘子 (Rotting Oranges)</a></li>
+                        <li><a href="#" style="color:var(--accent-color)">#102. 二叉树的层序遍历</a></li>
+                    </ul>
+                    <div style="margin-top: 40px; text-align: center;">
+                        <p style="font-size: 2rem;">谢谢大家！</p>
+                        <p>Q & A</p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">11 / 11</div>
+        </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn" onclick="prevSlide()">&#8592; 上一页</button>
+        <button class="btn" onclick="nextSlide()">下一页 &#8594;</button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script>
+        // --- Slide Navigation Logic ---
+        let currentSlideIndex = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progressBar');
+        const totalSlides = slides.length;
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlideIndex) {
+                    slide.classList.add('active');
+                } else if (index < currentSlideIndex) {
+                    slide.classList.add('prev');
+                }
+            });
+            // Update Progress Bar
+            const progress = ((currentSlideIndex + 1) / totalSlides) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function nextSlide() {
+            // Check for fragments first
+            const currentSlide = slides[currentSlideIndex];
+            const hiddenFragments = currentSlide.querySelectorAll('.fragment:not(.visible)');
+            if (hiddenFragments.length > 0) {
+                hiddenFragments[0].classList.add('visible');
+                return;
+            }
+
+            if (currentSlideIndex < totalSlides - 1) {
+                currentSlideIndex++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlide();
+            }
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowRight') {
+                nextSlide();
+            } else if (e.code === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Initialize
+        updateSlide();
+
+        // --- Demo Logic: Queue ---
+        const queueContainer = document.getElementById('queueDemo');
+        let queueCount = 0;
+
+        function demoQueuePush() {
+            if (queueContainer.children.length >= 5) return; // Limit size
+            queueCount++;
+            const item = document.createElement('div');
+            item.className = 'queue-item';
+            item.innerText = queueCount;
+            queueContainer.appendChild(item);
+        }
+
+        function demoQueuePop() {
+            if (queueContainer.children.length > 0) {
+                const item = queueContainer.firstElementChild;
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(-20px)';
+                setTimeout(() => item.remove(), 300);
+            }
+        }
+
+        // --- Demo Logic: Graph BFS ---
+        // Simple Adjacency List Graph
+        const graphData = {
+            0: [1, 2],
+            1: [0, 3, 4],
+            2: [0, 5],
+            3: [1],
+            4: [1, 5],
+            5: [2, 4]
+        };
+        const nodePositions = {
+            0: {x: 50, y: 50},
+            1: {x: 150, y: 50},
+            2: {x: 50, y: 150},
+            3: {x: 250, y: 50},
+            4: {x: 150, y: 150},
+            5: {x: 50, y: 250}
+        };
+        
+        // BFS State
+        let bfsQueue = [];
+        let bfsVisited = new Set();
+        let bfsCurrent = null;
+        let bfsStep = 0; // 0: init, 1: pop, 2: neighbors
+        let bfsRunning = false;
+
+        function initGraph() {
+            const container = document.getElementById('graph-container');
+            let svgContent = `<svg viewBox="0 0 300 300">`;
+            
+            // Draw Edges
+            const drawnEdges = new Set();
+            for (let u in graphData) {
+                graphData[u].forEach(v => {
+                    const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+                    if (!drawnEdges.has(key)) {
+                        const p1 = nodePositions[u];
+                        const p2 = nodePositions[v];
+                        svgContent += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" class="edge" id="edge-${u}-${v}" />`;
+                        drawnEdges.add(key);
+                    }
+                });
+            }
+
+            // Draw Nodes
+            for (let id in nodePositions) {
+                const p = nodePositions[id];
+                svgContent += `
+                    <g class="node" id="node-${id}" transform="translate(${p.x}, ${p.y})">
+                        <circle r="15" />
+                        <text>${id}</text>
+                    </g>`;
+            }
+            svgContent += `</svg>`;
+            container.innerHTML = svgContent;
+        }
+
+        function updateGraphVisuals() {
+            // Reset all styles
+            document.querySelectorAll('.node').forEach(el => el.classList.remove('active', 'visited', 'in-queue'));
+            
+            // Apply Visited
+            bfsVisited.forEach(id => {
+                document.getElementById(`node-${id}`).classList.add('visited');
+            });
+
+            // Apply Queue
+            bfsQueue.forEach(id => {
+                const el = document.getElementById(`node-${id}`);
+                if (!el.classList.contains('visited')) {
+                    el.classList.add('in-queue');
+                }
+            });
+
+            // Apply Current
+            if (bfsCurrent !== null) {
+                document.getElementById(`node-${bfsCurrent}`).classList.add('active');
+            }
+
+            // Update Text Displays
+            document.getElementById('graph-queue-display').innerText = JSON.stringify(bfsQueue);
+            document.getElementById('graph-current-display').innerText = bfsCurrent !== null ? bfsCurrent : "None";
+            document.getElementById('graph-visited-display').innerText = Array.from(bfsVisited).join(', ');
+        }
+
+        function resetGraphBFS() {
+            bfsQueue = [0];
+            bfsVisited = new Set([0]);
+            bfsCurrent = null;
+            bfsStep = 0;
+            updateGraphVisuals();
+        }
+
+        function stepGraphBFS() {
+            if (bfsQueue.length === 0 && bfsCurrent === null) {
+                // Start or Finished
+                if (bfsVisited.size === 1 && !bfsRunning) {
+                    bfsRunning = true; // Just started
+                } else {
+                    return; // Finished
+                }
+            }
+
+            // Simple Step Logic
+            // 1. If no current, Pop from queue
+            if (bfsCurrent === null) {
+                if (bfsQueue.length > 0) {
+                    bfsCurrent = bfsQueue.shift();
+                } else {
+                    // Done
+                    bfsCurrent = null;
+                }
+            } else {
+                // 2. Process neighbors
+                const neighbors = graphData[bfsCurrent];
+                let added = false;
+                for (let v of neighbors) {
+                    if (!bfsVisited.has(v)) {
+                        bfsVisited.add(v);
+                        bfsQueue.push(v);
+                    }
+                }
+                // 3. Mark current as fully processed (visually handled by visited set, just clear current)
+                bfsCurrent = null;
+            }
+            updateGraphVisuals();
+        }
+
+        // Initialize Graph on Load
+        initGraph();
+        resetGraphBFS();
+
+    </script>
+</body>
+</html>
