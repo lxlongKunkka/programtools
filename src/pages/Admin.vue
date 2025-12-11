@@ -119,7 +119,7 @@
               <button @click="openChapterModal(level)" class="btn-small btn-add-sub">添加章节</button>
             </div>
           </div>
-          <div class="level-desc">{{ level.description }}</div>
+          <div class="level-desc markdown-content" v-html="renderMarkdown(level.description)"></div>
           
           <div class="chapter-list">
             <div v-for="chapter in level.chapters" :key="chapter.id" class="chapter-item">
@@ -214,6 +214,7 @@
 
 <script>
 import request from '../utils/request'
+import { marked } from 'marked'
 
 export default {
   inject: ['showToastMessage'],
@@ -533,6 +534,10 @@ export default {
         }
         return p.docId || p._id
       }).join(', ')
+    },
+    renderMarkdown(text) {
+      if (!text) return ''
+      return marked(text)
     }
   }
 }
@@ -1004,6 +1009,17 @@ export default {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
+}
+.markdown-content {
+  line-height: 1.6;
+  color: #2c3e50;
+}
+.markdown-content p {
+  margin-bottom: 10px;
+}
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
+  margin-bottom: 10px;
 }
 .btn-tool {
   padding: 12px 24px;
