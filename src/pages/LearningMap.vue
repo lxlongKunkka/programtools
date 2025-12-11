@@ -20,9 +20,12 @@
     <div v-if="loading" class="loading">加载中...</div>
     <div v-else class="levels-container">
       <div v-for="level in levels" :key="level._id" class="level-card">
-        <div class="level-header">
+        <div class="level-header" @click="toggleLevel(level)">
           <div class="level-info">
-            <h2>Level {{ level.level }}</h2>
+            <h2>
+              <span class="toggle-icon">{{ isExpanded(level) ? '▼' : '▶' }}</span>
+              Level {{ level.level }}
+            </h2>
             <p>{{ level.title }}</p>
           </div>
           <div class="level-status">
@@ -32,27 +35,29 @@
           </div>
         </div>
         
-        <div class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
+        <div v-show="isExpanded(level)" class="level-content">
+          <div class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
 
-        <div class="chapters-grid">
-          <div 
-            v-for="chapter in level.chapters" 
-            :key="chapter.id" 
-            class="chapter-card"
-            :class="getChapterStatusClass(level, chapter)"
-            @click="goToChapter(level, chapter)"
-          >
-            <div class="chapter-icon">
-              <span v-if="isChapterCompleted(level, chapter)">✅</span>
-              <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
-              <span v-else>🔒</span>
-            </div>
-            <div class="chapter-info">
-              <h3>
-                Chapter {{ chapter.id }}
-                <span v-if="chapter.optional" class="tag-optional">选做</span>
-              </h3>
-              <p>{{ chapter.title }}</p>
+          <div class="chapters-grid">
+            <div 
+              v-for="chapter in level.chapters" 
+              :key="chapter.id" 
+              class="chapter-card"
+              :class="getChapterStatusClass(level, chapter)"
+              @click="goToChapter(level, chapter)"
+            >
+              <div class="chapter-icon">
+                <span v-if="isChapterCompleted(level, chapter)">✅</span>
+                <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                <span v-else>🔒</span>
+              </div>
+              <div class="chapter-info">
+                <h3>
+                  Chapter {{ chapter.id }}
+                  <span v-if="chapter.optional" class="tag-optional">选做</span>
+                </h3>
+                <p>{{ chapter.title }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -72,7 +77,8 @@ export default {
       userProgress: null,
       loading: true,
       selectedSubject: 'C++',
-      availableSubjects: ['C++', 'Python', 'Web']
+      availableSubjects: ['C++', 'Python', 'Web'],
+      expandedLevelIds: []
     }
   },
   mounted() {
@@ -88,11 +94,41 @@ export default {
         ])
         this.levels = levelsData
         this.userProgress = progressData
+        this.initExpandedLevels()
       } catch (e) {
         console.error('Failed to fetch course data', e)
       } finally {
         this.loading = false
       }
+    },
+    initExpandedLevels() {
+      const currentLevel = this.getCurrentSubjectLevel()
+      // Find the level object that matches the current level
+      const currentLevelObj = this.levels.find(l => l.level === currentLevel)
+      
+      if (currentLevelObj) {
+        this.expandedLevelIds = [currentLevelObj._id]
+      } else if (this.levels.length > 0) {
+        // If current level is beyond the last level (completed all), expand the last one
+        // Or if current level is 1 but not found (shouldn't happen if levels exist), expand first
+        if (currentLevel > this.levels.length) {
+           this.expandedLevelIds = [this.levels[this.levels.length - 1]._id]
+        } else {
+           this.expandedLevelIds = [this.levels[0]._id]
+        }
+      }
+    },
+    toggleLevel(level) {
+      const id = level._id
+      const index = this.expandedLevelIds.indexOf(id)
+      if (index > -1) {
+        this.expandedLevelIds.splice(index, 1)
+      } else {
+        this.expandedLevelIds.push(id)
+      }
+    },
+    isExpanded(level) {
+      return this.expandedLevelIds.includes(level._id)
     },
     getCurrentSubjectLevel() {
       if (!this.userProgress) return 1
@@ -228,6 +264,16 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 15px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-icon {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+  margin-right: 5px;
+  font-size: 18px;
+  color: #7f8c8d;
 }
 .level-info h2 {
   font-size: 24px;
