@@ -170,7 +170,7 @@ export default {
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
       // Split content by "===NEXT===" (case insensitive, allowing whitespace)
-      return this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => marked(part))
+      return this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => marked.parse(part, { breaks: true, mangle: false, headerIds: false }))
     },
     totalProblems() {
       return this.chapter?.problemIds?.length || 0

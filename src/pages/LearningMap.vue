@@ -36,35 +36,45 @@
         </div>
         
         <div v-show="isExpanded(level)" class="level-content">
-          <div class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
+          <div v-if="level.description" class="level-desc-section">
+             <div class="level-desc-header" @click="toggleDesc(level)">
+                <span class="toggle-icon">{{ isDescExpanded(level) ? '▼' : '▶' }}</span>
+                <span class="desc-label">等级简介</span>
+             </div>
+             <div v-show="isDescExpanded(level)" class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
+          </div>
 
           <!-- Topics Rendering -->
           <div v-if="level.topics && level.topics.length > 0" class="topics-container">
             <div v-for="topic in level.topics" :key="topic._id" class="topic-section">
-              <div class="topic-header">
+              <div class="topic-header" @click="toggleTopic(topic)">
+                <span class="toggle-icon">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
                 <h3>{{ topic.title }}</h3>
-                <div v-if="topic.description" class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
               </div>
               
-              <div class="chapters-grid">
-                <div 
-                  v-for="chapter in topic.chapters" 
-                  :key="chapter.id" 
-                  class="chapter-card"
-                  :class="getChapterStatusClass(level, chapter)"
-                  @click="goToChapter(level, chapter)"
-                >
-                  <div class="chapter-icon">
-                    <span v-if="isChapterCompleted(level, chapter)">✅</span>
-                    <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
-                    <span v-else>🔒</span>
-                  </div>
-                  <div class="chapter-info">
-                    <h4>
-                      {{ chapter.title }}
-                      <span v-if="chapter.optional" class="tag-optional">选做</span>
-                    </h4>
-                    <p class="chapter-id">Chapter {{ chapter.id }}</p>
+              <div v-show="isTopicExpanded(topic)" class="topic-content">
+                <div v-if="topic.description" class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
+                
+                <div class="chapters-grid">
+                  <div 
+                    v-for="chapter in topic.chapters" 
+                    :key="chapter.id" 
+                    class="chapter-card"
+                    :class="getChapterStatusClass(level, chapter)"
+                    @click="goToChapter(level, chapter)"
+                  >
+                    <div class="chapter-icon">
+                      <span v-if="isChapterCompleted(level, chapter)">✅</span>
+                      <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                      <span v-else>🔒</span>
+                    </div>
+                    <div class="chapter-info">
+                      <h4>
+                        {{ chapter.title }}
+                        <span v-if="chapter.optional" class="tag-optional">选做</span>
+                      </h4>
+                      <p class="chapter-id">Chapter {{ chapter.id }}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -116,7 +126,9 @@ export default {
       loading: true,
       selectedSubject: 'C++',
       availableSubjects: ['C++', 'Python', 'Web'],
-      expandedLevelIds: []
+      expandedLevelIds: [],
+      expandedDescIds: [],
+      expandedTopicIds: []
     }
   },
   mounted() {
@@ -132,6 +144,18 @@ export default {
         ])
         this.levels = levelsData
         this.userProgress = progressData
+        
+        // Initialize topics as expanded by default
+        if (this.levels) {
+          this.levels.forEach(l => {
+            if (l.topics) {
+              l.topics.forEach(t => {
+                this.expandedTopicIds.push(t._id)
+              })
+            }
+          })
+        }
+
         this.initExpandedLevels()
       } catch (e) {
         console.error('Failed to fetch course data', e)
@@ -146,13 +170,18 @@ export default {
       
       if (currentLevelObj) {
         this.expandedLevelIds = [currentLevelObj._id]
+        this.expandedDescIds = [currentLevelObj._id]
       } else if (this.levels.length > 0) {
         // If current level is beyond the last level (completed all), expand the last one
         // Or if current level is 1 but not found (shouldn't happen if levels exist), expand first
         if (currentLevel > this.levels.length) {
-           this.expandedLevelIds = [this.levels[this.levels.length - 1]._id]
+           const last = this.levels[this.levels.length - 1]
+           this.expandedLevelIds = [last._id]
+           this.expandedDescIds = [last._id]
         } else {
-           this.expandedLevelIds = [this.levels[0]._id]
+           const first = this.levels[0]
+           this.expandedLevelIds = [first._id]
+           this.expandedDescIds = [first._id]
         }
       }
     },
@@ -163,10 +192,38 @@ export default {
         this.expandedLevelIds.splice(index, 1)
       } else {
         this.expandedLevelIds.push(id)
+        // Auto-expand description when opening level
+        if (!this.expandedDescIds.includes(id)) {
+            this.expandedDescIds.push(id)
+        }
+      }
+    },
+    toggleDesc(level) {
+      const id = level._id
+      const index = this.expandedDescIds.indexOf(id)
+      if (index > -1) {
+        this.expandedDescIds.splice(index, 1)
+      } else {
+        this.expandedDescIds.push(id)
       }
     },
     isExpanded(level) {
       return this.expandedLevelIds.includes(level._id)
+    },
+    isDescExpanded(level) {
+      return this.expandedDescIds.includes(level._id)
+    },
+    toggleTopic(topic) {
+      const id = topic._id
+      const index = this.expandedTopicIds.indexOf(id)
+      if (index > -1) {
+        this.expandedTopicIds.splice(index, 1)
+      } else {
+        this.expandedTopicIds.push(id)
+      }
+    },
+    isTopicExpanded(topic) {
+      return this.expandedTopicIds.includes(topic._id)
     },
     getCurrentSubjectLevel() {
       if (!this.userProgress) return 1
@@ -233,7 +290,7 @@ export default {
     },
     renderMarkdown(text) {
       if (!text) return ''
-      return marked(text)
+      return marked.parse(text, { breaks: true, mangle: false, headerIds: false })
     }
   }
 }
@@ -343,6 +400,41 @@ export default {
   line-height: 1.5;
 }
 
+.level-desc-section {
+  margin-bottom: 20px;
+  background: #fcfcfc;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.level-desc-header {
+  padding: 10px 15px;
+  background: #f8f9fa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #555;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: background 0.2s;
+}
+.level-desc-header:hover {
+  background: #f0f0f0;
+}
+.level-desc-header .toggle-icon {
+  margin-right: 8px;
+  width: 20px;
+  text-align: center;
+  font-size: 12px;
+}
+.level-description {
+  padding: 20px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  margin-bottom: 0; /* Override previous margin */
+}
+
 .chapters-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -426,16 +518,34 @@ export default {
   margin-bottom: 15px;
   border-left: 4px solid #3498db;
   padding-left: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+.topic-header:hover {
+  opacity: 0.8;
+}
+.topic-header .toggle-icon {
+  margin-right: 8px;
+  width: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #3498db;
 }
 .topic-header h3 {
   font-size: 20px;
   color: #2c3e50;
-  margin: 0 0 5px 0;
+  margin: 0;
+}
+.topic-content {
+  padding-left: 20px;
+  animation: slideDown 0.3s ease-out;
 }
 .topic-desc {
   color: #7f8c8d;
   font-size: 14px;
-  margin: 0;
+  margin: 0 0 20px 0;
 }
 .chapter-info h4 {
   font-size: 16px;

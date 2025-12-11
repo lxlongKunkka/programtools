@@ -12,7 +12,7 @@
         :class="['tab-btn', { active: activeTab === 'courses' }]" 
         @click="switchTab('courses')"
       >
-        课程管理 (C++)
+        课程管理
       </button>
     </div>
 
@@ -118,7 +118,14 @@
               <button @click="deleteLevel(level._id)" class="btn-small btn-delete">删除</button>
             </div>
           </div>
-          <div class="level-desc markdown-content" v-html="renderMarkdown(level.description)"></div>
+          
+          <div class="level-desc-container">
+             <div class="level-desc-header" @click="toggleLevelDesc(level)">
+                <span class="toggle-icon">{{ level.descCollapsed ? '▶' : '▼' }}</span>
+                <span class="desc-label">等级简介</span>
+             </div>
+             <div v-show="!level.descCollapsed" class="level-desc markdown-content" v-html="renderMarkdown(level.description)"></div>
+          </div>
           
           <!-- Topics List -->
           <div class="topic-list">
@@ -464,8 +471,10 @@ export default {
       this.loadingCourses = true
       // Save current collapsed state
       const collapsedState = {}
+      const descCollapsedState = {}
       if (this.levels) {
         this.levels.forEach(l => {
+            if (l._id) descCollapsedState[l._id] = l.descCollapsed
             if (l.topics) l.topics.forEach(t => {
                 if (t._id) collapsedState[t._id] = t.collapsed
             })
@@ -477,6 +486,13 @@ export default {
         // Initialize collapsed state
         if (Array.isArray(data)) {
           data.forEach(level => {
+            // Restore level desc collapsed state
+            if (level._id && descCollapsedState[level._id] !== undefined) {
+                level.descCollapsed = descCollapsedState[level._id]
+            } else {
+                level.descCollapsed = false // Default expanded
+            }
+
             if (level.topics) {
               level.topics.forEach(topic => {
                 // Restore state or default to true
@@ -495,6 +511,9 @@ export default {
       } finally {
         this.loadingCourses = false
       }
+    },
+    toggleLevelDesc(level) {
+      level.descCollapsed = !level.descCollapsed
     },
     toggleTopicCollapse(topic) {
       // Use $set to ensure reactivity if needed, though usually direct assignment works if initialized
@@ -717,7 +736,7 @@ export default {
     },
     renderMarkdown(content) {
       if (!content) return ''
-      return marked(content)
+      return marked.parse(content, { breaks: true, mangle: false, headerIds: false })
     },
     getPreviewUrl(url) {
       if (!url) return ''
@@ -929,12 +948,7 @@ export default {
   font-weight: 700;
   color: #2c3e50;
 }
-.level-desc {
-  color: #7f8c8d;
-  margin-bottom: 20px;
-  font-size: 15px;
-  line-height: 1.5;
-}
+/* Removed old .level-desc style to avoid conflict */
 .level-actions, .chapter-actions {
   display: flex;
   gap: 10px;
@@ -1279,10 +1293,10 @@ export default {
   line-height: 1.6;
   color: #2c3e50;
 }
-.markdown-content p {
+.markdown-content :deep(p) {
   margin-bottom: 10px;
 }
-.markdown-content ul, .markdown-content ol {
+.markdown-content :deep(ul), .markdown-content :deep(ol) {
   padding-left: 20px;
   margin-bottom: 10px;
 }
@@ -1388,5 +1402,41 @@ export default {
 .markdown-preview {
   background: white;
   padding: 15px;
+}
+
+.level-desc-container {
+  margin-bottom: 20px;
+  background: #fcfcfc;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.level-desc-header {
+  padding: 8px 15px;
+  background: #f8f9fa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #555;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+.level-desc-header:hover {
+  background: #f0f0f0;
+}
+.level-desc-header .toggle-icon {
+  margin-right: 8px;
+  width: 20px;
+  text-align: center;
+  font-size: 12px;
+}
+.level-desc {
+  padding: 15px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  margin-bottom: 0;
 }
 </style>
