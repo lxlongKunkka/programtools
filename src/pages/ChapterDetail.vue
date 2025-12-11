@@ -68,11 +68,11 @@
                 <span v-else class="status-badge unsolved">未通过</span>
               </div>
               <div class="problem-actions">
-                <a :href="getProblemLink(problem)" target="_blank" class="btn-solve btn-link">
-                  去挑战 ↗
+                <a :href="getProblemLink(problem)" target="_blank" class="btn-action btn-challenge">
+                  <span class="icon">🚀</span> 去挑战
                 </a>
-                <button @click="checkStatus(problem)" class="btn-solve btn-check" :disabled="checking === problem._id">
-                  {{ checking === problem._id ? '检查中...' : '检查状态' }}
+                <button @click="checkStatus(problem)" class="btn-action btn-check" :disabled="checking === problem._id">
+                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状态' }}
                 </button>
               </div>
             </div>
@@ -727,48 +727,99 @@ export default {
 }
 .problem-item {
   border: 1px solid #eee;
-  border-radius: 6px;
-  padding: 15px;
+  border-radius: 8px;
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.problem-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 .problem-info {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 .problem-title {
   font-weight: 600;
   color: #34495e;
+  font-size: 15px;
 }
 .status-badge {
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
   display: inline-block;
-  width: fit-content;
+  font-weight: 500;
 }
 .status-badge.solved {
   background: #eafaf1;
   color: #2ecc71;
+  border: 1px solid #d5f5e3;
 }
 .status-badge.unsolved {
   background: #f5f5f5;
   color: #95a5a6;
+  border: 1px solid #eee;
 }
 
-.btn-solve {
-  padding: 6px 12px;
+.problem-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-action {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.btn-challenge {
   background-color: #3498db;
   color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
+  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.2);
 }
-.btn-solve:hover {
+.btn-challenge:hover {
   background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.btn-check {
+  background-color: #fff;
+  color: #34495e;
+  border-color: #ddd;
+}
+.btn-check:hover {
+  background-color: #f8f9fa;
+  border-color: #bbb;
+  color: #2c3e50;
+}
+.btn-check:disabled {
+  background-color: #f5f5f5;
+  color: #aaa;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.icon {
+  font-size: 14px;
 }
 
 .chapter-complete-msg {
