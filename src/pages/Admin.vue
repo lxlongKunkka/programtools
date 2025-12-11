@@ -126,6 +126,7 @@
                 <div class="topic-header">
                    <span class="topic-title">{{ topic.title }}</span>
                    <div class="topic-actions">
+                      <button @click="openTopicModal(level, null, level.topics.indexOf(topic))" class="btn-small btn-insert" title="在此之前插入">插入</button>
                       <button @click="openTopicModal(level, topic)" class="btn-small btn-edit">编辑</button>
                       <button @click="deleteTopic(level._id, topic._id)" class="btn-small btn-delete">删除</button>
                       <button @click="openChapterModal(level, topic)" class="btn-small btn-add-sub">添加章节</button>
@@ -426,8 +427,10 @@ export default {
         this.loadingCourses = false
       }
     },
-    openTopicModal(level, topic = null) {
+    openTopicModal(level, topic = null, insertIndex = null) {
       this.editingLevelForTopic = level
+      this.insertIndex = insertIndex // Reuse insertIndex
+      
       if (topic) {
         this.editingTopic = { ...topic }
       } else {
@@ -443,9 +446,13 @@ export default {
             body: JSON.stringify(this.editingTopic)
           })
         } else {
+          const body = { ...this.editingTopic }
+          if (this.insertIndex !== null) {
+             body.insertIndex = this.insertIndex
+          }
           await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics`, {
             method: 'POST',
-            body: JSON.stringify(this.editingTopic)
+            body: JSON.stringify(body)
           })
         }
         this.showToastMessage('保存知识点成功')

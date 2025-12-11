@@ -352,11 +352,18 @@ router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']
 // Add a Topic
 router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, description } = req.body
+    const { title, description, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    level.topics.push({ title, description, chapters: [] })
+    const newTopic = { title, description, chapters: [] }
+
+    if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.topics.length) {
+      level.topics.splice(insertIndex, 0, newTopic)
+    } else {
+      level.topics.push(newTopic)
+    }
+
     await level.save()
     res.json(level)
   } catch (e) {
