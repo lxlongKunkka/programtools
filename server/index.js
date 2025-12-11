@@ -40,6 +40,11 @@ app.use('/public/courseware', protectStatic, express.static(path.join(__dirname,
 // Serve other static files normally
 app.use('/public', express.static(path.join(__dirname, 'public')))
 
+// [Fix] Also serve under /api/public to bypass Nginx/Frontend routing issues in production
+// Since /api is usually proxied to backend, this ensures static files are served by Node
+app.use('/api/public/courseware', protectStatic, express.static(path.join(__dirname, 'public/courseware')))
+app.use('/api/public', express.static(path.join(__dirname, 'public')))
+
 // --- Usage logging ---
 app.use(requestLogger)
 

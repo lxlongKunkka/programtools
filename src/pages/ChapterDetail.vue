@@ -330,6 +330,14 @@ export default {
       // If relative path, assume it's served by our backend
       // Append token for protected resources (like courseware)
       if (url.indexOf('public/courseware') !== -1) {
+        // [Fix] Use /api/public prefix to ensure we hit the backend proxy in production
+        // instead of being caught by the frontend router
+        if (url.startsWith('/public/')) {
+           url = '/api' + url
+        } else if (url.startsWith('public/')) {
+           url = '/api/' + url
+        }
+
         const token = localStorage.getItem('auth_token')
         if (token) {
           const separator = url.includes('?') ? '&' : '?'
