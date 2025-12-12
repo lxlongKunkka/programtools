@@ -233,11 +233,16 @@ export default {
       selectedLearner: null,
       selectedLearnerProgress: null,
       selectedLearnerTopic: null, // The topic context for the modal
-      loadingLearnerProgress: false
+      loadingLearnerProgress: false,
+      isInitialLoad: true
     }
   },
   mounted() {
     this.fetchData()
+  },
+  beforeRouteLeave(to, from, next) {
+    localStorage.setItem('learning_map_scroll_position', window.scrollY)
+    next()
   },
   methods: {
     async fetchData() {
@@ -269,6 +274,18 @@ export default {
         console.error('Failed to fetch course data', e)
       } finally {
         this.loading = false
+        if (this.isInitialLoad) {
+          this.$nextTick(() => {
+            this.restoreScrollPosition()
+            this.isInitialLoad = false
+          })
+        }
+      }
+    },
+    restoreScrollPosition() {
+      const savedScroll = localStorage.getItem('learning_map_scroll_position')
+      if (savedScroll) {
+        window.scrollTo(0, parseInt(savedScroll))
       }
     },
     initExpandedLevels() {
