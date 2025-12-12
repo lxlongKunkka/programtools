@@ -144,13 +144,24 @@ router.get('/progress/:userId', authenticateToken, async (req, res) => {
        subjectLevels = { 'C++': progress.currentLevel || 1 }
     }
 
+    // Convert chapterProgress Map to Object
+    let chapterProgressObj = {}
+    if (progress.chapterProgress) {
+      if (progress.chapterProgress instanceof Map) {
+        chapterProgressObj = Object.fromEntries(progress.chapterProgress)
+      } else {
+        chapterProgressObj = progress.chapterProgress
+      }
+    }
+
     const responseData = {
       userId: progress.userId,
       subjectLevels: subjectLevels,
       // Fix: Use completedChapters length only to avoid double counting (since we double-write ID and UID)
       completedChaptersCount: progress.completedChapters ? progress.completedChapters.length : 0,
       completedChapters: progress.completedChapters || [],
-      completedChapterUids: progress.completedChapterUids || []
+      completedChapterUids: progress.completedChapterUids || [],
+      chapterProgress: chapterProgressObj
     }
     console.log(`[API] Returning progress:`, responseData)
 

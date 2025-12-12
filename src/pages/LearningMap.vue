@@ -49,7 +49,10 @@
             <div v-for="topic in level.topics" :key="topic._id" class="topic-section">
               <div class="topic-header" @click="toggleTopic(topic)">
                 <span class="toggle-icon">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
-                <h3>{{ topic.title }}</h3>
+                <h3>
+                  {{ topic.title }}
+                  <span class="topic-stats" v-if="getTopicTotalProblems(topic) > 0">({{ getTopicTotalProblems(topic) }} 题)</span>
+                </h3>
               </div>
               
               <div v-show="isTopicExpanded(topic)" class="topic-content">
@@ -76,7 +79,10 @@
                         <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
                         <span v-else class="tag-type markdown">MD</span>
                       </h4>
-                      <p class="chapter-id">Chapter {{ chapter.id }}</p>
+                      <p class="chapter-id">
+                        Chapter {{ chapter.id }}
+                        <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -132,7 +138,10 @@
                   <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
                   <span v-else class="tag-type markdown">MD</span>
                 </h3>
-                <p>{{ chapter.title }}</p>
+                <p>
+                  {{ chapter.title }}
+                  <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
+                </p>
               </div>
             </div>
           </div>
@@ -167,8 +176,8 @@
             <div class="progress-stat-card" v-if="selectedLearnerTopic">
                <h4>{{ selectedLearnerTopic.title }} 进度</h4>
                <div class="stat-value">
-                 {{ getTopicProgress(selectedLearnerProgress, selectedLearnerTopic) }} / {{ selectedLearnerTopic.chapters.length }}
-                 <span class="stat-label">章节</span>
+                 {{ getLearnerTopicSolvedCount(selectedLearnerProgress, selectedLearnerTopic) }} / {{ getTopicTotalProblems(selectedLearnerTopic) }}
+                 <span class="stat-label">题目</span>
                </div>
             </div>
             <div class="progress-stat-card">
@@ -379,6 +388,25 @@ export default {
       })
       
       return completedCount
+    },
+    getChapterProblemCount(chapter) {
+      return chapter.problemIds ? chapter.problemIds.length : 0
+    },
+    getTopicTotalProblems(topic) {
+      if (!topic || !topic.chapters) return 0
+      return topic.chapters.reduce((sum, ch) => sum + this.getChapterProblemCount(ch), 0)
+    },
+    getLearnerTopicSolvedCount(progress, topic) {
+      if (!progress || !progress.chapterProgress || !topic || !topic.chapters) return 0
+      
+      let solvedCount = 0
+      topic.chapters.forEach(ch => {
+        const chProgress = progress.chapterProgress[ch.id]
+        if (chProgress && chProgress.solvedProblems) {
+           solvedCount += chProgress.solvedProblems.length
+        }
+      })
+      return solvedCount
     },
     getCurrentSubjectLevel() {
       if (!this.userProgress) return 1
@@ -869,6 +897,13 @@ export default {
   font-weight: normal;
   color: #95a5a6;
   margin-left: 5px;
+}
+
+.topic-stats {
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: normal;
+  margin-left: 8px;
 }
 
 .markdown-content :deep(ul), .markdown-content :deep(ol) {
