@@ -74,7 +74,10 @@
               >
             </td>
             <td class="id-col">{{ doc._id }}</td>
-            <td>{{ doc.docId }}</td>
+            <td>
+              {{ doc.docId }}
+              <span v-if="isRemoteJudge(doc)" class="badge-rj" title="Remote Judge">RJ</span>
+            </td>
             <td>{{ doc.domainId }}</td>
             <td>
               <input v-model="doc.title" class="input-title" placeholder="标题">
@@ -153,6 +156,10 @@ export default {
     this.fetchDocuments()
   },
   methods: {
+    isRemoteJudge(doc) {
+      if (!doc.config) return false
+      return doc.config.includes('type: remote_judge')
+    },
     async fetchModels() {
       try {
         const res = await request('/api/models')
@@ -639,6 +646,19 @@ button {
   0% { opacity: 1; }
   50% { opacity: 0.7; }
   100% { opacity: 1; }
+}
+
+.badge-rj {
+  display: inline-block;
+  background: #9b59b6;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-left: 5px;
+  vertical-align: middle;
+  font-weight: bold;
+  cursor: help;
 }
 
 @media (max-width: 768px) {

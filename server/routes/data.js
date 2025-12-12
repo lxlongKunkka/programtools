@@ -31,7 +31,7 @@ router.get('/documents', authenticateToken, requireRole('admin'), async (req, re
     
     // Only fetch necessary fields for list to save bandwidth
     const docs = await Document.find(query)
-      .select('title content contentbak domainId tag pid docId reference')
+      .select('title content contentbak domainId tag pid docId reference config')
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .lean()
