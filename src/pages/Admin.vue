@@ -491,7 +491,12 @@ export default {
 
     // --- Course Management Methods ---
     async fetchLevels() {
-      this.loadingCourses = true
+      const currentScroll = window.scrollY
+      // Only show full loading state if we have no data, to prevent layout shift/scroll reset
+      if (!this.levels || this.levels.length === 0) {
+        this.loadingCourses = true
+      }
+      
       // Save current collapsed state
       const collapsedState = {}
       const descCollapsedState = {}
@@ -536,12 +541,15 @@ export default {
         this.showToastMessage('加载课程失败: ' + e.message)
       } finally {
         this.loadingCourses = false
-        if (this.isInitialLoad) {
-          this.$nextTick(() => {
+        this.$nextTick(() => {
+          if (this.isInitialLoad) {
             this.restoreScrollPosition()
             this.isInitialLoad = false
-          })
-        }
+          } else {
+            // Restore scroll position after refresh
+            window.scrollTo(0, currentScroll)
+          }
+        })
       }
     },
     toggleLevelDesc(level) {
