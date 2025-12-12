@@ -99,13 +99,16 @@ router.get('/topic/:topicId/learners', async (req, res) => {
     }).select('uname') // Only select uname, no avatar
     
     // 4. Attach progress and sort
-    const usersWithProgress = users.map(u => {
+    let usersWithProgress = users.map(u => {
         return {
             _id: u._id,
             uname: u.uname,
             completedCount: userProgressMap[u._id] || 0
         }
     })
+
+    // Filter out users who haven't completed any chapter in this topic
+    usersWithProgress = usersWithProgress.filter(u => u.completedCount > 0)
     
     // Sort descending by completed count
     usersWithProgress.sort((a, b) => b.completedCount - a.completedCount)

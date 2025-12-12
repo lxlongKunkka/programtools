@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基础判断与单双分支 - Lesson 3 if-else 语句</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 90%; max-width: 900px; overflow-x: auto; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .branch-box { display: flex; justify-content: center; gap: 30px; margin: 30px 0; }
+        .branch-card { background: #333; padding: 20px; border-radius: 10px; min-width: 200px; text-align: center; }
+        .branch-title { font-size: 28px; color: #3498db; }
+        .branch-desc { font-size: 20px; color: #ddd; margin-top: 10px; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 90%; max-width: 900px; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px; width: 150px; border: none; border-radius: 5px; }
+        .interactive-btn { font-size: 22px; padding: 10px 30px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .interactive-btn:hover { background: #217dbb; }
+        .result-text { font-size: 1.2em; color: #2ecc71; margin-top: 10px; }
+        /* 小测验样式优化（防止溢出） */
+        .reveal .quiz-section { max-height: 60vh; overflow-y: auto; box-sizing: border-box; }
+        .reveal .quiz-section h3 { font-size: 1.3em; margin-bottom: 10px; }
+        .reveal .quiz-question { font-size: 1.1em; margin-bottom: 8px; }
+        .reveal .quiz-code-box { background: #272822; color: #fff; border-radius: 6px; padding: 10px; font-size: 0.95em; margin-bottom: 8px; overflow-x: auto; }
+        .reveal .quiz-options { font-size: 1em; margin-bottom: 10px; }
+        .reveal .quiz-options input { margin-right: 8px; }
+        .reveal .quiz-options label { margin-right: 18px; }
+        /* 全局布局修复 */
+        .reveal .slides section { max-height: 85vh !important; overflow-y: auto !important; align-items: flex-start !important; padding-bottom: 30px !important; }
+        html, body { height: 100%; margin: 0; padding: 0; }
+        body { min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section>
+                <h2>TOpic 2: 基础判断与单双分支</h2>
+                <h3>Lesson 3: if-else 语句（双分支结构）</h3>
+            </section>
+
+            <!-- Slide 2: if-else语法 -->
+            <section>
+                <h3>if-else 语句的基本结构</h3>
+                <p>双分支：条件为真执行if块，为假执行else块（二选一）</p>
+                <div class="code-box">
+                    <pre><code class="cpp">// 语法格式
+if (条件表达式) {
+    // 条件为真时执行
+    语句块1;
+} else {
+    // 条件为假时执行
+    语句块2;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 3: 执行逻辑 -->
+            <section>
+                <h3>if-else 互斥逻辑</h3>
+                <div class="branch-box">
+                    <div class="branch-card">
+                        <div class="branch-title">if (条件真)</div>
+                        <div class="branch-desc">执行if代码块<br>else代码块跳过</div>
+                    </div>
+                    <div class="branch-card">
+                        <div class="branch-title">else (条件假)</div>
+                        <div class="branch-desc">执行else代码块<br>if代码块跳过</div>
+                    </div>
+                </div>
+                <p class="highlight">核心：两个代码块永远只会执行其中一个</p>
+            </section>
+
+            <!-- Slide 4: 示例 - 判断及格/不及格 -->
+            <section>
+                <h3>示例：判断成绩及格/不及格</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int score = 75;
+    if (score >= 60) {
+        cout << "成绩及格！" << endl;
+    } else {
+        cout << "成绩不及格！" << endl;
+    }
+    return 0;
+}</code></pre>
+                </div>
+                <p class="fragment">score=55时 → 输出"成绩不及格！"</p>
+            </section>
+
+            <!-- Slide 5: 示例 - 判断奇偶数 -->
+            <section>
+                <h3>示例：判断奇偶数</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">int num = 7;
+if (num % 2 == 0) {
+    cout << num << "是偶数" << endl;
+} else {
+    cout << num << "是奇数" << endl; // 会输出
+}</code></pre>
+                </div>
+                <p>核心逻辑：能被2整除（余数为0）是偶数，否则是奇数</p>
+            </section>
+
+            <!-- Slide 6: 交互式练习 - 判断及格/不及格 -->
+            <section>
+                <h3>交互式练习：判断成绩及格/不及格</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="scoreInput" placeholder="输入成绩(0-100)">
+                    <button class="interactive-btn" onclick="checkScore()">判断结果</button>
+                    <div class="result-text" id="scoreResult"></div>
+                </div>
+            </section>
+
+            <!-- Slide 7: 交互式练习 - 判断奇偶数 -->
+            <section>
+                <h3>交互式练习：判断奇偶数</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="oddEvenInput" placeholder="输入整数">
+                    <button class="interactive-btn" onclick="checkOddEven()">判断结果</button>
+                    <div class="result-text" id="oddEvenResult"></div>
+                </div>
+            </section>
+
+            <!-- Slide 8: 小测验（修复全屏显示） -->
+            <section class="quiz-section">
+                <h3>小测验</h3>
+                <!-- 问题1 -->
+                <div style="margin-bottom: 15px; flex-shrink: 1;">
+                    <p class="quiz-question">1. 以下代码输出什么？</p>
+                    <div class="code-box quiz-code-box">
+                        <pre><code class="cpp">int x = 0;
+if (x > 0) {
+    cout << "正";
+} else {
+    cout << "非正";
+}</code></pre>
+                    </div>
+                    <div class="quiz-options">
+                        <input type="radio" name="q1" id="q1a"> 
+                        <label for="q1a">A. 正</label><br>
+                        <input type="radio" name="q1" id="q1b"> 
+                        <label for="q1b">B. 非正</label><br>
+                        <input type="radio" name="q1" id="q1c"> 
+                        <label for="q1c">C. 无输出</label>
+                    </div>
+                </div>
+
+                <!-- 问题2 -->
+                <div style="flex-shrink: 1;">
+                    <p class="quiz-question">2. if-else中，else块可以单独存在吗？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q2" id="q2a"> 
+                        <label for="q2a">A. 可以</label><br>
+                        <input type="radio" name="q2" id="q2b"> 
+                        <label for="q2b">B. 不可以</label><br>
+                        <input type="radio" name="q2" id="q2c"> 
+                        <label for="q2c">C. 看情况</label>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            width: '100%',
+            height: '100%',
+            plugins: [ RevealHighlight ]
+        });
+
+        // 判断成绩及格/不及格
+        function checkScore() {
+            const score = Number(document.getElementById('scoreInput').value);
+            const resultEl = document.getElementById('scoreResult');
+            
+            if (isNaN(score) || score < 0 || score > 100) {
+                resultEl.textContent = "请输入0-100之间的有效成绩！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            let result;
+            if (score >= 60) {
+                result = `成绩${score} → 及格！`;
+            } else {
+                result = `成绩${score} → 不及格！`;
+            }
+            resultEl.textContent = result;
+            resultEl.style.color = "#2ecc71";
+        }
+
+        // 判断奇偶数
+        function checkOddEven() {
+            const num = Number(document.getElementById('oddEvenInput').value);
+            const resultEl = document.getElementById('oddEvenResult');
+            
+            if (isNaN(num)) {
+                resultEl.textContent = "请输入有效的整数！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            let result;
+            if (num % 2 === 0) {
+                result = `${num} → 是偶数！`;
+            } else {
+                result = `${num} → 是奇数！`;
+            }
+            resultEl.textContent = result;
+            resultEl.style.color = "#2ecc71";
+        }
+    </script>
+</body>
+</html>

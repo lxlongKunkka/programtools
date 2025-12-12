@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算法应用 - Lesson 5 累加与连乘</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 150px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>Lesson 5: 累加与连乘</h3>
+                <p>数据的积累：求和与阶乘</p>
+            </section>
+
+            <section>
+                <h3>累加器 (Accumulator)</h3>
+                <p>求 1 + 2 + 3 + ... + 100 的和</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int sum = 0; // 1. 初始化为 0 (加法单位元)
+for (int i = 1; i <= 100; i++) {
+    sum = sum + i; // 2. 累加：旧的sum + 当前i -> 新的sum
+    // 简写：sum += i;
+}
+cout << "总和是: " << sum << endl;</code></pre>
+                </div>
+                <p class="highlight">关键点：sum 必须初始化为 0！</p>
+            </section>
+
+            <section>
+                <h3>连乘器 (Product)</h3>
+                <p>求 5! (5的阶乘) = 1 * 2 * 3 * 4 * 5</p>
+                <div class="code-box">
+                    <pre><code class="cpp">long long prod = 1; // 1. 初始化为 1 (乘法单位元)
+for (int i = 1; i <= 5; i++) {
+    prod = prod * i; // 2. 连乘
+    // 简写：prod *= i;
+}
+cout << "5! = " << prod << endl;</code></pre>
+                </div>
+                <p class="highlight">关键点：prod 必须初始化为 1！(如果是0，结果永远是0)</p>
+            </section>
+
+            <section>
+                <h3>数据溢出警告</h3>
+                <p>阶乘增长非常快！</p>
+                <ul>
+                    <li>13! 超过 int 范围 (约20亿)</li>
+                    <li>20! 超过 long long 范围</li>
+                </ul>
+                <p>计算大数阶乘需要特殊处理（高精度算法，后续学习）。</p>
+            </section>
+
+            <section>
+                <h3>交互练习：求 1 到 N 的和</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="sumN" placeholder="输入 N">
+                    <button class="interactive-btn" onclick="calcSum()">计算累加和</button>
+                    <div class="result-text" id="sumResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>交互练习：求 N 的阶乘</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="factN" placeholder="输入 N (<=20)">
+                    <button class="interactive-btn" onclick="calcFact()">计算阶乘</button>
+                    <div class="result-text" id="factResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>如果把累乘器初始化为 0，计算 1*2*3 的结果是？</p>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 6</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 0</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 随机值</label>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        function calcSum() {
+            const n = parseInt(document.getElementById('sumN').value);
+            if(isNaN(n) || n < 1) { document.getElementById('sumResult').textContent = "请输入正整数"; return; }
+            let sum = 0;
+            for(let i=1; i<=n; i++) sum += i;
+            document.getElementById('sumResult').textContent = `1 到 ${n} 的和是: ${sum}`;
+        }
+        function calcFact() {
+            const n = parseInt(document.getElementById('factN').value);
+            if(isNaN(n) || n < 1 || n > 20) { document.getElementById('factResult').textContent = "请输入1-20之间的整数"; return; }
+            let prod = 1;
+            for(let i=1; i<=n; i++) prod *= i;
+            document.getElementById('factResult').textContent = `${n}! = ${prod}`;
+        }
+    </script>
+</body>
+</html>

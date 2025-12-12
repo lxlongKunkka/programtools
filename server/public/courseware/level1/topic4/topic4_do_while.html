@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>循环结构基础 - Lesson 3 do-while语句</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 150px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>Lesson 3: do-while 循环语句</h3>
+                <p>先斩后奏：至少执行一次</p>
+            </section>
+
+            <section>
+                <h3>do-while 语法结构</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">do {
+    // 循环体
+    // 先执行这里，然后再去判断条件
+} while (条件表达式); // 注意这里有分号！</code></pre>
+                </div>
+                <p>特点：<span class="highlight">先执行，后判断</span>。无论条件是否成立，循环体至少执行一次。</p>
+            </section>
+
+            <section>
+                <h3>while vs do-while</h3>
+                <div style="display: flex; justify-content: space-around;">
+                    <div style="width: 45%;">
+                        <h4>while</h4>
+                        <p>先判断，再执行</p>
+                        <pre><code class="cpp">int i = 100;
+while(i < 5) {
+    cout << "Hi";
+}
+// 结果：什么都不输出</code></pre>
+                    </div>
+                    <div style="width: 45%;">
+                        <h4>do-while</h4>
+                        <p>先执行，再判断</p>
+                        <pre><code class="cpp">int i = 100;
+do {
+    cout << "Hi";
+} while(i < 5);
+// 结果：输出一次 "Hi"</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3>典型应用：交互式菜单</h3>
+                <p>菜单通常需要先显示一次，用户选择后再决定是否继续。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">char choice;
+do {
+    cout << "1. 开始游戏" << endl;
+    cout << "2. 载入进度" << endl;
+    cout << "Q. 退出" << endl;
+    cin >> choice;
+    // 处理选择...
+} while (choice != 'Q'); // 只要不是 Q，就继续显示菜单</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>交互练习：模拟菜单</h3>
+                <div class="interactive-box">
+                    <p>输入 'y' 继续，输入 'n' 退出</p>
+                    <input type="text" class="interactive-input" id="menuInput" placeholder="输入 y 或 n">
+                    <button class="interactive-btn" onclick="checkMenu()">提交</button>
+                    <div class="result-text" id="menuResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>do-while 循环的 while 后面的分号 <code>;</code> 能省略吗？</p>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 可以</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 不可以，是语法错误</label><br>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        function checkMenu() {
+            const val = document.getElementById('menuInput').value.toLowerCase();
+            const res = document.getElementById('menuResult');
+            if (val === 'n') {
+                res.textContent = "循环结束 (条件为假)";
+                res.style.color = "#e74c3c";
+            } else {
+                res.textContent = "循环继续... (条件为真)";
+                res.style.color = "#2ecc71";
+            }
+        }
+    </script>
+</body>
+</html>

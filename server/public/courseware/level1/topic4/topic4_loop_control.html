@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>循环控制 - Lesson 4 break与continue</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 150px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>Lesson 4: break 与 continue</h3>
+                <p>循环的指挥官：随时停止或跳过</p>
+            </section>
+
+            <section>
+                <h3>break：彻底终止循环</h3>
+                <p>遇到 <code>break</code>，立即跳出当前循环，不再执行后续次数。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">for (int i = 1; i <= 10; i++) {
+    if (i == 5) {
+        break; // 当 i 是 5 时，直接结束循环
+    }
+    cout << i << " ";
+}
+// 输出: 1 2 3 4 (5及之后都不输出了)</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>continue：跳过本次循环</h3>
+                <p>遇到 <code>continue</code>，跳过本次循环体剩余代码，直接进入下一次循环。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">for (int i = 1; i <= 5; i++) {
+    if (i == 3) {
+        continue; // 当 i 是 3 时，跳过打印，直接去 i++
+    }
+    cout << i << " ";
+}
+// 输出: 1 2 4 5 (只有 3 没打印)</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>应用场景对比</h3>
+                <div style="display: flex; justify-content: space-around;">
+                    <div style="width: 45%;">
+                        <h4>break 场景</h4>
+                        <p>寻找<span class="highlight">第一个</span>满足条件的数。</p>
+                        <p>例如：在 1-100 中找到第一个能被 17 整除的数，找到就停。</p>
+                    </div>
+                    <div style="width: 45%;">
+                        <h4>continue 场景</h4>
+                        <p>排除<span class="highlight">特定</span>条件的数。</p>
+                        <p>例如：打印 1-100，但不要打印 7 的倍数（逢 7 过）。</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3>交互练习：逢 7 过 (continue)</h3>
+                <div class="interactive-box">
+                    <p>打印 1-20，遇到含 7 或 7 的倍数跳过</p>
+                    <button class="interactive-btn" onclick="runContinue()">执行</button>
+                    <div class="result-text" id="continueResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>交互练习：寻找幸运数字 (break)</h3>
+                <div class="interactive-box">
+                    <p>在 1-100 中寻找第一个 > 80 且是 9 的倍数的数</p>
+                    <button class="interactive-btn" onclick="runBreak()">寻找</button>
+                    <div class="result-text" id="breakResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>在嵌套循环中，break 只能跳出哪一层？</p>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 最外层</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 当前所在的那一层</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 所有循环</label>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        function runContinue() {
+            let res = "";
+            for(let i=1; i<=20; i++) {
+                if(i % 7 === 0 || i.toString().includes('7')) {
+                    res += `[跳过${i}] `;
+                    continue;
+                }
+                res += i + " ";
+            }
+            document.getElementById('continueResult').textContent = res;
+        }
+        function runBreak() {
+            let res = "";
+            for(let i=1; i<=100; i++) {
+                res += `检查${i}... `;
+                if(i > 80 && i % 9 === 0) {
+                    res += `\n找到啦！是 ${i}，停止搜索。`;
+                    break;
+                }
+            }
+            document.getElementById('breakResult').textContent = res;
+        }
+    </script>
+</body>
+</html>

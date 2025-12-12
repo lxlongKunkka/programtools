@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算法应用 - Lesson 6 统计与最值</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 300px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>Lesson 6: 统计与最值</h3>
+                <p>数据侦探：找最大、找最小、数个数</p>
+            </section>
+
+            <section>
+                <h3>计数器 (Counter)</h3>
+                <p>统计满足特定条件的数据个数。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int count = 0; // 1. 初始化计数器
+for (int i = 1; i <= 10; i++) {
+    int score;
+    cin >> score;
+    if (score >= 60) {
+        count++; // 2. 满足条件，计数加 1
+    }
+}
+cout << "及格人数: " << count << endl;</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>擂台法找最大值 (Max)</h3>
+                <p>假设第一个人是擂主，后面的人依次挑战，谁强谁当擂主。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int maxVal = -1; // 初始化为一个很小的数(或第一个数)
+int n;
+cin >> n; // 输入个数
+for (int i = 0; i < n; i++) {
+    int x;
+    cin >> x;
+    if (x > maxVal) { // 挑战成功？
+        maxVal = x;   // 换擂主
+    }
+}
+cout << "最大值是: " << maxVal << endl;</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>找最小值 (Min)</h3>
+                <p>原理相同，只是比较符号相反。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">int minVal = 10000; // 初始化为一个很大的数
+// ... 循环中 ...
+if (x < minVal) {
+    minVal = x;
+}</code></pre>
+                </div>
+                <p class="highlight">⚠️ 最小值初始值一定要足够大，最大值初始值要足够小！</p>
+            </section>
+
+            <section>
+                <h3>交互练习：成绩分析</h3>
+                <div class="interactive-box">
+                    <p>输入一组分数，用空格分隔 (如: 80 95 60 55)</p>
+                    <input type="text" class="interactive-input" id="scoresInput" placeholder="输入分数...">
+                    <button class="interactive-btn" onclick="analyzeScores()">分析</button>
+                    <div class="result-text" id="scoreResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>如果要找一组正整数中的最大值，maxVal 初始化为多少比较安全？</p>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 0 或 -1</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 100000</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 任意值</label>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        function analyzeScores() {
+            const input = document.getElementById('scoresInput').value;
+            const scores = input.split(' ').map(Number).filter(n => !isNaN(n));
+            if(scores.length === 0) { document.getElementById('scoreResult').textContent = "请输入有效数字"; return; }
+            
+            let max = -Infinity;
+            let min = Infinity;
+            let passCount = 0;
+            
+            for(let s of scores) {
+                if(s > max) max = s;
+                if(s < min) min = s;
+                if(s >= 60) passCount++;
+            }
+            
+            document.getElementById('scoreResult').textContent = 
+                `最高分: ${max}\n最低分: ${min}\n及格人数: ${passCount}\n总人数: ${scores.length}`;
+        }
+    </script>
+</body>
+</html>

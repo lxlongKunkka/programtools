@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>循环结构 - 回顾与测试</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 28px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 15px; text-align: left; margin: 15px auto; width: 85%; font-size: 0.8em; }
+        .quiz-container { background: #2c3e50; padding: 20px; border-radius: 10px; width: 85%; margin: 0 auto; text-align: left; }
+        .quiz-question { font-size: 26px; margin-bottom: 15px; font-weight: bold; color: #ecf0f1; }
+        .quiz-option { margin: 10px 0; padding: 10px; background: #34495e; border-radius: 5px; cursor: pointer; transition: background 0.3s; font-size: 24px; }
+        .quiz-option:hover { background: #4e6d8d; }
+        .quiz-option.correct { background: #27ae60 !important; }
+        .quiz-option.wrong { background: #c0392b !important; }
+        .explanation { display: none; margin-top: 15px; padding: 10px; background: #333; border-left: 5px solid #f1c40f; font-size: 22px; color: #ddd; }
+        .summary-box { background: #2980b9; color: white; padding: 20px; border-radius: 10px; margin: 20px auto; width: 90%; text-align: left; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>回顾总结 & 客观题测试</h3>
+                <p>巩固 for / while / 算法应用</p>
+            </section>
+
+            <!-- 知识点回顾 1 -->
+            <section>
+                <h3>知识点回顾：三种循环</h3>
+                <div class="summary-box">
+                    <ul>
+                        <li><strong>for 循环</strong>：适合已知循环次数。<code>for(初始化; 条件; 更新)</code></li>
+                        <li><strong>while 循环</strong>：适合未知次数，先判断后执行。</li>
+                        <li><strong>do-while 循环</strong>：至少执行一次，先执行后判断。</li>
+                    </ul>
+                </div>
+                <div class="code-box">
+                    <pre><code class="cpp">// 典型死循环
+while(true) { ... }
+for(;;) { ... }</code></pre>
+                </div>
+            </section>
+
+            <!-- 知识点回顾 2 -->
+            <section>
+                <h3>知识点回顾：控制与算法</h3>
+                <div class="summary-box">
+                    <ul>
+                        <li><strong>break</strong>：立即跳出当前循环。</li>
+                        <li><strong>continue</strong>：跳过本次剩余代码，进入下一次循环。</li>
+                        <li><strong>累加/累乘</strong>：注意初始化 (sum=0, prod=1)。</li>
+                        <li><strong>数位分离</strong>：<code>% 10</code> 取末位，<code>/ 10</code> 去末位。</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Q1 -->
+            <section>
+                <h3>题目 1: 循环次数</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">for (int i = 0; i < 10; i += 2) {
+    cout << i << " ";
+}</code></pre>
+                </div>
+                <div class="quiz-container">
+                    <div class="quiz-question">循环体执行了多少次？</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, true, 'q1')">A. 5次 (0, 2, 4, 6, 8)</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q1')">B. 10次</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q1')">C. 6次 (0, 2, 4, 6, 8, 10)</div>
+                    <div class="explanation" id="q1-exp">
+                        解析：i 的值依次为 0, 2, 4, 6, 8。当 i 变为 10 时，<code>10 < 10</code> 为假，循环结束。共 5 次。
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q2 -->
+            <section>
+                <h3>题目 2: while vs do-while</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">int i = 10;
+while (i < 5) { cout << "A"; }
+do { cout << "B"; } while (i < 5);</code></pre>
+                </div>
+                <div class="quiz-container">
+                    <div class="quiz-question">输出结果是？</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q2')">A. AB</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, true, 'q2')">B. B</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q2')">C. 什么都不输出</div>
+                    <div class="explanation" id="q2-exp">
+                        解析：while 先判断 10<5 为假，不执行。do-while 先执行一次输出 B，再判断 10<5 为假，结束。
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q3 -->
+            <section>
+                <h3>题目 3: continue 的作用</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">for (int i = 1; i <= 5; i++) {
+    if (i == 3) continue;
+    cout << i;
+}</code></pre>
+                </div>
+                <div class="quiz-container">
+                    <div class="quiz-question">输出结果是？</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q3')">A. 12345</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, true, 'q3')">B. 1245</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q3')">C. 12</div>
+                    <div class="explanation" id="q3-exp">
+                        解析：当 i 等于 3 时，执行 continue，跳过 cout，直接进入下一次循环 (i=4)。所以 3 没有被打印。
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q4 -->
+            <section>
+                <h3>题目 4: 算法细节</h3>
+                <div class="quiz-container">
+                    <div class="quiz-question">计算 1 到 100 的乘积，变量应该初始化为？</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q4')">A. int prod = 0;</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q4')">B. int prod = 1;</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, true, 'q4')">C. double/long long prod = 1;</div>
+                    <div class="explanation" id="q4-exp">
+                        解析：首先乘法初始值必须是 1 (0乘任何数都是0)。其次 100! 极其巨大，int 甚至 long long 都会溢出，通常需要 double (近似值) 或高精度算法。但在选项中，C 是最合理的选择（类型够大且初始值为1）。
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q5 -->
+            <section>
+                <h3>题目 5: 嵌套循环</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">for(int i=1; i<=3; i++)
+    for(int j=1; j<=4; j++)
+        cout << "*";</code></pre>
+                </div>
+                <div class="quiz-container">
+                    <div class="quiz-question">总共打印了多少个星号？</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q5')">A. 7个</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, true, 'q5')">B. 12个</div>
+                    <div class="quiz-option" onclick="checkAnswer(this, false, 'q5')">C. 34个</div>
+                    <div class="explanation" id="q5-exp">
+                        解析：外层 3 次，内层 4 次。总次数 = 3 * 4 = 12 次。
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3>测试结束</h3>
+                <p>全对：🎉 循环结构大师！</p>
+                <p>有错题：💪 请回顾对应的课程章节。</p>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        
+        function checkAnswer(element, isCorrect, qId) {
+            const parent = element.parentElement;
+            if (parent.getAttribute('data-answered') === 'true') return;
+            parent.setAttribute('data-answered', 'true');
+
+            if (isCorrect) {
+                element.classList.add('correct');
+                element.innerHTML += " ✅";
+            } else {
+                element.classList.add('wrong');
+                element.innerHTML += " ❌";
+                const options = parent.getElementsByClassName('quiz-option');
+                for(let opt of options) {
+                    if(opt.getAttribute('onclick').includes('true')) {
+                        opt.classList.add('correct');
+                    }
+                }
+            }
+            document.getElementById(qId + '-exp').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

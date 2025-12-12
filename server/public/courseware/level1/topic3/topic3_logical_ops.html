@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复杂条件构建 - Lesson 7 逻辑运算符</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        /* 基础样式 */
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        
+        /* 代码块样式 */
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        
+        /* 高亮提示 */
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .tip-box {
+            background: #3498db;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 85%;
+            font-size: 26px;
+            text-align: center;
+        }
+        
+        /* 运算符卡片 */
+        .operator-grid {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        .operator-card {
+            background: #333;
+            padding: 30px 20px;
+            border-radius: 10px;
+            min-width: 220px;
+            text-align: center;
+        }
+        .operator-symbol {
+            font-size: 40px;
+            color: #2ecc71;
+            margin-bottom: 15px;
+        }
+        .operator-name {
+            font-size: 28px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .operator-rule {
+            font-size: 20px;
+            color: #ddd;
+            line-height: 1.4;
+        }
+        
+        /* 交互式练习框 */
+        .interactive-box {
+            background: #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 80%;
+            text-align: center;
+        }
+        .interactive-input {
+            font-size: 24px;
+            padding: 10px;
+            margin: 0 10px 15px 10px;
+            width: 150px;
+            border: none;
+            border-radius: 5px;
+        }
+        .interactive-btn {
+            font-size: 24px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .result-text {
+            margin-top: 20px;
+            font-size: 28px;
+            color: #2ecc71;
+        }
+        
+        /* 小测验防溢出样式 */
+        .reveal .quiz-section {
+            width: 95%;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        .reveal .quiz-section h3 {
+            margin-bottom: 15px !important;
+            font-size: 36px !important;
+        }
+        .reveal .quiz-question {
+            font-size: 22px !important;
+            margin: 8px 0 !important;
+            line-height: 1.4 !important;
+        }
+        .reveal .quiz-code-box {
+            font-size: 0.7em !important;
+            padding: 15px !important;
+            margin: 8px auto !important;
+            width: 95% !important;
+            max-height: 180px !important;
+        }
+        .reveal .quiz-options {
+            text-align: left !important;
+            width: 85% !important;
+            margin: 5px auto !important;
+            font-size: 0.8em !important;
+            line-height: 1.6 !important;
+        }
+        .reveal .quiz-options input {
+            transform: scale(1.1) !important;
+            margin-right: 8px !important;
+        }
+        .reveal .quiz-options label {
+            font-size: 20px !important;
+        }
+        
+        /* 全局布局修复 */
+        .reveal .slides section {
+            min-height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            max-height: 85vh !important;
+            overflow-y: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- 第1页：标题页 -->
+            <section>
+                <h2>Topic 2: 复杂条件构建</h2>
+                <h3>Lesson 7: 逻辑运算符（&& / || / !）</h3>
+            </section>
+
+            <!-- 第2页：逻辑运算符基础 -->
+            <section>
+                <h3>逻辑运算符：组合多个条件</h3>
+                <div class="operator-grid">
+                    <div class="operator-card">
+                        <div class="operator-symbol">&&&nbsp;</div>
+                        <div class="operator-name">逻辑与 (AND)</div>
+                        <div class="operator-rule">所有条件都成立才为真<br>有一个假则整体为假</div>
+                    </div>
+                    <div class="operator-card">
+                        <div class="operator-symbol">||</div>
+                        <div class="operator-name">逻辑或 (OR)</div>
+                        <div class="operator-rule">任意一个条件成立即为真<br>全假才为假</div>
+                    </div>
+                    <div class="operator-card">
+                        <div class="operator-symbol">!</div>
+                        <div class="operator-name">逻辑非 (NOT)</div>
+                        <div class="operator-rule">对条件取反<br>真→假，假→真</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 第3页：短路求值特性（核心重点） -->
+            <section>
+                <h3>核心特性：短路求值</h3>
+                <div class="tip-box">
+                    一旦能确定整体结果，后续条件不再判断
+                </div>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    // && 短路：第一个条件假，第二个不执行
+    int a = 5;
+    if (a > 10 && ++a > 0) { // a>10为假，++a不执行
+        cout << "执行";
+    }
+    cout << a << endl; // 输出5（a未自增）
+
+    // || 短路：第一个条件真，第二个不执行
+    int b = 5;
+    if (b < 10 || ++b > 0) { // b<10为真，++b不执行
+        cout << "执行";
+    }
+    cout << b << endl; // 输出5（b未自增）
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第4页：示例1 - 判断闰年（经典案例） -->
+            <section>
+                <h3>实战示例1：判断闰年</h3>
+                <p>闰年规则：能被4整除且不能被100整除，或能被400整除</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int year = 2024;
+    // 组合条件：(能被4整除 && 不能被100整除) || 能被400整除
+    bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    
+    if (isLeapYear) {
+        cout << year << "年是闰年" << endl; // 输出2024年是闰年
+    } else {
+        cout << year << "年不是闰年" << endl;
+    }
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第5页：示例2 - 判断字符类型 -->
+            <section>
+                <h3>实战示例2：判断大写元音字母</h3>
+                <p>规则：是大写字母（A-Z）且是元音（A/E/I/O/U）</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    char ch = 'E';
+    // 组合条件：大写字母 && 元音字母
+    bool isUpperVowel = (ch >= 'A' && ch <= 'Z') && 
+                        (ch == 'A' || ch == 'E' || ch == 'I' || ch == 'O' || ch == 'U');
+    
+    if (isUpperVowel) {
+        cout << ch << "是大写元音字母" << endl; // 输出E是大写元音字母
+    } else {
+        cout << ch << "不是大写元音字母" << endl;
+    }
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第6页：交互式练习1 - 判断闰年 -->
+            <section>
+                <h3>交互式练习：判断闰年</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="yearInput" placeholder="输入年份">
+                    <button class="interactive-btn" onclick="judgeLeapYear()">判断闰年</button>
+                    <div class="result-text" id="yearResult"></div>
+                </div>
+            </section>
+
+            <!-- 第7页：交互式练习2 - 判断大写元音字母 -->
+            <section>
+                <h3>交互式练习：判断大写元音字母</h3>
+                <div class="interactive-box">
+                    <input type="text" class="interactive-input" id="charInput" placeholder="输入单个字符" maxlength="1">
+                    <button class="interactive-btn" onclick="judgeVowel()">判断类型</button>
+                    <div class="result-text" id="charResult"></div>
+                </div>
+            </section>
+
+            <!-- 第8页：小测验 -->
+            <section class="quiz-section">
+                <h3>小测验</h3>
+                <!-- 问题1 -->
+                <div style="margin-bottom: 15px; flex-shrink: 1;">
+                    <p class="quiz-question">1. 执行 if (3>5 || 8>2) 时，第二个条件会执行吗？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q1" id="q1a"> 
+                        <label for="q1a">A. 会（|| 不短路）</label><br>
+                        <input type="radio" name="q1" id="q1b"> 
+                        <label for="q1b">B. 不会（|| 短路，第一个假才执行第二个）</label><br>
+                        <input type="radio" name="q1" id="q1c"> 
+                        <label for="q1c">C. 不会（|| 短路，第一个真就不执行第二个）</label>
+                    </div>
+                </div>
+                <!-- 问题2 -->
+                <div style="flex-shrink: 1;">
+                    <p class="quiz-question">2. 2000年是闰年吗？(2000%4==0 && 2000%100!=0) || 2000%400==0</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q2" id="q2a"> 
+                        <label for="q2a">A. 是（能被400整除）</label><br>
+                        <input type="radio" name="q2" id="q2b"> 
+                        <label for="q2b">B. 不是（能被100整除）</label><br>
+                        <input type="radio" name="q2" id="q2c"> 
+                        <label for="q2c">C. 不确定</label>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        // 初始化Reveal.js
+        Reveal.initialize({
+            width: '100%',
+            height: '100%',
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+
+        // 判断闰年交互逻辑
+        function judgeLeapYear() {
+            const year = Number(document.getElementById('yearInput').value);
+            const resultEl = document.getElementById('yearResult');
+            
+            // 输入合法性校验
+            if (isNaN(year) || year < 1) {
+                resultEl.textContent = "❌ 请输入有效的年份（≥1）！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // 闰年判断逻辑
+            const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            resultEl.textContent = `✅ ${year}年${isLeap ? '是' : '不是'}闰年`;
+            resultEl.style.color = "#2ecc71";
+        }
+
+        // 判断大写元音字母交互逻辑
+        function judgeVowel() {
+            const ch = document.getElementById('charInput').value.toUpperCase();
+            const resultEl = document.getElementById('charResult');
+            
+            // 输入合法性校验
+            if (ch.length !== 1) {
+                resultEl.textContent = "❌ 请输入单个字符！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // 大写元音判断逻辑
+            const isUpper = ch >= 'A' && ch <= 'Z';
+            const isVowel = ch === 'A' || ch === 'E' || ch === 'I' || ch === 'O' || ch === 'U';
+            const isUpperVowel = isUpper && isVowel;
+
+            if (!isUpper) {
+                resultEl.textContent = `✅ ${ch} 不是大写字母`;
+            } else if (isUpperVowel) {
+                resultEl.textContent = `✅ ${ch} 是大写元音字母`;
+            } else {
+                resultEl.textContent = `✅ ${ch} 是大写字母但不是元音`;
+            }
+            resultEl.style.color = "#2ecc71";
+        }
+    </script>
+</body>
+</html>

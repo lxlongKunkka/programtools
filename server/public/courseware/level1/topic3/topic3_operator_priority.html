@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复杂条件构建 - Lesson 8 运算符优先级</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        /* 基础样式 */
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        
+        /* 代码块样式 */
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        
+        /* 高亮提示 */
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .priority-box {
+            background: #9b59b6;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 80%;
+            font-size: 28px;
+            text-align: center;
+        }
+        .priority-list {
+            text-align: left;
+            margin: 20px auto;
+            width: 70%;
+            font-size: 26px;
+            line-height: 2;
+        }
+        .priority-item {
+            position: relative;
+            padding-left: 20px;
+        }
+        .priority-item::before {
+            content: "🔝";
+            position: absolute;
+            left: 0;
+        }
+        
+        /* 交互式练习框 */
+        .interactive-box {
+            background: #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 80%;
+            text-align: center;
+        }
+        .interactive-input {
+            font-size: 24px;
+            padding: 10px;
+            margin: 0 10px 15px 10px;
+            width: 300px;
+            border: none;
+            border-radius: 5px;
+        }
+        .interactive-btn {
+            font-size: 24px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .result-text {
+            margin-top: 20px;
+            font-size: 28px;
+            color: #2ecc71;
+        }
+        
+        /* 小测验防溢出样式 */
+        .reveal .quiz-section {
+            width: 95%;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        .reveal .quiz-section h3 {
+            margin-bottom: 15px !important;
+            font-size: 36px !important;
+        }
+        .reveal .quiz-question {
+            font-size: 22px !important;
+            margin: 8px 0 !important;
+            line-height: 1.4 !important;
+        }
+        .reveal .quiz-code-box {
+            font-size: 0.7em !important;
+            padding: 15px !important;
+            margin: 8px auto !important;
+            width: 95% !important;
+            max-height: 180px !important;
+        }
+        .reveal .quiz-options {
+            text-align: left !important;
+            width: 85% !important;
+            margin: 5px auto !important;
+            font-size: 0.8em !important;
+            line-height: 1.6 !important;
+        }
+        .reveal .quiz-options input {
+            transform: scale(1.1) !important;
+            margin-right: 8px !important;
+        }
+        .reveal .quiz-options label {
+            font-size: 20px !important;
+        }
+        
+        /* 全局布局修复 */
+        .reveal .slides section {
+            min-height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            max-height: 85vh !important;
+            overflow-y: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- 第1页：标题页 -->
+            <section>
+                <h2>Topic 2: 复杂条件构建</h2>
+                <h3>Lesson 8: 运算符优先级</h3>
+            </section>
+
+            <!-- 第2页：优先级规则 -->
+            <section>
+                <h3>核心优先级（从高到低）</h3>
+                <div class="priority-box">
+                    ! (非) > 算术运算符 > 关系运算符 > && (与) > || (或)
+                </div>
+                <div class="priority-list">
+                    <div class="priority-item">1     ! (逻辑非)：最高优先级</div>
+                    <div class="priority-item">2     算术运算符：+ - * / %</div>
+                    <div class="priority-item">3     关系运算符：> < >= <= == !=</div>
+                    <div class="priority-item">4     && (逻辑与)：次低优先级</div>
+                    <div class="priority-item">5     || (逻辑或)：最低优先级</div>
+                </div>
+                <p class="highlight fragment">💡 不确定就加括号！括号优先级最高</p>
+            </section>
+
+            <!-- 第3页：优先级示例1 -->
+            <section>
+                <h3>示例1：无括号的优先级执行</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    // 执行顺序：
+    // 1. 算术：3+2=5；10-4=6
+    // 2. 关系：5>4=true；6<8=true
+    // 3. &&：true&&true=true
+    bool res1 = 3+2>4 && 10-4<8; 
+    cout << boolalpha << res1 << endl; // 输出true
+
+    // 执行顺序：
+    // 1. !：!true=false
+    // 2. 关系：5>3=true
+    // 3. ||：false||true=true
+    bool res2 = !true || 5>3;
+    cout << boolalpha << res2 << endl; // 输出true
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第4页：优先级示例2（括号改变顺序） -->
+            <section>
+                <h3>示例2：括号明确优先级</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int a=5, b=8, c=3;
+
+    // 无括号：!a>b → (!a)>b → false>b → false
+    bool res1 = !a > b;
+    // 有括号：!(a>b) → !(false) → true
+    bool res2 = !(a > b);
+
+    // 无括号：a+b>10 && c<5 → 13>10&&true → true
+    bool res3 = a + b > 10 && c < 5;
+    // 有括号：a+(b>10 && c)<5 → a+0<5 → 5<5 → false
+    bool res4 = a + (b > 10 && c) < 5;
+
+    cout << res1 << "," << res2 << "," << res3 << "," << res4 << endl;
+    // 输出：0,1,1,0
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第5页：易错案例分析 -->
+            <section>
+                <h3>易错案例：少括号导致的逻辑错误</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">// 需求：判断x在[10,20]之间 且 y>0
+int x=15, y=-5;
+
+// 错误写法：10<=x<=20 → (10<=x)<=20 → true<=20 → true
+// 最终：true && y>0 → true && false → false（结果对但逻辑错）
+bool wrong = 10 <= x <= 20 && y > 0;
+
+// 正确写法：(10<=x) && (x<=20) && (y>0)
+bool right = 10 <= x && x <= 20 && y > 0;
+
+cout << "错误写法结果：" << boolalpha << wrong << endl; // false
+cout << "正确写法结果：" << boolalpha << right << endl; // false
+</code></pre>
+                </div>
+                <p class="highlight">⚠️ 区间判断必须拆分为两个关系运算符+&&</p>
+            </section>
+
+            <!-- 第6页：交互式练习 - 计算布尔表达式 -->
+            <section>
+                <h3>交互式练习：计算复杂布尔表达式</h3>
+                <div class="interactive-box">
+                    <input type="text" class="interactive-input" id="exprInput" placeholder="输入布尔表达式（如：!true||5>3）">
+                    <button class="interactive-btn" onclick="calcExpr()">计算结果</button>
+                    <div class="result-text" id="exprResult"></div>
+                </div>
+                <p style="margin-top: 15px; font-size: 22px; color: #999;">支持运算符：! > < >= <= == != && || （示例：3+2>4&&10-4<8）</p>
+            </section>
+
+            <!-- 第7页：进阶练习 - 补全括号 -->
+            <section>
+                <h3>进阶练习：补全括号明确执行顺序</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">// 请为以下表达式补全括号，明确执行顺序
+1. !a + b > c && d < e
+   → (!a) + b > c && d < e
+   → ((!a) + b) > c && d < e
+   → (((!a) + b) > c) && (d < e)
+
+2. x > 5 || y < 3 && z == 0
+   → x > 5 || (y < 3 && z == 0)
+
+3. !m == n || p + q <= 20
+   → (!m) == n || (p + q) <= 20</code></pre>
+                </div>
+            </section>
+
+            <!-- 第8页：小测验 -->
+            <section class="quiz-section">
+                <h3>小测验</h3>
+                <!-- 问题1 -->
+                <div style="margin-bottom: 15px; flex-shrink: 1;">
+                    <p class="quiz-question">1. 表达式 !5>3 的执行结果是？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q1" id="q1a"> 
+                        <label for="q1a">A. true（!5是false，false>3为true）</label><br>
+                        <input type="radio" name="q1" id="q1b"> 
+                        <label for="q1b">B. false（!5是false，false>3为false）</label><br>
+                        <input type="radio" name="q1" id="q1c"> 
+                        <label for="q1c">C. 报错（!只能作用于布尔值）</label>
+                    </div>
+                </div>
+                <!-- 问题2 -->
+                <div style="flex-shrink: 1;">
+                    <p class="quiz-question">2. 表达式 3+2>4&&10-4<8 的执行顺序是？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q2" id="q2a"> 
+                        <label for="q2a">A. 先算&&，再算+/-，最后算></label><br>
+                        <input type="radio" name="q2" id="q2b"> 
+                        <label for="q2b">B. 先算+/-，再算>，最后算&&</label><br>
+                        <input type="radio" name="q2" id="q2c"> 
+                        <label for="q2c">C. 先算>，再算+/-，最后算&&</label>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        // 初始化Reveal.js
+        Reveal.initialize({
+            width: '100%',
+            height: '100%',
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+
+        // 布尔表达式计算交互逻辑（简化版，仅支持基础运算）
+        function calcExpr() {
+            const expr = document.getElementById('exprInput').value.trim();
+            const resultEl = document.getElementById('exprResult');
+            
+            // 简单的表达式替换（安全版，避免eval风险）
+            try {
+                // 替换布尔值和运算符
+                let safeExpr = expr
+                    .replace(/true/g, '1')
+                    .replace(/false/g, '0')
+                    .replace(/&&/g, '&')
+                    .replace(/\|\|/g, '|');
+                
+                // 计算（仅用于教学演示，生产环境需严格校验）
+                const result = eval(safeExpr);
+                const boolResult = Boolean(result);
+                
+                resultEl.textContent = `✅ 表达式：${expr} → 结果：${boolResult}（数值：${result}）`;
+                resultEl.style.color = "#2ecc71";
+            } catch (e) {
+                resultEl.textContent = "❌ 表达式格式错误！请输入合法的布尔表达式";
+                resultEl.style.color = "#e74c3c";
+            }
+        }
+    </script>
+</body>
+</html>

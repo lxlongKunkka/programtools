@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>等值判断与综合应用 - Lesson 10 选择结构综合练习</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        /* 基础样式 - 缩小基础字号，提升适配性 */
+        .reveal h1 { font-size: 2.2em !important; }
+        .reveal h2 { font-size: 1.8em !important; }
+        .reveal h3 { font-size: 1.5em !important; text-transform: none; }
+        .reveal p, .reveal li { font-size: 0.9em !important; line-height: 1.5; }
+        
+        /* 代码块样式 - 缩小尺寸+限制高度+滚动条 */
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 15px !important;
+            text-align: left;
+            margin: 15px auto !important;
+            width: 90% !important;
+            max-height: 200px !important;
+            overflow-y: auto !important;
+            font-size: 0.75em !important;
+        }
+        .code-box pre {
+            margin: 0 !important;
+            line-height: 1.4 !important;
+        }
+        .code-box code {
+            font-size: 0.9em !important;
+        }
+        
+        /* 高亮提示 */
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .skill-box {
+            background: #27ae60;
+            color: white;
+            padding: 12px 18px !important;
+            border-radius: 8px;
+            margin: 15px auto !important;
+            width: 90% !important;
+            font-size: 0.8em !important;
+            text-align: left;
+            line-height: 1.4;
+        }
+        
+        /* 交互式练习框 - 缩小尺寸+紧凑布局 */
+        .interactive-box {
+            background: #2c3e50;
+            padding: 20px !important;
+            border-radius: 8px;
+            margin: 15px auto !important;
+            width: 90% !important;
+            text-align: center;
+        }
+        .interactive-box p {
+            font-size: 0.8em !important;
+            margin-bottom: 10px !important;
+        }
+        .interactive-input {
+            font-size: 0.8em !important;
+            padding: 8px !important;
+            margin: 0 8px 10px 8px !important;
+            width: 120px !important;
+        }
+        .interactive-btn {
+            font-size: 0.8em !important;
+            padding: 8px 16px !important;
+            margin: 0 4px !important;
+        }
+        .result-text {
+            margin-top: 15px !important;
+            font-size: 0.85em !important;
+            line-height: 1.6;
+        }
+        
+        /* 小测验防溢出样式 - 核心优化 */
+        .reveal .quiz-section {
+            width: 95% !important;
+            margin: 0 auto !important;
+            padding: 0 8px !important;
+        }
+        .reveal .quiz-section h3 {
+            margin-bottom: 10px !important;
+            font-size: 1.2em !important;
+        }
+        .reveal .quiz-question {
+            font-size: 0.8em !important;
+            margin: 5px 0 !important;
+            line-height: 1.4 !important;
+        }
+        .reveal .quiz-code-box {
+            font-size: 0.65em !important;
+            padding: 12px !important;
+            margin: 5px auto !important;
+            width: 95% !important;
+            max-height: 150px !important;
+            overflow-y: auto !important;
+        }
+        .reveal .quiz-options {
+            text-align: left !important;
+            width: 90% !important;
+            margin: 3px auto !important;
+            font-size: 0.75em !important;
+            line-height: 1.5 !important;
+        }
+        .reveal .quiz-options input {
+            transform: scale(1) !important;
+            margin-right: 6px !important;
+        }
+        .reveal .quiz-options label {
+            font-size: 0.8em !important;
+        }
+        
+        /* 全局布局修复 - 关键：强制限制幻灯片高度+向上对齐+紧凑间距 */
+        .reveal .slides section {
+            min-height: auto !important;
+            max-height: 85vh !important;
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            padding: 20px 0 !important;
+            margin: 0 !important;
+            gap: 8px !important; /* 缩小元素间距 */
+        }
+        /* 修复滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #272822;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- 第1页：标题页 -->
+            <section>
+                <h2>Topic 2: 等值判断与综合应用</h2>
+                <h3>Lesson 10: 选择结构综合练习</h3>
+                <p class="highlight">整合if/else if/switch/逻辑运算符/优先级</p>
+            </section>
+
+            <!-- 第2页：核心知识点回顾 -->
+            <section>
+                <h3>选择结构核心知识点回顾</h3>
+                <div class="skill-box">
+                    <div>✅ 基础分支：if/else（二选一逻辑）</div>
+                    <div>✅ 多分支：if...else if...else（范围/多条件判断）</div>
+                    <div>✅ 简写：三目运算符（简单赋值场景）</div>
+                    <div>✅ 嵌套：if嵌套if（层级逻辑判断）</div>
+                    <div>✅ 复杂条件：&&/||/!（组合多条件）</div>
+                    <div>✅ 等值判断：switch/case（离散值匹配）</div>
+                    <div>✅ 优先级：() > ! > 算术 > 关系 > && > ||</div>
+                </div>
+            </section>
+
+            <!-- 第3页：示例1 - 出租车计费系统 -->
+            <section>
+                <h3>实战示例1：出租车计费系统</h3>
+                <p style="margin: 5px 0 !important;">计费规则：<br>
+                1. 起步价：3公里内10元<br>
+                2. 3-10公里：超出部分每公里2元<br>
+                3. 10公里以上：超出部分每公里3元<br>
+                4. 夜间（22:00-6:00）加价20%</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+#include &lt;iomanip&gt; // 用于保留小数
+using namespace std;
+
+int main() {
+    double distance = 12.5; // 行驶公里数
+    int hour = 23; // 乘车时间（小时）
+    double fee = 0.0;
+    
+    // 基础费用计算（多分支if）
+    if (distance <= 3) {
+        fee = 10;
+    } else if (distance <= 10) {
+        fee = 10 + (distance - 3) * 2;
+    } else {
+        fee = 10 + 7*2 + (distance - 10) * 3;
+    }
+    
+    // 夜间加价（逻辑运算符）
+    if (hour >= 22 || hour <= 6) {
+        fee = fee * 1.2;
+    }
+    
+    cout << "行驶" << distance << "公里，费用：" 
+         << fixed << setprecision(2) << fee << "元" << endl; // 35.40元
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第4页：示例2 - 自动售货机逻辑 -->
+            <section>
+                <h3>实战示例2：自动售货机逻辑</h3>
+                <p style="margin: 5px 0 !important;">规则：<br>
+                1. 商品：1-可乐(3元)、2-雪碧(3元)、3-矿泉水(2元)、4-薯片(5元)<br>
+                2. 输入商品编号和投币金额，判断是否够钱并找零</p>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int goodsId = 2; // 商品编号
+    int money = 5; // 投币金额
+    int price = 0;
+    
+    // 等值判断（switch）
+    switch (goodsId) {
+        case 1: case 2: price = 3; break;
+        case 3: price = 2; break;
+        case 4: price = 5; break;
+        default: cout << "无效商品编号" << endl; return 0;
+    }
+    
+    // 嵌套判断
+    if (money >= price) {
+        cout << "购买成功！找零：" << money - price << "元" << endl; // 2元
+    } else {
+        cout << "金额不足！还需：" << price - money << "元" << endl;
+    }
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第5页：交互式练习1 - 出租车计费 -->
+            <section>
+                <h3>交互式练习：出租车计费系统</h3>
+                <div class="interactive-box">
+                    <p style="color:white; margin-bottom:10px !important;">计费规则：3公里内10元 | 3-10公里每公里2元 | 10公里以上每公里3元 | 夜间(22-6点)加价20%</p>
+                    <input type="number" class="interactive-input" id="distance" placeholder="行驶公里数" step="0.1">
+                    <input type="number" class="interactive-input" id="timeHour" placeholder="乘车小时(0-23)">
+                    <button class="interactive-btn" onclick="calcTaxiFee()">计算费用</button>
+                    <div class="result-text" id="taxiResult"></div>
+                </div>
+            </section>
+
+            <!-- 第6页：交互式练习2 - 自动售货机 -->
+            <section>
+                <h3>交互式练习：自动售货机逻辑</h3>
+                <div class="interactive-box">
+                    <p style="color:white; margin-bottom:10px !important;">商品列表：1-可乐(3元) 2-雪碧(3元) 3-矿泉水(2元) 4-薯片(5元)</p>
+                    <input type="number" class="interactive-input" id="goodsId" placeholder="商品编号(1-4)">
+                    <input type="number" class="interactive-input" id="inputMoney" placeholder="投币金额">
+                    <button class="interactive-btn" onclick="vendingMachine()">购买商品</button>
+                    <div class="result-text" id="vendingResult"></div>
+                </div>
+            </section>
+
+            <!-- 第7页：综合拓展思考 -->
+            <section>
+                <h3>综合拓展思考</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">// 拓展需求：给出租车计费增加节假日加价（周末/法定假日加价10%）
+// 提示：
+// 1. 新增变量 isHoliday（是否节假日）
+// 2. 组合条件：夜间加价 && 节假日加价 → 总加价32%
+// 3. 优先级：先算基础费用 → 再算夜间加价 → 最后算节假日加价
+
+// 拓展需求：售货机增加会员折扣（VIP用户9折）
+// 提示：
+// 1. 新增变量 isVIP（是否VIP）
+// 2. 复杂条件：isVIP && money >= price*0.9
+// 3. 三目运算符简化折扣计算：finalPrice = isVIP ? price*0.9 : price;</code></pre>
+                </div>
+            </section>
+
+            <!-- 第8页：小测验（综合题） -->
+            <section class="quiz-section">
+                <h3>综合小测验</h3>
+                <!-- 问题1 -->
+                <div style="margin-bottom: 10px !important; flex-shrink: 1;">
+                    <p class="quiz-question">1. 出租车行驶8公里，23点乘车，费用是多少？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q1" id="q1a"> 
+                        <label for="q1a">A. 10+(8-3)*2=20元 → 夜间加价20% → 24元</label><br>
+                        <input type="radio" name="q1" id="q1b"> 
+                        <label for="q1b">B. 10+8*2=26元 → 夜间加价20% → 31.2元</label><br>
+                        <input type="radio" name="q1" id="q1c"> 
+                        <label for="q1c">C. 8*2=16元 → 夜间加价20% → 19.2元</label>
+                    </div>
+                </div>
+                <!-- 问题2 -->
+                <div style="flex-shrink: 1;">
+                    <p class="quiz-question">2. 售货机购买编号3的商品，投币3元，执行结果是？</p>
+                    <div class="quiz-code-box">
+                        <pre><code class="cpp">int id=3, money=3;
+int price=0;
+switch(id){
+    case 1:case2:price=3;break;
+    case3:price=2;break;
+    case4:price=5;break;
+}
+if(money>=price){
+    cout<<"找零："<<money-price;
+}else{
+    cout<<"金额不足";
+}</code></pre>
+                    </div>
+                    <div class="quiz-options">
+                        <input type="radio" name="q2" id="q2a"> 
+                        <label for="q2a">A. 找零：1</label><br>
+                        <input type="radio" name="q2" id="q2b"> 
+                        <label for="q2b">B. 找零：0</label><br>
+                        <input type="radio" name="q2" id="q2c"> 
+                        <label for="q2c">C. 金额不足</label>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        // 初始化Reveal.js
+        Reveal.initialize({
+            width: '100%',
+            height: '100%',
+            controls: true,
+            progress: true,
+            center: false, // 关闭居中，改为向上对齐
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+
+        // 出租车计费交互逻辑
+        function calcTaxiFee() {
+            const distance = Number(document.getElementById('distance').value);
+            const hour = Number(document.getElementById('timeHour').value);
+            const resultEl = document.getElementById('taxiResult');
+            
+            // 输入合法性校验
+            if (isNaN(distance) || distance < 0 || isNaN(hour) || hour < 0 || hour > 23) {
+                resultEl.textContent = "❌ 请输入有效的公里数（≥0）和小时数（0-23）！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // 基础费用计算（多分支if）
+            let baseFee = 0;
+            if (distance <= 3) {
+                baseFee = 10;
+            } else if (distance <= 10) {
+                baseFee = 10 + (distance - 3) * 2;
+            } else {
+                baseFee = 10 + 7*2 + (distance - 10) * 3;
+            }
+
+            // 夜间加价（逻辑运算符）
+            let finalFee = baseFee;
+            if (hour >= 22 || hour <= 6) {
+                finalFee = baseFee * 1.2;
+            }
+
+            // 结果展示
+            resultEl.textContent = `✅ 基础费用：${baseFee.toFixed(2)}元
+✅ 夜间加价：${hour >=22 || hour <=6 ? "是（+20%）" : "否"}
+✅ 最终费用：${finalFee.toFixed(2)}元`;
+            resultEl.style.color = "#2ecc71";
+        }
+
+        // 自动售货机交互逻辑
+        function vendingMachine() {
+            const goodsId = Number(document.getElementById('goodsId').value);
+            const money = Number(document.getElementById('inputMoney').value);
+            const resultEl = document.getElementById('vendingResult');
+            
+            // 输入合法性校验
+            if (isNaN(goodsId) || goodsId < 1 || goodsId > 4 || isNaN(money) || money < 0) {
+                resultEl.textContent = "❌ 请输入有效的商品编号（1-4）和投币金额（≥0）！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // switch判断商品价格（穿透利用）
+            let price = 0;
+            let goodsName = "";
+            switch (goodsId) {
+                case 1: goodsName = "可乐"; price = 3; break;
+                case 2: goodsName = "雪碧"; price = 3; break;
+                case 3: goodsName = "矿泉水"; price = 2; break;
+                case 4: goodsName = "薯片"; price = 5; break;
+            }
+
+            // 嵌套判断金额是否足够
+            let result = "";
+            if (money >= price) {
+                result = `✅ 购买${goodsName}成功！
+✅ 商品价格：${price}元，投币：${money}元，找零：${money - price}元`;
+            } else {
+                result = `❌ 购买${goodsName}失败！
+❌ 商品价格：${price}元，投币：${money}元，还需：${price - money}元`;
+            }
+            
+            resultEl.innerHTML = result.replace(/\n/g, '<br>');
+            resultEl.style.color = money >= price ? "#2ecc71" : "#e74c3c";
+        }
+    </script>
+</body>
+</html>

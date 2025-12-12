@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>等值判断与综合应用 - Lesson 9 switch语句</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        /* 基础样式 */
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        
+        /* 代码块样式 */
+        .code-box {
+            background: #272822;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+        }
+        
+        /* 高亮提示 */
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .warning-box {
+            background: #f39c12;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 85%;
+            font-size: 26px;
+            text-align: center;
+        }
+        .tip-box {
+            background: #3498db;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 85%;
+            font-size: 26px;
+            text-align: center;
+        }
+        
+        /* switch结构说明 */
+        .switch-structure {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px auto;
+            width: 75%;
+            font-size: 26px;
+        }
+        .switch-item {
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .switch-key { background: #9b59b6; color: white; }
+        .switch-case { background: #2ecc71; color: white; }
+        .switch-break { background: #e74c3c; color: white; }
+        .switch-default { background: #f1c40f; color: white; }
+        
+        /* 交互式练习框 */
+        .interactive-box {
+            background: #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px auto;
+            width: 80%;
+            text-align: center;
+        }
+        .interactive-input {
+            font-size: 24px;
+            padding: 10px;
+            margin: 0 10px 15px 10px;
+            width: 150px;
+            border: none;
+            border-radius: 5px;
+        }
+        .interactive-select {
+            font-size: 24px;
+            padding: 10px;
+            margin: 0 10px 15px 10px;
+            width: 150px;
+            border: none;
+            border-radius: 5px;
+        }
+        .interactive-btn {
+            font-size: 24px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .result-text {
+            margin-top: 20px;
+            font-size: 28px;
+            color: #2ecc71;
+        }
+        
+        /* 小测验防溢出样式 */
+        .reveal .quiz-section {
+            width: 95%;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        .reveal .quiz-section h3 {
+            margin-bottom: 15px !important;
+            font-size: 36px !important;
+        }
+        .reveal .quiz-question {
+            font-size: 22px !important;
+            margin: 8px 0 !important;
+            line-height: 1.4 !important;
+        }
+        .reveal .quiz-code-box {
+            font-size: 0.7em !important;
+            padding: 15px !important;
+            margin: 8px auto !important;
+            width: 95% !important;
+            max-height: 180px !important;
+        }
+        .reveal .quiz-options {
+            text-align: left !important;
+            width: 85% !important;
+            margin: 5px auto !important;
+            font-size: 0.8em !important;
+            line-height: 1.6 !important;
+        }
+        .reveal .quiz-options input {
+            transform: scale(1.1) !important;
+            margin-right: 8px !important;
+        }
+        .reveal .quiz-options label {
+            font-size: 20px !important;
+        }
+        
+        /* 全局布局修复 */
+        .reveal .slides section {
+            min-height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            max-height: 85vh !important;
+            overflow-y: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- 第1页：标题页 -->
+            <section>
+                <h2>Topic 2: 等值判断与综合应用</h2>
+                <h3>Lesson 9: switch语句（等值判断）</h3>
+            </section>
+
+            <!-- 第2页：switch基本结构 -->
+            <section>
+                <h3>switch语句核心结构</h3>
+                <p>适用于<strong class="highlight">等值判断</strong>场景，替代多分支if的简化写法</p>
+                <div class="switch-structure">
+                    <div class="switch-item switch-key">switch (表达式) { // 只能是整型/字符型等值判断</div>
+                    <div class="switch-item switch-case">  case 常量1: // 匹配表达式值
+                        &nbsp;&nbsp;语句块1;
+                        &nbsp;&nbsp;break; // 跳出switch，避免穿透</div>
+                    <div class="switch-item switch-case">  case 常量2:
+                        &nbsp;&nbsp;语句块2;
+                        &nbsp;&nbsp;break;</div>
+                    <div class="switch-item switch-default">  default: // 所有case不匹配时执行
+                        &nbsp;&nbsp;默认语句块;
+                        &nbsp;&nbsp;break;</div>
+                    <div class="switch-item switch-key">}</div>
+                </div>
+            </section>
+
+            <!-- 第3页：case穿透现象（核心重点） -->
+            <section>
+                <h3>⚠️ case穿透现象</h3>
+                <div class="warning-box">
+                    缺少break时，会从匹配的case开始，依次执行后续所有case代码
+                </div>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int num = 2;
+    switch (num) {
+        case 1:
+            cout << "执行case1" << endl;
+            // 无break，穿透到case2
+        case 2:
+            cout << "执行case2" << endl;
+            // 无break，穿透到default
+        default:
+            cout << "执行default" << endl;
+    }
+    // 输出：执行case2 → 执行default
+    return 0;
+}</code></pre>
+                </div>
+                <div class="tip-box fragment">
+                    ✨ 合理利用穿透：多个case执行相同逻辑（如12/1/2月都有31天）
+                </div>
+            </section>
+
+            <!-- 第4页：示例1 - 简易计算器 -->
+            <section>
+                <h3>实战示例1：简易计算器（加减乘除）</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int a = 10, b = 5;
+    char op = '+'; // 运算符：+ - * /
+    
+    switch (op) {
+        case '+':
+            cout << a << "+" << b << "=" << a+b << endl; // 15
+            break;
+        case '-':
+            cout << a << "-" << b << "=" << a-b << endl; // 5
+            break;
+        case '*':
+            cout << a << "*" << b << "=" << a*b << endl; // 50
+            break;
+        case '/':
+            if (b != 0) cout << a << "/" << b << "=" << a/b << endl; // 2
+            else cout << "除数不能为0" << endl;
+            break;
+        default:
+            cout << "无效运算符" << endl;
+            break;
+    }
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第5页：示例2 - 月份判断天数 -->
+            <section>
+                <h3>实战示例2：根据月份判断天数（利用穿透）</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int month = 2;
+    int days;
+    
+    switch (month) {
+        case 1: case 3: case 5: case 7: 
+        case 8: case 10: case 12:
+            days = 31; // 多个case共享逻辑（穿透利用）
+            break;
+        case 4: case 6: case 9: case 11:
+            days = 30;
+            break;
+        case 2:
+            days = 28; // 简化版，暂不考虑闰年
+            break;
+        default:
+            days = -1; // 无效月份
+            break;
+    }
+    
+    if (days == -1) cout << "无效月份" << endl;
+    else cout << month << "月有" << days << "天" << endl; // 2月有28天
+    return 0;
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 第6页：交互式练习1 - 简易计算器 -->
+            <section>
+                <h3>交互式练习：简易计算器</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="numA" placeholder="数字A">
+                    <select class="interactive-select" id="operator">
+                        <option value="+">+</option>
+                        <option value="-">-</option>
+                        <option value="*">*</option>
+                        <option value="/">/</option>
+                    </select>
+                    <input type="number" class="interactive-input" id="numB" placeholder="数字B">
+                    <button class="interactive-btn" onclick="calcSimple()">计算结果</button>
+                    <div class="result-text" id="calcResult"></div>
+                </div>
+            </section>
+
+            <!-- 第7页：交互式练习2 - 月份判断天数 -->
+            <section>
+                <h3>交互式练习：月份判断天数</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="monthInput" placeholder="输入月份(1-12)">
+                    <button class="interactive-btn" onclick="getMonthDays()">查询天数</button>
+                    <div class="result-text" id="monthResult"></div>
+                </div>
+            </section>
+
+            <!-- 第8页：小测验 -->
+            <section class="quiz-section">
+                <h3>小测验</h3>
+                <!-- 问题1 -->
+                <div style="margin-bottom: 15px; flex-shrink: 1;">
+                    <p class="quiz-question">1. switch语句的表达式可以是以下哪种类型？</p>
+                    <div class="quiz-options">
+                        <input type="radio" name="q1" id="q1a"> 
+                        <label for="q1a">A. 字符串（如"abc"）</label><br>
+                        <input type="radio" name="q1" id="q1b"> 
+                        <label for="q1b">B. 整型/字符型（如10、'+'）</label><br>
+                        <input type="radio" name="q1" id="q1c"> 
+                        <label for="q1c">C. 布尔型（如true/false）</label>
+                    </div>
+                </div>
+                <!-- 问题2 -->
+                <div style="flex-shrink: 1;">
+                    <p class="quiz-question">2. 以下代码输出什么？</p>
+                    <div class="code-box quiz-code-box">
+                        <pre><code class="cpp">int n=3;
+switch(n){
+    case 1: cout<<"A"; break;
+    case 3: cout<<"B";
+    case 5: cout<<"C"; break;
+    default: cout<<"D";
+}</code></pre>
+                    </div>
+                    <div class="quiz-options">
+                        <input type="radio" name="q2" id="q2a"> 
+                        <label for="q2a">A. B</label><br>
+                        <input type="radio" name="q2" id="q2b"> 
+                        <label for="q2b">B. BC</label><br>
+                        <input type="radio" name="q2" id="q2c"> 
+                        <label for="q2c">C. BCD</label>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        // 初始化Reveal.js
+        Reveal.initialize({
+            width: '100%',
+            height: '100%',
+            controls: true,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ]
+        });
+
+        // 简易计算器交互逻辑
+        function calcSimple() {
+            const a = Number(document.getElementById('numA').value);
+            const b = Number(document.getElementById('numB').value);
+            const op = document.getElementById('operator').value;
+            const resultEl = document.getElementById('calcResult');
+            
+            // 输入合法性校验
+            if (isNaN(a) || isNaN(b)) {
+                resultEl.textContent = "❌ 请输入有效的数字！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+            if (op === "/" && b === 0) {
+                resultEl.textContent = "❌ 除数不能为0！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // switch逻辑实现计算
+            let result = 0;
+            switch (op) {
+                case "+": result = a + b; break;
+                case "-": result = a - b; break;
+                case "*": result = a * b; break;
+                case "/": result = a / b; break;
+                default: result = "无效运算符";
+            }
+            
+            resultEl.textContent = `✅ ${a} ${op} ${b} = ${result}`;
+            resultEl.style.color = "#2ecc71";
+        }
+
+        // 月份判断天数交互逻辑
+        function getMonthDays() {
+            const month = Number(document.getElementById('monthInput').value);
+            const resultEl = document.getElementById('monthResult');
+            
+            // 输入合法性校验
+            if (isNaN(month) || month < 1 || month > 12) {
+                resultEl.textContent = "❌ 请输入1-12之间的有效月份！";
+                resultEl.style.color = "#e74c3c";
+                return;
+            }
+
+            // switch逻辑判断天数（利用穿透思想）
+            let days = 0;
+            switch (month) {
+                case 1: case 3: case 5: case 7: 
+                case 8: case 10: case 12:
+                    days = 31; break;
+                case 4: case 6: case 9: case 11:
+                    days = 30; break;
+                case 2:
+                    days = 28; break;
+            }
+            
+            resultEl.textContent = `✅ ${month}月有${days}天（简化版，暂不考虑闰年）`;
+            resultEl.style.color = "#2ecc71";
+        }
+    </script>
+</body>
+</html>

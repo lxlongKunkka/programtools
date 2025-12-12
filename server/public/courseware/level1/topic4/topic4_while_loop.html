@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>循环结构基础 - Lesson 2 while语句</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 150px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>Lesson 2: while 循环语句</h3>
+                <p>只要条件满足，就一直做下去</p>
+            </section>
+
+            <section>
+                <h3>while 循环语法</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">while (条件表达式) {
+    // 循环体
+    // 注意：必须有改变条件的语句，否则会死循环！
+}</code></pre>
+                </div>
+                <p>特点：<span class="highlight">先判断，后执行</span>。如果一开始条件为假，一次都不执行。</p>
+            </section>
+
+            <section>
+                <h3>for 与 while 的转换</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">// for 循环
+for (int i = 1; i <= 5; i++) {
+    cout << i << " ";
+}
+
+// 等价的 while 循环
+int i = 1;          // 1. 初始化
+while (i <= 5) {    // 2. 条件判断
+    cout << i << " ";
+    i++;            // 3. 更新 (千万别忘了！)
+}</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>适用场景：未知次数的循环</h3>
+                <p>当不知道具体要循环多少次，只知道停止条件时，用 while 更合适。</p>
+                <div class="code-box">
+                    <pre><code class="cpp">// 示例：不断输入数字，直到输入 0 为止
+int n;
+cin >> n;
+while (n != 0) {
+    cout << "你输入了: " << n << endl;
+    cin >> n; // 再次输入，更新 n 的值
+}
+cout << "结束" << endl;</code></pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>警惕：死循环 (Infinite Loop)</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">int i = 1;
+while (i <= 10) {
+    cout << i << endl;
+    // 忘记写 i++ 了！
+    // i 永远是 1，条件永远为真，程序卡死
+}</code></pre>
+                </div>
+                <p class="highlight">⚠️ 务必确保循环体内有改变判断条件的语句！</p>
+            </section>
+
+            <section>
+                <h3>交互练习：猜数字 (模拟)</h3>
+                <div class="interactive-box">
+                    <p>心中想一个 1-10 的数字，让电脑猜</p>
+                    <button class="interactive-btn" onclick="startGuess()">开始猜</button>
+                    <div class="result-text" id="guessResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>如果 <code>int n=5; while(n > 5) { ... }</code>，循环体执行几次？</p>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 1次</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 0次</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 无数次</label>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        function startGuess() {
+            let target = Math.floor(Math.random() * 10) + 1;
+            let guess = 0;
+            let count = 0;
+            let log = `目标数字是: ${target} (模拟用户输入)\n`;
+            
+            // 模拟 while 循环过程
+            while (guess !== target && count < 20) {
+                guess = Math.floor(Math.random() * 10) + 1;
+                count++;
+                log += `第${count}次猜: ${guess} -> ${guess === target ? '猜对了！' : '错'}\n`;
+            }
+            document.getElementById('guessResult').textContent = log;
+        }
+    </script>
+</body>
+</html>
