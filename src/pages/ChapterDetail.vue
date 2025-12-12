@@ -29,9 +29,11 @@
              </div>
            </div>
            
-           <button @click="isMaximized = !isMaximized" class="btn-maximize">
-             {{ isMaximized ? '退出全屏' : '全屏显示' }}
-           </button>
+           <div class="controls-bar">
+             <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+               {{ isMaximized ? '退出全屏' : '全屏显示' }}
+             </button>
+           </div>
            <iframe :src="getHtmlUrl(chapter.resourceUrl)" class="courseware-iframe" allowfullscreen></iframe>
         </div>
 
@@ -654,6 +656,12 @@ export default {
   z-index: 10000; /* Ensure it's above everything */
   display: flex;
   gap: 5px;
+}
+
+.html-content-container.maximized .controls-bar {
+  position: fixed;
+  top: 20px;
+  right: 40px;
 }
 
 .markdown-content-container.maximized .controls-bar {
