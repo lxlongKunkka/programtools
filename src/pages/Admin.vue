@@ -495,7 +495,7 @@ export default {
             if (level._id && descCollapsedState[level._id] !== undefined) {
                 level.descCollapsed = descCollapsedState[level._id]
             } else {
-                level.descCollapsed = false // Default expanded
+                level.descCollapsed = true // Default collapsed
             }
 
             if (level.topics) {
