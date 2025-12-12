@@ -175,9 +175,19 @@
             </div>
             <div class="progress-stat-card" v-if="selectedLearnerTopic">
                <h4>{{ selectedLearnerTopic.title }} 进度</h4>
-               <div class="stat-value">
-                 {{ getLearnerTopicSolvedCount(selectedLearnerProgress, selectedLearnerTopic) }} / {{ getTopicTotalProblems(selectedLearnerTopic) }}
-                 <span class="stat-label">题目</span>
+               <div class="stat-row">
+                 <div class="stat-item">
+                   <div class="stat-value">
+                     {{ getLearnerTopicSolvedCount(selectedLearnerProgress, selectedLearnerTopic) }} / {{ getTopicTotalProblems(selectedLearnerTopic) }}
+                     <span class="stat-label">题目</span>
+                   </div>
+                 </div>
+                 <div class="stat-item">
+                   <div class="stat-value">
+                     {{ getTopicProgress(selectedLearnerProgress, selectedLearnerTopic) }} / {{ selectedLearnerTopic.chapters.length }}
+                     <span class="stat-label">章节</span>
+                   </div>
+                 </div>
                </div>
             </div>
             <div class="progress-stat-card">
@@ -886,6 +896,13 @@ export default {
 .level-item:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+.stat-row {
+  display: flex;
+  gap: 20px;
+}
+.stat-item {
+  flex: 1;
 }
 .stat-value {
   font-size: 24px;
