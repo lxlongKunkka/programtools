@@ -2,6 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import CourseLevel from '../models/CourseLevel.js'
 import UserProgress from '../models/UserProgress.js'
+import User from '../models/User.js'
 import Document from '../models/Document.js'
 import Submission from '../models/Submission.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
@@ -29,6 +30,130 @@ router.get('/levels', async (req, res) => {
       .populate('chapters.problemIds', 'title docId domainId') // Legacy support
     res.json(levels)
   } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Get learners for a specific topic
+router.get('/topic/:topicId/learners', async (req, res) => {
+  try {
+    const { topicId } = req.params
+    
+    // 1. Find the topic and its chapters
+    const level = await CourseLevel.findOne({ 'topics._id': topicId })
+    
+    if (!level) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+    
+    const topic = level.topics.id(topicId)
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+    
+    const chapterIds = topic.chapters.map(c => c.id)
+    
+    if (chapterIds.length === 0) {
+      return res.json([])
+    }
+    
+    // 2. Find users who have unlocked any of these chapters
+    // We fetch completedChapters/Uids to calculate progress for sorting
+    const progresses = await UserProgress.find({
+      unlockedChapters: { $in: chapterIds }
+    }).select('userId completedChapters completedChapterUids')
+    
+    if (progresses.length === 0) {
+      return res.json([])
+    }
+
+    // Calculate completed count for each user for THIS topic
+    const userProgressMap = {} // userId -> count
+    
+    progresses.forEach(p => {
+       let userCompletedCount = 0
+       topic.chapters.forEach(chapter => {
+           let isCompleted = false
+           // Check UID
+           if (chapter._id && p.completedChapterUids && p.completedChapterUids.some(uid => uid.toString() === chapter._id.toString())) {
+               isCompleted = true
+           } 
+           // Check ID (Legacy)
+           else if (p.completedChapters && p.completedChapters.includes(chapter.id)) {
+               isCompleted = true
+           }
+           if (isCompleted) userCompletedCount++
+       })
+       userProgressMap[p.userId] = userCompletedCount
+    })
+    
+    const userIds = [...new Set(progresses.map(p => p.userId))] // Unique user IDs
+    
+    if (userIds.length === 0) {
+      return res.json([])
+    }
+    
+    // 3. Get user details
+    const users = await User.find({
+      _id: { $in: userIds }
+    }).select('uname') // Only select uname, no avatar
+    
+    // 4. Attach progress and sort
+    const usersWithProgress = users.map(u => {
+        return {
+            _id: u._id,
+            uname: u.uname,
+            completedCount: userProgressMap[u._id] || 0
+        }
+    })
+    
+    // Sort descending by completed count
+    usersWithProgress.sort((a, b) => b.completedCount - a.completedCount)
+
+    res.json(usersWithProgress)
+    
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Get specific user progress (Public/Protected)
+router.get('/progress/:userId', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params
+    console.log(`[API] Fetching progress for user: ${userId}`)
+    
+    const progress = await UserProgress.findOne({ userId })
+    
+    if (!progress) {
+      console.log(`[API] Progress not found for user: ${userId}`)
+      return res.status(404).json({ error: 'Progress not found' })
+    }
+
+    // Ensure subjectLevels is an object for JSON response
+    let subjectLevels = progress.subjectLevels
+    if (subjectLevels instanceof Map) {
+      subjectLevels = Object.fromEntries(subjectLevels)
+    }
+    // Fallback for legacy data
+    if (!subjectLevels || Object.keys(subjectLevels).length === 0) {
+       subjectLevels = { 'C++': progress.currentLevel || 1 }
+    }
+
+    const responseData = {
+      userId: progress.userId,
+      subjectLevels: subjectLevels,
+      // Fix: Use completedChapters length only to avoid double counting (since we double-write ID and UID)
+      completedChaptersCount: progress.completedChapters ? progress.completedChapters.length : 0,
+      completedChapters: progress.completedChapters || [],
+      completedChapterUids: progress.completedChapterUids || []
+    }
+    console.log(`[API] Returning progress:`, responseData)
+
+    res.json(responseData)
+  } catch (e) {
+    console.error(`[API] Error fetching progress:`, e)
     res.status(500).json({ error: e.message })
   }
 })

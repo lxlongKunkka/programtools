@@ -77,6 +77,32 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Learners Section -->
+                <div class="learners-section">
+                  <div class="learners-header" @click="toggleLearners(topic)">
+                    <span class="toggle-icon">{{ isLearnersExpanded(topic) ? '▼' : '▶' }}</span>
+                    <span class="learners-label">正在学习本课程的同学</span>
+                  </div>
+                  <div v-show="isLearnersExpanded(topic)" class="learners-content">
+                    <div v-if="loadingLearners[topic._id]" class="loading-small">加载中...</div>
+                    <div v-else-if="topicLearners[topic._id] && topicLearners[topic._id].length > 0" class="learners-grid">
+                      <div 
+                        v-for="user in topicLearners[topic._id]" 
+                        :key="user._id" 
+                        class="learner-tag" 
+                        @click.stop="viewLearnerProgress(user, topic)"
+                        title="点击查看进度"
+                      >
+                        {{ user.uname }}
+                      </div>
+                    </div>
+                    <div v-else class="no-learners">
+                      暂无同学正在学习
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -112,6 +138,42 @@
       </div>
     </div>
   </div>
+
+    <!-- Learner Progress Modal -->
+    <div v-if="showLearnerModal" class="modal-overlay" @click="closeLearnerModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedLearner ? selectedLearner.uname : '学员' }} 的学习进度</h3>
+          <button class="btn-close" @click="closeLearnerModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="loadingLearnerProgress" class="loading">加载中...</div>
+          <div v-else-if="selectedLearnerProgress" class="progress-details">
+            <div class="progress-stat-card">
+               <h4>当前等级</h4>
+               <div class="levels-list">
+                 <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="level-item">
+                   <span class="subj-name">{{ subj }}</span>
+                   <span class="lvl-val">Level {{ lvl }}</span>
+                 </div>
+               </div>
+            </div>
+            <div class="progress-stat-card" v-if="selectedLearnerTopic">
+               <h4>{{ selectedLearnerTopic.title }} 进度</h4>
+               <div class="stat-value">
+                 {{ getTopicProgress(selectedLearnerProgress, selectedLearnerTopic) }} / {{ selectedLearnerTopic.chapters.length }}
+                 <span class="stat-label">章节</span>
+               </div>
+            </div>
+            <div class="progress-stat-card">
+               <h4>累计完成章节</h4>
+               <div class="stat-value">{{ selectedLearnerProgress.completedChaptersCount }}</div>
+            </div>
+          </div>
+          <div v-else class="error">无法获取进度信息</div>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script>
@@ -128,7 +190,15 @@ export default {
       availableSubjects: ['C++', 'Python', 'Web'],
       expandedLevelIds: [],
       expandedDescIds: [],
-      expandedTopicIds: []
+      expandedTopicIds: [],
+      expandedLearnerIds: [],
+      topicLearners: {}, // topicId -> user array
+      loadingLearners: {}, // topicId -> boolean
+      showLearnerModal: false,
+      selectedLearner: null,
+      selectedLearnerProgress: null,
+      selectedLearnerTopic: null, // The topic context for the modal
+      loadingLearnerProgress: false
     }
   },
   mounted() {
@@ -224,6 +294,81 @@ export default {
     },
     isTopicExpanded(topic) {
       return this.expandedTopicIds.includes(topic._id)
+    },
+    toggleLearners(topic) {
+      const id = topic._id
+      const index = this.expandedLearnerIds.indexOf(id)
+      if (index > -1) {
+        this.expandedLearnerIds.splice(index, 1)
+      } else {
+        this.expandedLearnerIds.push(id)
+        // Fetch data if not already loaded
+        if (!this.topicLearners[id]) {
+          this.fetchTopicLearners(id)
+        }
+      }
+    },
+    isLearnersExpanded(topic) {
+      return this.expandedLearnerIds.includes(topic._id)
+    },
+    async fetchTopicLearners(topicId) {
+      this.loadingLearners[topicId] = true
+      try {
+        const users = await request(`/api/course/topic/${topicId}/learners`)
+        this.topicLearners[topicId] = users
+      } catch (e) {
+        console.error('Failed to fetch learners', e)
+      } finally {
+        this.loadingLearners[topicId] = false
+      }
+    },
+    async viewLearnerProgress(user, topic) {
+      console.log('View progress for user:', user, 'in topic:', topic)
+      this.selectedLearner = user
+      this.selectedLearnerTopic = topic
+      this.showLearnerModal = true
+      this.loadingLearnerProgress = true
+      this.selectedLearnerProgress = null
+      
+      try {
+        console.log(`Fetching progress from /api/course/progress/${user._id}`)
+        const progress = await request(`/api/course/progress/${user._id}`)
+        console.log('Received progress:', progress)
+        this.selectedLearnerProgress = progress
+      } catch (e) {
+        console.error('Failed to fetch learner progress', e)
+      } finally {
+        this.loadingLearnerProgress = false
+      }
+    },
+    closeLearnerModal() {
+      this.showLearnerModal = false
+      this.selectedLearner = null
+      this.selectedLearnerProgress = null
+      this.selectedLearnerTopic = null
+    },
+    getTopicProgress(progress, topic) {
+      if (!progress || !topic || !topic.chapters) return 0
+      
+      let completedCount = 0
+      const completedIds = progress.completedChapters || []
+      const completedUids = progress.completedChapterUids || []
+      
+      topic.chapters.forEach(chapter => {
+        let isCompleted = false
+        // Check UID
+        if (chapter._id && completedUids.includes(chapter._id)) {
+          isCompleted = true
+        }
+        // Check ID (Legacy)
+        else if (completedIds.includes(chapter.id)) {
+          isCompleted = true
+        }
+        
+        if (isCompleted) completedCount++
+      })
+      
+      return completedCount
     },
     getCurrentSubjectLevel() {
       if (!this.userProgress) return 1
@@ -533,49 +678,168 @@ export default {
   font-size: 14px;
   color: #3498db;
 }
-.topic-header h3 {
-  font-size: 20px;
-  color: #2c3e50;
-  margin: 0;
+
+/* Learners Section Styles */
+.learners-section {
+  margin-top: 25px;
+  border-top: 1px dashed #eee;
+  padding-top: 15px;
 }
-.topic-content {
+.learners-header {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #7f8c8d;
+  font-size: 14px;
+  user-select: none;
+  margin-bottom: 10px;
+}
+.learners-header:hover {
+  color: #3498db;
+}
+.learners-header .toggle-icon {
+  margin-right: 5px;
+  width: 16px;
+  text-align: center;
+}
+.learners-content {
   padding-left: 20px;
   animation: slideDown 0.3s ease-out;
 }
-.topic-desc {
-  color: #7f8c8d;
-  font-size: 14px;
-  margin: 0 0 20px 0;
-}
-.chapter-info h4 {
-  font-size: 16px;
-  margin: 0 0 5px 0;
-  color: #2c3e50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.chapter-id {
+.loading-small {
   font-size: 12px;
   color: #95a5a6;
-  margin: 0;
+  padding: 10px 0;
 }
-.no-content {
-  text-align: center;
+.learners-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 0;
+}
+.learner-tag {
+  background-color: #f0f2f5;
+  color: #555;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e0e0e0;
+  user-select: none;
+}
+.learner-tag:hover {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+  transform: translateY(-1px);
+}
+.no-learners {
+  font-size: 12px;
   color: #bdc3c7;
-  padding: 20px;
+  padding: 10px 0;
   font-style: italic;
 }
 
-.markdown-content {
-  line-height: 1.6;
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Ensure it's on top */
+  backdrop-filter: blur(2px); /* Optional: adds a nice blur effect */
+}
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+  z-index: 10000;
+}
+.modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
   color: #2c3e50;
 }
-.markdown-content :deep(p) {
-  margin-bottom: 10px;
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #95a5a6;
+  cursor: pointer;
+  line-height: 1;
 }
+.btn-close:hover {
+  color: #e74c3c;
+}
+.modal-body {
+  padding: 20px;
+}
+.progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.progress-stat-card {
+  background: #fcfcfc;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px;
+}
+.progress-stat-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.levels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.level-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  color: #2c3e50;
+  border-bottom: 1px dashed #eee;
+  padding-bottom: 5px;
+}
+.level-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #3498db;
+}
+.stat-label {
+  font-size: 14px;
+  font-weight: normal;
+  color: #95a5a6;
+  margin-left: 5px;
+}
+
 .markdown-content :deep(ul), .markdown-content :deep(ol) {
   padding-left: 20px;
   margin-bottom: 10px;
