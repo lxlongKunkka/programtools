@@ -304,6 +304,7 @@
 import request from '../utils/request'
 import { marked } from 'marked'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
+import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
 
 export default {
   components: { MarkdownViewer },
@@ -337,8 +338,8 @@ export default {
       editingLevelForChapter: null, // The level object the chapter belongs to
       editingTopicForChapter: null,
       insertIndex: null, // For inserting chapters
-      selectedSubject: 'C++',
-      availableSubjects: ['C++', 'Python', 'Web'],
+      selectedSubject: 'C++基础',
+      availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
       showPreview: false
     }
   },
@@ -487,7 +488,10 @@ export default {
       }
 
       try {
-        const data = await request(`/api/course/levels?subject=${encodeURIComponent(this.selectedSubject)}`)
+        const realSubject = getRealSubject(this.selectedSubject)
+        const rawData = await request(`/api/course/levels?subject=${encodeURIComponent(realSubject)}`)
+        const data = filterLevels(rawData, this.selectedSubject)
+        
         // Initialize collapsed state
         if (Array.isArray(data)) {
           data.forEach(level => {
@@ -579,7 +583,7 @@ export default {
           level: this.levels.length + 1, 
           title: '', 
           description: '',
-          subject: this.selectedSubject
+          subject: getRealSubject(this.selectedSubject)
         }
       }
       this.showLevelModal = true

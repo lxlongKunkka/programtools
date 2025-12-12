@@ -1,19 +1,25 @@
 <template>
   <div class="learning-map-container">
-    <div class="header">
-      <h1>{{ selectedSubject }} 闯关学习</h1>
-      <div class="subject-selector">
-        <button 
-          v-for="sub in availableSubjects" 
-          :key="sub"
-          :class="['btn-subject', { active: selectedSubject === sub }]"
-          @click="selectedSubject = sub; fetchData()"
-        >
-          {{ sub }}
-        </button>
-      </div>
-      <div class="progress-summary" v-if="userProgress">
-        当前等级: Level {{ getCurrentSubjectLevel() }}
+    <div class="header-banner">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>{{ selectedSubject }} 闯关学习</h1>
+          <div class="progress-badge" v-if="userProgress">
+            当前等级: Level {{ getCurrentSubjectLevel() }}
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="subject-selector">
+            <button 
+              v-for="sub in availableSubjects" 
+              :key="sub"
+              :class="['btn-subject', { active: selectedSubject === sub }]"
+              @click="selectedSubject = sub; fetchData()"
+            >
+              {{ sub }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -207,6 +213,7 @@
 <script>
 import request from '../utils/request'
 import { marked } from 'marked'
+import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
 
 export default {
   data() {
@@ -214,8 +221,8 @@ export default {
       levels: [],
       userProgress: null,
       loading: true,
-      selectedSubject: 'C++',
-      availableSubjects: ['C++', 'Python', 'Web'],
+      selectedSubject: 'C++基础',
+      availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
       expandedLevelIds: [],
       expandedDescIds: [],
       expandedTopicIds: [],
@@ -236,11 +243,12 @@ export default {
     async fetchData() {
       this.loading = true
       try {
+        const realSubject = getRealSubject(this.selectedSubject)
         const [levelsData, progressData] = await Promise.all([
-          request(`/api/course/levels?subject=${encodeURIComponent(this.selectedSubject)}`),
+          request(`/api/course/levels?subject=${encodeURIComponent(realSubject)}`),
           request('/api/course/progress')
         ])
-        this.levels = levelsData
+        this.levels = filterLevels(levelsData, this.selectedSubject)
         this.userProgress = progressData
         
         // Initialize topics as collapsed by default (commented out expansion logic)
@@ -274,11 +282,21 @@ export default {
       } else if (this.levels.length > 0) {
         // If current level is beyond the last level (completed all), expand the last one
         // Or if current level is 1 but not found (shouldn't happen if levels exist), expand first
-        if (currentLevel > this.levels.length) {
+        
+        // Check if currentLevel is greater than the max level in this view
+        const maxLevelInView = Math.max(...this.levels.map(l => l.level))
+        const minLevelInView = Math.min(...this.levels.map(l => l.level))
+
+        if (currentLevel > maxLevelInView) {
            const last = this.levels[this.levels.length - 1]
            this.expandedLevelIds = [last._id]
            // this.expandedDescIds = [last._id]
+        } else if (currentLevel < minLevelInView) {
+           // Should not happen normally if locked, but if so, expand first
+           const first = this.levels[0]
+           this.expandedLevelIds = [first._id]
         } else {
+           // Current level is within range but not found (maybe deleted?), expand first
            const first = this.levels[0]
            this.expandedLevelIds = [first._id]
            // this.expandedDescIds = [first._id]
@@ -428,11 +446,12 @@ export default {
     },
     getCurrentSubjectLevel() {
       if (!this.userProgress) return 1
-      if (this.userProgress.subjectLevels && this.userProgress.subjectLevels[this.selectedSubject]) {
-        return this.userProgress.subjectLevels[this.selectedSubject]
+      const realSubject = getRealSubject(this.selectedSubject)
+      if (this.userProgress.subjectLevels && this.userProgress.subjectLevels[realSubject]) {
+        return this.userProgress.subjectLevels[realSubject]
       }
       // Fallback for legacy or default
-      if (this.selectedSubject === 'C++') {
+      if (realSubject === 'C++') {
         return this.userProgress.currentLevel || 1
       }
       return 1
@@ -516,44 +535,70 @@ export default {
   margin: 0 auto;
   padding: 40px 20px;
 }
-.header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-.header h1 {
-  font-size: 36px;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-.subject-selector {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin: 20px 0;
-}
-.btn-subject {
-  padding: 10px 20px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 16px;
-  color: #555;
-  transition: all 0.2s;
-}
-.btn-subject.active {
-  background-color: #3498db;
+.header-banner {
+  background: linear-gradient(135deg, #3498db, #2980b9);
   color: white;
-  border-color: #3498db;
-  box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
-}
-.btn-subject:hover:not(.active) {
-  background-color: #e0e0e0;
+  padding: 30px 40px;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: 0 10px 20px rgba(52, 152, 219, 0.2);
 }
 
-.progress-summary {
-  font-size: 18px;
-  color: #7f8c8d;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-left h1 {
+  color: white;
+  margin: 0 0 10px 0;
+  font-size: 32px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.2);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+  font-weight: 500;
+}
+
+.subject-selector {
+  display: flex;
+  gap: 10px;
+  background: rgba(255,255,255,0.15);
+  padding: 6px;
+  border-radius: 30px;
+  flex-wrap: wrap;
+}
+
+.btn-subject {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.9);
+  padding: 8px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-subject.active {
+  background: white;
+  color: #3498db;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.btn-subject:hover:not(.active) {
+  background: rgba(255,255,255,0.2);
+  color: white;
 }
 
 .levels-container {
