@@ -221,7 +221,8 @@ export default {
         this.levels = levelsData
         this.userProgress = progressData
         
-        // Initialize topics as expanded by default
+        // Initialize topics as collapsed by default (commented out expansion logic)
+        /*
         if (this.levels) {
           this.levels.forEach(l => {
             if (l.topics) {
@@ -231,6 +232,7 @@ export default {
             }
           })
         }
+        */
 
         this.initExpandedLevels()
       } catch (e) {
