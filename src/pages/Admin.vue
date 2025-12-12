@@ -179,6 +179,9 @@
                       暂无章节
                     </div>
                   </div>
+                  <div class="topic-footer-actions" style="margin-top: 10px; text-align: right; padding-right: 10px;">
+                     <button @click="openChapterModal(level, topic)" class="btn-small btn-add-sub" style="padding: 6px 12px;">+ 添加章节</button>
+                  </div>
                 </div>
              </div>
              <button @click="openTopicModal(level)" class="btn-add-topic">添加知识点 (Topic)</button>
