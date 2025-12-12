@@ -44,13 +44,17 @@
               </div>
             </div>
 
-            <button @click="isMaximized = !isMaximized" class="btn-maximize">
-              {{ isMaximized ? '退出全屏' : '全屏显示' }}
-            </button>
+            <div class="controls-bar">
+              <button @click="adjustFontSize(-2)" class="btn-control" title="减小字体">A-</button>
+              <button @click="adjustFontSize(2)" class="btn-control" title="增大字体">A+</button>
+              <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+                {{ isMaximized ? '退出全屏' : '全屏显示' }}
+              </button>
+            </div>
 
             <div class="markdown-scroll-wrapper">
                 <div v-for="(stepHtml, index) in parsedSteps" :key="index">
-                  <div v-if="index < visibleSteps" class="markdown-content step-container" v-html="stepHtml"></div>
+                  <div v-if="index < visibleSteps" class="markdown-content step-container" :style="{ fontSize: fontSize + 'px' }" v-html="stepHtml"></div>
                 </div>
                 
                 <div v-if="parsedSteps.length > visibleSteps" class="step-action">
@@ -149,6 +153,7 @@ export default {
       code: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello World" << endl;\n    return 0;\n}',
       submitting: false,
       isMaximized: false,
+      fontSize: 18,
       checking: null,
       visibleSteps: 1
     }
@@ -485,6 +490,11 @@ export default {
       if (nextChapter) {
         this.$router.push(`/course/${this.level.level}/${nextChapter.id}`)
       }
+    },
+    adjustFontSize(delta) {
+      this.fontSize += delta
+      if (this.fontSize < 12) this.fontSize = 12
+      if (this.fontSize > 36) this.fontSize = 36
     }
   },
   watch: {
@@ -637,11 +647,16 @@ export default {
   margin: 0 auto;
 }
 
-.btn-maximize {
+.controls-bar {
   position: absolute;
   top: 10px;
   right: 20px;
   z-index: 10;
+  display: flex;
+  gap: 5px;
+}
+
+.btn-control {
   padding: 6px 12px;
   background: rgba(0,0,0,0.6);
   color: white;
@@ -650,9 +665,10 @@ export default {
   cursor: pointer;
   font-size: 14px;
 }
-.btn-maximize:hover {
+.btn-control:hover {
   background: rgba(0,0,0,0.8);
 }
+
 .courseware-iframe {
   width: 100%;
   height: 100%;
