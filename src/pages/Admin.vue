@@ -151,7 +151,7 @@
                         <span class="chapter-title">
                           Chapter {{ chapter.id }}: {{ chapter.title }}
                           <span v-if="chapter.optional" class="badge-optional">选做</span>
-                          <span v-if="chapter.contentType === 'html'" class="badge-type html">HTML</span>
+                          <a v-if="chapter.contentType === 'html'" :href="getPreviewUrl(chapter.resourceUrl)" target="_blank" class="badge-type html" @click.stop title="点击预览">HTML</a>
                           <span v-else class="badge-type markdown">MD</span>
                         </span>
                         <div class="chapter-actions">
@@ -1227,6 +1227,10 @@ export default {
   margin-left: 8px;
   vertical-align: middle;
   font-weight: bold;
+  text-decoration: none; /* Ensure links don't have underline */
+}
+.badge-type:hover {
+  opacity: 0.9;
 }
 .badge-type.html {
   background-color: #e67e22;
