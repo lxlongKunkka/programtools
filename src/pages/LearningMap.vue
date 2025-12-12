@@ -25,8 +25,8 @@
             <h2>
               <span class="toggle-icon">{{ isExpanded(level) ? '▼' : '▶' }}</span>
               Level {{ level.level }}
+              <span class="level-title-text">{{ level.title }}</span>
             </h2>
-            <p>{{ level.title }}</p>
           </div>
           <div class="level-status">
             <span v-if="isLevelCompleted(level)" class="badge completed">已完成</span>
@@ -543,7 +543,15 @@ export default {
 .level-info h2 {
   font-size: 24px;
   color: #34495e;
-  margin: 0 0 5px 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+.level-title-text {
+  margin-left: 15px;
+  font-size: 24px;
+  color: #34495e;
+  font-weight: normal;
 }
 .level-info p {
   font-size: 16px;
