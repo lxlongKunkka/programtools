@@ -340,13 +340,18 @@ export default {
       insertIndex: null, // For inserting chapters
       selectedSubject: 'C++基础',
       availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
-      showPreview: false
+      showPreview: false,
+      isInitialLoad: true
     }
   },
   computed: {
     isAdmin() {
       return this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.priv === -1)
     }
+  },
+  beforeRouteLeave(to, from, next) {
+    localStorage.setItem('admin_page_scroll_position', window.scrollY)
+    next()
   },
   mounted() {
     const userStr = localStorage.getItem('user_info')
@@ -367,6 +372,12 @@ export default {
     }
   },
   methods: {
+    restoreScrollPosition() {
+      const savedScroll = localStorage.getItem('admin_page_scroll_position')
+      if (savedScroll) {
+        window.scrollTo(0, parseInt(savedScroll))
+      }
+    },
     switchTab(tab) {
       this.activeTab = tab
       if (tab === 'courses') {
@@ -418,6 +429,12 @@ export default {
         this.showToastMessage('加载用户失败: ' + e.message)
       } finally {
         this.loading = false
+        if (this.isInitialLoad) {
+          this.$nextTick(() => {
+            this.restoreScrollPosition()
+            this.isInitialLoad = false
+          })
+        }
       }
     },
     async toggleRole(user, role, enable) {
@@ -519,6 +536,12 @@ export default {
         this.showToastMessage('加载课程失败: ' + e.message)
       } finally {
         this.loadingCourses = false
+        if (this.isInitialLoad) {
+          this.$nextTick(() => {
+            this.restoreScrollPosition()
+            this.isInitialLoad = false
+          })
+        }
       }
     },
     toggleLevelDesc(level) {
