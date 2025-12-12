@@ -169,7 +169,10 @@
                <div class="levels-list">
                  <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="level-item">
                    <span class="subj-name">{{ subj }}</span>
-                   <span class="lvl-val">Level {{ lvl }}</span>
+                   <span class="lvl-val">
+                     Level {{ lvl }}
+                     <span v-if="getLevelTitle(subj, lvl)" class="lvl-title-small"> {{ getLevelTitle(subj, lvl) }}</span>
+                   </span>
                  </div>
                </div>
             </div>
@@ -398,6 +401,11 @@ export default {
       })
       
       return completedCount
+    },
+    getLevelTitle(subject, levelNum) {
+      if (subject !== this.selectedSubject) return ''
+      const level = this.levels.find(l => l.level === levelNum)
+      return level ? level.title : ''
     },
     getChapterProblemCount(chapter) {
       return chapter.problemIds ? chapter.problemIds.length : 0
@@ -945,5 +953,12 @@ export default {
   color: #3498db;
   border-color: #3498db;
   background: #ebf5fb;
+}
+
+.lvl-title-small {
+  font-size: 13px;
+  color: #7f8c8d;
+  font-weight: normal;
+  margin-left: 5px;
 }
 </style>
