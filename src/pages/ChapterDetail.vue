@@ -651,9 +651,15 @@ export default {
   position: absolute;
   top: 10px;
   right: 20px;
-  z-index: 10;
+  z-index: 10000; /* Ensure it's above everything */
   display: flex;
   gap: 5px;
+}
+
+.markdown-content-container.maximized .controls-bar {
+  position: fixed; /* Keep it fixed relative to viewport in fullscreen */
+  top: 20px;
+  right: 40px;
 }
 
 .btn-control {
