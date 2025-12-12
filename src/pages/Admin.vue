@@ -151,6 +151,8 @@
                         <span class="chapter-title">
                           Chapter {{ chapter.id }}: {{ chapter.title }}
                           <span v-if="chapter.optional" class="badge-optional">选做</span>
+                          <span v-if="chapter.contentType === 'html'" class="badge-type html">HTML</span>
+                          <span v-else class="badge-type markdown">MD</span>
                         </span>
                         <div class="chapter-actions">
                           <button @click="moveChapter(level._id, topic._id, chapter._id || chapter.id, 'up')" class="btn-small btn-move" :disabled="topic.chapters.indexOf(chapter) === 0">↑</button>
@@ -1215,6 +1217,24 @@ export default {
   margin-left: 10px;
   vertical-align: middle;
   font-weight: normal;
+}
+
+.badge-type {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  vertical-align: middle;
+  font-weight: bold;
+}
+.badge-type.html {
+  background-color: #e67e22;
+  color: white;
+}
+.badge-type.markdown {
+  background-color: #3498db;
+  color: white;
 }
 
 .actions {

@@ -66,12 +66,15 @@
                     <div class="chapter-icon">
                       <span v-if="isChapterCompleted(level, chapter)">✅</span>
                       <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                      <span v-else-if="isTeacherOrAdmin()">🔓</span>
                       <span v-else>🔒</span>
                     </div>
                     <div class="chapter-info">
                       <h4>
                         {{ chapter.title }}
                         <span v-if="chapter.optional" class="tag-optional">选做</span>
+                        <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
+                        <span v-else class="tag-type markdown">MD</span>
                       </h4>
                       <p class="chapter-id">Chapter {{ chapter.id }}</p>
                     </div>
@@ -119,12 +122,15 @@
               <div class="chapter-icon">
                 <span v-if="isChapterCompleted(level, chapter)">✅</span>
                 <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                <span v-else-if="isTeacherOrAdmin()">🔓</span>
                 <span v-else>🔒</span>
               </div>
               <div class="chapter-info">
                 <h3>
                   Chapter {{ chapter.id }}
                   <span v-if="chapter.optional" class="tag-optional">选做</span>
+                  <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
+                  <span v-else class="tag-type markdown">MD</span>
                 </h3>
                 <p>{{ chapter.title }}</p>
               </div>
@@ -423,10 +429,19 @@ export default {
     getChapterStatusClass(level, chapter) {
       if (this.isChapterCompleted(level, chapter)) return 'status-completed'
       if (this.isChapterUnlocked(level, chapter)) return 'status-unlocked'
+      
+      // Check if user is teacher/admin to show unlocked style visually (optional, but good UX)
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+      if (userInfo.role === 'teacher' || userInfo.role === 'admin') return 'status-unlocked'
+
       return 'status-locked'
     },
     goToChapter(level, chapter) {
-      if (!this.isChapterUnlocked(level, chapter) && !this.isChapterCompleted(level, chapter)) {
+      // Allow teachers/admins to access any chapter
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+      const isTeacherOrAdmin = userInfo.role === 'teacher' || userInfo.role === 'admin'
+
+      if (!isTeacherOrAdmin && !this.isChapterUnlocked(level, chapter) && !this.isChapterCompleted(level, chapter)) {
         return // Locked
       }
       // Use level.level instead of level.levelId if levelId is not present
@@ -436,6 +451,10 @@ export default {
     renderMarkdown(text) {
       if (!text) return ''
       return marked.parse(text, { breaks: true, mangle: false, headerIds: false })
+    },
+    isTeacherOrAdmin() {
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+      return userInfo.role === 'teacher' || userInfo.role === 'admin'
     }
   }
 }
@@ -842,6 +861,25 @@ export default {
 
 .markdown-content :deep(ul), .markdown-content :deep(ol) {
   padding-left: 20px;
-  margin-bottom: 10px;
+}
+
+.tag-type {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  font-weight: bold;
+  border: 1px solid;
+}
+.tag-type.html {
+  color: #e67e22;
+  border-color: #e67e22;
+  background: #fff5eb;
+}
+.tag-type.markdown {
+  color: #3498db;
+  border-color: #3498db;
+  background: #ebf5fb;
 }
 </style>
