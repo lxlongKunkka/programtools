@@ -660,8 +660,9 @@ export default {
 }
 
 .markdown-content {
-  line-height: 1.6;
+  line-height: 1.8;
   color: #2c3e50;
+  font-size: 18px;
 }
 .markdown-content h1, .markdown-content h2, .markdown-content h3 {
   margin-top: 20px;
@@ -690,12 +691,14 @@ export default {
   padding: 15px;
   border-radius: 4px;
   overflow-x: auto;
+  font-size: 16px;
 }
 .markdown-content code {
   background: #f8f9fa;
   padding: 2px 5px;
   border-radius: 3px;
   font-family: monospace;
+  font-size: 0.9em;
 }
 
 .step-container {
