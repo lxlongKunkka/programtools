@@ -272,36 +272,8 @@ export default {
       }
     },
     initExpandedLevels() {
-      const currentLevel = this.getCurrentSubjectLevel()
-      // Find the level object that matches the current level
-      const currentLevelObj = this.levels.find(l => l.level === currentLevel)
-      
-      if (currentLevelObj) {
-        this.expandedLevelIds = [currentLevelObj._id]
-        // this.expandedDescIds = [currentLevelObj._id]
-      } else if (this.levels.length > 0) {
-        // If current level is beyond the last level (completed all), expand the last one
-        // Or if current level is 1 but not found (shouldn't happen if levels exist), expand first
-        
-        // Check if currentLevel is greater than the max level in this view
-        const maxLevelInView = Math.max(...this.levels.map(l => l.level))
-        const minLevelInView = Math.min(...this.levels.map(l => l.level))
-
-        if (currentLevel > maxLevelInView) {
-           const last = this.levels[this.levels.length - 1]
-           this.expandedLevelIds = [last._id]
-           // this.expandedDescIds = [last._id]
-        } else if (currentLevel < minLevelInView) {
-           // Should not happen normally if locked, but if so, expand first
-           const first = this.levels[0]
-           this.expandedLevelIds = [first._id]
-        } else {
-           // Current level is within range but not found (maybe deleted?), expand first
-           const first = this.levels[0]
-           this.expandedLevelIds = [first._id]
-           // this.expandedDescIds = [first._id]
-        }
-      }
+      // Default to all collapsed as per user request
+      this.expandedLevelIds = []
     },
     toggleLevel(level) {
       const id = level._id
