@@ -463,6 +463,24 @@ export default {
     },
     isLevelCompleted(level) {
       if (!this.userProgress) return false
+      
+      // Check actual chapter completion
+      let chapters = []
+      if (level.topics && level.topics.length > 0) {
+        level.topics.forEach(t => {
+          if (t.chapters) chapters.push(...t.chapters)
+        })
+      } else if (level.chapters) {
+        chapters = level.chapters
+      }
+
+      if (chapters.length > 0) {
+        const requiredChapters = chapters.filter(c => !c.optional)
+        if (requiredChapters.length > 0) {
+          return requiredChapters.every(c => this.isChapterCompleted(level, c))
+        }
+      }
+
       const lvl = level.level || level.levelId
       return lvl < this.getCurrentSubjectLevel()
     },
