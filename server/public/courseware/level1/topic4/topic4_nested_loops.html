@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>循环结构进阶 - Lesson 7 循环嵌套</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/league.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal p, .reveal li { font-size: 30px; line-height: 1.6; }
+        .code-box { background: #272822; border-radius: 8px; padding: 20px; text-align: left; margin: 20px auto; width: 80%; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .interactive-box { background: #2c3e50; padding: 25px; border-radius: 8px; margin: 20px auto; width: 80%; text-align: center; }
+        .interactive-input { font-size: 24px; padding: 10px; margin: 0 10px 15px 10px; width: 150px; border-radius: 5px; border: none; }
+        .interactive-btn { font-size: 24px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-text { margin-top: 20px; font-size: 24px; color: #2ecc71; white-space: pre-wrap; text-align: left; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; }
+        .reveal .slides section { min-height: auto !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; max-height: 85vh !important; overflow-y: auto !important; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h2>Topic 3: 循环结构</h2>
+                <h3>循环嵌套</h3>
+                <p>循环中的循环：复杂问题的分解</p>
+            </section>
+
+            <section>
+                <h3>什么是循环嵌套？</h3>
+                <p>在一个循环的内部，再包含另一个完整的循环结构</p>
+                <div class="code-box">
+                    <pre><code class="cpp">// 外层循环
+for (int i = 1; i <= 3; i++) {
+    // 内层循环
+    for (int j = 1; j <= 2; j++) {
+        cout << "i=" << i << ", j=" << j << endl;
+    }
+}</code></pre>
+                </div>
+                <p class="highlight">执行顺序：外层循环执行1次，内层循环执行完整的一轮</p>
+            </section>
+
+            <section>
+                <h3>嵌套循环的执行流程</h3>
+                <p>以上一页代码为例，执行步骤：</p>
+                <ol>
+                    <li>i=1 时，j=1 → 输出 "i=1, j=1"</li>
+                    <li>i=1 时，j=2 → 输出 "i=1, j=2"</li>
+                    <li>i=2 时，j=1 → 输出 "i=2, j=1"</li>
+                    <li>i=2 时，j=2 → 输出 "i=2, j=2"</li>
+                    <li>i=3 时，j=1 → 输出 "i=3, j=1"</li>
+                    <li>i=3 时，j=2 → 输出 "i=3, j=2"</li>
+                </ol>
+                <p>总执行次数：外层次数 × 内层次数 = 3 × 2 = 6 次</p>
+            </section>
+
+            <section>
+                <h3>典型应用：打印图形</h3>
+                <p>打印 4 行 5 列的星号矩阵：</p>
+                <div class="code-box">
+                    <pre><code class="cpp">// 控制行数
+for (int row = 1; row <= 4; row++) {
+    // 控制每行的列数
+    for (int col = 1; col <= 5; col++) {
+        cout << "* ";
+    }
+    cout << endl; // 换行
+}</code></pre>
+                </div>
+                <p>输出结果：</p>
+                <div class="code-box">
+                    <pre>* * * * * 
+* * * * * 
+* * * * * 
+* * * * *</pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>进阶应用：九九乘法表</h3>
+                <div class="code-box">
+                    <pre><code class="cpp">for (int i = 1; i <= 9; i++) {      // 乘数
+    for (int j = 1; j <= i; j++) {  // 被乘数，不超过乘数
+        cout << j << "*" << i << "=" << j*i << "\t";
+    }
+    cout << endl;
+}</code></pre>
+                </div>
+                <p class="highlight">注意内层循环的结束条件与外层变量相关</p>
+            </section>
+
+            <section>
+                <h3>交互练习：打印直角三角形</h3>
+                <div class="interactive-box">
+                    <input type="number" class="interactive-input" id="triangleSize" placeholder="输入行数(1-10)">
+                    <button class="interactive-btn" onclick="printTriangle()">打印三角形</button>
+                    <div class="result-text" id="triangleResult"></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>小测验</h3>
+                <div style="text-align: left; width: 90%; margin: 0 auto; font-size: 0.8em;">
+                    <p>以下代码会输出多少个星号？</p>
+                    <div class="code-box" style="width: 90%; font-size: 0.8em;">
+                        <pre><code class="cpp">for(int i=1; i<=3; i++){
+    for(int j=i; j<=3; j++){
+        cout << "*";
+    }
+}</code></pre>
+                    </div>
+                    <input type="radio" name="q1" id="q1a"> <label for="q1a">A. 3个</label><br>
+                    <input type="radio" name="q1" id="q1b"> <label for="q1b">B. 6个</label><br>
+                    <input type="radio" name="q1" id="q1c"> <label for="q1c">C. 9个</label>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({ width: '100%', height: '100%', plugins: [ RevealHighlight ] });
+        
+        function printTriangle() {
+            const size = parseInt(document.getElementById('triangleSize').value);
+            if(isNaN(size) || size < 1 || size > 10) {
+                document.getElementById('triangleResult').textContent = "请输入1-10之间的整数";
+                return;
+            }
+            
+            let result = "";
+            // 外层循环控制行数
+            for(let i = 1; i <= size; i++) {
+                // 内层循环控制每行的星号数量
+                for(let j = 1; j <= i; j++) {
+                    result += "* ";
+                }
+                result += "\n";
+            }
+            document.getElementById('triangleResult').textContent = result;
+        }
+    </script>
+</body>
+</html>

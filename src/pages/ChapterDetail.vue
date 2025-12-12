@@ -36,15 +36,28 @@
         </div>
 
         <!-- Markdown Content Mode -->
-        <div v-else>
-            <div v-for="(stepHtml, index) in parsedSteps" :key="index">
-              <div v-if="index < visibleSteps" class="markdown-content step-container" v-html="stepHtml"></div>
+        <div v-else :class="['markdown-content-container', { maximized: isMaximized }]">
+            <!-- Watermark for Fullscreen -->
+            <div class="watermark-container" v-if="userInfo && isMaximized">
+              <div class="watermark-text" v-for="n in 30" :key="n">
+                {{ watermarkText }}
+              </div>
             </div>
-            
-            <div v-if="parsedSteps.length > visibleSteps" class="step-action">
-              <button @click="showNextStep" class="btn-next-step">
-                点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) ↓
-              </button>
+
+            <button @click="isMaximized = !isMaximized" class="btn-maximize">
+              {{ isMaximized ? '退出全屏' : '全屏显示' }}
+            </button>
+
+            <div class="markdown-scroll-wrapper">
+                <div v-for="(stepHtml, index) in parsedSteps" :key="index">
+                  <div v-if="index < visibleSteps" class="markdown-content step-container" v-html="stepHtml"></div>
+                </div>
+                
+                <div v-if="parsedSteps.length > visibleSteps" class="step-action">
+                  <button @click="showNextStep" class="btn-next-step">
+                    点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) ↓
+                  </button>
+                </div>
             </div>
         </div>
       </div>
@@ -592,6 +605,38 @@ export default {
   border: none;
   background: white;
 }
+
+.markdown-content-container {
+  position: relative;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.markdown-content-container.maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: white;
+  padding: 40px;
+  overflow: hidden; /* Scroll wrapper handles scroll */
+  box-sizing: border-box;
+}
+
+.markdown-scroll-wrapper {
+  /* Default for non-maximized: auto height */
+}
+
+.markdown-content-container.maximized .markdown-scroll-wrapper {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 20px 40px 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
 .btn-maximize {
   position: absolute;
   top: 10px;
