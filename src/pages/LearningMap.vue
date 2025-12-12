@@ -272,8 +272,31 @@ export default {
       }
     },
     initExpandedLevels() {
+      const savedState = localStorage.getItem('learning_map_expanded_state')
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState)
+          this.expandedLevelIds = state.expandedLevelIds || []
+          this.expandedDescIds = state.expandedDescIds || []
+          this.expandedTopicIds = state.expandedTopicIds || []
+          this.expandedLearnerIds = state.expandedLearnerIds || []
+          return
+        } catch (e) {
+          console.error('Failed to parse saved expanded state', e)
+        }
+      }
+
       // Default to all collapsed as per user request
       this.expandedLevelIds = []
+    },
+    saveExpandedState() {
+      const state = {
+        expandedLevelIds: this.expandedLevelIds,
+        expandedDescIds: this.expandedDescIds,
+        expandedTopicIds: this.expandedTopicIds,
+        expandedLearnerIds: this.expandedLearnerIds
+      }
+      localStorage.setItem('learning_map_expanded_state', JSON.stringify(state))
     },
     toggleLevel(level) {
       const id = level._id
@@ -289,6 +312,7 @@ export default {
         }
         */
       }
+      this.saveExpandedState()
     },
     toggleDesc(level) {
       const id = level._id
@@ -298,6 +322,7 @@ export default {
       } else {
         this.expandedDescIds.push(id)
       }
+      this.saveExpandedState()
     },
     isExpanded(level) {
       return this.expandedLevelIds.includes(level._id)
@@ -313,6 +338,7 @@ export default {
       } else {
         this.expandedTopicIds.push(id)
       }
+      this.saveExpandedState()
     },
     isTopicExpanded(topic) {
       return this.expandedTopicIds.includes(topic._id)
@@ -329,6 +355,7 @@ export default {
           this.fetchTopicLearners(id)
         }
       }
+      this.saveExpandedState()
     },
     isLearnersExpanded(topic) {
       return this.expandedLearnerIds.includes(topic._id)
