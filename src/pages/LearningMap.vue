@@ -248,18 +248,18 @@ export default {
       
       if (currentLevelObj) {
         this.expandedLevelIds = [currentLevelObj._id]
-        this.expandedDescIds = [currentLevelObj._id]
+        // this.expandedDescIds = [currentLevelObj._id]
       } else if (this.levels.length > 0) {
         // If current level is beyond the last level (completed all), expand the last one
         // Or if current level is 1 but not found (shouldn't happen if levels exist), expand first
         if (currentLevel > this.levels.length) {
            const last = this.levels[this.levels.length - 1]
            this.expandedLevelIds = [last._id]
-           this.expandedDescIds = [last._id]
+           // this.expandedDescIds = [last._id]
         } else {
            const first = this.levels[0]
            this.expandedLevelIds = [first._id]
-           this.expandedDescIds = [first._id]
+           // this.expandedDescIds = [first._id]
         }
       }
     },
@@ -271,9 +271,11 @@ export default {
       } else {
         this.expandedLevelIds.push(id)
         // Auto-expand description when opening level
+        /*
         if (!this.expandedDescIds.includes(id)) {
             this.expandedDescIds.push(id)
         }
+        */
       }
     },
     toggleDesc(level) {
