@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解题课件：最多能参加比赛数</title>
+    <style>
+        /* --- 基础和布局 (与课程PPT保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 (与课程PPT保持一致) --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 (与课程PPT保持一致) --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 (与课程PPT保持一致) --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本课件特定样式 */
+        .problem-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+        }
+        .code-block .comment { color: #8c8c8c; }
+        .code-block .keyword { color: #f92672; }
+        .code-block .type { color: #66d9ef; }
+        .code-block .number { color: #ae81ff; }
+        .code-block .string { color: #a6e22e; }
+        .code-block .preprocessor { color: #ae81ff; }
+
+        /* 动画演示区域 */
+        .animation-area {
+            height: 300px;
+            position: relative;
+            border: 2px dashed #ccc;
+            margin-top: 2vh;
+            padding: 10px;
+        }
+        .timeline {
+            width: 100%;
+            height: 2px;
+            background-color: #333;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .event {
+            position: absolute;
+            height: 40px;
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.5s ease-in-out;
+            opacity: 0.5;
+        }
+        .event.selected {
+            opacity: 1;
+            transform: scale(1.1);
+            border: 3px solid #ffd700;
+        }
+        .event.conflicted {
+            opacity: 0.2;
+            filter: grayscale(80%);
+        }
+        .status-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 1vh;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🏆</div>
+                <h1>解题课件：最多能参加比赛数</h1>
+                <h3>—— 贪心算法经典应用：区间调度</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 题目描述 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📝</span> 题目解析</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="problem-box">
+                    <p><strong>题目核心：</strong></p>
+                    <p>给定 n 个带有开始和结束时间的区间，你需要从中选出一些区间，使得这些选出的区间<strong>互不重叠</strong>，并且数量尽可能多。</p>
+                    <p><strong>约束条件：</strong></p>
+                    <ul>
+                        <li>必须完整参加比赛，不能中途加入或退出。</li>
+                        <li>同一时间只能参加一场比赛。`[0, 2]` 和 `[2, 4]` 这种端点重合的情况是<strong>允许</strong>的。</li>
+                    </ul>
+                </div>
+                <div class="conclusion">
+                    <strong>一句话目标：</strong>在时间轴上，找出一组不重叠的区间，使其数量最多。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 思路探讨 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 思路探讨：如何“贪心”？</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>我们可能会有一些直觉上的贪心策略：</p>
+                <ul>
+                    <li>
+                        <strong>策略A：按开始时间最早的选？</strong><br>
+                        <span style="color: red;">反例：</span>如果第一个开始的比赛持续时间非常长（如 `[8:00, 18:00]`），它会“霸占”一整天，导致我们错过很多短时间的比赛。
+                    </li>
+                    <li>
+                        <strong>策略B：选持续时间最短的？</strong><br>
+                        <span style="color: red;">反例：</span>一个非常短的比赛（如 `[12:00, 12:01]`）可能会与两个较长的、本可以连续参加的比赛（如 `[10:00, 12:00]` 和 `[12:01, 14:00]`）冲突。
+                    </li>
+                    <li>
+                        <strong>策略C：按结束时间最早的选？</strong><br>
+                        <span style="color: green; font-weight: bold;">这似乎很靠谱！</span>选择一个尽早结束的比赛，意味着我们可以为后续的比赛留出<strong>尽可能多</strong>的时间。这正是正确的贪心策略！
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 4: 动画演示 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：正确的贪心过程</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>样例数据：</strong> `[0, 2]`, `[2, 4]`, `[1, 3]`</p>
+                <p><strong>第一步：按结束时间排序！</strong> 排序后：`[0, 2]`, `[1, 3]`, `[2, 4]`</p>
+                <div class="animation-area">
+                    <div class="timeline"></div>
+                    <!-- 排序后的比赛 -->
+                    <div class="event" id="event1" style="left: 0%; width: 20%; background-color: #3498db; top: 20%;">[0, 2]</div>
+                    <div class="event" id="event2" style="left: 10%; width: 20%; background-color: #e74c3c; top: 50%;">[1, 3]</div>
+                    <div class="event" id="event3" style="left: 20%; width: 20%; background-color: #2ecc71; top: 80%;">[2, 4]</div>
+                </div>
+                <div id="status" class="status-text">点击“开始”按钮查看过程</div>
+                <button id="startAnimation" style="align-self: center; padding: 10px 20px; font-size: 1em; cursor: pointer;">开始</button>
+            </div>
+        </div>
+
+        <!-- Slide 5: C++ 代码实现 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> C++ 代码实现</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>核心步骤：</strong></p>
+                <ol>
+                    <li>用 `struct` 或 `pair` 存储每场比赛的开始和结束时间。</li>
+                    <li>使用 `std::sort` 对所有比赛按<strong>结束时间</strong>进行升序排序。</li>
+                    <li>遍历排序后的比赛，维护一个 `last_finish_time` 变量，记录上一场被选中比赛的结束时间。</li>
+                    <li>如果当前比赛的开始时间 `>= last_finish_time`，则选择该比赛，更新 `last_finish_time`，并将计数器加一。</li>
+                </ol>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;iostream&gt;</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;algorithm&gt;</span>
+
+<span class="keyword">struct</span> <span class="type">Competition</span> {
+    <span class="type">int</span> <span class="variable">start</span>, <span class="variable">end</span>;
+};
+
+<span class="comment">// 自定义排序规则，按结束时间升序</span>
+<span class="type">bool</span> <span class="function">compareCompetitions</span>(<span class="keyword">const</span> <span class="type">Competition</span>& <span class="variable">a</span>, <span class="keyword">const</span> <span class="type">Competition</span>& <span class="variable">b</span>) {
+    <span class="keyword">return</span> <span class="variable">a</span>.end < <span class="variable">b</span>.end;
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    <span class="type">std::ios_base::sync_with_stdio</span>(<span class="keyword">false</span>);
+    <span class="type">std::cin.tie</span>(NULL);
+
+    <span class="type">int</span> <span class="variable">n</span>;
+    <span class="type">std::cin</span> >> <span class="variable">n</span>;
+
+    <span class="type">std::vector</span>&lt;<span class="type">Competition</span>&gt; <span class="variable">competitions</span>(<span class="variable">n</span>);
+    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="number">0</span>; <span class="variable">i</span> < <span class="variable">n</span>; ++<span class="variable">i</span>) {
+        <span class="type">std::cin</span> >> <span class="variable">competitions</span>[<span class="variable">i</span>].start >> <span class="variable">competitions</span>[<span class="variable">i</span>].end;
+    }
+
+    <span class="function">std::sort</span>(<span class="variable">competitions</span>.begin(), <span class="variable">competitions</span>.end(), <span class="variable">compareCompetitions</span>);
+
+    <span class="keyword">if</span> (<span class="variable">n</span> == <span class="number">0</span>) {
+        <span class="type">std::cout</span> << <span class="number">0</span> << <span class="type">std::endl</span>;
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+
+    <span class="type">int</span> <span class="variable">count</span> = <span class="number">1</span>;
+    <span class="type">int</span> <span class="variable">last_finish_time</span> = <span class="variable">competitions</span>[<span class="number">0</span>].end;
+
+    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="number">1</span>; <span class="variable">i</span> < <span class="variable">n</span>; ++<span class="variable">i</span>) {
+        <span class="keyword">if</span> (<span class="variable">competitions</span>[<span class="variable">i</span>].start >= <span class="variable">last_finish_time</span>) {
+            <span class="variable">count</span>++;
+            <span class="variable">last_finish_time</span> = <span class="variable">competitions</span>[<span class="variable">i</span>].end;
+        }
+    }
+
+    <span class="type">std::cout</span> << <span class="variable">count</span> << <span class="type">std::endl</span>;
+
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🧠</span> 知识点总结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="problem-box">
+                    <h4>算法模型：区间调度问题 (Activity Selection Problem)</h4>
+                    <p>这道题是“区间调度问题”的典型模板。这类问题的共同特征是：</p>
+                    <ul>
+                        <li>给定一组带起止时间的事件/区间。</li>
+                        <li>目标是选择最多的互不冲突的事件/区间。</li>
+                    </ul>
+                </div>
+                <div class="conclusion">
+                    <strong>核心解法：</strong>记住这个贪心策略——<strong>按结束时间升序排序，然后依次选择不冲突的区间</strong>。这是解决此类问题的“万能钥匙”。
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // --- 动画逻辑 ---
+            const startBtn = document.getElementById('startAnimation');
+            const statusText = document.getElementById('status');
+            const events = [
+                document.getElementById('event1'),
+                document.getElementById('event2'),
+                document.getElementById('event3')
+            ];
+
+            function resetAnimation() {
+                events.forEach(el => {
+                    el.classList.remove('selected', 'conflicted');
+                });
+                statusText.textContent = '点击“开始”按钮查看过程';
+                startBtn.disabled = false;
+            }
+
+            startBtn.addEventListener('click', () => {
+                startBtn.disabled = true;
+                resetAnimation();
+                
+                setTimeout(() => {
+                    statusText.textContent = '1. 选择结束最早的比赛 [0, 2]';
+                    events[0].classList.add('selected');
+                }, 500);
+
+                setTimeout(() => {
+                    statusText.textContent = '2. 检查下一个比赛 [1, 3]... 开始时间 1 < 上一个结束时间 2，冲突！';
+                    events[1].classList.add('conflicted');
+                }, 2000);
+
+                setTimeout(() => {
+                    statusText.textContent = '3. 检查下一个比赛 [2, 4]... 开始时间 2 >= 上一个结束时间 2，不冲突！';
+                }, 3500);
+                
+                setTimeout(() => {
+                    statusText.textContent = '选择比赛 [2, 4]！';
+                    events[2].classList.add('selected');
+                }, 5000);
+
+                setTimeout(() => {
+                    statusText.textContent = '结束。共选择了 2 场比赛。';
+                    startBtn.disabled = false;
+                }, 6500);
+            });
+        });
+    </script>
+
+</body>
+</html>
