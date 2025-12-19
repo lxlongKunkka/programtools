@@ -700,6 +700,38 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
   }
 })
 
+// Move a Topic
+router.put('/levels/:id/topics/:topicId/move', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { direction } = req.body // 'up' or 'down'
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) return res.status(404).json({ error: 'Level not found' })
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) return res.status(404).json({ error: 'Topic not found' })
+    
+    const index = level.topics.indexOf(topic)
+    if (index === -1) return res.status(404).json({ error: 'Topic not found in array' })
+    
+    if (direction === 'up') {
+      if (index > 0) {
+        level.topics.splice(index, 1)
+        level.topics.splice(index - 1, 0, topic)
+      }
+    } else if (direction === 'down') {
+      if (index < level.topics.length - 1) {
+        level.topics.splice(index, 1)
+        level.topics.splice(index + 1, 0, topic)
+      }
+    }
+    
+    await level.save()
+    res.json(level)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Helper to resolve problem IDs (ObjectId or domain:docId or docId)
 async function resolveProblemIds(ids) {
   const resolved = []
