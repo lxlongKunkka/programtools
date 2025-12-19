@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪心算法 - Chapter 2: 使用说明书</title>
+    <style>
+        /* --- 基础和布局 (与Chapter 1保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 (与Chapter 1保持一致) --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 (与Chapter 1保持一致) --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 (与Chapter 1保持一致) --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1, h2, h3, p, li, table, .conclusion, .highlight, .flow-step {
+            /* 继承自Chapter 1的通用样式 */
+        }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .flow-step { margin-top: 1.5vh; padding-left: 20px; border-left: 3px solid #007aff; }
+        .flow-step strong { color: #007aff; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本章新增/特定样式 */
+        .comparison-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            width: 100%;
+        }
+        .comparison-box {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+        .success {
+            border-color: #28a745;
+            background-color: #f6ffed;
+        }
+        .failure {
+            border-color: #dc3545;
+            background-color: #fff1f0;
+        }
+        .comparison-box h4 {
+            margin-top: 0;
+            font-size: clamp(1.2em, 2.2vw, 1.5em);
+            display: flex;
+            align-items: center;
+        }
+        .success h4 { color: #28a745; }
+        .failure h4 { color: #dc3545; }
+        .check-icon, .cross-icon {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">📜</div>
+                <h1>Chapter 2: 贪心算法的“使用说明书”</h1>
+                <h3>—— 知道它何时有效，何时会“失灵”</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 最优子结构 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🧩</span> 贪心的“魔力”从何而来？</h2>
+            </div>
+            <div class="slide-content">
+                <h3>核心性质：最优子结构</h3>
+                <p><strong>通俗解释：</strong>当一个大问题的最优解，可以由几个小问题的最优解<strong>拼凑</strong>而成时，贪心就可能有效。</p>
+                <p>就像搭积木，把每个小零件都完美地搭好，整个大模型也就搭好了。</p>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>正面例子 (找零 `{10, 5, 1}`):</strong><br>
+                    “找 <span class="highlight">18</span> 元的最优解” = “一张 <span class="highlight">10</span> 元” + “找 <span class="highlight">8</span> 元的最优解”<br>
+                    “找 <span class="highlight">8</span> 元的最优解” = “一张 <span class="highlight">5</span> 元” + “找 <span class="highlight">3</span> 元的最优解”<br>
+                    <em>大问题可以完美地拆成小问题！</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 贪心失灵的时刻 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💥</span> 贪心算法的“失灵”时刻</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>但如果纸币的面额变了，贪心策略可能就会“犯错”。</p>
+                <div class="comparison-container">
+                    <!-- 成功的例子 -->
+                    <div class="comparison-box success">
+                        <h4><span class="check-icon">✔️</span> 贪心有效</h4>
+                        <p><strong>面额:</strong> `{10, 5, 1}`<br><strong>目标:</strong> 找 18 元</p>
+                        <p><strong>贪心解:</strong> 10 + 5 + 1 + 1 + 1 (5张)<br><strong>最优解:</strong> 10 + 5 + 1 + 1 + 1 (5张)</p>
+                        <p><strong>结果：贪心解 = 最优解</strong></p>
+                    </div>
+                    <!-- 失败的例子 -->
+                    <div class="comparison-box failure">
+                        <h4><span class="cross-icon">❌</span> 贪心失效</h4>
+                        <p><strong>面额:</strong> `{4, 3, 1}`<br><strong>目标:</strong> 找 6 元</p>
+                        <p><strong>贪心解:</strong> 4 + 1 + 1 (3张)<br><strong>最优解:</strong> 3 + 3 (2张)</p>
+                        <p><strong>结果：贪心解 ≠ 最优解</strong></p>
+                    </div>
+                </div>
+                <div class="conclusion" style="background-color: #fff1f0; border-color: #ff4d4f;">
+                    <strong>结论：</strong>贪心算法的“局部最优”选择（第一步选了4元），有时并不能导向“全局最优”。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 如何判断 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 如何初步判断能否用贪心？</h2>
+            </div>
+            <div class="slide-content">
+                <p>对于初学者，一个非常实用的方法是<strong>“三步判断法”</strong>：</p>
+                <div class="flow-step">
+                    <strong>第一步：设计一个贪心策略</strong>
+                    <p>想一个最直观的“局部最优”规则。例如：“每次选最大的”、“每次选最小的”、“每次选结束最早的”。</p>
+                </div>
+                <div class="flow-step">
+                    <strong>第二步：用简单例子验证</strong>
+                    <p>用一个简单的、显而易见的情况跑一下你的策略，看看结果对不对。</p>
+                </div>
+                <div class="flow-step">
+                    <strong>第三步：努力举一个反例</strong>
+                    <p>这是最关键的一步！像侦探一样，想方设法构造一个让你的策略“犯错”的场景。如果能轻易找到，说明贪心不适用。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 练习 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✍️</span> 练习：判断一下</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="comparison-container">
+                    <div class="comparison-box" style="border-color: #1890ff;">
+                        <h4>问题1: 活动安排</h4>
+                        <p>有很多活动，每个都有开始和结束时间。你想参加尽可能多的活动（活动不能重叠）。</p>
+                        <p><strong>贪心策略：</strong>“每次都参加那个<span class="highlight">结束最早</span>的活动”。</p>
+                        <p><strong>判断：</strong>这个策略对吗？（引导思考：这个策略似乎很难找到反例，因为它总能为未来留下最多的时间。它<strong style="color: green;">可能是对的</strong>！）</p>
+                    </div>
+                    <div class="comparison-box" style="border-color: #faad14;">
+                        <h4>问题2: 0-1背包问题</h4>
+                        <p>一个背包容量有限。一堆宝物，每个有重量和价值。你想装入总价值最高的宝物（宝物不能分割）。</p>
+                        <p><strong>贪心策略：</strong>“优先装<span class="highlight">单位价值最高</span>（价值/重量）的宝物”。</p>
+                        <p><strong>判断：</strong>这个策略对吗？（引导思考：如果一个单位价值极高的钻石很重，占满了所有空间，总价值可能不如几个轻的宝石。很容易举出反例，所以它<strong style="color: red;">是错的</strong>！）</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章回顾</h2>
+            </div>
+            <div class="slide-content">
+                <ul>
+                    <li><strong>知道了贪心有效的前提：</strong>问题需要具备“最优子结构”。</li>
+                    <li><strong>见证了贪心“失灵”的时刻：</strong>通过找零反例，明白局部最优不总等于全局最优。</li>
+                    <li><strong>学会了初步判断方法：</strong>掌握了“设计策略 -> 验证 -> 举反例”的三步法。</li>
+                    <li><strong>锻炼了判断能力：</strong>对两个经典问题进行了贪心适用性的分析。</li>
+                </ul>
+                <div class="conclusion" style="background-color: #f6ffed; border-color: #b7eb8f;">
+                    <strong>下一章预告：</strong><br>
+                    理论和判断都学了，是时候大展身手了！下一章，我们将通过一系列经典的实战案例，真正把贪心算法用起来！
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            // 支持键盘左右箭头翻页
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0); // 初始化第一页
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪心算法 - Chapter 3: 经典实战 (C++)</title>
+    <style>
+        /* --- 基础和布局 (与前几章保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 (与前几章保持一致) --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 (与前几章保持一致) --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 (与前几章保持一致) --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本章新增/特定样式 */
+        .case-intro {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+        }
+        .code-block .comment { color: #8c8c8c; }
+        .code-block .keyword { color: #f92672; }
+        .code-block .type { color: #66d9ef; }
+        .code-block .number { color: #ae81ff; }
+        .code-block .string { color: #a6e22e; }
+        .code-block .preprocessor { color: #ae81ff; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🎯</div>
+                <h1>Chapter 3: 经典贪心问题实战 (C++)</h1>
+                <h3>—— 从理论到代码，动手解决问题</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 案例1 - 活动安排 (问题描述) -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🗓️</span> 案例1: 活动安排</h2>
+            </div>
+            <div class="slide-content">
+                <div class="case-intro">
+                    <p><strong>问题描述 (大白话版):</strong></p>
+                    <p>你收到很多活动邀请，每个活动都有一个开始时间和结束时间。因为你只有一个你，所以任意时刻最多只能参加一个活动。你的目标是，如何选择才能参加<strong>尽可能多</strong>的活动？</p>
+                    <p><strong>例如:</strong> 邀请有 `[9:00, 10:30]`, `[10:00, 11:00]`, `[11:00, 12:00]`</p>
+                </div>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>贪心思路分析：我们该怎么“贪”？</strong><br>
+                    为了能参加更多活动，我们应该让每个活动尽快结束，以便给后续活动留出更多的时间。所以，我们的贪心策略是：<strong>每次都选择结束时间最早的活动</strong>。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 案例1 - 活动安排 (C++ 代码) -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> 活动安排 - 代码实现 (C++)</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>核心步骤：</strong></p>
+                <ol>
+                    <li>将所有活动按<strong>结束时间</strong>从小到大排序。</li>
+                    <li>选择第一个活动，然后遍历剩下的活动，跳过所有与已选活动冲突的，选择第一个不冲突的活动。</li>
+                    <li>重复此过程。</li>
+                </ol>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;iostream&gt;</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;algorithm&gt;</span>
+
+<span class="keyword">int</span> <span class="function">maxActivities</span>(<span class="type">std::vector</span>&lt;<span class="type">std::pair</span>&lt;<span class="type">int</span>, <span class="type">int</span>&gt;&gt;& <span class="variable">activities</span>) {
+    <span class="comment">// 按结束时间排序 (pair的第二个元素)</span>
+    <span class="function">std::sort</span>(<span class="variable">activities</span>.begin(), <span class="variable">activities</span>.end(), [](<span class="keyword">const</span> <span class="keyword">auto</span>& <span class="variable">a</span>, <span class="keyword">const</span> <span class="keyword">auto</span>& <span class="variable">b</span>) {
+        <span class="keyword">return</span> <span class="variable">a</span>.second < <span class="variable">b</span>.second;
+    });
+
+    <span class="keyword">if</span> (<span class="variable">activities</span>.empty()) {
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+
+    <span class="type">int</span> <span class="variable">count</span> = <span class="number">1</span>; <span class="comment">// 第一个活动必选</span>
+    <span class="type">int</span> <span class="variable">last_finish_time</span> = <span class="variable">activities</span>[<span class="number">0</span>].second;
+
+    <span class="keyword">for</span> (<span class="type">size_t</span> <span class="variable">i</span> = <span class="number">1</span>; <span class="variable">i</span> < <span class="variable">activities</span>.size(); ++<span class="variable">i</span>) {
+        <span class="comment">// 如果当前活动的开始时间 >= 上一个已选活动的结束时间</span>
+        <span class="keyword">if</span> (<span class="variable">activities</span>[<span class="variable">i</span>].first >= <span class="variable">last_finish_time</span>) {
+            <span class="variable">count</span>++;
+            <span class="variable">last_finish_time</span> = <span class="variable">activities</span>[<span class="variable">i</span>].second;
+        }
+    }
+    <span class="keyword">return</span> <span class="variable">count</span>;
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    <span class="type">std::vector</span>&lt;<span class="type">std::pair</span>&lt;<span class="type">int</span>, <span class="type">int</span>&gt;&gt; <span class="variable">acts</span> = {{<span class="number">900</span>, <span class="number">1030</span>}, {<span class="number">1000</span>, <span class="number">1100</span>}, {<span class="number">1100</span>, <span class="number">1200</span>}};
+    <span class="type">std::cout</span> << <span class="string">"Max activities: "</span> << <span class="function">maxActivities</span>(<span class="variable">acts</span>) << <span class="type">std::endl</span>; <span class="comment">// 输出: 2</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 案例2 - 买卖股票 (问题描述) -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📈</span> 案例2: 买卖股票的最佳时机 II</h2>
+            </div>
+            <div class="slide-content">
+                <div class="case-intro">
+                    <p><strong>问题描述 (大白话版):</strong></p>
+                    <p>你是一个“股神”，能预知未来几天一只股票的价格。你可以进行多次买入和卖出操作（但在再次买入前必须卖出），你的目标是计算出能获得的最大利润。</p>
+                    <p><strong>例如:</strong> 股票价格为 `{7, 1, 5, 3, 6, 4}`</p>
+                </div>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>贪心思路分析：我们该怎么“贪”？</strong><br>
+                    我们不需要考虑长期持有。只要发现明天的价格比今天高，就意味着有钱可赚。所以，我们的策略是：<strong>收集所有上涨区间的利润</strong>。这相当于“今天买，明天涨了就卖”。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 案例2 - 买卖股票 (C++ 代码) -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> 买卖股票 - 代码实现 (C++)</h2>
+            </div>
+            <div class="slide-content">
+                <p>对于价格数组 `prices = {7, 1, 5, 3, 6, 4}`</p>
+                <p>贪心策略：只要 `prices[i] > prices[i-1]`，就把差价 `prices[i] - prices[i-1]` 加入总利润。</p>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;iostream&gt;</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;numeric&gt;</span>
+
+<span class="type">int</span> <span class="function">maxProfit</span>(<span class="keyword">const</span> <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt;& <span class="variable">prices</span>) {
+    <span class="type">int</span> <span class="variable">total_profit</span> = <span class="number">0</span>;
+    
+    <span class="comment">// 从第二天开始遍历</span>
+    <span class="keyword">for</span> (<span class="type">size_t</span> <span class="variable">i</span> = <span class="number">1</span>; <span class="variable">i</span> < <span class="variable">prices</span>.size(); ++<span class="variable">i</span>) {
+        <span class="comment">// 如果今天的价格比昨天高</span>
+        <span class="keyword">if</span> (<span class="variable">prices</span>[<span class="variable">i</span>] > <span class="variable">prices</span>[<span class="variable">i</span> - <span class="number">1</span>]) {
+            <span class="comment">// 就把差价加到总利润里</span>
+            <span class="variable">total_profit</span> += <span class="variable">prices</span>[<span class="variable">i</span>] - <span class="variable">prices</span>[<span class="variable">i</span> - <span class="number">1</span>];
+        }
+    }
+    <span class="keyword">return</span> <span class="variable">total_profit</span>;
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt; <span class="variable">prices</span> = {<span class="number">7</span>, <span class="number">1</span>, <span class="number">5</span>, <span class="number">3</span>, <span class="number">6</span>, <span class="number">4</span>};
+    <span class="type">std::cout</span> << <span class="string">"Max profit: "</span> << <span class="function">maxProfit</span>(<span class="variable">prices</span>) << <span class="type">std::endl</span>; <span class="comment">// 输出: 7</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 案例3 - 分发糖果 (问题描述) -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🍬</span> 案例3: 分发糖果</h2>
+            </div>
+            <div class="slide-content">
+                <div class="case-intro">
+                    <p><strong>问题描述 (大白话版):</strong></p>
+                    <p>一群孩子站成一排，每个孩子都有一个“表现分”。你需要给他们分糖果，并遵守两个规则：</p>
+                    <ol>
+                        <li>每个孩子至少得到 1 颗糖果。</li>
+                        <li>表现分比<strong>相邻</strong>小伙伴高的孩子，必须获得更多的糖果。</li>
+                    </ol>
+                    <p><strong>目标：</strong>计算出满足条件所需的最少糖果总数。</p>
+                    <p><strong>例如:</strong> 孩子们的表现分是 `{1, 0, 2}`</p>
+                </div>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>贪心思路分析：一个有点技巧的贪心</strong><br>
+                    一个孩子的糖果数同时受左、右两边孩子的影响。一次遍历很难处理。我们可以把规则拆开：先满足“比左边高”的规则，再满足“比右边高”的规则。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 案例3 - 分发糖果 (C++ 代码) -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🔄</span> 分发糖果 - 代码实现 (C++)</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>核心步骤：两次遍历</strong></p>
+                <ol>
+                    <li><strong>从左到右：</strong>保证每个孩子比他左边分高的孩子糖果多。</li>
+                    <li><strong>从右到左：</strong>保证每个孩子比他右边分高的孩子糖果多。</li>
+                </ol>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;iostream&gt;</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>
+<span class="preprocessor">#include &lt;numeric&gt;</span> <span class="comment">// for std::accumulate</span>
+<span class="preprocessor">#include &lt;algorithm&gt;</span> <span class="comment">// for std::max</span>
+
+<span class="type">int</span> <span class="function">candy</span>(<span class="keyword">const</span> <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt;& <span class="variable">ratings</span>) {
+    <span class="type">int</span> <span class="variable">n</span> = <span class="variable">ratings</span>.size();
+    <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt; <span class="variable">candies</span>(<span class="variable">n</span>, <span class="number">1</span>); <span class="comment">// 每人至少1颗</span>
+
+    <span class="comment">// 从左到右遍历</span>
+    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="number">1</span>; <span class="variable">i</span> < <span class="variable">n</span>; ++<span class="variable">i</span>) {
+        <span class="keyword">if</span> (<span class="variable">ratings</span>[<span class="variable">i</span>] > <span class="variable">ratings</span>[<span class="variable">i</span> - <span class="number">1</span>]) {
+            <span class="variable">candies</span>[<span class="variable">i</span>] = <span class="variable">candies</span>[<span class="variable">i</span> - <span class="number">1</span>] + <span class="number">1</span>;
+        }
+    }
+
+    <span class="comment">// 从右到左遍历</span>
+    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="variable">n</span> - <span class="number">2</span>; <span class="variable">i</span> >= <span class="number">0</span>; --<span class="variable">i</span>) {
+        <span class="keyword">if</span> (<span class="variable">ratings</span>[<span class="variable">i</span>] > <span class="variable">ratings</span>[<span class="variable">i</span> + <span class="number">1</span>]) {
+            <span class="variable">candies</span>[<span class="variable">i</span>] = <span class="function">std::max</span>(<span class="variable">candies</span>[<span class="variable">i</span>], <span class="variable">candies</span>[<span class="variable">i</span> + <span class="number">1</span>] + <span class="number">1</span>);
+        }
+    }
+
+    <span class="keyword">return</span> <span class="function">std::accumulate</span>(<span class="variable">candies</span>.begin(), <span class="variable">candies</span>.end(), <span class="number">0</span>);
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt; <span class="variable">ratings</span> = {<span class="number">1</span>, <span class="number">0</span>, <span class="number">2</span>};
+    <span class="type">std::cout</span> << <span class="string">"Total candies: "</span> << <span class="function">candy</span>(<span class="variable">ratings</span>) << <span class="type">std::endl</span>; <span class="comment">// 输出: 5</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 总结 -->
+        <div class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章回顾</h2>
+            </div>
+            <div class="slide-content">
+                <p>通过三个经典案例，我们学会了如何将贪心思想转化为C++代码：</p>
+                <ul>
+                    <li><strong>活动安排：</strong>学会了对区间问题使用“按结束时间排序”的经典策略，并使用 `std::sort` 和 lambda 表达式实现。</li>
+                    <li><strong>买卖股票：</strong>学会了将问题分解为“赚取所有上坡利润”的简单累加，并用一个 for 循环轻松搞定。</li>
+                    <li><strong>分发糖果：</strong>掌握了处理复杂相邻关系的“两次遍历”技巧，并使用 `std::vector` 和 `std::max` 解决。</li>
+                </ul>
+                <div class="conclusion" style="background-color: #f6ffed; border-color: #b7eb8f;">
+                    <strong>下一章预告：</strong><br>
+                    我们已经学习了贪心算法的“是什么”、“为什么”和“怎么用”。最后一章，我们将进行全面的总结，并为你未来的学习之路提供一份清晰的“地图”。
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 8</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            // 支持键盘左右箭头翻页
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0); // 初始化第一页
+        });
+    </script>
+
+</body>
+</html>
