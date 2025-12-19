@@ -197,12 +197,16 @@
         <div class="form-group">
           <label>科目 (Subject):</label>
           <select v-model="editingLevel.subject" class="form-input">
-            <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
+            <option v-for="sub in subjectOptions" :key="sub" :value="sub">{{ sub }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>Level (数字):</label>
           <input v-model.number="editingLevel.level" type="number" class="form-input">
+          <p v-if="currentSubjectConfig && currentSubjectConfig.minLevel" style="font-size: 12px; color: #666; margin-top: 4px;">
+             当前视图 "{{ selectedSubject }}" 显示范围: Level {{ currentSubjectConfig.minLevel }} - {{ currentSubjectConfig.maxLevel || '∞' }}。
+             如果设置超出此范围，该等级将不会在当前列表中显示。
+          </p>
         </div>
         <div class="form-group">
           <label>标题:</label>
@@ -347,6 +351,13 @@ export default {
   computed: {
     isAdmin() {
       return this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.priv === -1)
+    },
+    subjectOptions() {
+      const subjects = new Set(SUBJECTS_CONFIG.map(s => s.realSubject))
+      return Array.from(subjects)
+    },
+    currentSubjectConfig() {
+      return SUBJECTS_CONFIG.find(s => s.name === this.selectedSubject)
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -610,8 +621,25 @@ export default {
       if (level) {
         this.editingLevel = { ...level }
       } else {
+        let nextLevel = 1
+        const subjectConfig = SUBJECTS_CONFIG.find(s => s.name === this.selectedSubject)
+        
+        // Start from minLevel if defined
+        if (subjectConfig && subjectConfig.minLevel) {
+            nextLevel = subjectConfig.minLevel
+        }
+
+        // If there are existing levels, try to increment from the max
+        if (this.levels && this.levels.length > 0) {
+            const maxLevel = Math.max(...this.levels.map(l => l.level || 0))
+            // Only increment if the max level is actually relevant (>= minLevel)
+            if (maxLevel >= nextLevel) {
+                nextLevel = maxLevel + 1
+            }
+        }
+
         this.editingLevel = { 
-          level: this.levels.length + 1, 
+          level: nextLevel, 
           title: '', 
           description: '',
           subject: getRealSubject(this.selectedSubject)
