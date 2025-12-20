@@ -111,22 +111,25 @@
             border-radius: 8px;
             border: 1px solid #e9ecef;
         }
+        /* --- 代码块样式修改：白色背景 --- */
         .code-block {
-            background-color: #2d2d2d;
-            color: #f8f8f2;
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
             padding: 20px;
             border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
             font-family: "Courier New", Courier, monospace;
             white-space: pre-wrap;
             margin-top: 2vh;
             font-size: clamp(0.8em, 1.6vw, 1em);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .code-block .comment { color: #8c8c8c; }
-        .code-block .keyword { color: #f92672; }
-        .code-block .type { color: #66d9ef; }
-        .code-block .number { color: #ae81ff; }
-        .code-block .string { color: #a6e22e; }
-        .code-block .preprocessor { color: #ae81ff; }
+        .code-block .comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-block .keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-block .type { color: #2b91af; } /* 青色类型 */
+        .code-block .number { color: #a31515; } /* 红色数字 */
+        .code-block .string { color: #a31515; } /* 红色字符串 */
+        .code-block .preprocessor { color: #808080; } /* 灰色预处理 */
 
         /* 动画演示区域 */
         .animation-area {
@@ -290,19 +293,39 @@
                 <p>根据推导的结论，我们只需要按 <span class="math-formula">W + S</span> 升序排序，然后模拟堆叠过程计算最大压扁指数即可。</p>
                 <div class="code-block">
 <pre>
+<span class="comment">// Problem: P1842 [USACO05NOV] 奶牛玩杂技</span>
+<span class="comment">// Contest: Luogu</span>
+<span class="comment">// URL: https://www.luogu.com.cn/problem/P1842</span>
+<span class="comment">// Memory Limit: 125 MB</span>
+<span class="comment">// Time Limit: 1000 ms</span>
+<span class="comment">// </span>
+<span class="comment">// Powered by CP Editor (https://cpeditor.org)</span>
+
 <span class="preprocessor">#include &lt;bits/stdc++.h&gt;</span>
+
 <span class="keyword">using</span> <span class="keyword">namespace</span> std;
 
-<span class="preprocessor">#define int long long</span> <span class="comment">// 防止数据溢出，题目中 S_i 可达 10^9</span>
-<span class="keyword">const</span> <span class="type">int</span> INF = 0x3f3f3f3f3f3f3f3f;
-<span class="keyword">const</span> <span class="type">int</span> N = 1e6 + 10;
+<span class="preprocessor">#define endl '\n'</span>
 
-<span class="keyword">struct</span> <span class="type">Node</span> {
+<span class="preprocessor">#define TRACE 1</span>
+<span class="preprocessor">#define tcout TRACE && cout</span>
+
+<span class="preprocessor">#define fst ios::sync_with_stdio(false); cin.tie(0); cout.tie(0);</span>
+
+<span class="preprocessor">#define int long long</span>
+
+<span class="keyword">const</span> <span class="type">int</span> P = <span class="number">998244353</span>; 
+<span class="keyword">const</span> <span class="type">int</span> INF = <span class="number">0x3f3f3f3f3f3f3f3f</span>; 
+
+<span class="keyword">const</span> <span class="type">int</span> N = <span class="number">1e6</span> + <span class="number">10</span>, M = <span class="number">2e6</span> + <span class="number">10</span>; 
+
+<span class="keyword">struct</span> <span class="type">Node</span>
+{
     <span class="type">int</span> w, s;
 };
 
-<span class="comment">// 核心排序规则：按 W + S 升序排列</span>
-<span class="type">bool</span> <span class="function">cmp</span>(<span class="type">Node</span> x, <span class="type">Node</span> y) {
+<span class="type">bool</span> <span class="function">cmp</span>(<span class="type">Node</span> x, <span class="type">Node</span> y)
+{
     <span class="keyword">return</span> x.w + x.s < y.w + y.s;
 }
 
@@ -310,26 +333,20 @@
 <span class="type">Node</span> a[N];
 <span class="type">int</span> ans = -INF;
 
-<span class="type">signed</span> <span class="function">main</span>() {
-    <span class="comment">// 优化 I/O</span>
-    ios::sync_with_stdio(<span class="keyword">false</span>); cin.tie(<span class="number">0</span>); cout.tie(<span class="number">0</span>);
-
+<span class="type">signed</span> <span class="function">main</span>()
+{
     cin >> n;
-    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++) {
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++)
+    {
         cin >> a[i].w >> a[i].s;
     }
-
-    <span class="comment">// 1. 贪心排序</span>
     <span class="function">sort</span>(a+<span class="number">1</span>, a+n+<span class="number">1</span>, cmp);
-
-    <span class="comment">// 2. 模拟堆叠过程，计算最大风险值</span>
-    <span class="type">int</span> sum = <span class="number">0</span>; <span class="comment">// 当前牛上面的总重量</span>
-    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++) {
-        <span class="comment">// 压扁指数 = 上面总重 - 自身力量</span>
+    <span class="type">int</span> sum = <span class="number">0</span>;
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++)
+    {
         ans = <span class="function">max</span>(ans, sum - a[i].s);
-        sum += a[i].w; <span class="comment">// 累加当前牛的重量给下面</span>
+        sum += a[i].w;
     }
-
     cout << ans;
     <span class="keyword">return</span> <span class="number">0</span>;
 }

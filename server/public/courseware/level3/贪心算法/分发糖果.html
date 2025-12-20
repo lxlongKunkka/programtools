@@ -111,47 +111,53 @@
             border-radius: 8px;
             border: 1px solid #e9ecef;
         }
+        /* --- 代码块样式修改：白色背景 --- */
         .code-block {
-            background-color: #2d2d2d;
-            color: #f8f8f2;
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
             padding: 20px;
             border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
             font-family: "Courier New", Courier, monospace;
             white-space: pre-wrap;
             margin-top: 2vh;
             font-size: clamp(0.8em, 1.6vw, 1em);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .code-block .comment { color: #8c8c8c; }
-        .code-block .keyword { color: #f92672; }
-        .code-block .type { color: #66d9ef; }
-        .code-block .number { color: #ae81ff; }
-        .code-block .string { color: #a6e22e; }
-        .code-block .preprocessor { color: #ae81ff; }
+        .code-block .comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-block .keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-block .type { color: #2b91af; } /* 青色类型 */
+        .code-block .number { color: #a31515; } /* 红色数字 */
+        .code-block .string { color: #a31515; } /* 红色字符串 */
+        .code-block .preprocessor { color: #808080; } /* 灰色预处理 */
 
         /* 动画演示区域 */
         .animation-area {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 10px; /* 减小间距以容纳更多元素 */
             margin: 3vh 0;
             min-height: 200px;
+            overflow-x: auto; /* 允许横向滚动 */
+            padding-bottom: 10px;
         }
         .child-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             transition: transform 0.3s ease-in-out;
+            min-width: 50px; /* 确保最小宽度 */
         }
         .child-container.active {
-            transform: scale(1.2);
+            transform: scale(1.1); /* 稍微减小缩放比例 */
         }
         .rating-box, .candy-box {
-            width: 60px;
-            height: 60px;
+            width: 50px; /* 稍微减小尺寸 */
+            height: 50px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5em;
+            font-size: 1.2em;
             font-weight: bold;
             border-radius: 8px;
         }
@@ -241,7 +247,7 @@
                 <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：两次遍历法</h2>
             </div>
             <div class="slide-content" style="justify-content: flex-start;">
-                <p><strong>样例数据：</strong> 表现分 `ratings = {1, 0, 2}`</p>
+                <p><strong>样例数据：</strong> 表现分 `ratings = {1, 3, 2, 2, 1, 4, 5}`</p>
                 <div class="animation-area" id="animation-container">
                     <!-- JS will generate content here -->
                 </div>
@@ -259,39 +265,73 @@
                 <p>这个“两次遍历”的思路，可以非常直观地翻译成代码：</p>
                 <div class="code-block">
 <pre>
-<span class="preprocessor">#include &lt;iostream&gt;</span>
-<span class="preprocessor">#include &lt;vector&gt;</span>
-<span class="preprocessor">#include &lt;numeric&gt;</span>   <span class="comment">// for std::accumulate</span>
-<span class="preprocessor">#include &lt;algorithm&gt;</span> <span class="comment">// for std::max</span>
+<span class="preprocessor">#include &lt;bits/stdc++.h&gt;</span>
 
-<span class="type">int</span> <span class="function">candy</span>(<span class="keyword">const</span> <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt;& <span class="variable">ratings</span>) {
-    <span class="type">int</span> <span class="variable">n</span> = <span class="variable">ratings</span>.size();
-    <span class="keyword">if</span> (<span class="variable">n</span> == <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>;
+<span class="keyword">using</span> <span class="keyword">namespace</span> std;
 
-    <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt; <span class="variable">candies</span>(<span class="variable">n</span>, <span class="number">1</span>); <span class="comment">// 规则1: 每人至少1颗</span>
+<span class="preprocessor">#define endl '\n'</span>
 
-    <span class="comment">// 第一次遍历: 从左到右，满足“比左边高”的规则</span>
-    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="number">1</span>; <span class="variable">i</span> < <span class="variable">n</span>; ++<span class="variable">i</span>) {
-        <span class="keyword">if</span> (<span class="variable">ratings</span>[<span class="variable">i</span>] > <span class="variable">ratings</span>[<span class="variable">i</span> - <span class="number">1</span>]) {
-            <span class="variable">candies</span>[<span class="variable">i</span>] = <span class="variable">candies</span>[<span class="variable">i</span> - <span class="number">1</span>] + <span class="number">1</span>;
+<span class="preprocessor">#define TRACE 1</span>
+<span class="preprocessor">#define tcout TRACE && cout</span>
+
+<span class="preprocessor">#define fst ios::sync_with_stdio(false); cin.tie(0); cout.tie(0);</span>
+
+<span class="preprocessor">#define int long long</span>
+
+<span class="comment">// 确定状态</span>
+<span class="comment">// 划分阶段-根据阶段确定求解顺序</span>
+<span class="comment">// 决策选择-动态转移方程</span>
+<span class="comment">// 边界条件-起点设置</span>
+<span class="comment">// 求解目标</span>
+
+<span class="keyword">const</span> <span class="type">int</span> P = <span class="number">998244353</span>; 
+<span class="keyword">const</span> <span class="type">int</span> Base = <span class="number">3221225477</span>;
+<span class="keyword">const</span> <span class="type">int</span> INF = <span class="number">0x3f3f3f3f3f3f3f3f</span>; 
+
+<span class="keyword">const</span> <span class="type">int</span> N = <span class="number">1e6</span> + <span class="number">10</span>, M = <span class="number">2e6</span> + <span class="number">10</span>; 
+
+<span class="type">int</span> n;
+<span class="type">int</span> a[N];
+<span class="type">int</span> b[N];
+
+<span class="type">signed</span> <span class="function">main</span>()
+{
+    cin >> n;
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++)
+    {
+        cin >> a[i];
+        b[i] = <span class="number">1</span>;
+    }
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">2</span>; i<=n; i++)
+    {
+        <span class="keyword">if</span>(a[i] > a[i-<span class="number">1</span>])
+        {
+            b[i] = <span class="function">max</span>(b[i], b[i-<span class="number">1</span>] + <span class="number">1</span>);
         }
     }
-
-    <span class="comment">// 第二次遍历: 从右到左，满足“比右边高”的规则</span>
-    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> = <span class="variable">n</span> - <span class="number">2</span>; <span class="variable">i</span> >= <span class="number">0</span>; --<span class="variable">i</span>) {
-        <span class="keyword">if</span> (<span class="variable">ratings</span>[<span class="variable">i</span>] > <span class="variable">ratings</span>[<span class="variable">i</span> + <span class="number">1</span>]) {
-            <span class="comment">// 如果需要更多糖果，就更新。取较大值确保不破坏第一次遍历的结果。</span>
-            <span class="variable">candies</span>[<span class="variable">i</span>] = <span class="function">std::max</span>(<span class="variable">candies</span>[<span class="variable">i</span>], <span class="variable">candies</span>[<span class="variable">i</span> + <span class="number">1</span>] + <span class="number">1</span>);
+    <span class="comment">// for(int i=1; i<=n; i++)</span>
+    <span class="comment">// {</span>
+        <span class="comment">// cout << b[i] << " ";</span>
+    <span class="comment">// }</span>
+    <span class="comment">// cout << endl;</span>
+    <span class="keyword">for</span>(<span class="type">int</span> i=n-<span class="number">1</span>; i>=<span class="number">1</span>; i--)
+    {
+        <span class="keyword">if</span>(a[i] > a[i+<span class="number">1</span>])
+        {
+            b[i] = <span class="function">max</span>(b[i], b[i+<span class="number">1</span>] + <span class="number">1</span>);
         }
     }
-
-    <span class="comment">// 计算总糖果数</span>
-    <span class="keyword">return</span> <span class="function">std::accumulate</span>(<span class="variable">candies</span>.begin(), <span class="variable">candies</span>.end(), <span class="number">0</span>);
-}
-
-<span class="type">int</span> <span class="function">main</span>() {
-    <span class="type">std::vector</span>&lt;<span class="type">int</span>&gt; <span class="variable">ratings</span> = {<span class="number">1</span>, <span class="number">0</span>, <span class="number">2</span>};
-    <span class="type">std::cout</span> << <span class="string">"Total candies: "</span> << <span class="function">candy</span>(<span class="variable">ratings</span>) << <span class="type">std::endl</span>; <span class="comment">// 输出: 5</span>
+    <span class="comment">// for(int i=1; i<=n; i++)</span>
+    <span class="comment">// {</span>
+        <span class="comment">// cout << b[i] << " ";</span>
+    <span class="comment">// }</span>
+    <span class="comment">// cout << endl;</span>
+    <span class="type">int</span> ans = <span class="number">0</span>;
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++)
+    {
+        ans += b[i];
+    }
+    cout << ans << endl;
     <span class="keyword">return</span> <span class="number">0</span>;
 }
 </pre>
@@ -362,12 +402,15 @@
             const startBtn = document.getElementById('startAnimation');
             const statusText = document.getElementById('status');
             const animationContainer = document.getElementById('animation-container');
-            const ratings = [1, 0, 2];
+            // 新样例: 1, 3, 2, 2, 1, 4, 5
+            const ratings = [1, 3, 2, 2, 1, 4, 5];
             let childElements = [];
+            let candies = new Array(ratings.length).fill(1);
 
             function createChildren() {
                 animationContainer.innerHTML = '';
                 childElements = [];
+                candies = new Array(ratings.length).fill(1);
                 ratings.forEach((rating, i) => {
                     const container = document.createElement('div');
                     container.className = 'child-container';
@@ -389,7 +432,7 @@
                 });
             }
 
-            function updateCandy(index, value, isFinal) {
+            function updateCandy(index, value) {
                 const candyBox = document.getElementById(`candy-${index}`);
                 candyBox.textContent = value;
                 candyBox.classList.add('updated');
@@ -403,73 +446,72 @@
                  }
             }
 
-            function resetAnimation() {
+            // 辅助函数：延迟
+            const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+            async function runAnimation() {
+                startBtn.disabled = true;
                 createChildren();
-                statusText.textContent = '点击“开始”按钮查看过程';
+                
+                // Pass 1: Left to Right
+                statusText.textContent = '开始第一次遍历 (从左到右)';
+                await delay(1000);
+                
+                for (let i = 1; i < ratings.length; i++) {
+                    highlightChild(i);
+                    statusText.textContent = `检查 #${i}(分=${ratings[i]}) 和 #${i-1}(分=${ratings[i-1]})`;
+                    await delay(1000);
+
+                    if (ratings[i] > ratings[i-1]) {
+                        candies[i] = candies[i-1] + 1;
+                        updateCandy(i, candies[i]);
+                        statusText.textContent = `${ratings[i]} > ${ratings[i-1]}，糖果 = ${candies[i-1]} + 1 = ${candies[i]}`;
+                    } else {
+                        statusText.textContent = `${ratings[i]} <= ${ratings[i-1]}，糖果不变`;
+                    }
+                    await delay(1000);
+                }
+
+                highlightChild(-1);
+                statusText.textContent = `第一次遍历结束。糖果: [${candies.join(', ')}]`;
+                await delay(2000);
+
+                // Pass 2: Right to Left
+                statusText.textContent = '开始第二次遍历 (从右到左)';
+                await delay(1000);
+
+                for (let i = ratings.length - 2; i >= 0; i--) {
+                    highlightChild(i);
+                    statusText.textContent = `检查 #${i}(分=${ratings[i]}) 和 #${i+1}(分=${ratings[i+1]})`;
+                    await delay(1000);
+
+                    if (ratings[i] > ratings[i+1]) {
+                        let newVal = Math.max(candies[i], candies[i+1] + 1);
+                        if (newVal > candies[i]) {
+                            candies[i] = newVal;
+                            updateCandy(i, candies[i]);
+                            statusText.textContent = `${ratings[i]} > ${ratings[i+1]}，更新糖果 = max(${candies[i]}, ${candies[i+1]}+1) = ${newVal}`;
+                        } else {
+                            statusText.textContent = `${ratings[i]} > ${ratings[i+1]}，但当前糖果已足够，不变`;
+                        }
+                    } else {
+                        statusText.textContent = `${ratings[i]} <= ${ratings[i+1]}，糖果不变`;
+                    }
+                    await delay(1000);
+                }
+
+                highlightChild(-1);
+                let total = candies.reduce((a, b) => a + b, 0);
+                statusText.textContent = `第二次遍历结束。最终糖果: [${candies.join(', ')}]，总数 = ${total}`;
                 startBtn.disabled = false;
             }
 
-            startBtn.addEventListener('click', () => {
-                startBtn.disabled = true;
-                resetAnimation();
-                let candies = [1, 1, 1];
-                
-                // Pass 1: Left to Right
-                setTimeout(() => { statusText.textContent = '开始第一次遍历 (从左到右)'; }, 500);
-                
-                setTimeout(() => {
-                    statusText.textContent = '检查孩子 #1 (分=0) 和 #0 (分=1)';
-                    highlightChild(1);
-                }, 1500);
-                setTimeout(() => { statusText.textContent = '0 不大于 1，糖果不变'; }, 2500);
-
-                setTimeout(() => {
-                    statusText.textContent = '检查孩子 #2 (分=2) 和 #1 (分=0)';
-                    highlightChild(2);
-                }, 3500);
-                setTimeout(() => {
-                    statusText.textContent = '2 > 0，糖果更新为 1+1=2';
-                    candies[2] = 2;
-                    updateCandy(2, 2);
-                }, 4500);
-
-                // Pass 2: Right to Left
-                setTimeout(() => {
-                    statusText.textContent = '第一次遍历结束。糖果: [1, 1, 2]';
-                    highlightChild(-1);
-                }, 5500);
-                setTimeout(() => { statusText.textContent = '开始第二次遍历 (从右到左)'; }, 6500);
-
-                setTimeout(() => {
-                    statusText.textContent = '检查孩子 #1 (分=0) 和 #2 (分=2)';
-                    highlightChild(1);
-                }, 7500);
-                setTimeout(() => { statusText.textContent = '0 不大于 2，糖果不变'; }, 8500);
-
-                setTimeout(() => {
-                    statusText.textContent = '检查孩子 #0 (分=1) 和 #1 (分=0)';
-                    highlightChild(0);
-                }, 9500);
-                setTimeout(() => {
-                    statusText.textContent = '1 > 0，糖果需要 > 1。当前为1，更新为 1+1=2';
-                    candies[0] = 2;
-                    updateCandy(0, 2);
-                }, 10500);
-
-                // Final
-                setTimeout(() => {
-                    statusText.textContent = '第二次遍历结束。最终糖果: [2, 1, 2]';
-                    highlightChild(-1);
-                }, 12000);
-                setTimeout(() => {
-                    statusText.textContent = '总糖果数 = 2 + 1 + 2 = 5';
-                    startBtn.disabled = false;
-                }, 13500);
-            });
+            startBtn.addEventListener('click', runAnimation);
             
             const slide4Observer = new IntersectionObserver((entries) => {
                 if (entries[0].isIntersecting) {
-                    resetAnimation();
+                    createChildren();
+                    statusText.textContent = '点击“开始”按钮查看过程';
                 }
             }, { threshold: 0.5 });
 

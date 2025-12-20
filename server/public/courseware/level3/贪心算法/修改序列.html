@@ -111,22 +111,25 @@
             border-radius: 8px;
             border: 1px solid #e9ecef;
         }
+        /* --- 代码块样式修改：白色背景 --- */
         .code-block {
-            background-color: #2d2d2d;
-            color: #f8f8f2;
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
             padding: 20px;
             border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
             font-family: "Courier New", Courier, monospace;
             white-space: pre-wrap;
             margin-top: 2vh;
             font-size: clamp(0.8em, 1.6vw, 1em);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .code-block .comment { color: #8c8c8c; }
-        .code-block .keyword { color: #f92672; }
-        .code-block .type { color: #66d9ef; }
-        .code-block .number { color: #ae81ff; }
-        .code-block .string { color: #a6e22e; }
-        .code-block .preprocessor { color: #ae81ff; }
+        .code-block .comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-block .keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-block .type { color: #2b91af; } /* 青色类型 */
+        .code-block .number { color: #a31515; } /* 红色数字 */
+        .code-block .string { color: #a31515; } /* 红色字符串 */
+        .code-block .preprocessor { color: #808080; } /* 灰色预处理 */
 
         /* 动画演示区域 */
         .animation-area {
@@ -260,7 +263,7 @@
                 <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：替换过程</h2>
             </div>
             <div class="slide-content" style="justify-content: flex-start;">
-                <p><strong>样例数据：</strong> 白板 [1, 2, 3]，操作序列 [4, 5]</p>
+                <p><strong>样例数据：</strong> 白板 [10, 20, 5, 15, 30]，操作序列 [25, 8, 35, 12]</p>
                 <div class="animation-area">
                     <div class="board-container" id="boardContainer">
                         <!-- JS will generate boards here -->
@@ -390,9 +393,10 @@
             const opArea = document.getElementById('opArea');
             const newValEl = document.getElementById('newVal');
             
-            // 初始数据
-            let boards = [1, 2, 3];
-            const ops = [4, 5];
+            // 初始数据: [10, 20, 5, 15, 30]
+            let boards = [10, 20, 5, 15, 30];
+            // 操作序列: [25, 8, 35, 12]
+            const ops = [25, 8, 35, 12];
 
             function renderBoards() {
                 boardContainer.innerHTML = '';
@@ -415,7 +419,7 @@
 
             startBtn.addEventListener('click', async () => {
                 startBtn.disabled = true;
-                boards = [1, 2, 3]; // 重置
+                boards = [10, 20, 5, 15, 30]; // 重置
                 renderBoards();
                 
                 for (let i = 0; i < ops.length; i++) {
