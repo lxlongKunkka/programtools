@@ -217,11 +217,17 @@ import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseCo
 
 export default {
   data() {
+    const savedSubject = localStorage.getItem('selected_subject')
+    const defaultSubject = 'C++基础'
+    const initialSubject = (savedSubject && SUBJECTS_CONFIG.some(s => s.name === savedSubject)) 
+      ? savedSubject 
+      : defaultSubject
+
     return {
       levels: [],
       userProgress: null,
       loading: true,
-      selectedSubject: 'C++基础',
+      selectedSubject: initialSubject,
       availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
       expandedLevelIds: [],
       expandedDescIds: [],
@@ -235,6 +241,11 @@ export default {
       selectedLearnerTopic: null, // The topic context for the modal
       loadingLearnerProgress: false,
       isInitialLoad: true
+    }
+  },
+  watch: {
+    selectedSubject(newVal) {
+      localStorage.setItem('selected_subject', newVal)
     }
   },
   mounted() {

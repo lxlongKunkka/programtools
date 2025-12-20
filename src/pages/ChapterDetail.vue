@@ -141,6 +141,7 @@
 <script>
 import request from '../utils/request'
 import { marked } from 'marked'
+import { SUBJECTS_CONFIG } from '../utils/courseConfig'
 
 export default {
   inject: ['showToastMessage'],
@@ -351,6 +352,20 @@ export default {
         this.level = levelsData.find(l => l.level === this.levelId)
         
         if (this.level) {
+          // Update selected subject in localStorage based on current level
+          const matchedConfig = SUBJECTS_CONFIG.find(s => {
+             // Default to C++ if subject not present, or match subject
+             const levelSubject = this.level.subject || 'C++'
+             if (s.realSubject !== levelSubject) return false
+             if (s.minLevel && this.level.level < s.minLevel) return false
+             if (s.maxLevel && this.level.level > s.maxLevel) return false
+             return true
+          })
+          
+          if (matchedConfig) {
+            localStorage.setItem('selected_subject', matchedConfig.name)
+          }
+
           // Try legacy chapters
           this.chapter = this.level.chapters.find(c => c.id === this.chapterId)
           
