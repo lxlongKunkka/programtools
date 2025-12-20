@@ -190,7 +190,20 @@ export default {
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
       // Split content by "===NEXT===" (case insensitive, allowing whitespace)
-      return this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => marked.parse(part, { breaks: true, mangle: false, headerIds: false }))
+      const steps = this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => marked.parse(part, { breaks: true, mangle: false, headerIds: false }))
+
+      // Inject Token
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        return steps.map(html => {
+           return html.replace(/(src=["'])((\/public\/|\/api\/public\/)[^"']*)(["'])/g, (match, prefix, url, pathPrefix, suffix) => {
+               const separator = url.includes('?') ? '&' : '?'
+               return `${prefix}${url}${separator}token=${token}${suffix}`
+           })
+        })
+      }
+
+      return steps
     },
     totalProblems() {
       return this.chapter?.problemIds?.length || 0
@@ -280,7 +293,20 @@ export default {
 
         // 3. 保护 Iframe (PDF/PPT)
         const iframes = container.querySelectorAll('iframe')
+        const token = localStorage.getItem('auth_token')
+
         iframes.forEach(iframe => {
+          // Inject Token
+          try {
+            let src = iframe.getAttribute('src')
+            if (src && (src.startsWith('/public/') || src.startsWith('/api/public/')) && !src.includes('token=')) {
+              if (token) {
+                const separator = src.includes('?') ? '&' : '?'
+                iframe.setAttribute('src', src + separator + 'token=' + token)
+              }
+            }
+          } catch (e) {}
+
           iframe.oncontextmenu = (e) => {
             e.preventDefault()
             return false

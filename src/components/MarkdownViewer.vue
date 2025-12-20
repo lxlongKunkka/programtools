@@ -27,7 +27,23 @@ export default {
           headerIds: false,
           breaks: true
         })
-        return DOMPurify.sanitize(html)
+        let sanitized = DOMPurify.sanitize(html, {
+          ADD_TAGS: ['iframe'],
+          ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+        })
+
+        // Inject Token to prevent 401 on initial load
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+           // Replace src="/public/..." with src="/public/...?token=..."
+           // Also match /api/public/
+           sanitized = sanitized.replace(/(src=["'])((\/public\/|\/api\/public\/)[^"']*)(["'])/g, (match, prefix, url, pathPrefix, suffix) => {
+               const separator = url.includes('?') ? '&' : '?'
+               return `${prefix}${url}${separator}token=${token}${suffix}`
+           })
+        }
+
+        return sanitized
       } catch (e) {
         console.error('Markdown render error:', e)
         return `<pre>${this.escapeHtml(this.content)}</pre>`
@@ -43,6 +59,10 @@ export default {
     }
   },
   updated() {
+    this.renderMath()
+    this.secureContent()
+  },
+  mounted() {
     this.renderMath()
     this.secureContent()
   },
@@ -73,7 +93,20 @@ export default {
 
       // 3. 保护 Iframe (PDF/PPT)
       const iframes = el.querySelectorAll('iframe')
+      const token = localStorage.getItem('auth_token')
+
       iframes.forEach(iframe => {
+        // 注入 Token (解决 Unauthorized 问题)
+        try {
+          let src = iframe.getAttribute('src')
+          if (src && (src.startsWith('/public/') || src.startsWith('/api/public/')) && !src.includes('token=')) {
+            if (token) {
+              const separator = src.includes('?') ? '&' : '?'
+              iframe.setAttribute('src', src + separator + 'token=' + token)
+            }
+          }
+        } catch (e) {}
+
         // 禁用右键
         iframe.oncontextmenu = (e) => {
           e.preventDefault()

@@ -136,8 +136,6 @@
                    </span>
                    <span class="topic-title">{{ topic.title }}</span>
                    <div class="topic-actions" @click.stop>
-                      <button @click="moveTopic(level._id, topic._id, 'up')" class="btn-small btn-move" :disabled="level.topics.indexOf(topic) === 0">↑</button>
-                      <button @click="moveTopic(level._id, topic._id, 'down')" class="btn-small btn-move" :disabled="level.topics.indexOf(topic) === level.topics.length - 1">↓</button>
                       <button @click="openTopicModal(level, null, level.topics.indexOf(topic))" class="btn-small btn-insert" title="在此之前插入">插入</button>
                       <button @click="openTopicModal(level, topic)" class="btn-small btn-edit">编辑</button>
                       <button @click="deleteTopic(level._id, topic._id)" class="btn-small btn-delete">删除</button>
@@ -733,6 +731,10 @@ export default {
 <iframe src="/public/pdfs/sample.pdf" width="100%" height="600px" style="border: none;">
 </iframe>
 
+### 课件预览 (HTML)
+<iframe src="/public/pdfs/sample.html" width="100%" height="600px" frameborder="0" scrolling="auto">
+</iframe>
+
 ===NEXT===
 
 ### 知识点讲解
@@ -834,18 +836,6 @@ export default {
     async moveChapter(levelId, topicId, chapterId, direction) {
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}/move`, {
-          method: 'PUT',
-          body: JSON.stringify({ direction })
-        })
-        this.showToastMessage('移动成功')
-        this.fetchLevels()
-      } catch (e) {
-        this.showToastMessage('移动失败: ' + e.message)
-      }
-    },
-    async moveTopic(levelId, topicId, direction) {
-      try {
-        await request(`/api/course/levels/${levelId}/topics/${topicId}/move`, {
           method: 'PUT',
           body: JSON.stringify({ direction })
         })

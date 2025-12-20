@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解题课件：奶牛玩杂技</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 (保持一致) --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 (保持一致) --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 (保持一致) --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本课件特定样式 */
+        .problem-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+        }
+        .code-block .comment { color: #8c8c8c; }
+        .code-block .keyword { color: #f92672; }
+        .code-block .type { color: #66d9ef; }
+        .code-block .number { color: #ae81ff; }
+        .code-block .string { color: #a6e22e; }
+        .code-block .preprocessor { color: #ae81ff; }
+
+        /* 动画演示区域 */
+        .animation-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 3vh 0;
+            min-height: 300px;
+            position: relative;
+        }
+        .cow-stack {
+            display: flex;
+            flex-direction: column-reverse; /* 从下往上堆叠 */
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .cow {
+            width: 200px;
+            height: 50px;
+            background-color: #ffc107;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-weight: bold;
+            color: #333;
+            transition: transform 0.5s ease, background-color 0.3s;
+            position: relative;
+        }
+        .cow.active {
+            background-color: #4caf50;
+            border-color: #388e3c;
+            color: white;
+            transform: scale(1.05);
+        }
+        .cow-info {
+            font-size: 0.9em;
+        }
+        .risk-value {
+            position: absolute;
+            right: -120px;
+            width: 100px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #e63946;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .risk-value.show {
+            opacity: 1;
+        }
+        .status-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 1vh;
+            height: 30px;
+        }
+        .math-formula {
+            font-family: "Times New Roman", Times, serif;
+            font-style: italic;
+            background-color: #f1f3f5;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🐄</div>
+                <h1>解题课件：奶牛玩杂技</h1>
+                <h3>—— 贪心算法与微扰法证明</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 题目描述 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📝</span> 题目解析</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="problem-box">
+                    <p><strong>题目背景：</strong></p>
+                    <p>N 头奶牛要叠罗汉，每头牛有体重 <span class="math-formula">W<sub>i</sub></span> 和力量 <span class="math-formula">S<sub>i</sub></span>。</p>
+                    <p><strong>核心定义：</strong></p>
+                    <ul>
+                        <li><strong>压扁指数：</strong> 对于某头牛，等于它上面所有牛的总重减去它的力量。即 <span class="math-formula">Risk<sub>i</sub> = (∑W<sub>above</sub>) - S<sub>i</sub></span>。</li>
+                        <li><strong>总压扁指数：</strong> 所有牛中最大的那个压扁指数。</li>
+                    </ul>
+                    <p><strong>目标：</strong></p>
+                    <p>找出一个堆叠顺序，使得<span class="highlight">总压扁指数最小</span>。</p>
+                </div>
+                <div class="conclusion">
+                    <strong>关键点：</strong>我们需要最小化最大值（Min-Max 问题），这通常暗示着贪心策略或二分答案。本题数据特征指向贪心排序。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 思路探讨 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💡</span> 贪心策略：微扰法证明</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>假设我们已经有了一个最优的堆叠顺序。现在考虑相邻的两头牛 <span class="math-formula">i</span> 和 <span class="math-formula">j</span>，其中 <span class="math-formula">i</span> 在 <span class="math-formula">j</span> 上面。</p>
+                <p>设它们上面的牛总重为 <span class="math-formula">W<sub>sum</sub></span>。</p>
+                <ul>
+                    <li><strong>交换前：</strong>
+                        <ul>
+                            <li>牛 <span class="math-formula">i</span> 的风险：<span class="math-formula">R<sub>i</sub> = W<sub>sum</sub> - S<sub>i</sub></span></li>
+                            <li>牛 <span class="math-formula">j</span> 的风险：<span class="math-formula">R<sub>j</sub> = W<sub>sum</sub> + W<sub>i</sub> - S<sub>j</sub></span></li>
+                            <li>局部最大风险：<span class="math-formula">max(W<sub>sum</sub> - S<sub>i</sub>, W<sub>sum</sub> + W<sub>i</sub> - S<sub>j</sub>)</span></li>
+                        </ul>
+                    </li>
+                    <li><strong>交换后（j 在 i 上面）：</strong>
+                        <ul>
+                            <li>牛 <span class="math-formula">j</span> 的风险：<span class="math-formula">R'<sub>j</sub> = W<sub>sum</sub> - S<sub>j</sub></span></li>
+                            <li>牛 <span class="math-formula">i</span> 的风险：<span class="math-formula">R'<sub>i</sub> = W<sub>sum</sub> + W<sub>j</sub> - S<sub>i</sub></span></li>
+                            <li>局部最大风险：<span class="math-formula">max(W<sub>sum</sub> - S<sub>j</sub>, W<sub>sum</sub> + W<sub>j</sub> - S<sub>i</sub>)</span></li>
+                        </ul>
+                    </li>
+                </ul>
+                <p>显然 <span class="math-formula">W<sub>sum</sub> - S<sub>i</sub> < W<sub>sum</sub> + W<sub>j</sub> - S<sub>i</sub></span> 且 <span class="math-formula">W<sub>sum</sub> - S<sub>j</sub> < W<sub>sum</sub> + W<sub>i</sub> - S<sub>j</sub></span>。要让交换前更优（即交换后变差），我们需要 <span class="math-formula">W<sub>sum</sub> + W<sub>i</sub> - S<sub>j</sub> < W<sub>sum</sub> + W<sub>j</sub> - S<sub>i</sub></span>，化简得 <span class="math-formula">W<sub>i</sub> + S<sub>i</sub> < W<sub>j</sub> + S<sub>j</sub></span>。</p>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>结论：</strong>应该按照 <span class="highlight">W + S</span> 从小到大的顺序从上往下排（或者说放在下面的牛 W+S 应该更大）。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 动画演示 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：排序与计算</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>样例数据：</strong> (W=10, S=3), (W=2, S=5), (W=3, S=3)</p>
+                <div class="animation-area">
+                    <div class="cow-stack" id="cowStack">
+                        <!-- JS will generate cows here -->
+                    </div>
+                </div>
+                <div id="status" class="status-text">点击“开始”按钮演示排序和计算过程</div>
+                <button id="startAnimation" style="align-self: center; padding: 10px 20px; font-size: 1em; cursor: pointer;">开始</button>
+            </div>
+        </div>
+
+        <!-- Slide 5: C++ 代码实现 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> C++ 代码实现</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>根据推导的结论，我们只需要按 <span class="math-formula">W + S</span> 升序排序，然后模拟堆叠过程计算最大压扁指数即可。</p>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;bits/stdc++.h&gt;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> std;
+
+<span class="preprocessor">#define int long long</span> <span class="comment">// 防止数据溢出，题目中 S_i 可达 10^9</span>
+<span class="keyword">const</span> <span class="type">int</span> INF = 0x3f3f3f3f3f3f3f3f;
+<span class="keyword">const</span> <span class="type">int</span> N = 1e6 + 10;
+
+<span class="keyword">struct</span> <span class="type">Node</span> {
+    <span class="type">int</span> w, s;
+};
+
+<span class="comment">// 核心排序规则：按 W + S 升序排列</span>
+<span class="type">bool</span> <span class="function">cmp</span>(<span class="type">Node</span> x, <span class="type">Node</span> y) {
+    <span class="keyword">return</span> x.w + x.s < y.w + y.s;
+}
+
+<span class="type">int</span> n;
+<span class="type">Node</span> a[N];
+<span class="type">int</span> ans = -INF;
+
+<span class="type">signed</span> <span class="function">main</span>() {
+    <span class="comment">// 优化 I/O</span>
+    ios::sync_with_stdio(<span class="keyword">false</span>); cin.tie(<span class="number">0</span>); cout.tie(<span class="number">0</span>);
+
+    cin >> n;
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++) {
+        cin >> a[i].w >> a[i].s;
+    }
+
+    <span class="comment">// 1. 贪心排序</span>
+    <span class="function">sort</span>(a+<span class="number">1</span>, a+n+<span class="number">1</span>, cmp);
+
+    <span class="comment">// 2. 模拟堆叠过程，计算最大风险值</span>
+    <span class="type">int</span> sum = <span class="number">0</span>; <span class="comment">// 当前牛上面的总重量</span>
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=n; i++) {
+        <span class="comment">// 压扁指数 = 上面总重 - 自身力量</span>
+        ans = <span class="function">max</span>(ans, sum - a[i].s);
+        sum += a[i].w; <span class="comment">// 累加当前牛的重量给下面</span>
+    }
+
+    cout << ans;
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🧠</span> 知识点总结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="problem-box">
+                    <h4>算法模型：贪心 + 排序不等式</h4>
+                    <p>这类题目通常要求确定一个最优顺序。解决思路是：</p>
+                    <ol>
+                        <li><strong>微扰法（邻项交换法）：</strong> 假设最优解中相邻两项交换位置，分析代价函数的变化。</li>
+                        <li><strong>推导排序规则：</strong> 通过不等式化简，找到只与个体属性相关的排序关键字（如本题的 <span class="math-formula">W+S</span>）。</li>
+                        <li><strong>注意数据范围：</strong> 涉及累加和比较，注意是否需要 <code>long long</code>。</li>
+                    </ol>
+                </div>
+                <div class="conclusion">
+                    <strong>核心解法：</strong>按 <span class="highlight">W + S</span> 升序排序，然后线性扫描计算最大值。
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+            showSlide(0);
+
+            // --- 动画逻辑 ---
+            const startBtn = document.getElementById('startAnimation');
+            const statusText = document.getElementById('status');
+            const cowStack = document.getElementById('cowStack');
+            
+            // 原始数据: {w, s, id}
+            const rawCows = [
+                { w: 10, s: 3, id: 1, sum: 13 },
+                { w: 2, s: 5, id: 2, sum: 7 },
+                { w: 3, s: 3, id: 3, sum: 6 }
+            ];
+
+            function createCows(cows) {
+                cowStack.innerHTML = '';
+                // 倒序插入，因为 flex-direction 是 column-reverse，第一个元素在最下面
+                // 但为了符合直觉（数组第一个在最上面），我们正序插入，CSS控制显示
+                // 实际上题目是从上往下叠，index 1 在 top。
+                // 我们的 flex-reverse 让 DOM 最后一个在最上面。
+                // 所以我们应该把排好序的数组（index 0 是最上面的牛）反转后加入 DOM，或者直接用 column-reverse
+                // 让我们用 column，第一个子元素在最上面。
+                cowStack.style.flexDirection = 'column';
+
+                cows.forEach((cow, index) => {
+                    const cowDiv = document.createElement('div');
+                    cowDiv.className = 'cow';
+                    cowDiv.id = `cow-${cow.id}`;
+                    cowDiv.innerHTML = `
+                        <span>牛 #${cow.id}</span>
+                        <span class="cow-info">W:${cow.w}, S:${cow.s}, Sum:${cow.sum}</span>
+                        <span class="risk-value" id="risk-${cow.id}">Risk: ?</span>
+                    `;
+                    cowStack.appendChild(cowDiv);
+                });
+            }
+
+            async function wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            startBtn.addEventListener('click', async () => {
+                startBtn.disabled = true;
+                
+                // 1. 初始状态
+                statusText.textContent = '初始状态 (未排序)';
+                createCows(rawCows);
+                await wait(1500);
+
+                // 2. 排序演示
+                statusText.textContent = '按 W + S 升序排序...';
+                await wait(1000);
+                
+                // 排序逻辑
+                const sortedCows = [...rawCows].sort((a, b) => a.sum - b.sum);
+                
+                // 简单的视觉排序效果：重新渲染
+                createCows(sortedCows);
+                statusText.textContent = '排序完成：牛#3(6) -> 牛#2(7) -> 牛#1(13)';
+                await wait(2000);
+
+                // 3. 计算过程
+                let currentWeight = 0;
+                let maxRisk = -Infinity;
+
+                for (let i = 0; i < sortedCows.length; i++) {
+                    const cow = sortedCows[i];
+                    const cowEl = document.getElementById(`cow-${cow.id}`);
+                    const riskEl = document.getElementById(`risk-${cow.id}`);
+
+                    statusText.textContent = `计算 牛#${cow.id} 的压扁指数...`;
+                    cowEl.classList.add('active');
+                    await wait(1000);
+
+                    const risk = currentWeight - cow.s;
+                    riskEl.textContent = `Risk: ${currentWeight} - ${cow.s} = ${risk}`;
+                    riskEl.classList.add('show');
+                    
+                    statusText.textContent = `牛#${cow.id} 上面总重 ${currentWeight}，风险 = ${risk}`;
+                    await wait(1500);
+
+                    if (risk > maxRisk) {
+                        maxRisk = risk;
+                        // 可以加个高亮最大值的效果，这里简单处理
+                    }
+
+                    currentWeight += cow.w;
+                    cowEl.classList.remove('active');
+                    await wait(500);
+                }
+
+                statusText.textContent = `计算结束。最小的总压扁指数为：${maxRisk}`;
+                startBtn.disabled = false;
+            });
+        });
+    </script>
+
+</body>
+</html>

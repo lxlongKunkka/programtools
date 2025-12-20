@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解题课件：kunkka的赌场策略</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 (保持一致) --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 (保持一致) --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 (保持一致) --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本课件特定样式 */
+        .problem-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .code-block {
+            background-color: #ffffff;
+            color: #333333;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .code-block .comment { color: #008000; font-style: italic; }
+        .code-block .keyword { color: #0000ff; font-weight: bold; }
+        .code-block .type { color: #2b91af; }
+        .code-block .number { color: #a31515; }
+        .code-block .string { color: #a31515; }
+        .code-block .preprocessor { color: #808080; }
+
+        /* 动画演示区域 */
+        .animation-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin: 3vh 0;
+            min-height: 300px;
+        }
+        .bet-history {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .bet-round {
+            width: 80px;
+            height: 100px;
+            background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        .bet-round.active {
+            border-color: #e67e22;
+            box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+            transform: scale(1.1);
+        }
+        .bet-round.win {
+            border-color: #27ae60;
+            background-color: #e8f8f5;
+        }
+        .bet-round.lose {
+            border-color: #c0392b;
+            background-color: #f9ebea;
+        }
+        .round-num { font-size: 0.8em; color: #666; }
+        .bet-amount { font-weight: bold; font-size: 1.2em; color: #2980b9; }
+        .total-loss { font-size: 0.8em; color: #c0392b; }
+        
+        .balance-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #ecf0f1;
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        .status-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 1vh;
+            height: 30px;
+        }
+        .math-formula {
+            font-family: "Times New Roman", Times, serif;
+            font-style: italic;
+            background-color: #f1f3f5;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🎰</div>
+                <h1>解题课件：kunkka的赌场策略</h1>
+                <h3>—— 鞅策略与贪心构造</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 题目描述 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📝</span> 题目解析</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="problem-box">
+                    <p><strong>题目背景：</strong></p>
+                    <p>初始资金 <span class="math-formula">a</span>，最大连续输 <span class="math-formula">x</span> 次。</p>
+                    <p><strong>规则：</strong></p>
+                    <ul>
+                        <li>下注 <span class="math-formula">y</span>，赢了获得 <span class="math-formula">y·k</span>（净赚 <span class="math-formula">y(k-1)</span>），输了失去 <span class="math-formula">y</span>。</li>
+                        <li>只要赢一次，就可以重置连续输的计数。</li>
+                    </ul>
+                    <p><strong>目标：</strong></p>
+                    <p>判断是否能通过策略，保证赢得任意数量的钱（即资金无限增长）。</p>
+                </div>
+                <div class="conclusion">
+                    <strong>关键点：</strong>要实现资金无限增长，必须保证在任何一次获胜时，赢得的钱不仅能覆盖之前连续输掉的所有本金，还能有额外的盈余。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 思路探讨 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💡</span> 贪心策略：倍投法</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>核心思想：</strong></p>
+                <p>这是一种类似于“马丁格尔策略”（倍投法）的变种。如果在第 <span class="math-formula">i</span> 局获胜，我们需要保证：</p>
+                <p style="text-align: center; font-weight: bold;">本次赢得的钱 > 之前所有输掉的钱</p>
+                <p>设之前输掉的总金额为 <span class="math-formula">Sum</span>，本次下注 <span class="math-formula">y</span>。</p>
+                <p>获胜后拿回 <span class="math-formula">y·k</span>，净赚 <span class="math-formula">y(k-1)</span>。</p>
+                <p>我们需要 <span class="math-formula">y(k-1) > Sum</span>，即 <span class="math-formula">y > Sum / (k-1)</span>。</p>
+                <div class="conclusion" style="background-color: #fffbe6; border-color: #ffe58f;">
+                    <strong>贪心构造：</strong>为了让资金能够支撑最多次数的连续失败，我们每次下注应该尽可能小，只要刚好满足“回本并盈利”即可。
+                    <br>
+                    即每次下注 <span class="math-formula">y = floor(Sum / (k-1)) + 1</span>。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 动画演示 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：下注过程</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>样例数据：</strong> k=2, x=3, a=15</p>
+                <p>目标：连续输 3 次后，第 4 次还能下注并回本。</p>
+                <div class="animation-area">
+                    <div class="balance-display">当前余额: <span id="balance">15</span></div>
+                    <div class="bet-history" id="betHistory">
+                        <!-- JS will generate rounds here -->
+                    </div>
+                </div>
+                <div id="status" class="status-text">点击“开始”按钮演示策略</div>
+                <button id="startAnimation" style="align-self: center; padding: 10px 20px; font-size: 1em; cursor: pointer;">开始</button>
+            </div>
+        </div>
+
+        <!-- Slide 5: C++ 代码实现 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> C++ 代码实现</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>代码逻辑：模拟最坏情况（连续输 x 次），计算每次最少需要的下注额，看总资金是否足够。</p>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;bits/stdc++.h&gt;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> std;
+
+<span class="preprocessor">#define int long long</span>
+
+<span class="type">int</span> k, x, a;
+
+<span class="type">void</span> <span class="function">solve</span>() {
+    cin >> k >> x >> a;
+    <span class="type">int</span> sum = <span class="number">0</span>; <span class="comment">// 统计输掉了多少钱</span>
+
+    <span class="comment">// 最多连续输 x 次，所以我们要看第 x+1 次能否下注</span>
+    <span class="comment">// 实际上循环 x+1 次，前 x 次模拟输，最后一次模拟赢</span>
+    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">1</span>; i<=x+<span class="number">1</span>; i++) {
+        <span class="comment">// 目标：本次下注 y，赢了要能覆盖 sum</span>
+        <span class="comment">// y * (k - 1) > sum  =>  y > sum / (k - 1)</span>
+        <span class="comment">// 贪心：取最小整数解</span>
+        <span class="type">int</span> y = sum / (k - <span class="number">1</span>) + <span class="number">1</span>;
+        
+        <span class="comment">// 检查钱够不够下注</span>
+        <span class="comment">// 注意：这里判断的是总投入 sum + y 是否超过初始资金 a</span>
+        <span class="keyword">if</span>(a < sum + y) {
+            cout << <span class="string">"NO"</span> << endl;
+            <span class="keyword">return</span>;
+        }
+        
+        sum += y; <span class="comment">// 假设这次输了，累计损失增加</span>
+    }
+    
+    <span class="comment">// 如果能撑过 x+1 轮（即前 x 轮输，第 x+1 轮还能下注并回本）</span>
+    <span class="comment">// 那么只要赢一次，资金就会增加，从而实现无限增长</span>
+    cout << <span class="string">"YES"</span> << endl;
+}
+
+<span class="type">signed</span> <span class="function">main</span>() {
+    <span class="type">int</span> t;
+    cin >> t;
+    <span class="keyword">while</span>(t--) {
+        <span class="function">solve</span>();
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🧠</span> 知识点总结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="problem-box">
+                    <h4>算法模型：贪心构造 / 模拟</h4>
+                    <p>这类问题通常要求构造一种策略以满足特定条件。</p>
+                    <ol>
+                        <li><strong>最坏情况分析：</strong> 考虑系统允许的极限情况（连续输 <span class="math-formula">x</span> 次）。</li>
+                        <li><strong>逆向/正向推导：</strong> 为了抵消之前的损失，当前必须投入多少？</li>
+                        <li><strong>贪心选择：</strong> 为了生存更久，每次投入应为满足条件的最小值。</li>
+                    </ol>
+                </div>
+                <div class="conclusion">
+                    <strong>核心解法：</strong>模拟连续失败的过程，计算每次为了回本所需的最小下注额，判断总资金是否足以支撑到赢的那一次。
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+            showSlide(0);
+
+            // --- 动画逻辑 ---
+            const startBtn = document.getElementById('startAnimation');
+            const statusText = document.getElementById('status');
+            const historyContainer = document.getElementById('betHistory');
+            const balanceEl = document.getElementById('balance');
+            
+            // 样例: k=2, x=3, a=15
+            const k = 2;
+            const x = 3;
+            const a = 15;
+            let currentBalance = a;
+            let lostSum = 0;
+
+            function createRound(index, bet) {
+                const round = document.createElement('div');
+                round.className = 'bet-round';
+                round.id = `round-${index}`;
+                round.innerHTML = `
+                    <div class="round-num">Round ${index}</div>
+                    <div class="bet-amount">Bet: ${bet}</div>
+                    <div class="total-loss">Lost: ${lostSum}</div>
+                `;
+                historyContainer.appendChild(round);
+                return round;
+            }
+
+            async function wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            startBtn.addEventListener('click', async () => {
+                startBtn.disabled = true;
+                historyContainer.innerHTML = '';
+                currentBalance = a;
+                lostSum = 0;
+                balanceEl.textContent = currentBalance;
+                
+                // 模拟 x+1 轮
+                for (let i = 1; i <= x + 1; i++) {
+                    // 计算下注
+                    const bet = Math.floor(lostSum / (k - 1)) + 1;
+                    
+                    statusText.textContent = `第 ${i} 轮：之前输 ${lostSum}，需下注 ${bet} 以回本`;
+                    await wait(1000);
+
+                    if (currentBalance < bet) {
+                        statusText.textContent = `余额不足！无法下注 ${bet}。失败 (NO)`;
+                        startBtn.disabled = false;
+                        return;
+                    }
+
+                    const roundEl = createRound(i, bet);
+                    roundEl.classList.add('active');
+                    
+                    // 扣除下注
+                    currentBalance -= bet;
+                    balanceEl.textContent = currentBalance;
+                    await wait(1000);
+
+                    if (i <= x) {
+                        // 前 x 轮模拟输
+                        statusText.textContent = `第 ${i} 轮：输了...`;
+                        roundEl.classList.remove('active');
+                        roundEl.classList.add('lose');
+                        lostSum += bet;
+                    } else {
+                        // 第 x+1 轮模拟赢
+                        statusText.textContent = `第 ${i} 轮：赢了！获得 ${bet * k}`;
+                        roundEl.classList.remove('active');
+                        roundEl.classList.add('win');
+                        currentBalance += bet * k;
+                        balanceEl.textContent = currentBalance;
+                        
+                        statusText.textContent = `最终余额 ${currentBalance} > 初始 ${a}。成功 (YES)`;
+                    }
+                    await wait(1500);
+                }
+                
+                startBtn.disabled = false;
+            });
+        });
+    </script>
+
+</body>
+</html>
