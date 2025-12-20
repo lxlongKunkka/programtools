@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模拟算法 - Chapter 1: 认知与核心思想</title>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(33, 150, 243, 0.7); /* 蓝色 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #2196F3;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #2196F3; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #2196F3; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e3f2fd; border-left: 5px solid #2196F3; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        .two-columns {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .column { flex: 1; }
+
+        .vs-card {
+            background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 20px;
+            margin-bottom: 15px; text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .vs-title { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; display: block; }
+
+        /* 超市收银动画 */
+        .checkout-counter {
+            background: #e0e0e0; border-bottom: 5px solid #999; height: 120px; 
+            display: flex; align-items: flex-end; padding: 0 20px; position: relative;
+            overflow: hidden; margin-top: 10px; border-radius: 4px;
+        }
+        .cashier {
+            width: 70px; height: 90px; background: #333; color: #fff; 
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px 10px 0 0; position: absolute; right: 50px; bottom: 0; z-index: 2;
+            font-size: 18px;
+        }
+        .item {
+            width: 50px; height: 50px; background: #FF9800; border: 2px solid #F57C00;
+            border-radius: 5px; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #fff; position: absolute; bottom: 5px; left: -60px;
+            font-size: 20px; z-index: 3;
+            transition: left 1.5s ease-out, opacity 0.5s; 
+        }
+        .scanner-beam {
+            position: absolute; right: 90px; bottom: 10px; width: 4px; height: 50px;
+            background: red; opacity: 0; z-index: 4;
+        }
+        .scanner-beam.scan { animation: flash 0.3s; }
+        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* 控制面板 */
+        .control-panel {
+            display: flex; gap: 20px; justify-content: center; align-items: center; margin-top: 20px;
+            background: #f5f5f5; padding: 10px; border-radius: 8px;
+        }
+        .status-item { font-family: monospace; font-size: 1.2em; color: #333; font-weight: bold; }
+        .status-val { color: #2196F3; display: inline-block; min-width: 40px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🤖</div>
+                <h1>Chapter 1: 模拟算法认知</h1>
+                <h3>—— 用代码“复刻”现实过程</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 什么是模拟？ -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 什么是模拟算法？</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <div class="vs-card" style="border-top: 5px solid #2196F3;">
+                            <span class="vs-title">🤡 通俗定义</span>
+                            <p>“照葫芦画瓢”</p>
+                            <p style="font-size: 0.9em; color: #666;">
+                                题目怎么说，你就怎么做。<br>
+                                一步步模仿人类的操作流程。
+                            </p>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="vs-card" style="border-top: 5px solid #333;">
+                            <span class="vs-title">👨‍💻 专业定义</span>
+                            <p>状态 + 流程</p>
+                            <p style="font-size: 0.9em; color: #666;">
+                                通过还原问题的操作流程，<br>
+                                按顺序执行指令，得到结果。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 模拟 vs 枚举 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🆚</span> 模拟 vs 枚举</h2>
+            </div>
+            <div class="slide-content">
+                <p>它们是算法界的“哼哈二将”，但思维方式完全不同。</p>
+                
+                <div class="two-columns">
+                    <div class="column">
+                        <div style="background: #fff3e0; padding: 20px; border-radius: 10px; border: 1px solid #ffe0b2;">
+                            <h3>🔍 枚举 (Enumeration)</h3>
+                            <p><strong>核心：</strong> 找答案</p>
+                            <p style="font-size: 0.9em;">"我不知道密码是啥，但我知道它在000-999之间，我挨个试。"</p>
+                            <p style="color: #F57C00; font-weight: bold;">主动搜索</p>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; border: 1px solid #bbdefb;">
+                            <h3>🤖 模拟 (Simulation)</h3>
+                            <p><strong>核心：</strong> 做任务</p>
+                            <p style="font-size: 0.9em;">"我知道规则是红灯停绿灯行，我只要照着规则走，就能到终点。"</p>
+                            <p style="color: #2196F3; font-weight: bold;">被动执行</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 生活案例：超市结账 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🛒</span> 生活案例：超市结账</h2>
+            </div>
+            <div class="slide-content">
+                <p>模拟流程：拿商品 &rarr; 扫码 &rarr; 累加总价 &rarr; 付款</p>
+                
+                <div class="checkout-counter">
+                    <div class="scanner-beam" id="beam"></div>
+                    <div class="cashier">收银</div>
+                    <!-- JS 生成商品 -->
+                </div>
+
+                <div class="control-panel">
+                    <button onclick="runSimulation()" style="padding: 8px 20px; background: #2196F3; color: #fff; border: none; font-size: 1em; border-radius: 6px; cursor: pointer;">▶ 开始模拟</button>
+                    <div class="status-item">Total: $<span class="status-val" id="total-price">0</span></div>
+                    <div class="status-item">Count: <span class="status-val" id="item-count">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 核心特点 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">⚖️</span> 核心特点</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column" style="border-left: 5px solid #4CAF50; padding-left: 20px;">
+                        <h3>✅ 优点</h3>
+                        <ul>
+                            <li><strong>逻辑直观</strong>：代码就是翻译题目。</li>
+                            <li><strong>容易调试</strong>：每一步都有迹可循。</li>
+                        </ul>
+                    </div>
+                    <div class="column" style="border-left: 5px solid #F44336; padding-left: 20px;">
+                        <h3>❌ 缺点</h3>
+                        <ul>
+                            <li><strong>代码量大</strong>：如果流程繁琐，代码会很长。</li>
+                            <li><strong>容易踩坑</strong>：一步错，步步错（细节魔鬼）。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="margin-top: 30px; border: 2px solid #333; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+                    <strong>💡 学习口诀：</strong><br>
+                    读懂题意是关键，变量命名要规范。<br>
+                    一步一步写逻辑，边界条件别看乱。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column" style="background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; text-align: center;">
+                        <h3>本质</h3>
+                        <p>流程复刻</p>
+                    </div>
+                    <div class="column" style="background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; text-align: center;">
+                        <h3>关键</h3>
+                        <p>按顺序执行</p>
+                    </div>
+                    <div class="column" style="background: #2196F3; color: #fff; padding: 20px; border-radius: 8px; text-align: center;">
+                        <h3>下一步</h3>
+                        <p>学习解题框架</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // 超市模拟逻辑
+            window.runSimulation = function() {
+                const counter = document.querySelector('.checkout-counter');
+                document.querySelectorAll('.item').forEach(e => e.remove());
+                document.getElementById('total-price').innerText = '0';
+                document.getElementById('item-count').innerText = '0';
+
+                let total = 0;
+                let count = 0;
+                const prices = [10, 5, 20, 8]; 
+
+                // 间隔延长到 3.5秒，给足时间
+                prices.forEach((price, index) => {
+                    setTimeout(() => {
+                        let item = document.createElement('div');
+                        item.className = 'item';
+                        item.innerText = '$' + price;
+                        counter.appendChild(item);
+
+                        // 1. 开始移动 (耗时 1.5s)
+                        setTimeout(() => {
+                            // 移动到扫码枪正下方 (right: 90px 左右)
+                            item.style.left = 'calc(100% - 140px)'; 
+                        }, 100);
+
+                        // 2. 到达后停顿，然后扫码 (在 1.6s 处)
+                        setTimeout(() => {
+                            document.getElementById('beam').classList.add('scan');
+                            setTimeout(() => document.getElementById('beam').classList.remove('scan'), 300);
+                            
+                            // 更新数据
+                            total += price;
+                            count++;
+                            document.getElementById('total-price').innerText = total;
+                            document.getElementById('item-count').innerText = count;
+                        }, 1600);
+
+                        // 3. 扫码完成后，再停留一会儿，然后消失 (在 2.5s 处)
+                        setTimeout(() => {
+                            item.style.opacity = '0';
+                        }, 2500);
+
+                    }, index * 3500); 
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

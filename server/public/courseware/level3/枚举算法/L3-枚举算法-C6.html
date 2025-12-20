@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>枚举算法 - Chapter 6: 实战综合</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        /* --- 代码块样式修改：白色背景 --- */
+        .code-block {
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .code-comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-func { color: #795e26; } /* 棕色函数名 */
+        .code-num { color: #a31515; } /* 红色数字 */
+
+        .two-columns {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .column { flex: 1; }
+
+        /* 流程卡片 */
+        .flow-step {
+            background: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 15px;
+            text-align: center; position: relative; margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .flow-step::after {
+            content: "⬇"; position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%);
+            color: #007aff; font-size: 20px; font-weight: bold;
+        }
+        .flow-step:last-child::after { content: none; }
+        .flow-icon { font-size: 1.5em; }
+
+        /* 三连击演示 */
+        .combo-box {
+            display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 30px;
+            font-family: monospace; font-size: 1.5em;
+        }
+        .num-block {
+            background: #333; color: #fff; padding: 10px 20px; border-radius: 5px;
+            transition: 0.3s;
+        }
+        .num-block.highlight { background: #007aff; transform: scale(1.1); }
+        .digit-check {
+            display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; margin-top: 20px;
+            width: 80%; margin-left: auto; margin-right: auto;
+        }
+        .digit {
+            background: #eee; padding: 10px; text-align: center; border-radius: 4px; color: #ccc;
+            font-weight: bold;
+        }
+        .digit.found { background: #28a745; color: #fff; }
+
+        /* 构造法示意图 */
+        .mirror-box {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-family: monospace; font-size: 2em; background: #333; color: #fff; padding: 20px; border-radius: 10px;
+        }
+        .mirror-part { padding: 5px 10px; border: 2px dashed #555; border-radius: 5px; }
+        .mirror-arrow { color: #007aff; font-size: 1.5em; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🏆</div>
+                <h1>Chapter 6: 实战综合</h1>
+                <h3>—— 像考试一样思考</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 解题四部曲 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🗺️</span> 解题四部曲 (Strategy)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <div class="flow-step">
+                            <span class="flow-icon">👀</span>
+                            <div><strong>1. 审题</strong> <span style="font-size:0.8em; color:#666">(看N大小)</span></div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="flow-icon">📐</span>
+                            <div><strong>2. 范围</strong> <span style="font-size:0.8em; color:#666">(Start/End)</span></div>
+                        </div>
+                        <div class="flow-step">
+                            <span class="flow-icon">🔄</span>
+                            <div><strong>3. 循环</strong> <span style="font-size:0.8em; color:#666">(for结构)</span></div>
+                        </div>
+                        <div class="flow-step" style="border-color: #007aff;">
+                            <span class="flow-icon">✅</span>
+                            <div><strong>4. 验证</strong> <span style="font-size:0.8em; color:#666">(if条件)</span></div>
+                        </div>
+                    </div>
+                    <div class="column" style="display: flex; align-items: center;">
+                        <div style="background: #e3f2fd; padding: 30px; border-radius: 10px; border-left: 8px solid #2196F3; width: 100%;">
+                            <h3 style="margin-top:0;">考试秘籍：复杂度估算</h3>
+                            <p>计算机每秒约运行 10<sup>8</sup> 次。</p>
+                            <ul style="margin-top: 20px;">
+                                <li style="margin-bottom: 15px;">
+                                    <strong>N ≤ 100</strong>: <br>
+                                    <span style="color:#28a745">可用三重循环 O(N<sup>3</sup>)</span> (100万)
+                                </li>
+                                <li style="margin-bottom: 15px;">
+                                    <strong>N ≤ 3000</strong>: <br>
+                                    <span style="color:#ffc107">可用双重循环 O(N<sup>2</sup>)</span> (900万)
+                                </li>
+                                <li>
+                                    <strong>N ≤ 10<sup>7</sup></strong>: <br>
+                                    <span style="color:#dc3545">只能用单层循环 O(N)</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 真题 1 - 三连击 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">1️⃣</span> 真题 1: 三连击 (洛谷 P1008)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <p><strong>题目：</strong> 将 1~9 这九个数分成三个三位数，要求第二个是第一个的2倍，第三个是第一个的3倍。</p>
+                        <p><strong>思路：</strong></p>
+                        <ul>
+                            <li><span class="highlight">枚举谁？</span> 只枚举第一个数 <code>i</code>。</li>
+                            <li><span class="highlight">范围？</span> 最小123，最大329 (因为 333*3=999)。</li>
+                            <li><span class="highlight">验证？</span> 检查这三个数是否刚好用完了 1~9。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">123</span>; i <= <span class="code-num">329</span>; i++) {
+    <span class="code-keyword">int</span> j = i * <span class="code-num">2</span>;
+    <span class="code-keyword">int</span> k = i * <span class="code-num">3</span>;
+    
+    <span class="code-comment">// 核心验证：检查 i, j, k </span>
+    <span class="code-comment">// 是否包含了 1~9 所有数字</span>
+    <span class="code-keyword">if</span> (check(i, j, k)) {
+        cout << i << <span class="code-comment">" "</span> << j << <span class="code-comment">" "</span> << k << endl;
+    }
+}</pre></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 互动 - 三连击验证 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🔍</span> 互动：数字查重</h2>
+            </div>
+            <div class="slide-content">
+                <p>演示：当 i=192 时，检查是否符合条件。</p>
+                <button onclick="checkCombo()" style="padding: 10px 30px; background: #007aff; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 1.2em;">▶ 验证 192, 384, 576</button>
+
+                <div class="combo-box">
+                    <div class="num-block" id="n1">192</div>
+                    <div>,</div>
+                    <div class="num-block" id="n2">384</div>
+                    <div>,</div>
+                    <div class="num-block" id="n3">576</div>
+                </div>
+                
+                <div class="digit-check">
+                    <div class="digit" id="d1">1</div><div class="digit" id="d2">2</div><div class="digit" id="d3">3</div>
+                    <div class="digit" id="d4">4</div><div class="digit" id="d5">5</div><div class="digit" id="d6">6</div>
+                    <div class="digit" id="d7">7</div><div class="digit" id="d8">8</div><div class="digit" id="d9">9</div>
+                </div>
+
+                <div id="check-log" style="margin-top: 20px; font-weight: bold; color: #28a745; min-height: 30px;"></div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 真题 2 - 回文日期 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">2️⃣</span> 真题 2: 回文日期 (构造法)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <p><strong>题目：</strong> 找出 10000101 到 89991231 之间的所有回文日期。</p>
+                        <div style="border: 2px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                            <span style="color: #dc3545; font-weight: bold;">❌ 笨办法</span>
+                            <p style="font-size:0.8em;">枚举每一天 (365 * 8000 = 300万次)。写起来巨麻烦（要处理闰年、月份天数）。</p>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div style="border: 2px solid #007aff; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                            <span style="color: #007aff; font-weight: bold;">✅ 构造法</span>
+                            <p style="font-size:0.8em;">只枚举 <strong>年份</strong> (1000~8999)，然后通过“照镜子”生成日期。</p>
+                        </div>
+                        <ul style="font-size: 0.9em; margin-top: 10px;">
+                            <li>枚举量仅 8000 次 (快300倍)</li>
+                            <li>逻辑简单：不用处理进位</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 构造法演示 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🛠️</span> 构造法：照镜子</h2>
+            </div>
+            <div class="slide-content">
+                <p>我们只需要枚举年份，右边自动生成。</p>
+                
+                <div style="margin: 40px auto; text-align: center;">
+                    <div class="mirror-box">
+                        <div class="mirror-part" style="color: #4fc3f7;">2021</div>
+                        <div class="mirror-arrow"> + </div>
+                        <div class="mirror-part" style="color: #ffb74d;">1202</div>
+                        <div class="mirror-arrow"> = </div>
+                        <div>20211202</div>
+                    </div>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                        (年份) + (年份的倒序)
+                    </p>
+                </div>
+
+                <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> year = <span class="code-num">1000</span>; year <= <span class="code-num">8999</span>; year++) {
+    <span class="code-comment">// 1. 构造出回文日期</span>
+    <span class="code-keyword">int</span> date = year * <span class="code-num">10000</span> + reverse(year); 
+    
+    <span class="code-comment">// 2. 只需要验证：这个日期合法吗？</span>
+    <span class="code-comment">// (比如 20211332 这种 月份13 就是非法的)</span>
+    <span class="code-keyword">if</span> (isValid(date)) {
+        cout << date << endl;
+    }
+}</pre></div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 总结 -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 实战 CheckList</h2>
+            </div>
+            <div class="slide-content">
+                <div style="text-align: left; background: #f9f9f9; padding: 30px; border-radius: 10px; border-left: 10px solid #007aff;">
+                    <p>提交代码前，请自问：</p>
+                    <ul style="list-style: none;">
+                        <li>⬜ <strong>数据范围看了吗？</strong> (会不会超时)</li>
+                        <li>⬜ <strong>边界处理了吗？</strong> (是 &lt; 还是 &le;)</li>
+                        <li>⬜ <strong>能剪枝吗？</strong> (找到答案是否 break)</li>
+                        <li>⬜ <strong>能倒着搜吗？</strong> (找最大值时)</li>
+                        <li>⬜ <strong>能构造吗？</strong> (像回文日期那样)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // 三连击验证逻辑
+            window.checkCombo = function() {
+                // Reset
+                document.querySelectorAll('.digit').forEach(d => d.className = 'digit');
+                document.getElementById('check-log').innerText = '';
+                
+                const digits = [1,9,2, 3,8,4, 5,7,6];
+                
+                let i = 0;
+                let interval = setInterval(() => {
+                    if(i >= 9) {
+                        clearInterval(interval);
+                        document.getElementById('check-log').innerText = "✅ 成功！1~9 全部出现且无重复。";
+                        return;
+                    }
+                    
+                    let d = digits[i];
+                    // Highlight digit in grid
+                    document.getElementById('d'+d).classList.add('found');
+                    
+                    i++;
+                }, 300);
+            }
+        });
+    </script>
+
+</body>
+</html>

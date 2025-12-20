@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模拟算法 - Chapter 5: 优化与进阶</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(33, 150, 243, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #2196F3;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #2196F3; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #2196F3; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e3f2fd; border-left: 5px solid #2196F3; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 30px; align-items: flex-start; }
+        .col { flex: 1; text-align: left; }
+
+        /* 优化卡片 */
+        .opt-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 20px;
+            margin-bottom: 15px; transition: 0.3s; display: flex; align-items: center; gap: 15px;
+        }
+        .opt-card:hover { border-color: #2196F3; transform: translateX(10px); }
+        .opt-icon { font-size: 2em; }
+
+        /* 周期演示 */
+        .cycle-track {
+            display: flex; gap: 10px; justify-content: center; margin-top: 30px;
+            overflow: hidden; padding: 10px; border: 2px dashed #ccc; border-radius: 10px;
+        }
+        .light {
+            width: 60px; height: 60px; border-radius: 50%; opacity: 0.3; transition: 0.3s;
+            border: 4px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        .light.active { opacity: 1; transform: scale(1.2); }
+        .light.red { background: #F44336; }
+        .light.yellow { background: #FFC107; }
+        .light.green { background: #4CAF50; }
+
+        /* 数据溢出演示 */
+        .overflow-box {
+            width: 200px; height: 100px; background: #333; color: #fff; margin: 0 auto;
+            display: flex; align-items: center; justify-content: center; font-family: monospace;
+            font-size: 1.5em; border-radius: 8px; position: relative; overflow: hidden;
+        }
+        .overflow-box.explode { animation: shake 0.5s; background: #F44336; }
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+
+        /* 代码块样式 (模仿 Chapter 4) */
+        .code-block {
+            background-color: #ffffff;
+            color: #333333;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .code-comment { color: #008000; font-style: italic; }
+        .code-keyword { color: #0000ff; font-weight: bold; }
+        .code-func { color: #795e26; }
+        .code-num { color: #a31515; }
+        .code-str { color: #a31515; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>Chapter 5: 优化与进阶</h1>
+                <h3>—— 拒绝超时 (TLE) & 拒绝溢出 (WA)</h3>
+            </div>
+        </section>
+
+        <!-- Slide 2: 三大优化方向 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🗺️</span> 三大优化方向</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <div class="opt-card">
+                            <span class="opt-icon">🔄</span>
+                            <div>
+                                <strong>找规律 (Cycle)</strong><br>
+                                <span style="font-size:0.8em; color:#666">利用周期性跳过循环</span>
+                            </div>
+                        </div>
+                        <div class="opt-card">
+                            <span class="opt-icon">💾</span>
+                            <div>
+                                <strong>预处理 (Pre-calc)</strong><br>
+                                <span style="font-size:0.8em; color:#666">空间换时间，避免重复算</span>
+                            </div>
+                        </div>
+                        <div class="opt-card" style="border-color: #F44336;">
+                            <span class="opt-icon">💥</span>
+                            <div>
+                                <strong>防溢出 (Long Long)</strong><br>
+                                <span style="font-size:0.8em; color:#666">数据太大 int 装不下</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col" style="display:flex; align-items:center;">
+                        <div style="background:#fff3e0; padding:20px; border-radius:8px; border-left:5px solid #FF9800;">
+                            <h3>💡 核心思维</h3>
+                            <p>模拟不是傻算。</p>
+                            <p>如果 N > 10^8，一定有规律！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 找规律：周期性 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">1️⃣</span> 找规律：周期性</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <p><strong>问题：</strong> 红绿灯按 <span style="color:#F44336">红</span> &rarr; <span style="color:#FFC107">黄</span> &rarr; <span style="color:#4CAF50">绿</span> 循环。</p>
+                        <p>问第 10^18 秒是什么灯？</p>
+                        <div style="margin-top:20px; font-size:0.9em; color:#666;">
+                            笨办法：<code>for (i=1 to 10^18)</code><br>
+                            <span style="color:red;">超时！(TLE)</span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="code-block"><pre><span class="code-comment">// 聪明办法：取模 (%)</span>
+<span class="code-keyword">long long</span> n = <span class="code-num">1e18</span>;
+<span class="code-keyword">int</span> cycle = <span class="code-num">3</span>; <span class="code-comment">// 周期长度</span>
+
+<span class="code-keyword">int</span> pos = n % cycle; <span class="code-comment">// 直接算结果</span>
+
+<span class="code-keyword">if</span> (pos == <span class="code-num">1</span>) cout << <span class="code-str">"Red"</span>;
+<span class="code-keyword">else if</span> (pos == <span class="code-num">2</span>) cout << <span class="code-str">"Yellow"</span>;
+<span class="code-keyword">else</span> cout << <span class="code-str">"Green"</span>;</pre></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 互动：周期演示 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🔄</span> 互动：周期跳跃</h2>
+            </div>
+            <div class="slide-content">
+                <p style="font-size:0.9em;">模拟第 10 次亮灯 (10 % 3 = 1 &rarr; 红)</p>
+                <button id="btn-cycle" style="padding:10px 30px; background:#2196F3; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:1.2em;">▶ 直接跳跃计算</button>
+                
+                <div class="cycle-track">
+                    <div class="light red" id="l1"></div>
+                    <div class="light yellow" id="l2"></div>
+                    <div class="light green" id="l3"></div>
+                </div>
+
+                <div id="cycle-log" style="margin-top:20px; font-family:monospace; color:#333;">等待计算...</div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 数据范围：防溢出 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">2️⃣</span> 巨坑：数据溢出</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <p><code>int</code> 最大约 2×10^9。</p>
+                        <p>如果题目说 "结果可能很大"，或者 N=10^18。</p>
+                        <p style="color:#F44336; font-weight:bold;">必须用 long long！</p>
+                    </div>
+                    <div class="col">
+                        <div class="overflow-box" id="int-box">2147483647</div>
+                        <button id="btn-overflow" style="margin-top:20px; padding:5px 15px; cursor:pointer;">+1</button>
+                        <p id="ov-msg" style="font-size:0.8em; color:#666; margin-top:10px;">(int 的极限)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 预处理：空间换时间 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">3️⃣</span> 预处理 (Pre-calc)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <p><strong>场景：</strong> 询问 1000 次 "第 N 个斐波那契数是多少？"</p>
+                        <p><strong>笨办法：</strong> 每次都重新算一遍。</p>
+                        <p><strong>好办法：</strong> 先算好存数组里，问谁给谁。</p>
+                    </div>
+                    <div class="col">
+                        <div class="code-block"><pre><span class="code-keyword">long long</span> f[<span class="code-num">1005</span>]; 
+
+<span class="code-comment">// 1. 预先算好 (只跑一次)</span>
+f[<span class="code-num">1</span>] = <span class="code-num">1</span>; f[<span class="code-num">2</span>] = <span class="code-num">1</span>;
+<span class="code-keyword">for</span>(<span class="code-keyword">int</span> i=<span class="code-num">3</span>; i<=<span class="code-num">1000</span>; i++) {
+    f[i] = f[i-<span class="code-num">1</span>] + f[i-<span class="code-num">2</span>];
+}
+
+<span class="code-comment">// 2. 直接查表 (O(1) 极快)</span>
+cin >> n;
+cout << f[n];</pre></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 总结 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#e3f2fd; padding:15px; border-radius:8px;">
+                        <h3>时间优化</h3>
+                        <p>找周期 (%)</p>
+                        <p>预处理 (Array)</p>
+                    </div>
+                    <div class="col" style="background:#ffebee; padding:15px; border-radius:8px;">
+                        <h3>空间/范围</h3>
+                        <p><code>long long</code> 防溢出</p>
+                        <p>数组开够大</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // --- 周期演示逻辑 ---
+            const btnCycle = document.getElementById('btn-cycle');
+            const lights = [document.getElementById('l1'), document.getElementById('l2'), document.getElementById('l3')];
+            const logCycle = document.getElementById('cycle-log');
+
+            btnCycle.addEventListener('click', function() {
+                // Reset
+                lights.forEach(l => l.classList.remove('active'));
+                logCycle.innerText = "计算中: 10 % 3 ...";
+
+                setTimeout(() => {
+                    let remainder = 10 % 3; // 1
+                    // 数组索引是 0,1,2。余数1对应第1个(索引0)吗？
+                    // 假设 1=Red, 2=Yellow, 0=Green
+                    let idx = (remainder === 0) ? 2 : remainder - 1;
+                    
+                    lights[idx].classList.add('active');
+                    logCycle.innerHTML = `10 % 3 = <strong>${remainder}</strong> &rarr; 第 ${remainder} 个灯 (Red)`;
+                }, 500);
+            });
+
+            // --- 溢出演示逻辑 ---
+            const btnOverflow = document.getElementById('btn-overflow');
+            const boxOverflow = document.getElementById('int-box');
+            const msgOverflow = document.getElementById('ov-msg');
+
+            btnOverflow.addEventListener('click', function() {
+                boxOverflow.innerText = "-2147483648"; // 溢出变成负数
+                boxOverflow.classList.add('explode');
+                msgOverflow.innerHTML = "<span style='color:red;'>💥 爆炸！变成负数了！</span>";
+                
+                setTimeout(() => boxOverflow.classList.remove('explode'), 500);
+            });
+        });
+    </script>
+
+</body>
+</html>

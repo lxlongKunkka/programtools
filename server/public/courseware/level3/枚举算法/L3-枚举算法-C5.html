@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>枚举算法 - Chapter 5: 优化技巧</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        /* --- 代码块样式修改：白色背景 --- */
+        .code-block {
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .code-comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-func { color: #795e26; } /* 棕色函数名 */
+        .code-num { color: #a31515; } /* 红色数字 */
+
+        .two-columns {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .column { flex: 1; }
+
+        /* 剪枝动画 */
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .tree-branch {
+            width: 4px;
+            height: 50px;
+            background-color: #333;
+            margin: 0 auto;
+        }
+        .tree-nodes {
+            display: flex;
+            gap: 40px;
+        }
+        .tree-node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #28a745;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            position: relative;
+        }
+        .tree-node.bad {
+            background-color: #dc3545;
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+        .tree-node.bad.pruned {
+            opacity: 0.2;
+            text-decoration: line-through;
+        }
+        .scissors {
+            font-size: 2em;
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.5s;
+        }
+        .scissors.cut {
+            opacity: 1;
+            transform: translateX(-10px) rotate(-45deg);
+        }
+
+        /* 降维打击图示 */
+        .dim-box {
+            border: 2px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+        }
+        .dim-arrow {
+            font-size: 2em;
+            color: #007aff;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>Chapter 5: 优化技巧</h1>
+                <h3>—— 让你的代码飞起来</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 为什么要优化？ -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🐢</span> 为什么要优化？</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>现实很残酷：</strong> 计算机不是无限快的。</p>
+                <ul>
+                    <li>通常限制：<strong>1 秒</strong></li>
+                    <li>运算上限：约 <strong>1亿次</strong> (10<sup>8</sup>)</li>
+                </ul>
+                <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;">
+                    <strong>⚠️ 警示：</strong><br>
+                    如果 <i>N</i> = 10000，写了 <i>O(N<sup>2</sup>)</i> 的双重循环：<br>
+                    10000 × 10000 = 1 亿次 → <span style="color: #e63946; font-weight: bold;">危险边缘！</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 技巧1 - 缩小范围 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🔍</span> 技巧 1：缩小枚举范围</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>案例：</strong> 判断 <i>N</i> 是否为质数。</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>❌ 笨办法 (遍历到 N)</h4>
+                        <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">2</span>; i < n; i++) {
+    <span class="code-keyword">if</span> (n % i == <span class="code-num">0</span>) <span class="code-keyword">return</span> <span class="code-keyword">false</span>;
+}</pre></div>
+                        <p style="font-size: 0.8em;">如果 N=100，要试 98 次。</p>
+                    </div>
+                    <div class="column">
+                        <h4>✅ 好办法 (遍历到 √N)</h4>
+                        <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">2</span>; i * i <= n; i++) {
+    <span class="code-keyword">if</span> (n % i == <span class="code-num">0</span>) <span class="code-keyword">return</span> <span class="code-keyword">false</span>;
+}</pre></div>
+                        <p style="font-size: 0.8em;">如果 N=100，只要试到 10，<strong>仅需 9 次！</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 技巧2 - 提前终止 (剪枝) -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✂️</span> 技巧 2：提前终止 (剪枝)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>核心：</strong> 发现路不通，立马回头，不要一条道走到黑。</p>
+                <ul>
+                    <li><code>break</code>: 终止整个循环（找到了，不找了）。</li>
+                    <li><code>continue</code>: 跳过本次（这个不行，看下一个）。</li>
+                </ul>
+                
+                <div class="tree-container">
+                    <div class="tree-node">Root</div>
+                    <div class="tree-branch"></div>
+                    <div class="tree-nodes">
+                        <div class="tree-node">A</div>
+                        <div class="tree-node bad" id="node-b">B<div class="scissors">✂️</div></div>
+                        <div class="tree-node">C</div>
+                    </div>
+                </div>
+                <p style="text-align: center; font-size: 0.8em; color: #666; margin-top: 10px;">
+                    <span id="prune-status">正在检查分支...</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 5: 剪枝代码示例 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> 剪枝代码示例</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>任务：</strong> 找第一个能被 17 整除的数。</p>
+                <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">1</span>; i <= <span class="code-num">100</span>; i++) {
+    
+    <span class="code-keyword">if</span> (i % <span class="code-num">17</span> == <span class="code-num">0</span>) {
+        cout << i;
+        <span class="code-keyword">break</span>; <span class="code-comment">// 找到了就跑！</span>
+               <span class="code-comment">// 后面 18~100 都不用看了</span>
+    }
+    
+}</pre></div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 技巧3 - 降维打击 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📉</span> 技巧 3：降维打击 (知二求一)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>问题：</strong> <i>a</i> + <i>b</i> + <i>c</i> = 100</p>
+                
+                <div class="two-columns">
+                    <div class="column">
+                        <div class="dim-box" style="border-color: #dc3545;">
+                            <h4>3层循环 <i>O(N<sup>3</sup>)</i></h4>
+                            <p>枚举 a, 枚举 b, 枚举 c</p>
+                            <p>验证 a+b+c == 100</p>
+                        </div>
+                    </div>
+                    <div class="column" style="display: flex; align-items: center; justify-content: center;">
+                        <div class="dim-arrow">➔ 优化 ➔</div>
+                    </div>
+                    <div class="column">
+                        <div class="dim-box" style="border-color: #28a745;">
+                            <h4>2层循环 <i>O(N<sup>2</sup>)</i></h4>
+                            <p>枚举 a, 枚举 b</p>
+                            <p><strong>直接计算 c = 100 - a - b</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="code-block"><pre><span class="code-comment">// 优化后：O(N^2)</span>
+<span class="code-keyword">for</span>(<span class="code-keyword">int</span> a=<span class="code-num">0</span>; a<=<span class="code-num">100</span>; a++) {
+    <span class="code-keyword">for</span>(<span class="code-keyword">int</span> b=<span class="code-num">0</span>; b<=<span class="code-num">100</span>; b++) {
+        <span class="code-keyword">int</span> c = <span class="code-num">100</span> - a - b; <span class="code-comment">// 算出来！</span>
+        <span class="code-keyword">if</span> (c >= <span class="code-num">0</span>) { ... }
+    }
+}</pre></div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 总结 -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <ul>
+                    <li><strong>缩范围</strong>：利用数学性质 (如 √N)。</li>
+                    <li><strong>勤剪枝</strong>：用 <code>break</code> / <code>continue</code> 减少无效运算。</li>
+                    <li><strong>降维度</strong>：利用等式关系，能算出来的变量就不要枚举。</li>
+                </ul>
+                <div class="conclusion" style="background-color: #f6ffed; border-color: #b7eb8f;">
+                    <strong>下一章预告：</strong><br>
+                    学了这么多，是时候来一场真正的战斗了！下一章我们将进行<strong>综合实战</strong>，解决真题！
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // 剪枝动画
+            const nodeB = document.getElementById('node-b');
+            const scissors = nodeB.querySelector('.scissors');
+            const statusText = document.getElementById('prune-status');
+
+            function playPruneAnim() {
+                // 重置
+                nodeB.classList.remove('pruned');
+                scissors.classList.remove('cut');
+                statusText.innerText = "正在检查分支...";
+
+                setTimeout(() => {
+                    statusText.innerText = "发现分支 B 无效！";
+                    scissors.classList.add('cut');
+                }, 1000);
+
+                setTimeout(() => {
+                    nodeB.classList.add('pruned');
+                    statusText.innerText = "剪枝完成！跳过 B 的所有子节点。";
+                }, 1500);
+            }
+
+            // 监听 Slide 4 的激活
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.target.id === 'slide-4' && mutation.target.classList.contains('active')) {
+                        playPruneAnim();
+                    }
+                });
+            });
+            observer.observe(document.getElementById('slide-4'), { attributes: true });
+        });
+    </script>
+
+</body>
+</html>
