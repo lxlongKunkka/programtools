@@ -516,8 +516,33 @@ export default {
       const lvl = level.level || level.levelId
       const currentLvl = this.getCurrentSubjectLevel()
       
+      // If level is lower than current, it's all unlocked (history)
       if (lvl < currentLvl) return true
-      if (lvl > currentLvl) return false
+      
+      // For current OR future levels (插班生/跳级):
+      // Always unlock the first chapter of any topic
+      if (level.topics) {
+        for (const topic of level.topics) {
+          if (topic.chapters && topic.chapters.length > 0) {
+            const firstChap = topic.chapters[0]
+            // Check by reference or ID
+            if (firstChap === chapter || firstChap.id === chapter.id) return true
+            if (firstChap._id && chapter._id && firstChap._id === chapter._id) return true
+          }
+        }
+      }
+      // Always unlock the first chapter of the level (Legacy)
+      if (level.chapters && level.chapters.length > 0) {
+         const firstChap = level.chapters[0]
+         if (firstChap === chapter || firstChap.id === chapter.id) return true
+         if (firstChap._id && chapter._id && firstChap._id === chapter._id) return true
+      }
+      
+      // If level is higher than current, and not the first chapter, it's locked by default
+      // UNLESS explicitly unlocked in userProgress (e.g. manual unlock by admin)
+      if (lvl > currentLvl) {
+         // Check explicit unlocks below
+      }
       
       // Check by UID first (Robust)
       // If user has UIDs recorded, we trust UIDs exclusively for chapters that have UIDs
