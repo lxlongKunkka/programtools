@@ -197,8 +197,14 @@ export default {
       if (token) {
         return steps.map(html => {
            return html.replace(/(src=["'])((\/public\/|\/api\/public\/)[^"']*)(["'])/g, (match, prefix, url, pathPrefix, suffix) => {
-               const separator = url.includes('?') ? '&' : '?'
-               return `${prefix}${url}${separator}token=${token}${suffix}`
+               // Force /api/public prefix for production compatibility
+               let finalUrl = url;
+               if (finalUrl.startsWith('/public/')) {
+                   finalUrl = '/api' + finalUrl;
+               }
+
+               const separator = finalUrl.includes('?') ? '&' : '?'
+               return `${prefix}${finalUrl}${separator}token=${token}${suffix}`
            })
         })
       }
@@ -299,10 +305,20 @@ export default {
           // Inject Token
           try {
             let src = iframe.getAttribute('src')
-            if (src && (src.startsWith('/public/') || src.startsWith('/api/public/')) && !src.includes('token=')) {
-              if (token) {
-                const separator = src.includes('?') ? '&' : '?'
-                iframe.setAttribute('src', src + separator + 'token=' + token)
+            if (src && (src.startsWith('/public/') || src.startsWith('/api/public/'))) {
+              let finalUrl = src;
+              // Force /api/public prefix
+              if (finalUrl.startsWith('/public/')) {
+                 finalUrl = '/api' + finalUrl;
+              }
+              
+              if (!finalUrl.includes('token=') && token) {
+                 const separator = finalUrl.includes('?') ? '&' : '?'
+                 finalUrl = finalUrl + separator + 'token=' + token
+              }
+              
+              if (finalUrl !== src) {
+                 iframe.setAttribute('src', finalUrl)
               }
             }
           } catch (e) {}
