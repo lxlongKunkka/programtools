@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - 模运算与同余入门精讲</title>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(103, 58, 183, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #673AB7;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #673AB7; border-bottom: 4px solid #ede7f6; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        
+        p, li { 
+            font-size: clamp(1.5em, 2.5vw, 2em); 
+            line-height: 1.6; 
+            color: #333; 
+            margin-bottom: 15px;
+        }
+        ul, ol { padding-left: 40px; }
+        
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #673AB7; font-weight: bold; }
+        
+        .conclusion { 
+            margin-top: 4vh; 
+            padding: 25px; 
+            background-color: #ede7f6; 
+            border-left: 8px solid #673AB7; 
+            border-radius: 8px; 
+            font-style: italic; 
+            font-size: 1.1em;
+        }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+        .example-box { 
+            background-color: #f3e5f5; 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+            border: 1px solid #e1bee7;
+        }
+        .example-title { 
+            font-weight: bold; 
+            color: #673AB7; 
+            margin-bottom: 10px; 
+            font-size: 1.2em;
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #673AB7; margin-top: 20px; font-size: 1.2em;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        
+        /* 模运算演示区域 */
+        .mod-demo {
+            display: flex;
+            justify-content: center;
+            margin: 40px 0;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .mod-card {
+            background: white;
+            border: 3px solid #673AB7;
+            border-radius: 10px;
+            padding: 20px;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .mod-card .title {
+            font-weight: bold;
+            color: #673AB7;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .mod-result {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        /* 互动按钮 */
+        .interactive-btn {
+            padding: 15px 40px;
+            background: #673AB7;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.5em;
+            display: block;
+            margin: 20px auto;
+            transition: all 0.3s;
+        }
+        .interactive-btn:hover {
+            background: #512da8;
+            transform: scale(1.05);
+        }
+        
+        /* 步骤指示器 */
+        .steps {
+            margin: 30px 0;
+            padding-left: 20px;
+        }
+        .step-item {
+            margin-bottom: 25px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .step-item:before {
+            content: "";
+            position: absolute;
+            left: -10px;
+            top: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #673AB7;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* 新增动画样式 */
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #673AB7; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #673AB7; margin-bottom: 15px; }
+
+        /* 时钟动画 */
+        .clock-face {
+            width: 250px; height: 250px; border: 8px solid #333; border-radius: 50%;
+            position: relative; margin: 20px auto;
+        }
+        .clock-hand {
+            width: 6px; height: 100px; background: #673AB7; position: absolute;
+            bottom: 50%; left: 50%; transform-origin: bottom center;
+            transition: transform 0.5s cubic-bezier(0.4, 2.5, 0.6, 0.8);
+        }
+        .clock-num {
+            position: absolute; font-weight: bold; color: #666; font-size: 1.2em;
+        }
+        .n12 { top: 10px; left: 50%; transform: translateX(-50%); }
+        .n3 { right: 10px; top: 50%; transform: translateY(-50%); }
+        .n6 { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .n9 { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        /* 负数取模动画 */
+        .mod-line {
+            position: relative; height: 6px; background: #ccc; margin: 60px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .mod-point {
+            width: 15px; height: 15px; background: #666; border-radius: 50%; position: relative;
+        }
+        .mod-label {
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%); font-size: 0.9em; font-weight: bold;
+        }
+        .jumper {
+            width: 30px; height: 30px; background: #F44336; border-radius: 50%;
+            position: absolute; top: -12px; left: 0; transition: left 0.5s;
+        }
+        .jump-btn {
+            padding: 15px 30px; background: #673AB7; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.2em;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+
+        /* 公式块 (放大字体) */
+        .formula {
+            font-size: 1.5em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🔢</div>
+                <h1>模运算与同余入门精讲</h1>
+                <p style="margin-top: 30px;">数论基础 · 计算机应用 · 实战演练</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: 课程导入 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🎯</span> 一、课程导入：核心意义</h2>
+            </div>
+            <div class="slide-content">
+                <p>模运算与同余是数论的基础核心内容，也是计算机科学、密码学、编码理论等领域的重要数学工具。</p>
+                <p><strong>核心作用：</strong> 描述整数在“周期性分组”下的等价关系，解决整数除法中“余数相关”的问题。</p>
+                
+                <h3>生活与专业领域的应用：</h3>
+                <ul>
+                    <li><strong>日常生活：</strong> 星期计算、时钟计时</li>
+                    <li><strong>专业领域：</strong> 加密算法设计、数据校验、数论问题求解</li>
+                </ul>
+                
+                <div class="conclusion">
+                    本课件将延续“基础原理→核心概念→公式推导→例题演练→实际应用→易错点规避”的逻辑框架，循序渐进地讲解核心知识。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 模运算的定义 (新增时钟动画) -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 二、模运算的定义</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <p>模运算本质是整数除法中的“余数运算”，是理解同余概念的前提。</p>
+                        
+                        <p><strong>定义：</strong> 对于任意整数a和正整数m，存在唯一的整数q（商）和r（余数），满足：</p>
+                        <div class="formula">a = q × m + r，其中 0 ≤ r &lt; m</div>
+                        <p>此时，称r为a除以m的余数，记为 <span class="highlight">r = a mod m</span>。这里的m称为“模数”。</p>
+                        
+                        <h3>关键说明：</h3>
+                        <ul>
+                            <li>1. 模数m必须是正整数，余数r的取值范围是[0, m-1]；</li>
+                            <li>2. 当a为正数时，余数r可直接通过整数除法求得；</li>
+                            <li>3. 当a为负数时，余数r仍需满足0 ≤ r &lt; m，需调整商q的取值。</li>
+                        </ul>
+                    </div>
+                    <div class="col" style="text-align: center;">
+                        <div class="clock-face">
+                            <div class="clock-num n12">0</div>
+                            <div class="clock-num n3">3</div>
+                            <div class="clock-num n6">6</div>
+                            <div class="clock-num n9">9</div>
+                            <div class="clock-hand" id="hand"></div>
+                        </div>
+                        <p><strong>时钟模型：</strong><br>13点 = 1点 (13 % 12 = 1)</p>
+                        <button id="btn-spin" style="padding:10px 30px; font-size:1.2em; cursor:pointer; background:#673AB7; color:white; border:none; border-radius:8px;">+13小时</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 模运算的实例演练 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✏️</span> 二、模运算的实例演练</h2>
+            </div>
+            <div class="slide-content">
+                <div class="mod-demo">
+                    <div class="mod-card">
+                        <div class="title">正数模运算</div>
+                        <p>15 mod 4 = ?</p>
+                        <p>解析：15 = 4×3 + 3</p>
+                        <div class="mod-result">3</div>
+                    </div>
+                    
+                    <div class="mod-card">
+                        <div class="title">负数模运算</div>
+                        <p>-7 mod 5 = ?</p>
+                        <p>解析：-7 = 5×(-2) + 3</p>
+                        <div class="mod-result">3</div>
+                    </div>
+                    
+                    <div class="mod-card">
+                        <div class="title">零的模运算</div>
+                        <p>0 mod 6 = ?</p>
+                        <p>解析：0 = 6×0 + 0</p>
+                        <div class="mod-result">0</div>
+                    </div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">常见误区：负数模运算的余数符号错误</div>
+                    <p>错误：-10 mod 3 = -1</p>
+                    <p>纠正：-10 = 3×(-4) + 2，因此-10 mod 3 = 2（余数必须满足0 ≤ r &lt; m）</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 模运算的基本性质 (新增技巧卡片) -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔑</span> 二、模运算的基本性质</h2>
+            </div>
+            <div class="slide-content">
+                <p>模运算满足加法、减法、乘法、幂运算的封闭性，设a、b为整数，m为正整数，k为非负整数：</p>
+                
+                <div class="container">
+                    <div class="col skill-card">
+                        <div class="skill-title">性质1：加法性质</div>
+                        <div class="formula">(a + b) mod m = [(a mod m) + (b mod m)] mod m</div>
+                        <p>示例：(13 + 8) mod 5 = 21 mod 5 = 1</p>
+                        <p>[(13 mod 5) + (8 mod 5)] mod 5 = (3 + 3) mod 5 = 1</p>
+                    </div>
+                    
+                    <div class="col skill-card">
+                        <div class="skill-title">性质2：减法性质</div>
+                        <div class="formula">(a - b) mod m = [(a mod m) - (b mod m) + m] mod m</div>
+                        <p>示例：(8 - 13) mod 5 = (-5) mod 5 = 0</p>
+                        <p>[(8 mod 5) - (13 mod 5) + 5] mod 5 = 4</p>
+                    </div>
+                </div>
+                
+                <div class="container">
+                    <div class="col skill-card">
+                        <div class="skill-title">性质3：乘法性质</div>
+                        <div class="formula">(a × b) mod m = [(a mod m) × (b mod m)] mod m</div>
+                        <p>示例：(13 × 8) mod 5 = 104 mod 5 = 4</p>
+                        <p>[(13 mod 5) × (8 mod 5)] mod 5 = (3 × 3) mod 5 = 4</p>
+                    </div>
+                    
+                    <div class="col skill-card">
+                        <div class="skill-title">性质4：幂运算性质</div>
+                        <div class="formula">aᵏ mod m = [(a mod m)ᵏ] mod m</div>
+                        <p>示例：13³ mod 5 = 2197 mod 5 = 2</p>
+                        <p>[(13 mod 5)³] mod 5 = 3³ mod 5 = 2</p>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>黄金法则：</strong> 步步取模！防止大数溢出。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 同余的定义 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔄</span> 三、同余的定义</h2>
+            </div>
+            <div class="slide-content">
+                <p>同余是模运算的延伸，描述了两个整数在模m下的“等价关系”，是数论中研究整数性质的重要工具。</p>
+                
+                <p><strong>定义：</strong> 设a、b为整数，m为正整数，若m能整除(a - b)，即 m | (a - b)，则称a与b关于模m同余，记为：</p>
+                <div class="formula">a ≡ b (mod m)</div>
+                
+                <p><strong>等价定义：</strong> a ≡ b (mod m) ⇔ a mod m = b mod m（即a和b除以m的余数相同）。</p>
+                
+                <h3>理解要点：</h3>
+                <ul>
+                    <li>1. 同余的本质是“余数相同”，如13 mod 5 = 3，8 mod 5 = 3，因此13 ≡ 8 (mod 5)；</li>
+                    <li>2. 同余符号“≡”并非等于号，它表示的是“模m下的等价”；</li>
+                    <li>3. 当a ≡ 0 (mod m)时，等价于m | a（如10 ≡ 0 (mod 5)）。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 7: 同余实例与等价性质 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📝</span> 三、同余实例与等价性质</h2>
+            </div>
+            <div class="slide-content">
+                <h3>同余实例：</h3>
+                <div class="example-box">
+                    <p>① 15 ≡ 3 (mod 6)</p>
+                    <p>解析：15-3=12，6 | 12；且15 mod 6=3，3 mod 6=3</p>
+                </div>
+                
+                <div class="example-box">
+                    <p>② -7 ≡ 3 (mod 5)</p>
+                    <p>解析：-7-3=-10，5 | -10；且-7 mod 5=3，3 mod 5=3</p>
+                </div>
+                
+                <h3>同余的基本性质（等价关系）：</h3>
+                <p>同余关系满足自反性、对称性和传递性，可将整数按模m划分为m个“同余类”。</p>
+                <ul>
+                    <li>性质1（自反性）：对任意整数a，a ≡ a (mod m)；</li>
+                    <li>性质2（对称性）：若a ≡ b (mod m)，则b ≡ a (mod m)；</li>
+                    <li>性质3（传递性）：若a ≡ b (mod m)且b ≡ c (mod m)，则a ≡ c (mod m)。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 8: 同余的运算性质 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚙️</span> 三、同余的运算性质</h2>
+            </div>
+            <div class="slide-content">
+                <p>同余关系在加法、减法、乘法、幂运算中保持封闭（设a、b、c、d为整数，m为正整数，k为非负整数）：</p>
+                
+                <div class="container">
+                    <div class="col">
+                        <h3>性质1（加法同余）</h3>
+                        <div class="formula">若a ≡ b (mod m)，c ≡ d (mod m)，则(a + c) ≡ (b + d) (mod m)</div>
+                    </div>
+                    
+                    <div class="col">
+                        <h3>性质2（减法同余）</h3>
+                        <div class="formula">若a ≡ b (mod m)，c ≡ d (mod m)，则(a - c) ≡ (b - d) (mod m)</div>
+                    </div>
+                </div>
+                
+                <div class="container">
+                    <div class="col">
+                        <h3>性质3（乘法同余）</h3>
+                        <div class="formula">若a ≡ b (mod m)，c ≡ d (mod m)，则(a × c) ≡ (b × d) (mod m)</div>
+                    </div>
+                    
+                    <div class="col">
+                        <h3>性质4（幂运算同余）</h3>
+                        <div class="formula">若a ≡ b (mod m)，则aᵏ ≡ bᵏ (mod m)</div>
+                    </div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">示例：</div>
+                    <p>13 ≡ 3 (mod 5)，则13³ ≡ 3³ (mod 5)</p>
+                    <p>即2197 ≡ 27 ≡ 2 (mod 5)，与2197 mod 5=2一致</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 同余的除法性质 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">➗</span> 三、同余的除法性质</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>注意：</strong> 同余的除法不具有普遍封闭性，需满足额外条件。</p>
+                
+                <p><strong>核心性质：</strong></p>
+                <div class="code-block">
+                    若a×c ≡ b×c (mod m)，且gcd(c, m) = 1（c与m互质），<br>
+                    则a ≡ b (mod m)。
+                </div>
+                
+                <h3>说明：</h3>
+                <ul>
+                    <li>1. gcd(c, m)表示c与m的最大公约数，“互质”即最大公约数为1；</li>
+                    <li>2. 只有当除数c与模数m互质时，才能两边同时除以c；</li>
+                    <li>3. 若gcd(c, m) = d > 1，则需将模数和同余式同时除以d。</li>
+                </ul>
+                
+                <div class="container">
+                    <div class="col example-box">
+                        <div class="example-title">满足互质条件</div>
+                        <p>3×4 ≡ 3×9 (mod 5)，gcd(3,5)=1</p>
+                        <p>结论：4 ≡ 9 (mod 5)（9 mod 5=4，成立）</p>
+                    </div>
+                    
+                    <div class="col example-box">
+                        <div class="example-title">不满足互质条件</div>
+                        <p>2×3 ≡ 2×6 (mod 6)，gcd(2,6)=2>1</p>
+                        <p>处理：同余式和模数同除以2，得3 ≡ 6 (mod 3)</p>
+                        <p>结论：3 mod 3=0，6 mod 3=0，成立</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 基础例题 - 模运算计算 -->
+        <section class="slide" id="slide-10">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 四、基础例题：模运算计算</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例1：</strong>计算下列模运算结果：</p>
+                <ol>
+                    <li>-18 mod 7；</li>
+                    <li>25 mod 4；</li>
+                    <li>0 mod 9；</li>
+                    <li>(12 - 20) mod 6。</li>
+                </ol>
+                
+                <button id="showSol1" class="interactive-btn">查看解析</button>
+                
+                <div id="solution1" style="display: none;">
+                    <div class="example-box">
+                        <p>① 负数模运算：-18 = 7×(-3) + 3（确保余数3∈[0,6]），因此-18 mod 7 = 3；</p>
+                        <p>② 正数模运算：25 = 4×6 + 1，因此25 mod 4 = 1；</p>
+                        <p>③ 零的模运算：0 = 9×0 + 0，因此0 mod 9 = 0；</p>
+                        <p>④ 减法模运算：先算括号内12-20=-8，再算-8 mod 6：-8 = 6×(-2) + 4，结果为4。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 基础例题 - 同余判定 -->
+        <section class="slide" id="slide-11">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔍</span> 四、基础例题：同余判定</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例2：</strong>判断下列同余关系是否成立：</p>
+                <ol>
+                    <li>17 ≡ 5 (mod 6)；</li>
+                    <li>-9 ≡ 6 (mod 5)；</li>
+                    <li>24 ≡ 16 (mod 7)。</li>
+                </ol>
+                
+                <p><strong>判定核心：</strong>判断m是否整除(a - b)，或a mod m是否等于b mod m。</p>
+                
+                <button id="showSol2" class="interactive-btn">查看解析</button>
+                
+                <div id="solution2" style="display: none;">
+                    <div class="example-box">
+                        <p>① 17 - 5 = 12，6 | 12（12÷6=2），因此17 ≡ 5 (mod 6)成立；</p>
+                        <p>② -9 - 6 = -15，5 | -15（-15÷5=-3），因此-9 ≡ 6 (mod 5)成立；</p>
+                        <p>③ 24 mod 7 = 3，16 mod 7 = 2，3≠2，因此24 ≡ 16 (mod 7)不成立。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12: 进阶例题 - 大幂次模运算 -->
+        <section class="slide" id="slide-12">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💪</span> 四、进阶例题：大幂次模运算</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例3：</strong>计算 2¹⁰⁰ mod 7（核心：利用同余的幂运算性质简化）</p>
+                
+                <button id="stepThrough" class="interactive-btn">分步演示</button>
+                
+                <div id="powerSteps" style="display: none;">
+                    <div class="steps">
+                        <div class="step-item">
+                            <p><strong>步骤1：</strong>计算小幂次模7结果：</p>
+                            <ul>
+                                <li>2¹ mod 7 = 2；</li>
+                                <li>2² mod 7 = 4；</li>
+                                <li>2³ mod 7 = 8 mod 7 = 1；</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤2：</strong>发现周期：2³ ≡ 1 (mod 7)，因此2³ᵏ ≡ 1ᵏ = 1 (mod 7)；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤3：</strong>拆分100：100 = 3×33 + 1，因此2¹⁰⁰ = 2^(3×33 + 1) = (2³)^33 × 2¹；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤4：</strong>利用同余性质：(2³)^33 × 2¹ ≡ 1^33 × 2 ≡ 2 (mod 7)；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>结论：</strong>2¹⁰⁰ mod 7 = 2</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13: 进阶例题 - 同余方程 -->
+        <section class="slide" id="slide-13">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">❓</span> 四、进阶例题：同余方程</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例4：</strong>求解同余方程 3x ≡ 2 (mod 7)（即找到整数x，使3x除以7的余数为2）</p>
+                
+                <button id="showEquation" class="interactive-btn">查看求解过程</button>
+                
+                <div id="equationSolution" style="display: none;">
+                    <div class="steps">
+                        <div class="step-item">
+                            <p><strong>步骤1：</strong>找3的逆元：试算k=5，因为3×5=15 ≡ 1 (mod 7)，因此逆元为5；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤2：</strong>方程两边同时乘以5：5×3x ≡ 5×2 (mod 7)；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤3：</strong>化简：15x ≡ 10 (mod 7)，即1x ≡ 3 (mod 7)（因为15 mod 7=1，10 mod 7=3）；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤4：</strong>解为：x ≡ 3 (mod 7)，即所有满足x=3+7k（k∈Z）的整数x（如3、10、17、-4等）。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14: 综合例题 - 星期计算 -->
+        <section class="slide" id="slide-14">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📅</span> 四、综合例题：星期计算</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例5：</strong>已知今天是星期一，求100天后是星期几？</p>
+                
+                <p>思路：星期具有周期性（周期为7），因此可转化为模7运算。</p>
+                
+                <button id="showWeekday" class="interactive-btn">查看计算过程</button>
+                
+                <div id="weekdaySolution" style="display: none;">
+                    <div class="steps">
+                        <div class="step-item">
+                            <p><strong>步骤1：</strong>定义：星期一对应1，星期二对应2，…，星期日对应0；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤2：</strong>今天是星期一（1），100天后的星期数 = (1 + 100) mod 7；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤3：</strong>计算：101 mod 7 = 101 - 7×14 = 101 - 98 = 3；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>步骤4：</strong>对应星期：3对应星期三；</p>
+                        </div>
+                        
+                        <div class="step-item">
+                            <p><strong>结论：</strong>100天后是星期三。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15: 实际应用场景 -->
+        <section class="slide" id="slide-15">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔬</span> 五、实际应用场景</h2>
+            </div>
+            <div class="slide-content">
+                <p>模运算与同余的应用广泛，尤其在需要“周期性”“余数校验”“加密解密”的场景中不可或缺：</p>
+                
+                <div class="container">
+                    <div class="col">
+                        <h3>5.1 日常生活</h3>
+                        <ul>
+                            <li><strong>时钟计时：</strong>12小时制中，时针位置是“当前时间 mod 12”</li>
+                            <li><strong>星期计算：</strong>利用模7运算确定未来/过去某一天的星期</li>
+                            <li><strong>农历节气：</strong>基于回归年周期，通过模运算计算日期</li>
+                        </ul>
+                        
+                        <h3>5.2 计算机科学</h3>
+                        <ul>
+                            <li><strong>身份证校验：</strong>最后一位校验码通过前17位模11运算得到</li>
+                            <li><strong>哈希函数：</strong>将任意长度数据映射到固定范围，常用模运算</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col">
+                        <h3>5.3 密码学</h3>
+                        <ul>
+                            <li><strong>RSA加密：</strong>核心公式c = mᵉ mod n和m = cᵈ mod n</li>
+                            <li><strong>密钥生成：</strong>基于e×d ≡ 1 (mod φ(n))的同余性质</li>
+                        </ul>
+                        
+                        <h3>5.4 数学竞赛</h3>
+                        <ul>
+                            <li><strong>整除性判断：</strong>如判断能否被3整除，用各位和mod 3</li>
+                            <li><strong>周期性问题：</strong>利用模运算简化周期重复的计算</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 16: 常见易错点 (新增负数取模动画和错误标签) -->
+        <section class="slide" id="slide-16">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 六、常见易错点与规避</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">符号错误</span> <strong>负数取模</strong>：记得 <code>+m</code> 再 <code>%m</code>。</li>
+                    <li><span class="mistake-tag">条件忽略</span> <strong>同余除法</strong>：除法不满足简单取模，需互质或逆元。</li>
+                    <li><span class="mistake-tag">溢出</span> <strong>大数运算</strong>：<code>(a*b)%m</code> 中 <code>a*b</code> 可能爆 <code>long long</code>。</li>
+                    <li><span class="mistake-tag">混淆</span> <strong>同余 vs 等号</strong>：同余是模 m 下的等价。</li>
+                </ul>
+
+                <!-- 负数取模动画 -->
+                <div style="margin-top: 50px;">
+                    <h3>负数取模的修正演示</h3>
+                    <p>C++ 中 <code>-2 % 5 = -2</code>，但数学余数应为 3。</p>
+                    <div class="mod-line">
+                        <div class="mod-point" style="left: 0%"><div class="mod-label">-2</div></div>
+                        <div class="mod-point" style="left: 20%"><div class="mod-label">-1</div></div>
+                        <div class="mod-point" style="left: 40%"><div class="mod-label">0</div></div>
+                        <div class="mod-point" style="left: 60%"><div class="mod-label">1</div></div>
+                        <div class="mod-point" style="left: 80%"><div class="mod-label">2</div></div>
+                        <div class="mod-point" style="left: 100%"><div class="mod-label">3</div></div>
+                        <div class="jumper" id="jumper" style="left: 0%"></div>
+                    </div>
+                    <div style="text-align: center;">
+                        <button id="btn-neg" class="jump-btn">1. 初始 (-2)</button>
+                        <button id="btn-fix" class="jump-btn" style="margin-left: 20px;">2. 修正 (+5)</button>
+                    </div>
+                    <div class="formula" style="margin-top: 30px;">
+                        ans = (a % m + m) % m;
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 17: 总结与学习建议 (优化布局) -->
+        <section class="slide" id="slide-17">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📝</span> 七、总结与学习建议</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#f3e5f5; padding:30px; border-radius:12px;">
+                        <h3>核心知识框架</h3>
+                        <p>模运算定义（时钟模型）</p>
+                        <p>加减乘幂运算性质</p>
+                        <p>同余等价关系</p>
+                        <p>除法特殊条件</p>
+                    </div>
+                    <div class="col" style="background:#ede7f6; padding:30px; border-radius:12px;">
+                        <h3>课后练习</h3>
+                        <p>1. 计算 -25 mod 9；② (18×25) mod 7；③ 3¹⁰ mod 8；</p>
+                        <p>2. 判断：① 28 ≡ 13 (mod 5)；② -12 ≡ 6 (mod 9)；</p>
+                        <p>3. 求解同余方程：2x ≡ 5 (mod 9)；</p>
+                        <p>4. 已知今天是星期三，求50天后是星期几？</p>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 40px;">学习建议</h3>
+                <ul>
+                    <li>1. 夯实基础：熟练掌握模运算定义（尤其是负数）和同余等价关系；</li>
+                    <li>2. 强化计算：多练习负数模运算、大幂次简化，提升准确性；</li>
+                    <li>3. 理解应用：结合实际场景（如星期计算、身份证校验）理解意义；</li>
+                    <li>4. 重视易错点：针对负数模运算、同余除法等进行专项练习；</li>
+                    <li>5. 关联拓展：可进一步学习欧拉函数、中国剩余定理等内容。</li>
+                </ul>
+                
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    模运算与同余是数论的基础，下一章我们将学习更高级的数论工具——欧拉函数与裴蜀定理，深入探索整数的深层性质。
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 17</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 互动元素逻辑 ---
+            // 例1解析
+            document.getElementById('showSol1').addEventListener('click', function() {
+                document.getElementById('solution1').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+            
+            // 例2解析
+            document.getElementById('showSol2').addEventListener('click', function() {
+                document.getElementById('solution2').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+            
+            // 例3分步演示
+            document.getElementById('stepThrough').addEventListener('click', function() {
+                document.getElementById('powerSteps').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+            
+            // 例4方程求解
+            document.getElementById('showEquation').addEventListener('click', function() {
+                document.getElementById('equationSolution').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+            
+            // 例5星期计算
+            document.getElementById('showWeekday').addEventListener('click', function() {
+                document.getElementById('weekdaySolution').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+
+            // --- 时钟动画 ---
+            const btnSpin = document.getElementById('btn-spin');
+            const hand = document.getElementById('hand');
+            let rotation = 0;
+
+            if (btnSpin && hand) {
+                btnSpin.addEventListener('click', function() {
+                    rotation += 360 + 30; // 转一圈(12) + 1格(1) = 13
+                    hand.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+                });
+            }
+
+            // --- 负数演示逻辑 ---
+            const btnNeg = document.getElementById('btn-neg');
+            const btnFix = document.getElementById('btn-fix');
+            const jumper = document.getElementById('jumper');
+
+            if (btnNeg && btnFix && jumper) {
+                btnNeg.addEventListener('click', function() {
+                    jumper.style.left = '0%'; // -2的位置
+                    jumper.style.backgroundColor = "#F44336";
+                });
+
+                btnFix.addEventListener('click', function() {
+                    jumper.style.left = '100%'; // 3的位置
+                    jumper.style.backgroundColor = "#4CAF50";
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

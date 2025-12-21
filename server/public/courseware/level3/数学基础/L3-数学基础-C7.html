@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - Chapter 7: 几何基础</title>
+    <style>
+        /* --- 基础布局 (延续前章风格) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(255, 152, 0, 0.7); /* 橙色系 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #FF9800;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #FF9800; border-bottom: 4px solid #FFF3E0; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.6; color: #333; margin-bottom: 15px; }
+        ul, ol { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #FF9800; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #FFF3E0; border-left: 8px solid #FF9800; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #FF9800; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #FF9800; margin-bottom: 15px; }
+
+        /* 公式块 */
+        .formula {
+            font-size: 1.5em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #FF9800; margin-top: 20px; font-size: 1.2em; line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        /* 示例盒子 */
+        .example-box {
+            background-color: #FFF3E0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #FFCC80;
+        }
+        .example-title {
+            font-weight: bold;
+            color: #FF9800;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* 几何动画样式 */
+        .geo-demo-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            border: 2px solid #FF9800;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .coord-plane {
+            width: 400px;
+            height: 400px;
+            border: 2px solid #333;
+            margin: 20px auto;
+            position: relative;
+            background-color: #fafafa;
+        }
+        .axis-x {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #000;
+        }
+        .axis-y {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #000;
+        }
+        .point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #FF9800;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .point:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+        .point-label {
+            position: absolute;
+            font-weight: bold;
+            color: #FF9800;
+            font-size: 1.2em;
+        }
+        .distance-line {
+            position: absolute;
+            border: 2px dashed #FF9800;
+            z-index: 1;
+        }
+        .rectangle {
+            position: absolute;
+            border: 3px solid #4CAF50;
+            background-color: rgba(76, 175, 80, 0.1);
+            z-index: 0;
+        }
+        .demo-btn {
+            padding: 12px 25px;
+            background: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        .demo-btn:hover {
+            background: #F57C00;
+            transform: scale(1.05);
+        }
+        .calc-result {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FF9800;
+            margin: 20px 0;
+        }
+
+        /* 距离对比表 */
+        .distance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 1.2em;
+        }
+        .distance-table th, .distance-table td {
+            border: 2px solid #FF9800;
+            padding: 15px;
+            text-align: center;
+        }
+        .distance-table th {
+            background-color: #FFF3E0;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">📐</div>
+                <h1>Chapter 7: 几何基础</h1>
+                <h3>—— Geometry Basics (平面坐标与距离计算)</h3>
+                <p style="margin-top: 20px;">平面坐标系、距离公式与 C++ 实现</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: 平面直角坐标系 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 一、平面直角坐标系</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 坐标系定义</h3>
+                <p>平面直角坐标系由横轴（x轴）和纵轴（y轴）组成，两轴垂直相交于<strong>原点(0,0)</strong>，将平面分为四个象限。</p>
+                
+                <div class="geo-demo-container">
+                    <h3>交互式坐标系演示</h3>
+                    <div class="coord-plane" id="coordPlane1">
+                        <div class="axis-x"></div>
+                        <div class="axis-y"></div>
+                        <div class="point" style="left: 60%; top: 30%;" id="pointA">
+                            <div class="point-label" style="left: 15px; top: -20px;">A(2,1)</div>
+                        </div>
+                        <div class="point" style="left: 30%; top: 70%;" id="pointB">
+                            <div class="point-label" style="left: 15px; top: 10px;">B(-1,-2)</div>
+                        </div>
+                    </div>
+                    <p>点击坐标系中的点查看坐标详情</p>
+                </div>
+                
+                <h3>2. 点的表示</h3>
+                <p>平面上任意一点 P 可用有序数对 <strong>(x, y)</strong> 表示：</p>
+                <ul>
+                    <li>x：横坐标（水平方向，右为正，左为负）；</li>
+                    <li>y：纵坐标（垂直方向，上为正，下为负）；</li>
+                    <li>原点：(0, 0)，是坐标系的中心。</li>
+                </ul>
+                
+                <div class="example-box">
+                    <div class="example-title">象限分布规则</div>
+                    <div class="container">
+                        <div class="col">
+                            <p>第一象限：x>0, y>0</p>
+                            <p>第二象限：x<0, y>0</p>
+                        </div>
+                        <div class="col">
+                            <p>第三象限：x<0, y<0</p>
+                            <p>第四象限：x>0, y<0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 距离公式（曼哈顿 vs 欧几里得） -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📏</span> 二、距离公式：曼哈顿 vs 欧几里得</h2>
+            </div>
+            <div class="slide-content">
+                <div class="distance-table">
+                    <tr>
+                        <th>距离类型</th>
+                        <th>计算公式</th>
+                        <th>几何意义</th>
+                    </tr>
+                    <tr>
+                        <td>欧几里得距离 (Euclidean)</td>
+                        <td>√[(x₂-x₁)² + (y₂-y₁)²]</td>
+                        <td>两点间直线距离（实际距离）</td>
+                    </tr>
+                    <tr>
+                        <td>曼哈顿距离 (Manhattan)</td>
+                        <td>|x₂-x₁| + |y₂-y₁|</td>
+                        <td>网格中沿坐标轴的最短路径</td>
+                    </tr>
+                </div>
+                
+                <div class="geo-demo-container" id="distanceDemo">
+                    <h3>交互式距离计算演示</h3>
+                    <div class="coord-plane" id="coordPlane2">
+                        <div class="axis-x"></div>
+                        <div class="axis-y"></div>
+                        <div class="point" style="left: 30%; top: 30%;" id="point1">
+                            <div class="point-label" style="left: 15px; top: -20px;">P1(1,1)</div>
+                        </div>
+                        <div class="point" style="left: 70%; top: 70%;" id="point2">
+                            <div class="point-label" style="left: 15px; top: 10px;">P2(3,-2)</div>
+                        </div>
+                        <div class="distance-line" style="left: 30%; top: 30%; width: 40%; height: 0; transform: rotate(45deg); transform-origin: left top; display: none;" id="euclidLine"></div>
+                    </div>
+                    <button class="demo-btn" id="calcEuclid">计算欧几里得距离</button>
+                    <button class="demo-btn" id="calcManhattan">计算曼哈顿距离</button>
+                    <div class="calc-result" id="distanceResult"></div>
+                </div>
+                
+                <div class="formula">
+                    示例：P1(1,1)，P2(3,-2)<br>
+                    欧几里得距离 = √[(3-1)² + (-2-1)²] = √(4+9) = √13 ≈ 3.605<br>
+                    曼哈顿距离 = |3-1| + |-2-1| = 2 + 3 = 5
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 距离计算的C++实现 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💻</span> 三、距离计算的 C++ 实现</h2>
+            </div>
+            <div class="slide-content">
+                <div class="skill-card">
+                    <div class="skill-title">1. 点的结构体定义（核心数据结构）</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <cmath> // 包含sqrt、fabs等数学函数<br>
+#include <iomanip> // 用于控制输出精度<br>
+using namespace std;<br>
+<br>
+// 定义点的结构体，封装x和y坐标<br>
+struct Point {<br>
+&nbsp;&nbsp;double x; // 横坐标（用double保证精度）<br>
+&nbsp;&nbsp;double y; // 纵坐标<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 构造函数：初始化点的坐标<br>
+&nbsp;&nbsp;Point(double x_ = 0, double y_ = 0) : x(x_), y(y_) {}<br>
+<br>
+&nbsp;&nbsp;// 打印点的坐标<br>
+&nbsp;&nbsp;void print() const {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "(" << x << ", " << y << ")" << endl;<br>
+&nbsp;&nbsp;}<br>
+};<br>
+                    </div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">2. 距离计算函数实现</div>
+                    <div class="code-block">
+// 计算两点间的欧几里得距离<br>
+double euclideanDistance(const Point& p1, const Point& p2) {<br>
+&nbsp;&nbsp;double dx = p2.x - p1.x;<br>
+&nbsp;&nbsp;double dy = p2.y - p1.y;<br>
+&nbsp;&nbsp;// 勾股定理：√(dx² + dy²)<br>
+&nbsp;&nbsp;return sqrt(dx * dx + dy * dy);<br>
+}<br>
+<br>
+// 计算两点间的曼哈顿距离<br>
+double manhattanDistance(const Point& p1, const Point& p2) {<br>
+&nbsp;&nbsp;double dx = fabs(p2.x - p1.x); // 绝对值<br>
+&nbsp;&nbsp;double dy = fabs(p2.y - p1.y);<br>
+&nbsp;&nbsp;// 曼哈顿距离：|x2-x1| + |y2-y1|<br>
+&nbsp;&nbsp;return dx + dy;<br>
+}<br>
+<br>
+// 主函数测试<br>
+int main() {<br>
+&nbsp;&nbsp;Point p1(1, 1);<br>
+&nbsp;&nbsp;Point p2(3, -2);<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cout << "点P1："; p1.print(); // 输出：(1, 1)<br>
+&nbsp;&nbsp;cout << "点P2："; p2.print(); // 输出：(3, -2)<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 设置输出精度为3位小数<br>
+&nbsp;&nbsp;cout << fixed << setprecision(3);<br>
+&nbsp;&nbsp;cout << "欧几里得距离：" << euclideanDistance(p1, p2) << endl; // 3.606<br>
+&nbsp;&nbsp;cout << "曼哈顿距离：" << manhattanDistance(p1, p2) << endl; // 5.000<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 判断点是否在矩形内 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔍</span> 四、判断点是否在矩形内</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 矩形的表示方法</h3>
+                <p>矩形由两个对角点定义：左上角 (xmin, ymax) 和右下角 (xmax, ymin)，或左下角 (xmin, ymin) 和右上角 (xmax, ymax)。</p>
+                
+                <div class="formula">
+                    点 P(x,y) 在矩形内的条件：<br>
+                    xmin ≤ x ≤ xmax 且 ymin ≤ y ≤ ymax
+                </div>
+                
+                <div class="geo-demo-container" id="rectDemo">
+                    <h3>交互式矩形包含判断</h3>
+                    <div class="coord-plane" id="coordPlane3">
+                        <div class="axis-x"></div>
+                        <div class="axis-y"></div>
+                        <!-- 矩形：xmin=-2, ymin=-1, xmax=2, ymax=2 -->
+                        <div class="rectangle" style="left: 25%; top: 20%; width: 50%; height: 50%;" id="rect"></div>
+                        <div class="point" style="left: 40%; top: 40%;" id="testPoint">
+                            <div class="point-label" style="left: 15px; top: -20px;">P(0,0)</div>
+                        </div>
+                    </div>
+                    <button class="demo-btn" id="checkPointInRect">判断点是否在矩形内</button>
+                    <div class="calc-result" id="rectResult"></div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">2. C++ 实现：判断点在矩形内</div>
+                    <div class="code-block">
+// 定义矩形结构体<br>
+struct Rectangle {<br>
+&nbsp;&nbsp;double xmin, ymin; // 左下角坐标<br>
+&nbsp;&nbsp;double xmax, ymax; // 右上角坐标<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 构造函数<br>
+&nbsp;&nbsp;Rectangle(double x1, double y1, double x2, double y2) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// 确保xmin ≤ xmax，ymin ≤ ymax<br>
+&nbsp;&nbsp;&nbsp;&nbsp;xmin = min(x1, x2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;xmax = max(x1, x2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ymin = min(y1, y2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ymax = max(y1, y2);<br>
+&nbsp;&nbsp;}<br>
+};<br>
+<br>
+// 判断点是否在矩形内（包含边界）<br>
+bool isPointInRectangle(const Point& p, const Rectangle& rect) {<br>
+&nbsp;&nbsp;return (p.x >= rect.xmin && p.x <= rect.xmax) &&<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(p.y >= rect.ymin && p.y <= rect.ymax);<br>
+}<br>
+<br>
+// 判断点是否在矩形内（不包含边界）<br>
+bool isPointInRectangleStrict(const Point& p, const Rectangle& rect) {<br>
+&nbsp;&nbsp;return (p.x > rect.xmin && p.x < rect.xmax) &&<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(p.y > rect.ymin && p.y < rect.ymax);<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;Point p(0, 0);<br>
+&nbsp;&nbsp;Rectangle rect(-2, -1, 2, 2); // 左下角(-2,-1)，右上角(2,2)<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;if (isPointInRectangle(p, rect)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "点" << fixed << setprecision(1) << "(" << p.x << "," << p.y << ") 在矩形内" << endl;<br>
+&nbsp;&nbsp;} else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "点不在矩形内" << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;// 输出：点(0.0,0.0) 在矩形内<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 实战例题 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> 五、实战例题</h2>
+            </div>
+            <div class="slide-content">
+                <div class="example-box">
+                    <div class="example-title">例1：计算多点到原点的距离</div>
+                    <p>已知点集：A(3,4)、B(-1,2)、C(0,-5)，计算各点到原点(0,0)的欧几里得距离，并排序。</p>
+                    <p>解：</p>
+                    <ul>
+                        <li>A到原点：√(3²+4²)=5；</li>
+                        <li>B到原点：√((-1)²+2²)=√5≈2.236；</li>
+                        <li>C到原点：√(0²+(-5)²)=5；</li>
+                        <li>排序：B(2.236) < A(5) = C(5)。</li>
+                    </ul>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">例2：矩形包含判断</div>
+                    <p>矩形：左上角(1,5)，右下角(4,2)，判断点 P1(2,3)、P2(1,5)、P3(5,3) 是否在矩形内。</p>
+                    <p>解：</p>
+                    <ul>
+                        <li>矩形范围：x∈[1,4]，y∈[2,5]；</li>
+                        <li>P1(2,3)：在矩形内；</li>
+                        <li>P2(1,5)：在边界上（包含边界则在内）；</li>
+                        <li>P3(5,3)：x=5>4，不在矩形内。</li>
+                    </ul>
+                </div>
+                
+                <button class="demo-btn" id="showPracticeCode" style="display: block; margin: 20px auto;">查看例题C++实现</button>
+                <div id="practiceCode" style="display: none;">
+                    <div class="skill-card">
+                        <div class="skill-title">例题1+2 完整实现</div>
+                        <div class="code-block">
+#include <iostream><br>
+#include <cmath><br>
+#include <iomanip><br>
+#include <vector><br>
+#include <algorithm><br>
+using namespace std;<br>
+<br>
+struct Point {<br>
+&nbsp;&nbsp;double x, y;<br>
+&nbsp;&nbsp;Point(double x_=0, double y_=0) : x(x_), y(y_) {}<br>
+};<br>
+<br>
+struct Rectangle {<br>
+&nbsp;&nbsp;double xmin, ymin, xmax, ymax;<br>
+&nbsp;&nbsp;Rectangle(double x1, double y1, double x2, double y2) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;xmin = min(x1, x2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;xmax = max(x1, x2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ymin = min(y1, y2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ymax = max(y1, y2);<br>
+&nbsp;&nbsp;}<br>
+};<br>
+<br>
+// 欧几里得距离<br>
+double euclideanDistance(const Point& p1, const Point& p2) {<br>
+&nbsp;&nbsp;double dx = p2.x - p1.x;<br>
+&nbsp;&nbsp;double dy = p2.y - p1.y;<br>
+&nbsp;&nbsp;return sqrt(dx*dx + dy*dy);<br>
+}<br>
+<br>
+// 判断点在矩形内（包含边界）<br>
+bool isPointInRectangle(const Point& p, const Rectangle& rect) {<br>
+&nbsp;&nbsp;return (p.x >= rect.xmin && p.x <= rect.xmax) &&<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(p.y >= rect.ymin && p.y <= rect.ymax);<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 例1：计算多点到原点的距离并排序<br>
+&nbsp;&nbsp;vector<Point> points = {Point(3,4), Point(-1,2), Point(0,-5)};<br>
+&nbsp;&nbsp;vector<pair<double, Point>> distPoints;<br>
+&nbsp;&nbsp;Point origin(0,0);<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cout << "例1：各点到原点的距离：" << endl;<br>
+&nbsp;&nbsp;for (const auto& p : points) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;double dist = euclideanDistance(p, origin);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;distPoints.emplace_back(dist, p);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "(" << p.x << "," << p.y << ")：" << fixed << setprecision(3) << dist << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 按距离排序<br>
+&nbsp;&nbsp;sort(distPoints.begin(), distPoints.end());<br>
+&nbsp;&nbsp;cout << "排序后：" << endl;<br>
+&nbsp;&nbsp;for (const auto& dp : distPoints) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "(" << dp.second.x << "," << dp.second.y << ")：" << dp.first << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 例2：矩形包含判断<br>
+&nbsp;&nbsp;Rectangle rect(1,5,4,2); // 左上角(1,5)，右下角(4,2)<br>
+&nbsp;&nbsp;vector<Point> testPoints = {Point(2,3), Point(1,5), Point(5,3)};<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cout << "\n例2：矩形包含判断：" << endl;<br>
+&nbsp;&nbsp;for (const auto& p : testPoints) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "点(" << p.x << "," << p.y << ")："<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<< (isPointInRectangle(p, rect) ? "在矩形内" : "不在矩形内") << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 常见易错点 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 六、常见易错点（C++ 重点）</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">精度问题</span> <strong>浮点数精度</strong>：使用int存储坐标/距离会丢失精度，必须用double/float；比较浮点数时避免直接用==，需设置误差范围（如1e-9）。</li>
+                    <li><span class="mistake-tag">坐标顺序</span> <strong>矩形坐标顺序</strong>：未统一矩形的xmin/xmax、ymin/ymax，导致判断逻辑错误（需先取min/max）。</li>
+                    <li><span class="mistake-tag">边界处理</span> <strong>包含/不包含边界</strong>：未明确判断条件是≥/≤还是>/<，导致结果不符合预期。</li>
+                    <li><span class="mistake-tag">数学函数</span> <strong>sqrt参数</strong>：sqrt传入负数（如距离计算时dx²+dy²为负），源于int溢出，需用double计算。</li>
+                    <li><span class="mistake-tag">绝对值遗漏</span> <strong>曼哈顿距离绝对值</strong>：忘记取绝对值，导致距离为负。</li>
+                    <li><span class="mistake-tag">输出格式</span> <strong>精度控制</strong>：未用fixed和setprecision控制浮点数输出精度，导致结果显示不规范。</li>
+                </ul>
+                
+                <div class="conclusion">
+                    <strong>C++ 避坑技巧：</strong><br>
+                    1. 坐标/距离统一使用double类型，避免精度丢失；<br>
+                    2. 矩形初始化时强制统一xmin≤xmax、ymin≤ymax；<br>
+                    3. 浮点数比较：if (fabs(a-b) < 1e-9) 替代 if (a==b)；<br>
+                    4. 曼哈顿距离必须用fabs取绝对值；<br>
+                    5. 输出浮点数时用fixed和setprecision控制精度；<br>
+                    6. 明确边界条件（包含/不包含），函数命名体现差异（如isPointInRectangleStrict）。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 总结与练习 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 七、总结与练习</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#FFF3E0; padding:30px; border-radius:12px;">
+                        <h3>核心知识</h3>
+                        <p>平面坐标系：点(x,y)的表示与象限分布；</p>
+                        <p>距离公式：欧几里得（直线）vs 曼哈顿（网格）；</p>
+                        <p>C++ 实现：Point/Rectangle结构体封装、距离计算；</p>
+                        <p>核心应用：两点距离计算、点在矩形内判断；</p>
+                        <p>避坑要点：浮点数精度、边界处理、坐标顺序。</p>
+                    </div>
+                    <div class="col" style="background:#FFCC80; padding:30px; border-radius:12px;">
+                        <h3>课后练习（C++ 实现）</h3>
+                        <p>1. 实现函数计算多点集中距离最近的两点对；</p>
+                        <p>2. 扩展矩形结构体，实现判断两个矩形是否相交；</p>
+                        <p>3. 计算点到直线的距离（扩展：ax+by+c=0）；</p>
+                        <p>4. 实现函数判断点是否在圆形内（圆心(x0,y0)，半径r）。</p>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    掌握了平面几何基础后，我们将学习几何进阶内容——<strong>向量基础与几何变换</strong>，解决向量运算、旋转、平移等更复杂的几何问题！
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 8</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 坐标系点交互 ---
+            const pointA = document.getElementById('pointA');
+            const pointB = document.getElementById('pointB');
+            
+            pointA.addEventListener('click', () => {
+                alert('点A坐标：(2, 1)，位于第一象限');
+            });
+            
+            pointB.addEventListener('click', () => {
+                alert('点B坐标：(-1, -2)，位于第三象限');
+            });
+
+            // --- 距离计算交互 ---
+            const calcEuclid = document.getElementById('calcEuclid');
+            const calcManhattan = document.getElementById('calcManhattan');
+            const distanceResult = document.getElementById('distanceResult');
+            const euclidLine = document.getElementById('euclidLine');
+            
+            calcEuclid.addEventListener('click', () => {
+                euclidLine.style.display = 'block';
+                // 计算P1(1,1)和P2(3,-2)的欧几里得距离
+                const dx = 3 - 1;
+                const dy = -2 - 1;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                distanceResult.textContent = `欧几里得距离：√(2² + (-3)²) = √13 ≈ ${dist.toFixed(3)}`;
+            });
+            
+            calcManhattan.addEventListener('click', () => {
+                euclidLine.style.display = 'none';
+                // 计算曼哈顿距离
+                const dx = Math.abs(3 - 1);
+                const dy = Math.abs(-2 - 1);
+                const dist = dx + dy;
+                distanceResult.textContent = `曼哈顿距离：|3-1| + |-2-1| = ${dx} + ${dy} = ${dist}`;
+            });
+
+            // --- 矩形包含判断交互 ---
+            const checkPointInRect = document.getElementById('checkPointInRect');
+            const rectResult = document.getElementById('rectResult');
+            const testPoint = document.getElementById('testPoint');
+            
+            checkPointInRect.addEventListener('click', () => {
+                // 矩形范围：x∈[-2,2]，y∈[-1,2]
+                // 测试点P(0,0)
+                const x = 0, y = 0;
+                const xmin = -2, xmax = 2;
+                const ymin = -1, ymax = 2;
+                
+                if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                    rectResult.textContent = `点(${x},${y}) 在矩形内（矩形范围：x∈[${xmin},${xmax}]，y∈[${ymin},${ymax}]）`;
+                } else {
+                    rectResult.textContent = `点(${x},${y}) 不在矩形内`;
+                }
+                
+                // 允许拖动测试点
+                testPoint.style.cursor = 'move';
+                let isDragging = false;
+                
+                testPoint.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    e.preventDefault();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const rect = document.getElementById('coordPlane3').getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    testPoint.style.left = `${x}%`;
+                    testPoint.style.top = `${y}%`;
+                    
+                    // 转换为实际坐标（-3~3范围）
+                    const realX = (x/100)*6 - 3;
+                    const realY = 3 - (y/100)*6;
+                    testPoint.querySelector('.point-label').textContent = `P(${realX.toFixed(1)},${realY.toFixed(1)})`;
+                    
+                    // 实时判断
+                    const inRect = realX >= xmin && realX <= xmax && realY >= ymin && realY <= ymax;
+                    rectResult.textContent = `点(${realX.toFixed(1)},${realY.toFixed(1)}) ${inRect ? '在' : '不在'} 矩形内`;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            });
+
+            // --- 实战例题代码展示 ---
+            document.getElementById('showPracticeCode').addEventListener('click', function() {
+                document.getElementById('practiceCode').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+        });
+    </script>
+
+</body>
+</html>

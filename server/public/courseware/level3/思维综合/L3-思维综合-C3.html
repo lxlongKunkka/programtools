@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维训练 - Chapter 3: 构造思维与特判</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(156, 39, 176, 0.7); /* 紫色系 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #9C27B0;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #9C27B0; border-bottom: 3px solid #f3e5f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #9C27B0; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #f3e5f5; border-left: 5px solid #9C27B0; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 30px; align-items: flex-start; }
+        .col { flex: 1; text-align: left; }
+
+        /* 构造法动画 */
+        .palindrome-builder {
+            display: flex; justify-content: center; gap: 5px; margin-top: 30px;
+        }
+        .p-box {
+            width: 50px; height: 50px; border: 2px solid #ccc; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5em; font-weight: bold; background: #fff; transition: 0.3s;
+        }
+        .p-box.filled { background: #E1BEE7; border-color: #9C27B0; color: #4A148C; transform: scale(1.1); }
+        .p-box.mirror { background: #F3E5F5; border-color: #BA68C8; color: #7B1FA2; }
+
+        /* 奇偶性动画 */
+        .balance-scale {
+            position: relative; width: 300px; height: 10px; background: #333; margin: 50px auto 0;
+            border-radius: 5px; transition: transform 0.5s;
+        }
+        .balance-scale::after { /* 支点 */
+            content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 30px solid #333;
+        }
+        .pan {
+            width: 80px; height: 80px; border: 3px solid #333; border-radius: 0 0 40px 40px;
+            position: absolute; top: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5em; font-weight: bold; background: #fff;
+        }
+        .pan-left { left: 0; }
+        .pan-right { right: 0; }
+        
+        .sum-display { text-align: center; font-size: 1.2em; margin-top: 40px; }
+        .result-tag { display: inline-block; padding: 5px 15px; border-radius: 20px; color: white; font-weight: bold; margin-left: 10px; }
+        .tag-no { background: #F44336; }
+        .tag-yes { background: #4CAF50; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🏗️</div>
+                <h1>Chapter 3: 构造思维与特判</h1>
+                <h3>—— 学会“造例子”</h3>
+            </div>
+        </section>
+
+        <!-- Slide 2: 什么是构造？ -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 什么是构造题？</h2>
+            </div>
+            <div class="slide-content">
+                <p>题目通常要求：<strong>“请输出任意一个满足条件的解”</strong>。</p>
+                <div class="container" style="margin-top: 30px;">
+                    <div class="col" style="background:#fff; border:1px solid #ddd; padding:20px; border-radius:8px;">
+                        <h3>❌ 暴力搜索</h3>
+                        <p>尝试所有可能，直到找到一个。</p>
+                        <p style="color:#F44336;">太慢！容易超时。</p>
+                    </div>
+                    <div class="col" style="background:#f3e5f5; border:1px solid #9C27B0; padding:20px; border-radius:8px;">
+                        <h3>✅ 构造思维</h3>
+                        <p>利用<strong>对称性、奇偶性</strong>等规律，直接生成一个解。</p>
+                        <p style="color:#9C27B0;">极快！O(N) 或 O(1)。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 构造回文串 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🔤</span> 案例1：构造回文串</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 构造一个长度为 <i>N</i> 的回文串，只包含 'a', 'b', 'c'。</p>
+                <p><strong>思路：</strong> 回文串是关于中心对称的。</p>
+                <ul>
+                    <li>我们只需要决定<strong>前一半</strong>填什么。</li>
+                    <li>后一半直接<strong>照镜子</strong>（复制）过去。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 4: 互动：回文构造器 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🛠️</span> 互动：回文构造器</h2>
+            </div>
+            <div class="slide-content">
+                <p>构造长度为 5 的回文串：</p>
+                <button id="btn-build" style="padding:10px 30px; background:#9C27B0; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:1.2em; display:block; margin: 0 auto;">▶ 填入下一个字符</button>
+                
+                <div class="palindrome-builder">
+                    <div class="p-box" id="pb0"></div>
+                    <div class="p-box" id="pb1"></div>
+                    <div class="p-box" id="pb2"></div>
+                    <div class="p-box" id="pb3"></div>
+                    <div class="p-box" id="pb4"></div>
+                </div>
+                <div id="build-log" style="text-align: center; margin-top: 20px; color: #666;">点击按钮开始构造...</div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 奇偶性特判 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">⚖️</span> 案例2：奇偶性特判</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 给定一堆数字，能否将它们分成两组，使得两组的和相等？</p>
+                <p><strong>直觉：</strong> 这是一个经典的“子集和”问题（背包问题），通常很难。</p>
+                <p><strong>特判思维：</strong></p>
+                <ul>
+                    <li>如果总和是<strong>奇数</strong>，能分成两个相等的整数吗？</li>
+                    <li>不能！因为 <i>Sum</i> = <i>A</i> + <i>A</i> = 2<i>A</i>，总和必须是偶数。</li>
+                </ul>
+                <div class="conclusion">
+                    <strong>结论：</strong> 拿到题先算总和。如果是奇数，直接输出 "NO"。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 互动：天平判断 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">⚖️</span> 互动：能平衡吗？</h2>
+            </div>
+            <div class="slide-content">
+                <div style="text-align: center;">
+                    <button onclick="checkBalance([1, 2, 3, 4])" style="margin:5px; padding:5px 10px;">数据 A: [1, 2, 3, 4]</button>
+                    <button onclick="checkBalance([1, 2, 3, 5])" style="margin:5px; padding:5px 10px;">数据 B: [1, 2, 3, 5]</button>
+                </div>
+
+                <div class="balance-scale" id="scale">
+                    <div class="pan pan-left">?</div>
+                    <div class="pan pan-right">?</div>
+                </div>
+
+                <div class="sum-display">
+                    总和: <span id="total-sum">0</span>
+                    <span id="result-tag" class="result-tag" style="display:none;">NO</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 总结 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#fff; border:1px solid #ddd; padding:20px; border-radius:8px;">
+                        <h3>构造法</h3>
+                        <p>利用对称性、周期性。</p>
+                        <p>只处理一半，另一半自动生成。</p>
+                    </div>
+                    <div class="col" style="background:#fff; border:1px solid #ddd; padding:20px; border-radius:8px;">
+                        <h3>特判思维</h3>
+                        <p>先看边界 (N=1)。</p>
+                        <p>先看性质 (奇偶性)。</p>
+                        <p>排除不可能的情况。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 回文构造逻辑 ---
+            const btnBuild = document.getElementById('btn-build');
+            const buildLog = document.getElementById('build-log');
+            const chars = ['a', 'b', 'c']; // 循环使用
+            let step = 0;
+            const len = 5;
+
+            btnBuild.addEventListener('click', function() {
+                if (step >= Math.ceil(len / 2)) {
+                    // Reset
+                    step = 0;
+                    for(let i=0; i<len; i++) {
+                        const box = document.getElementById('pb'+i);
+                        box.innerText = '';
+                        box.className = 'p-box';
+                    }
+                    buildLog.innerText = "重置... 再试一次";
+                    btnBuild.innerText = "▶ 填入下一个字符";
+                    return;
+                }
+
+                // 填入左边
+                const char = chars[step % 3];
+                const leftBox = document.getElementById('pb' + step);
+                leftBox.innerText = char;
+                leftBox.classList.add('filled');
+                
+                // 填入右边 (镜像)
+                const rightIdx = len - 1 - step;
+                if (rightIdx !== step) {
+                    const rightBox = document.getElementById('pb' + rightIdx);
+                    rightBox.innerText = char;
+                    rightBox.classList.add('mirror');
+                    buildLog.innerText = `填入第 ${step+1} 位 '${char}'，自动镜像到第 ${rightIdx+1} 位`;
+                } else {
+                    buildLog.innerText = `填入中间位 '${char}'`;
+                }
+
+                step++;
+                if (step >= Math.ceil(len / 2)) {
+                    btnBuild.innerText = "↺ 重置";
+                    buildLog.innerHTML += " <br><span style='color:#9C27B0'>构造完成！</span>";
+                }
+            });
+
+            // --- 奇偶性判断逻辑 ---
+            window.checkBalance = function(arr) {
+                const sum = arr.reduce((a, b) => a + b, 0);
+                const sumDisplay = document.getElementById('total-sum');
+                const resultTag = document.getElementById('result-tag');
+                const scale = document.getElementById('scale');
+
+                sumDisplay.innerText = sum;
+                resultTag.style.display = 'inline-block';
+
+                if (sum % 2 !== 0) {
+                    // 奇数 -> 不可能平衡
+                    resultTag.innerText = "NO (奇数)";
+                    resultTag.className = "result-tag tag-no";
+                    scale.style.transform = "rotate(10deg)"; // 倾斜
+                } else {
+                    // 偶数 -> 有可能 (这里简单演示为YES)
+                    resultTag.innerText = "YES (偶数)";
+                    resultTag.className = "result-tag tag-yes";
+                    scale.style.transform = "rotate(0deg)"; // 平衡
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

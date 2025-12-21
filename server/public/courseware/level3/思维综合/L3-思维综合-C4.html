@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维训练 - Chapter 4: 贪心策略</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(156, 39, 176, 0.7); /* 紫色系 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #9C27B0;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #9C27B0; border-bottom: 3px solid #f3e5f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #9C27B0; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #f3e5f5; border-left: 5px solid #9C27B0; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 30px; align-items: flex-start; }
+        .col { flex: 1; text-align: left; }
+
+        /* 贪心定义卡片 */
+        .greedy-card {
+            background: #fff; border: 2px solid #eee; border-radius: 12px; padding: 20px;
+            margin-bottom: 15px; text-align: center;
+        }
+        .greedy-icon { font-size: 2.5em; display: block; margin-bottom: 10px; }
+
+        /* 排队打水动画 */
+        .water-queue {
+            display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-top: 30px; height: 120px;
+        }
+        .person {
+            width: 50px; background: #E1BEE7; border: 2px solid #9C27B0; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #4A148C;
+            transition: all 0.5s; position: relative;
+        }
+        .person::after { content: 's'; font-size: 0.6em; }
+        .tap {
+            width: 60px; height: 100px; background: #ccc; border-radius: 5px; margin-right: 20px;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;
+        }
+
+        /* 合并果子动画 */
+        .fruit-pile {
+            width: 60px; height: 60px; border-radius: 50%; background: #FFCC80; border: 3px solid #FF9800;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #E65100;
+            transition: all 0.5s; position: relative;
+        }
+        .fruit-container {
+            display: flex; justify-content: center; gap: 20px; margin-top: 30px; align-items: flex-end; height: 150px;
+        }
+        .merged-pile {
+            background: #FF9800; color: white; transform: scale(1.2);
+        }
+        .energy-cost {
+            position: absolute; top: -30px; color: #F44336; font-weight: bold; opacity: 0; transition: opacity 0.5s;
+        }
+        .energy-cost.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🍰</div>
+                <h1>Chapter 4: 贪心策略</h1>
+                <h3>—— 只顾眼前的“短视”智慧</h3>
+            </div>
+        </section>
+
+        <!-- Slide 2: 什么是贪心？ -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 什么是贪心？</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>核心思想：</strong> 每一步都做出在当前看来最好的选择（局部最优），希望最终结果也是最好的（全局最优）。</p>
+                <div class="container" style="margin-top: 30px;">
+                    <div class="col greedy-card">
+                        <span class="greedy-icon">🦞</span>
+                        <h3>自助餐策略</h3>
+                        <p>只夹最贵的！<br>(单价最高)</p>
+                    </div>
+                    <div class="col greedy-card">
+                        <span class="greedy-icon">🏃</span>
+                        <h3>短跑策略</h3>
+                        <p>每一步都迈最大！<br>(步幅最大)</p>
+                    </div>
+                    <div class="col greedy-card">
+                        <span class="greedy-icon">💰</span>
+                        <h3>找零钱</h3>
+                        <p>先用大面额！<br>(张数最少)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 经典案例 - 排队打水 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💧</span> 案例1：排队打水</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> <i>N</i> 个人排队打水，耗时分别为 <i>T</i><sub>1</sub>, <i>T</i><sub>2</sub>... 如何排队让总等待时间最小？</p>
+                <p><strong>直觉：</strong> 快的人先打，慢的人后打。</p>
+                <div class="conclusion">
+                    <strong>证明（邻项交换法）：</strong><br>
+                    假设两个人 A(快) 和 B(慢)。<br>
+                    A在前：B 等 A。<br>
+                    B在前：A 等 B。<br>
+                    显然让 A 在前，B 等的时间更短！
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 互动：打水排序 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📊</span> 互动：谁先谁后？</h2>
+            </div>
+            <div class="slide-content">
+                <p>点击按钮，按耗时从小到大排序。</p>
+                <button id="btn-sort" style="padding:10px 30px; background:#9C27B0; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:1.2em; display:block; margin: 0 auto;">▶ 贪心排序</button>
+                
+                <div class="water-queue" id="queue-container">
+                    <div class="tap">水龙头</div>
+                    <!-- JS 生成人 -->
+                </div>
+                <div id="wait-log" style="text-align: center; margin-top: 20px; font-weight: bold; color: #666;">当前顺序：随机</div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 经典案例 - 合并果子 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🍎</span> 案例2：合并果子</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 有 <i>N</i> 堆果子，每次合并两堆，消耗体力 = 两堆重量之和。求合并成一堆的最小体力。</p>
+                <p><strong>贪心策略：</strong> 每次合并<strong>最小</strong>的两堆。</p>
+                <p><strong>数据结构：</strong> 优先队列 (Priority Queue) / 小根堆。</p>
+            </div>
+        </section>
+
+        <!-- Slide 6: 互动：合并演示 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🏗️</span> 互动：合并过程</h2>
+            </div>
+            <div class="slide-content">
+                <p>当前果子堆：<span id="piles-text">1, 2, 9, 4</span></p>
+                <button id="btn-merge" style="padding:10px 30px; background:#9C27B0; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:1.2em; display:block; margin: 0 auto;">▶ 合并最小两堆</button>
+                
+                <div class="fruit-container" id="fruit-container">
+                    <!-- JS 生成 -->
+                </div>
+                <div id="merge-log" style="text-align: center; margin-top: 20px; font-weight: bold; color: #F44336;">总消耗体力：0</div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 总结 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#fff; border:1px solid #ddd; padding:20px; border-radius:8px;">
+                        <h3>排序贪心</h3>
+                        <p>打水、活动安排。</p>
+                        <p>关键：按什么排序？</p>
+                    </div>
+                    <div class="col" style="background:#fff; border:1px solid #ddd; padding:20px; border-radius:8px;">
+                        <h3>堆贪心</h3>
+                        <p>合并果子、哈夫曼树。</p>
+                        <p>关键：每次取最小。</p>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>注意：</strong> 贪心不一定是对的！必须能证明“局部最优能推导全局最优”才行。
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 排队打水逻辑 ---
+            const queueContainer = document.getElementById('queue-container');
+            const btnSort = document.getElementById('btn-sort');
+            const waitLog = document.getElementById('wait-log');
+            let people = [8, 2, 5, 12]; // 初始乱序
+
+            function renderQueue(arr) {
+                // 清除除了水龙头以外的元素
+                while(queueContainer.children.length > 1) {
+                    queueContainer.removeChild(queueContainer.lastChild);
+                }
+                arr.forEach(t => {
+                    const p = document.createElement('div');
+                    p.className = 'person';
+                    p.style.height = (t * 5 + 20) + 'px'; // 高度代表时间
+                    p.innerText = t;
+                    queueContainer.appendChild(p);
+                });
+            }
+            renderQueue(people);
+
+            btnSort.addEventListener('click', function() {
+                people.sort((a, b) => a - b);
+                renderQueue(people);
+                waitLog.innerText = "当前顺序：从小到大 (最优)";
+                waitLog.style.color = "#4CAF50";
+                btnSort.disabled = true;
+                btnSort.style.opacity = 0.5;
+            });
+
+            // --- 合并果子逻辑 ---
+            const fruitContainer = document.getElementById('fruit-container');
+            const btnMerge = document.getElementById('btn-merge');
+            const pilesText = document.getElementById('piles-text');
+            const mergeLog = document.getElementById('merge-log');
+            let piles = [1, 2, 9, 4];
+            let totalCost = 0;
+
+            function renderFruits() {
+                fruitContainer.innerHTML = '';
+                piles.forEach(w => {
+                    const f = document.createElement('div');
+                    f.className = 'fruit-pile';
+                    f.style.width = (40 + w * 5) + 'px';
+                    f.style.height = (40 + w * 5) + 'px';
+                    f.innerText = w;
+                    fruitContainer.appendChild(f);
+                });
+                pilesText.innerText = piles.join(', ');
+            }
+            renderFruits();
+
+            btnMerge.addEventListener('click', function() {
+                if (piles.length <= 1) return;
+
+                // 1. 排序
+                piles.sort((a, b) => a - b);
+                
+                // 2. 取出最小两个
+                let a = piles.shift();
+                let b = piles.shift();
+                let sum = a + b;
+                totalCost += sum;
+
+                // 3. 放入新堆
+                piles.push(sum);
+                
+                // 4. 渲染
+                renderFruits();
+                mergeLog.innerText = `合并 ${a} + ${b} = ${sum}，总消耗：${totalCost}`;
+
+                // 高亮新生成的堆 (最后一个)
+                const lastChild = fruitContainer.lastChild;
+                lastChild.classList.add('merged-pile');
+                
+                // 显示消耗动画
+                const costLabel = document.createElement('div');
+                costLabel.className = 'energy-cost show';
+                costLabel.innerText = `+${sum}`;
+                lastChild.appendChild(costLabel);
+
+                setTimeout(() => {
+                    lastChild.classList.remove('merged-pile');
+                    costLabel.classList.remove('show');
+                }, 800);
+
+                if (piles.length === 1) {
+                    btnMerge.innerText = "合并完成";
+                    btnMerge.disabled = true;
+                    btnMerge.style.opacity = 0.5;
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

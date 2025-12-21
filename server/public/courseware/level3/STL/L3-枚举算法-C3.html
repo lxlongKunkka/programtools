@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>枚举算法 - Chapter 3: 多重循环枚举</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(0, 122, 255, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #007aff;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* --- 幻灯片内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        ul { padding-left: 25px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* 本章特定样式 */
+        /* --- 代码块样式修改：白色背景 --- */
+        .code-block {
+            background-color: #ffffff; /* 白色背景 */
+            color: #333333; /* 深色文字 */
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd; /* 添加边框以区分 */
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .code-comment { color: #008000; font-style: italic; } /* 绿色注释 */
+        .code-keyword { color: #0000ff; font-weight: bold; } /* 蓝色关键字 */
+        .code-func { color: #795e26; } /* 棕色函数名 */
+        .code-num { color: #a31515; } /* 红色数字 */
+
+        .two-columns {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .column { flex: 1; }
+
+        /* 时钟动画 */
+        .clock-container {
+            width: 150px;
+            height: 150px;
+            border: 8px solid #333;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto;
+        }
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            border-radius: 4px;
+        }
+        .hour-hand {
+            width: 6px;
+            height: 40px;
+            background-color: #333;
+            animation: rotate 12s linear infinite; /* 模拟外层循环 */
+        }
+        .minute-hand {
+            width: 4px;
+            height: 60px;
+            background-color: #007aff;
+            animation: rotate 1s linear infinite; /* 模拟内层循环 */
+        }
+        @keyframes rotate {
+            from { transform: translateX(-50%) rotate(0deg); }
+            to { transform: translateX(-50%) rotate(360deg); }
+        }
+
+        /* 矩阵图示 */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .matrix-cell {
+            background-color: #eee;
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        .matrix-cell.active { background-color: #007aff; color: white; }
+        .matrix-cell.skip { background-color: #ddd; color: #999; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🔄</div>
+                <h1>Chapter 3: 多重循环枚举</h1>
+                <h3>—— 当未知数不止一个时</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 为什么要多重循环？ -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">❓</span> 为什么要多重循环？</h2>
+            </div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <p><strong>单层循环：</strong> 解决只有一个变量的问题。</p>
+                        <p>例如：找一个数 <i>x</i>，满足... </p>
+                        <br>
+                        <p><strong>多层循环：</strong> 解决有多个变量组合的问题。</p>
+                        <p>例如：找两个数 <i>x</i> 和 <i>y</i>，满足 <i>x</i> + <i>y</i> = 10。</p>
+                    </div>
+                    <div class="column" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div class="clock-container">
+                            <div class="hand hour-hand"></div>
+                            <div class="hand minute-hand"></div>
+                        </div>
+                        <p style="text-align: center; margin-top: 10px; font-size: 0.9em;">
+                            <strong>形象理解：</strong><br>
+                            外层循环像时针（走得慢）<br>
+                            内层循环像分针（走得快）<br>
+                            <span class="highlight">外层走一步，内层跑一圈！</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 代码结构 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> 双重循环结构</h2>
+            </div>
+            <div class="slide-content">
+                <p>假设我们要从 1~5 中选两个数 <i>i</i> 和 <i>j</i>：</p>
+                <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">1</span>; i <= <span class="code-num">5</span>; i++) {      <span class="code-comment">// 外层：控制第一个数</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> j = <span class="code-num">1</span>; j <= <span class="code-num">5</span>; j++) {  <span class="code-comment">// 内层：控制第二个数</span>
+        cout << i << <span class="code-comment">", "</span> << j << endl;
+    }
+}</pre></div>
+                <p><strong>输出结果：</strong></p>
+                <p style="font-family: monospace; background: #eee; padding: 10px; border-radius: 4px;">
+                    1, 1 | 1, 2 | 1, 3 ... 1, 5<br>
+                    2, 1 | 2, 2 ...
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 4: 核心难点 - 去重 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🚫</span> 核心技巧：如何去重？</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>问题：</strong> 如果题目要求选两个<strong>不同</strong>的数，且 <code>(1, 2)</code> 和 <code>(2, 1)</code> 算同一种组合。</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>❌ 错误写法 (j 从 1 开始)</h4>
+                        <div class="matrix-grid">
+                            <div class="matrix-cell active">1,1</div><div class="matrix-cell active">1,2</div><div class="matrix-cell active">1,3</div><div class="matrix-cell active">1,4</div>
+                            <div class="matrix-cell active">2,1</div><div class="matrix-cell active">2,2</div><div class="matrix-cell active">2,3</div><div class="matrix-cell active">2,4</div>
+                            <div class="matrix-cell active">3,1</div><div class="matrix-cell active">3,2</div><div class="matrix-cell active">3,3</div><div class="matrix-cell active">3,4</div>
+                        </div>
+                        <p style="font-size: 0.8em; color: red;">重复且包含自身！</p>
+                    </div>
+                    <div class="column">
+                        <h4>✅ 正确写法 (j 从 i+1 开始)</h4>
+                        <div class="matrix-grid">
+                            <div class="matrix-cell skip">1,1</div><div class="matrix-cell active">1,2</div><div class="matrix-cell active">1,3</div><div class="matrix-cell active">1,4</div>
+                            <div class="matrix-cell skip">2,1</div><div class="matrix-cell skip">2,2</div><div class="matrix-cell active">2,3</div><div class="matrix-cell active">2,4</div>
+                            <div class="matrix-cell skip">3,1</div><div class="matrix-cell skip">3,2</div><div class="matrix-cell skip">3,3</div><div class="matrix-cell active">3,4</div>
+                        </div>
+                        <p style="font-size: 0.8em; color: green;">不重不漏！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 去重代码实现 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📝</span> 去重代码模板</h2>
+            </div>
+            <div class="slide-content">
+                <p>这是组合枚举中最常用的模板，请务必背诵！</p>
+                <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = <span class="code-num">1</span>; i <= n; i++) {
+    <span class="code-comment">// 关键点：j 从 i + 1 开始</span>
+    <span class="code-comment">// 保证了 j 永远比 i 大，避免了 (2, 1) 和 (2, 2)</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> j = i + <span class="code-num">1</span>; j <= n; j++) {
+        
+        <span class="code-comment">// 在这里处理 i 和 j 的组合</span>
+        cout << i << <span class="code-comment">" "</span> << j << endl;
+    }
+}</pre></div>
+                <div class="conclusion">
+                    <strong>原理：</strong> 人为规定顺序（小的在前，大的在后），就能消除重复。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 经典例题 - 百钱买百鸡 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🐔</span> 经典例题：百钱买百鸡</h2>
+            </div>
+            <div class="slide-content">
+                <div class="problem-box" style="background-color: #fff3e0; padding: 15px; border-radius: 8px; border-left: 5px solid #ff9800;">
+                    <strong>题目描述：</strong><br>
+                    公鸡5元一只，母鸡3元一只，小鸡1元三只。<br>
+                    用100元买100只鸡，问公鸡、母鸡、小鸡各多少只？
+                </div>
+                <p><strong>思路：</strong> 设公鸡 <i>x</i>，母鸡 <i>y</i>，小鸡 <i>z</i>。</p>
+                <div class="code-block"><pre><span class="code-keyword">for</span> (<span class="code-keyword">int</span> x = <span class="code-num">0</span>; x <= <span class="code-num">20</span>; x++) {      <span class="code-comment">// 公鸡最多20只</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> y = <span class="code-num">0</span>; y <= <span class="code-num">33</span>; y++) {  <span class="code-comment">// 母鸡最多33只</span>
+        <span class="code-keyword">int</span> z = <span class="code-num">100</span> - x - y;         <span class="code-comment">// 小鸡数量由总数决定 (降维优化!)</span>
+        
+        <span class="code-comment">// 验证：1. 小鸡数量非负  2. 小鸡是3的倍数  3. 总钱数对不对</span>
+        <span class="code-keyword">if</span> (z >= <span class="code-num">0</span> && z % <span class="code-num">3</span> == <span class="code-num">0</span> && <span class="code-num">5</span>*x + <span class="code-num">3</span>*y + z/<span class="code-num">3</span> == <span class="code-num">100</span>) {
+            cout << x << <span class="code-comment">" "</span> << y << <span class="code-comment">" "</span> << z << endl;
+        }
+    }
+}</pre></div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 总结 -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <ul>
+                    <li><strong>多重循环</strong>：用于解决多变量组合问题。</li>
+                    <li><strong>执行逻辑</strong>：外层走一步，内层跑一圈。</li>
+                    <li><strong>去重技巧</strong>：内层循环起点设为 <code>j = i + 1</code>。</li>
+                    <li><strong>复杂度</strong>：两层循环是 <i>O(N<sup>2</sup>)</i>，三层是 <i>O(N<sup>3</sup>)</i>。注意 <i>N</i> 的大小！</li>
+                </ul>
+                <div class="conclusion" style="background-color: #f6ffed; border-color: #b7eb8f;">
+                    <strong>下一章预告：</strong><br>
+                    除了数字，我们还能枚举什么？下一章我们将学习<strong>数位拆解</strong>和<strong>字符串枚举</strong>！
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+        });
+    </script>
+
+</body>
+</html>

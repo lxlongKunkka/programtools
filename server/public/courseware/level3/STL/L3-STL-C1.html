@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ STL 核心容器入门 - vector/set/map</title>
+    <style>
+        /* --- 基础布局 (延续前章风格) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(63, 81, 181, 0.7); /* 蓝色系 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #3F51B5;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #3F51B5; border-bottom: 4px solid #E8EAF6; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.6; color: #333; margin-bottom: 15px; }
+        ul, ol { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #3F51B5; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #E8EAF6; border-left: 8px solid #3F51B5; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #3F51B5; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #3F51B5; margin-bottom: 15px; }
+
+        /* 公式块/代码块 */
+        .formula, .code-block {
+            font-size: 1.2em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+        }
+        .code-block {
+            border-left: 6px solid #3F51B5;
+            overflow-x: auto;
+            line-height: 1.4;
+            font-size: 1.1em;
+        }
+
+        /* 示例盒子 */
+        .example-box {
+            background-color: #E8EAF6;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #C5CAE9;
+        }
+        .example-title {
+            font-weight: bold;
+            color: #3F51B5;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* STL 动画容器 */
+        .stl-demo-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            border: 2px solid #3F51B5;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .demo-btn {
+            padding: 12px 25px;
+            background: #3F51B5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        .demo-btn:hover {
+            background: #303F9F;
+            transform: scale(1.05);
+        }
+        .demo-result {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #3F51B5;
+            margin: 20px 0;
+        }
+
+        /* Vector 扩容动画 */
+        .vector-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+        }
+        .vector-cell {
+            width: 60px;
+            height: 60px;
+            background-color: #E8EAF6;
+            border: 2px solid #3F51B5;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: all 0.5s ease;
+        }
+        .vector-cell.filled {
+            background-color: #3F51B5;
+            color: white;
+        }
+        .vector-cell.empty {
+            background-color: #f5f5f5;
+            border-color: #ddd;
+        }
+        .vector-cell.highlight {
+            background-color: #FF9800;
+            border-color: #FF9800;
+            transform: scale(1.1);
+        }
+
+        /* Set/Map 红黑树动画（简化版） */
+        .tree-container {
+            margin: 40px auto;
+            text-align: center;
+            position: relative;
+            height: 400px;
+        }
+        .tree-node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: #3F51B5;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: all 0.5s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .tree-node.key {
+            background-color: #FF9800;
+        }
+        .tree-node.value {
+            background-color: #4CAF50;
+            transform: translateX(70px);
+            font-size: 1em;
+        }
+        .tree-edge {
+            position: absolute;
+            border: 2px dashed #3F51B5;
+            z-index: -1;
+            transition: all 0.5s ease;
+        }
+        .tree-node.highlight {
+            transform: scale(1.2);
+            background-color: #FF9800;
+        }
+
+        /* 容器对比表 */
+        .container-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 1.1em;
+        }
+        .container-table th, .container-table td {
+            border: 2px solid #3F51B5;
+            padding: 15px;
+            text-align: center;
+        }
+        .container-table th {
+            background-color: #E8EAF6;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 课程封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">📦</div>
+                <h1>C++ STL 核心容器入门</h1>
+                <h3>—— vector / set / map 可视化教程</h3>
+                <p style="margin-top: 20px;">从底层逻辑到实战应用，掌握STL核心容器</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: vector - 动态数组的灵活运用（场景引入） -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 第一章：vector - 动态数组的灵活运用</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 场景引入：为什么需要vector？</h3>
+                <div class="example-box">
+                    <div class="example-title">生活类比：可伸缩的收纳盒</div>
+                    <p>普通数组 = 固定大小的收纳盒（买了4格就只能放4件东西）；</p>
+                    <p>vector = 可伸缩的收纳盒（东西多了自动扩容，不用手动换盒子）。</p>
+                </div>
+                <p class="highlight">编程痛点：</p>
+                <ul>
+                    <li>普通数组长度固定，无法动态添加元素（如存储未知数量的学生成绩）；</li>
+                    <li>手动扩容数组需要重新分配内存、拷贝元素，代码繁琐且易出错；</li>
+                    <li>vector 自动管理内存，支持动态增删，接口友好。</li>
+                </ul>
+
+                <h3>2. vector 核心特性</h3>
+                <div class="container">
+                    <div class="col">
+                        <p>✅ 底层：连续内存空间（和数组一致），支持随机访问；</p>
+                        <p>✅ 优势：动态扩容、尾部操作快（O(1)）；</p>
+                    </div>
+                    <div class="col">
+                        <p>⚠️ 缺点：中间插入/删除慢（O(n)）；</p>
+                        <p>📌 适用：频繁访问、动态添加尾部元素的场景。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: vector - 核心用法与扩容动画 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔧</span> vector 核心用法 + 扩容动画</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 核心接口速览</h3>
+                <div class="code-block">
+#include <iostream><br>
+#include <vector> // 必须包含头文件<br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 1. 初始化<br>
+&nbsp;&nbsp;vector<int> v1; // 空vector<br>
+&nbsp;&nbsp;vector<int> v2(5, 0); // 5个元素，初始值0<br>
+&nbsp;&nbsp;vector<int> v3 = {1,2,3,4}; // 列表初始化<br>
+<br>
+&nbsp;&nbsp;// 2. 增删改查<br>
+&nbsp;&nbsp;v3.push_back(5); // 尾部添加：1,2,3,4,5<br>
+&nbsp;&nbsp;v3.pop_back(); // 尾部删除：1,2,3,4<br>
+&nbsp;&nbsp;v3.insert(v3.begin()+2, 9); // 位置2插入9：1,2,9,3,4<br>
+&nbsp;&nbsp;v3.erase(v3.begin()+2); // 删除位置2元素：1,2,3,4<br>
+<br>
+&nbsp;&nbsp;// 3. 容量与大小<br>
+&nbsp;&nbsp;cout << "大小：" << v3.size() << endl; // 4（实际元素数）<br>
+&nbsp;&nbsp;cout << "容量：" << v3.capacity() << endl; // 4（当前内存容量）<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 可视化扩容动画</h3>
+                <div class="stl-demo-container">
+                    <p>点击按钮演示：向容量为4的vector添加第5个元素（扩容为8）</p>
+                    <button class="demo-btn" id="vectorExpandBtn">开始扩容动画</button>
+                    <div class="vector-container" id="vectorContainer">
+                        <div class="vector-cell filled">1</div>
+                        <div class="vector-cell filled">2</div>
+                        <div class="vector-cell filled">3</div>
+                        <div class="vector-cell filled">4</div>
+                        <div class="vector-cell empty"></div>
+                        <div class="vector-cell empty"></div>
+                        <div class="vector-cell empty"></div>
+                        <div class="vector-cell empty"></div>
+                    </div>
+                    <div class="demo-result" id="vectorResult">当前：size=4，capacity=4</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: vector - 实战练习与易错点 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> vector 实战 + 易错点</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 实战练习：学生成绩管理系统</h3>
+                <div class="code-block">
+// 需求：输入未知数量成绩 → 计算平均分 → 输出不及格成绩<br>
+#include <iostream><br>
+#include <vector><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;vector<double> scores;<br>
+&nbsp;&nbsp;double score, sum = 0;<br>
+<br>
+&nbsp;&nbsp;// 输入成绩（输入-1结束）<br>
+&nbsp;&nbsp;cout << "输入成绩（-1结束）：" << endl;<br>
+&nbsp;&nbsp;while (cin >> score && score != -1) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;scores.push_back(score);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sum += score;<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;// 计算平均分<br>
+&nbsp;&nbsp;double avg = sum / scores.size();<br>
+&nbsp;&nbsp;cout << "平均分：" << avg << endl;<br>
+<br>
+&nbsp;&nbsp;// 输出不及格成绩（<60）<br>
+&nbsp;&nbsp;cout << "不及格成绩：";<br>
+&nbsp;&nbsp;for (auto s : scores) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (s < 60) cout << s << " ";<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 常见易错点</h3>
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">越界访问</span> 用v[10]访问size=5的vector（无边界检查，内存风险），建议用v.at(10)（会抛异常）；</li>
+                    <li><span class="mistake-tag">容量混淆</span> 认为capacity()等于size()，扩容后capacity会翻倍（如4→8→16）；</li>
+                    <li><span class="mistake-tag">效率误区</span> 频繁在中间插入元素（动画演示：后续元素全部移位，效率极低）。</li>
+                </ul>
+
+                <div class="conclusion">
+                    <strong>避坑技巧：</strong><br>
+                    1. 提前用reserve(n)预留容量，减少扩容次数；<br>
+                    2. 优先使用push_back/pop_back（尾部操作）；<br>
+                    3. 遍历用范围for或迭代器，避免手动下标越界。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: set - 有序集合的去重与查找 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 第二章：set - 有序集合的去重与查找</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 场景引入：为什么需要set？</h3>
+                <div class="example-box">
+                    <div class="example-title">生活类比：自动排序的书架</div>
+                    <p>普通数组 = 杂乱的书架（找书需要逐个翻，重复书籍可能多本）；</p>
+                    <p>set = 自动排序的书架（放入书籍自动按序排列，且无重复书籍，找书更快）。</p>
+                </div>
+                <p class="highlight">编程痛点：</p>
+                <ul>
+                    <li>数组去重需要手动遍历，代码繁琐；</li>
+                    <li>数组查找元素效率低（O(n)），大数据量下卡顿；</li>
+                    <li>set 自动去重+有序+O(log n) 快速查找。</li>
+                </ul>
+
+                <h3>2. set 核心特性</h3>
+                <div class="container">
+                    <div class="col">
+                        <p>✅ 底层：红黑树（简化为“有序二叉树”）；</p>
+                        <p>✅ 优势：自动排序、自动去重、查找快（O(log n)）；</p>
+                    </div>
+                    <div class="col">
+                        <p>⚠️ 缺点：不支持随机访问（无下标）；</p>
+                        <p>📌 适用：去重、有序集合、快速查找。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: set - 核心用法与红黑树动画 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔧</span> set 核心用法 + 红黑树动画</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 核心接口速览</h3>
+                <div class="code-block">
+#include <iostream><br>
+#include <set> // 必须包含头文件<br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 1. 初始化<br>
+&nbsp;&nbsp;set<int> s1; // 空set<br>
+&nbsp;&nbsp;set<int> s2 = {3,1,4,1,5}; // 自动去重排序：1,3,4,5<br>
+<br>
+&nbsp;&nbsp;// 2. 增删查<br>
+&nbsp;&nbsp;s2.insert(2); // 插入2 → 1,2,3,4,5<br>
+&nbsp;&nbsp;s2.erase(3); // 删除3 → 1,2,4,5<br>
+<br>
+&nbsp;&nbsp;// 查找元素（返回迭代器）<br>
+&nbsp;&nbsp;auto it = s2.find(4);<br>
+&nbsp;&nbsp;if (it != s2.end()) cout << "找到：" << *it << endl;<br>
+<br>
+&nbsp;&nbsp;// 判断元素是否存在<br>
+&nbsp;&nbsp;if (s2.count(5)) cout << "5存在" << endl;<br>
+<br>
+&nbsp;&nbsp;// 遍历（只能用迭代器/范围for）<br>
+&nbsp;&nbsp;for (auto num : s2) cout << num << " ";<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 可视化红黑树动画</h3>
+                <div class="stl-demo-container">
+                    <p>点击按钮演示：插入3,1,4,1,5 → 自动去重排序</p>
+                    <button class="demo-btn" id="setInsertBtn">开始插入动画</button>
+                    <div class="tree-container" id="setTreeContainer">
+                        <div class="tree-node" style="top: 50px; left: 50%;">3</div>
+                    </div>
+                    <div class="demo-result" id="setResult">当前set：3</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: set - 实战练习与易错点 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> set 实战 + 易错点</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 实战练习：关键词去重与排序</h3>
+                <div class="code-block">
+// 需求：输入关键词 → 去重 → 按字典序输出 → 查找是否存在"STL"<br>
+#include <iostream><br>
+#include <set><br>
+#include <string><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;set<string> keywords;<br>
+&nbsp;&nbsp;string word;<br>
+<br>
+&nbsp;&nbsp;// 输入关键词（输入quit结束）<br>
+&nbsp;&nbsp;cout << "输入关键词（quit结束）：" << endl;<br>
+&nbsp;&nbsp;while (cin >> word && word != "quit") {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;keywords.insert(word); // 自动去重+排序<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;// 输出排序后的关键词<br>
+&nbsp;&nbsp;cout << "去重排序后：" << endl;<br>
+&nbsp;&nbsp;for (auto w : keywords) cout << w << " ";<br>
+<br>
+&nbsp;&nbsp;// 查找"STL"<br>
+&nbsp;&nbsp;if (keywords.find("STL") != keywords.end()) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "\n找到关键词：STL" << endl;<br>
+&nbsp;&nbsp;} else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "\n未找到STL" << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 常见易错点</h3>
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">下标访问</span> 尝试用s[0]访问set元素（set无连续内存，不支持下标）；</li>
+                    <li><span class="mistake-tag">重复插入</span> 插入重复元素后认为“报错”，实际set静默去重（无任何提示）；</li>
+                    <li><span class="mistake-tag">修改元素</span> 直接修改set元素（set元素是const，需先删除再插入）。</li>
+                </ul>
+
+                <div class="conclusion">
+                    <strong>避坑技巧：</strong><br>
+                    1. 遍历set只能用迭代器/范围for；<br>
+                    2. 判断元素存在优先用count()（返回0/1）；<br>
+                    3. 修改元素：先erase(old)，再insert(new)。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: map - 键值对的映射魔法 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 第三章：map - 键值对的映射魔法</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 场景引入：为什么需要map？</h3>
+                <div class="example-box">
+                    <div class="example-title">生活类比：字典</div>
+                    <p>普通数组 = 按页码翻字典（找“STL”需要翻全书）；</p>
+                    <p>map = 拼音索引字典（按“STL”的拼音直接定位，一键查找）。</p>
+                </div>
+                <p class="highlight">编程痛点：</p>
+                <ul>
+                    <li>存储“关联关系”（学号→成绩、用户名→密码）时，数组需要遍历匹配；</li>
+                    <li>查找效率低（O(n)），map 按键查找仅需 O(log n)；</li>
+                    <li>map 自动按键排序，一键映射键值对。</li>
+                </ul>
+
+                <h3>2. map 核心特性</h3>
+                <div class="container">
+                    <div class="col">
+                        <p>✅ 底层：红黑树（按键排序）；</p>
+                        <p>✅ 优势：键值一一对应、按键查找快、自动排序；</p>
+                    </div>
+                    <div class="col">
+                        <p>⚠️ 缺点：不支持随机访问、键不可修改；</p>
+                        <p>📌 适用：关联关系存储、字典/缓存查询。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: map - 核心用法与键值对动画 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔧</span> map 核心用法 + 键值对动画</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 核心接口速览</h3>
+                <div class="code-block">
+#include <iostream><br>
+#include <map> // 必须包含头文件<br>
+#include <string><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 1. 初始化（键=学号，值=姓名）<br>
+&nbsp;&nbsp;map<int, string> stu;<br>
+&nbsp;&nbsp;stu.insert({1, "张三"}); // 插入键值对<br>
+&nbsp;&nbsp;stu[2] = "李四"; // 直接赋值（推荐）<br>
+&nbsp;&nbsp;stu[3] = "王五";<br>
+<br>
+&nbsp;&nbsp;// 2. 访问值<br>
+&nbsp;&nbsp;cout << "学号2：" << stu[2] << endl; // 李四<br>
+&nbsp;&nbsp;cout << "学号4：" << stu[4] << endl; // 空字符串（自动插入键4）<br>
+<br>
+&nbsp;&nbsp;// 3. 查找键<br>
+&nbsp;&nbsp;auto it = stu.find(3);<br>
+&nbsp;&nbsp;if (it != stu.end()) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "找到：" << it->first << " → " << it->second << endl;<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;// 4. 遍历（按键排序）<br>
+&nbsp;&nbsp;for (auto p : stu) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << p.first << " → " << p.second << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 可视化键值对动画</h3>
+                <div class="stl-demo-container">
+                    <p>点击按钮演示：插入(2,"李四")、(1,"张三")、(3,"王五") → 按键排序</p>
+                    <button class="demo-btn" id="mapInsertBtn">开始插入动画</button>
+                    <div class="tree-container" id="mapTreeContainer">
+                        <div class="tree-node key" style="top: 50px; left: 50%;">2</div>
+                        <div class="tree-node value" style="top: 50px; left: 50%;">李四</div>
+                    </div>
+                    <div class="demo-result" id="mapResult">当前map：2→李四</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: map - 实战练习与易错点 -->
+        <section class="slide" id="slide-10">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> map 实战 + 易错点</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 实战练习：学生成绩查询系统</h3>
+                <div class="code-block">
+// 需求：学号→成绩 → 按学号排序输出 → 查询/修改成绩<br>
+#include <iostream><br>
+#include <map><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;map<int, int> scoreMap; // 键=学号，值=成绩<br>
+&nbsp;&nbsp;int id, score;<br>
+<br>
+&nbsp;&nbsp;// 输入学号和成绩<br>
+&nbsp;&nbsp;scoreMap[101] = 90;<br>
+&nbsp;&nbsp;scoreMap[103] = 85;<br>
+&nbsp;&nbsp;scoreMap[102] = 95;<br>
+<br>
+&nbsp;&nbsp;// 按学号排序输出<br>
+&nbsp;&nbsp;cout << "成绩列表：" << endl;<br>
+&nbsp;&nbsp;for (auto p : scoreMap) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "学号：" << p.first << " 成绩：" << p.second << endl;<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;// 查询指定学号<br>
+&nbsp;&nbsp;cout << "输入查询学号：";<br>
+&nbsp;&nbsp;cin >> id;<br>
+&nbsp;&nbsp;if (scoreMap.count(id)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "成绩：" << scoreMap[id] << endl;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// 修改成绩<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "输入新成绩：";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cin >> score;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;scoreMap[id] = score;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "修改后：" << scoreMap[id] << endl;<br>
+&nbsp;&nbsp;} else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << "学号不存在" << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                </div>
+
+                <h3>2. 常见易错点</h3>
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">自动插入</span> 用stu[4]访问不存在的键（自动插入空值，导致map变大），建议先find()再访问；</li>
+                    <li><span class="mistake-tag">键不可改</span> 尝试修改map的键（键是const，需删除旧键插入新键）；</li>
+                    <li><span class="mistake-tag">类型错误</span> 自定义类型作为键时，未重载&lt;运算符（map需要按键排序）。</li>
+                </ul>
+
+                <div class="conclusion">
+                    <strong>避坑技巧：</strong><br>
+                    1. 访问前先用find()/count()判断键是否存在；<br>
+                    2. 修改键：erase(oldKey) → insert({newKey, value})；<br>
+                    3. 自定义键类型必须重载&lt;运算符。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 综合实战 - 容器对比与选型 -->
+        <section class="slide" id="slide-11">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📊</span> 第四章：综合实战 - 容器对比与选型</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 三大容器核心对比</h3>
+                <div class="container-table">
+                    <tr>
+                        <th>容器</th>
+                        <th>底层结构</th>
+                        <th>核心优势</th>
+                        <th>查找效率</th>
+                        <th>适用场景</th>
+                    </tr>
+                    <tr>
+                        <td>vector</td>
+                        <td>连续数组</td>
+                        <td>随机访问快、尾部操作快</td>
+                        <td>O(n)</td>
+                        <td>动态列表、频繁访问/尾部操作</td>
+                    </tr>
+                    <tr>
+                        <td>set</td>
+                        <td>红黑树</td>
+                        <td>自动去重排序、查找快</td>
+                        <td>O(log n)</td>
+                        <td>去重、有序集合、快速查找</td>
+                    </tr>
+                    <tr>
+                        <td>map</td>
+                        <td>红黑树（键排序）</td>
+                        <td>键值映射、按键查找快</td>
+                        <td>O(log n)</td>
+                        <td>关联关系、字典/缓存查询</td>
+                    </tr>
+                </div>
+
+                <h3>2. 场景选型实战</h3>
+                <div class="example-box">
+                    <div class="example-title">实战：单词统计工具（map+vector）</div>
+                    <p>需求：输入文本 → 统计每个单词出现次数 → 按次数降序输出前3个</p>
+                    <div class="code-block">
+#include <iostream><br>
+#include <map><br>
+#include <vector><br>
+#include <string><br>
+#include <algorithm><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;map<string, int> wordCount; // 单词→次数<br>
+&nbsp;&nbsp;string word;<br>
+<br>
+&nbsp;&nbsp;// 输入文本（输入quit结束）<br>
+&nbsp;&nbsp;cout << "输入文本（quit结束）：" << endl;<br>
+&nbsp;&nbsp;while (cin >> word && word != "quit") {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wordCount[word]++;<br>
+&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;// 转vector排序（按次数降序）<br>
+&nbsp;&nbsp;vector<pair<string, int>> vec(wordCount.begin(), wordCount.end());<br>
+&nbsp;&nbsp;sort(vec.begin(), vec.end(), [](auto& a, auto& b) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return a.second > b.second;<br>
+&nbsp;&nbsp;});<br>
+<br>
+&nbsp;&nbsp;// 输出前3个<br>
+&nbsp;&nbsp;cout << "出现次数前3的单词：" << endl;<br>
+&nbsp;&nbsp;for (int i=0; i<min(3, (int)vec.size()); i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << vec[i].first << "：" << vec[i].second << "次" << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+
+                <h3>3. 扩展与优化</h3>
+                <ul>
+                    <li>unordered_set/unordered_map：哈希表实现，无序但查找更快（O(1)），适合不要求排序的场景；</li>
+                    <li>vector 优化：reserve() 预留容量，避免频繁扩容；</li>
+                    <li>set/map 优化：避免频繁插入删除（红黑树平衡会消耗性能）。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 12: 课程总结 -->
+        <section class="slide" id="slide-12">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 课程总结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#E8EAF6; padding:30px; border-radius:12px;">
+                        <h3>核心知识点</h3>
+                        <p>vector：动态数组，优先尾部操作，适合动态列表；</p>
+                        <p>set：有序无重复集合，自动去重，适合快速查找；</p>
+                        <p>map：键值映射，按键查找快，适合关联关系存储；</p>
+                        <p>选型原则：按“访问方式+效率需求”选择容器。</p>
+                    </div>
+                    <div class="col" style="background:#C5CAE9; padding:30px; border-radius:12px;">
+                        <h3>课后练习</h3>
+                        <p>1. 用vector实现数组去重（对比set的去重效率）；</p>
+                        <p>2. 用map实现“通讯录”（姓名→电话）；</p>
+                        <p>3. 用set+vector实现“随机抽奖”（去重+随机选）。</p>
+                    </div>
+                </div>
+
+                <div class="conclusion" style="margin-top: 40px;">
+                    <strong>学习建议：</strong><br>
+                    1. 不要死记接口，理解“底层结构决定用法”；<br>
+                    2. 多做场景选型练习，培养“用容器解决问题”的思维；<br>
+                    3. 后续可学习：unordered系列容器、容器适配器（stack/queue）。
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 12</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- vector扩容动画 ---
+            const vectorExpandBtn = document.getElementById('vectorExpandBtn');
+            const vectorContainer = document.getElementById('vectorContainer');
+            const vectorResult = document.getElementById('vectorResult');
+            let expandStep = 0;
+
+            vectorExpandBtn.addEventListener('click', () => {
+                vectorExpandBtn.disabled = true;
+                vectorExpandBtn.textContent = "动画中...";
+                const cells = vectorContainer.querySelectorAll('.vector-cell');
+                
+                // 步骤1：高亮第5个位置（待插入）
+                setTimeout(() => {
+                    cells[4].classList.add('highlight');
+                    vectorResult.textContent = "步骤1：插入第5个元素（5），当前capacity=4不足";
+                }, 1000);
+
+                // 步骤2：扩容为8，拷贝旧元素
+                setTimeout(() => {
+                    cells.forEach((cell, idx) => {
+                        if (idx < 4) cell.classList.remove('filled');
+                        cell.classList.remove('highlight');
+                    });
+                    // 拷贝旧元素到新位置
+                    cells[0].textContent = 1; cells[0].classList.add('filled');
+                    cells[1].textContent = 2; cells[1].classList.add('filled');
+                    cells[2].textContent = 3; cells[2].classList.add('filled');
+                    cells[3].textContent = 4; cells[3].classList.add('filled');
+                    vectorResult.textContent = "步骤2：扩容为8，拷贝旧元素到新内存";
+                }, 2000);
+
+                // 步骤3：插入新元素
+                setTimeout(() => {
+                    cells[4].textContent = 5;
+                    cells[4].classList.add('filled');
+                    cells[4].classList.add('highlight');
+                    vectorResult.textContent = "步骤3：插入新元素5 → size=5，capacity=8";
+                    vectorExpandBtn.disabled = false;
+                    vectorExpandBtn.textContent = "重新演示";
+                    expandStep = 0;
+                }, 3000);
+            });
+
+            // --- set红黑树插入动画 ---
+            const setInsertBtn = document.getElementById('setInsertBtn');
+            const setTreeContainer = document.getElementById('setTreeContainer');
+            const setResult = document.getElementById('setResult');
+            let setStep = 0;
+
+            setInsertBtn.addEventListener('click', () => {
+                setInsertBtn.disabled = true;
+                setInsertBtn.textContent = "动画中...";
+                setTreeContainer.innerHTML = '';
+                
+                // 步骤1：插入3（根节点）
+                setTimeout(() => {
+                    const node3 = document.createElement('div');
+                    node3.className = 'tree-node';
+                    node3.style.top = '50px';
+                    node3.style.left = '50%';
+                    node3.textContent = 3;
+                    setTreeContainer.appendChild(node3);
+                    setResult.textContent = "当前set：3";
+                }, 500);
+
+                // 步骤2：插入1（左子节点）
+                setTimeout(() => {
+                    const node1 = document.createElement('div');
+                    node1.className = 'tree-node';
+                    node1.style.top = '150px';
+                    node1.style.left = '30%';
+                    node1.textContent = 1;
+                    setTreeContainer.appendChild(node1);
+                    // 画连线
+                    const edge1 = document.createElement('div');
+                    edge1.className = 'tree-edge';
+                    edge1.style.top = '70px';
+                    edge1.style.left = '50%';
+                    edge1.style.width = '18%';
+                    edge1.style.height = '0';
+                    edge1.style.transform = 'rotate(-45deg)';
+                    setTreeContainer.appendChild(edge1);
+                    setResult.textContent = "当前set：1,3";
+                }, 1500);
+
+                // 步骤3：插入4（右子节点）
+                setTimeout(() => {
+                    const node4 = document.createElement('div');
+                    node4.className = 'tree-node';
+                    node4.style.top = '150px';
+                    node4.style.left = '70%';
+                    node4.textContent = 4;
+                    setTreeContainer.appendChild(node4);
+                    // 画连线
+                    const edge2 = document.createElement('div');
+                    edge2.className = 'tree-edge';
+                    edge2.style.top = '70px';
+                    edge2.style.left = '50%';
+                    edge2.style.width = '18%';
+                    edge2.style.height = '0';
+                    edge2.style.transform = 'rotate(45deg)';
+                    setTreeContainer.appendChild(edge2);
+                    setResult.textContent = "当前set：1,3,4";
+                }, 2500);
+
+                // 步骤4：插入1（重复，去重）
+                setTimeout(() => {
+                    setResult.textContent = "插入1（重复，去重）→ 当前set：1,3,4";
+                }, 3500);
+
+                // 步骤5：插入5（4的右子节点）
+                setTimeout(() => {
+                    const node5 = document.createElement('div');
+                    node5.className = 'tree-node';
+                    node5.style.top = '250px';
+                    node5.style.left = '80%';
+                    node5.textContent = 5;
+                    setTreeContainer.appendChild(node5);
+                    // 画连线
+                    const edge3 = document.createElement('div');
+                    edge3.className = 'tree-edge';
+                    edge3.style.top = '170px';
+                    edge3.style.left = '70%';
+                    edge3.style.width = '8%';
+                    edge3.style.height = '0';
+                    edge3.style.transform = 'rotate(45deg)';
+                    setTreeContainer.appendChild(edge3);
+                    setResult.textContent = "插入5 → 当前set：1,3,4,5";
+                    setInsertBtn.disabled = false;
+                    setInsertBtn.textContent = "重新演示";
+                    setStep = 0;
+                }, 4500);
+            });
+
+            // --- map键值对插入动画 ---
+            const mapInsertBtn = document.getElementById('mapInsertBtn');
+            const mapTreeContainer = document.getElementById('mapTreeContainer');
+            const mapResult = document.getElementById('mapResult');
+            let mapStep = 0;
+
+            mapInsertBtn.addEventListener('click', () => {
+                mapInsertBtn.disabled = true;
+                mapInsertBtn.textContent = "动画中...";
+                mapTreeContainer.innerHTML = '';
+                
+                // 步骤1：插入2→李四（根节点）
+                setTimeout(() => {
+                    const key2 = document.createElement('div');
+                    key2.className = 'tree-node key';
+                    key2.style.top = '50px';
+                    key2.style.left = '50%';
+                    key2.textContent = 2;
+                    const val2 = document.createElement('div');
+                    val2.className = 'tree-node value';
+                    val2.style.top = '50px';
+                    val2.style.left = '50%';
+                    val2.textContent = "李四";
+                    mapTreeContainer.appendChild(key2);
+                    mapTreeContainer.appendChild(val2);
+                    mapResult.textContent = "当前map：2→李四";
+                }, 500);
+
+                // 步骤2：插入1→张三（左子节点）
+                setTimeout(() => {
+                    const key1 = document.createElement('div');
+                    key1.className = 'tree-node key';
+                    key1.style.top = '150px';
+                    key1.style.left = '30%';
+                    key1.textContent = 1;
+                    const val1 = document.createElement('div');
+                    val1.className = 'tree-node value';
+                    val1.style.top = '150px';
+                    val1.style.left = '30%';
+                    val1.textContent = "张三";
+                    mapTreeContainer.appendChild(key1);
+                    mapTreeContainer.appendChild(val1);
+                    // 画连线
+                    const edge1 = document.createElement('div');
+                    edge1.className = 'tree-edge';
+                    edge1.style.top = '70px';
+                    edge1.style.left = '50%';
+                    edge1.style.width = '18%';
+                    edge1.style.height = '0';
+                    edge1.style.transform = 'rotate(-45deg)';
+                    mapTreeContainer.appendChild(edge1);
+                    mapResult.textContent = "当前map：1→张三, 2→李四";
+                }, 2000);
+
+                // 步骤3：插入3→王五（右子节点）
+                setTimeout(() => {
+                    const key3 = document.createElement('div');
+                    key3.className = 'tree-node key';
+                    key3.style.top = '150px';
+                    key3.style.left = '70%';
+                    key3.textContent = 3;
+                    const val3 = document.createElement('div');
+                    val3.className = 'tree-node value';
+                    val3.style.top = '150px';
+                    val3.style.left = '70%';
+                    val3.textContent = "王五";
+                    mapTreeContainer.appendChild(key3);
+                    mapTreeContainer.appendChild(val3);
+                    // 画连线
+                    const edge2 = document.createElement('div');
+                    edge2.className = 'tree-edge';
+                    edge2.style.top = '70px';
+                    edge2.style.left = '50%';
+                    edge2.style.width = '18%';
+                    edge2.style.height = '0';
+                    edge2.style.transform = 'rotate(45deg)';
+                    mapTreeContainer.appendChild(edge2);
+                    mapResult.textContent = "当前map：1→张三, 2→李四, 3→王五（按键排序）";
+                    mapInsertBtn.disabled = false;
+                    mapInsertBtn.textContent = "重新演示";
+                    mapStep = 0;
+                }, 3500);
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - Chapter 8: 数列与找规律</title>
+    <style>
+        /* --- 基础布局 (延续前章风格) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(76, 175, 80, 0.7); /* 绿色系 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #4CAF50;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #4CAF50; border-bottom: 4px solid #E8F5E9; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.6; color: #333; margin-bottom: 15px; }
+        ul, ol { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #4CAF50; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #E8F5E9; border-left: 8px solid #4CAF50; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #4CAF50; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #4CAF50; margin-bottom: 15px; }
+
+        /* 公式块 */
+        .formula {
+            font-size: 1.5em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #4CAF50; margin-top: 20px; font-size: 1.2em; line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        /* 示例盒子 */
+        .example-box {
+            background-color: #E8F5E9;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #C8E6C9;
+        }
+        .example-title {
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* 数列动画样式 */
+        .seq-demo-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            border: 2px solid #4CAF50;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .seq-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #E8F5E9;
+            text-align: left;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .seq-step.active {
+            opacity: 1;
+            border-left: 6px solid #4CAF50;
+        }
+        .seq-result {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 20px 0;
+        }
+        .demo-btn {
+            padding: 12px 25px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        .demo-btn:hover {
+            background: #388E3C;
+            transform: scale(1.05);
+        }
+        .seq-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .seq-item {
+            width: 60px;
+            height: 60px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+        .seq-item:hover {
+            transform: scale(1.1);
+        }
+
+        /* 数列对比表 */
+        .seq-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 1.2em;
+        }
+        .seq-table th, .seq-table td {
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            text-align: center;
+        }
+        .seq-table th {
+            background-color: #E8F5E9;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🔢</div>
+                <h1>Chapter 8: 数列与找规律</h1>
+                <h3>—— Sequences & Patterns (C++ 实现)</h3>
+                <p style="margin-top: 20px;">等差/等比数列 + 找规律 + 斐波那契数列</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: 等差数列基础 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 一、等差数列 (Arithmetic Sequence)</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 定义</h3>
+                <p>从第二项起，每一项与前一项的差为<strong>固定常数（公差d）</strong>的数列。</p>
+                
+                <div class="seq-table">
+                    <tr>
+                        <th>核心参数</th>
+                        <th>通项公式</th>
+                        <th>前n项和公式</th>
+                    </tr>
+                    <tr>
+                        <td>首项a₁，公差d</td>
+                        <td>aₙ = a₁ + (n-1)d</td>
+                        <td>Sₙ = n×(a₁+aₙ)/2 = n×a₁ + n(n-1)d/2</td>
+                    </tr>
+                </div>
+                
+                <div class="seq-demo-container">
+                    <h3>交互式等差数列演示</h3>
+                    <p>示例：首项a₁=2，公差d=3的等差数列</p>
+                    <div class="seq-list" id="arithSeqList">
+                        <div class="seq-item">2</div>
+                        <div class="seq-item">5</div>
+                        <div class="seq-item">8</div>
+                        <div class="seq-item">11</div>
+                        <div class="seq-item">14</div>
+                    </div>
+                    <button class="demo-btn" id="calcArithN">计算第10项</button>
+                    <button class="demo-btn" id="calcArithSum">计算前10项和</button>
+                    <div class="seq-result" id="arithResult"></div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">示例计算</div>
+                    <p>等差数列：2,5,8,11,14,... （a₁=2，d=3）</p>
+                    <ul>
+                        <li>第10项：a₁₀ = 2 + (10-1)×3 = 29；</li>
+                        <li>前10项和：S₁₀ = 10×(2+29)/2 = 155。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 等比数列基础 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📈</span> 二、等比数列 (Geometric Sequence)</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 定义</h3>
+                <p>从第二项起，每一项与前一项的比为<strong>固定常数（公比q）</strong>的数列（q≠0）。</p>
+                
+                <div class="seq-table">
+                    <tr>
+                        <th>核心参数</th>
+                        <th>通项公式</th>
+                        <th>前n项和公式</th>
+                    </tr>
+                    <tr>
+                        <td>首项a₁，公比q</td>
+                        <td>aₙ = a₁ × q^(n-1)</td>
+                        <td>Sₙ = a₁×(1-qⁿ)/(1-q) (q≠1)；Sₙ = n×a₁ (q=1)</td>
+                    </tr>
+                </div>
+                
+                <div class="seq-demo-container">
+                    <h3>交互式等比数列演示</h3>
+                    <p>示例：首项a₁=2，公比q=2的等比数列</p>
+                    <div class="seq-list" id="geoSeqList">
+                        <div class="seq-item">2</div>
+                        <div class="seq-item">4</div>
+                        <div class="seq-item">8</div>
+                        <div class="seq-item">16</div>
+                        <div class="seq-item">32</div>
+                    </div>
+                    <button class="demo-btn" id="calcGeoN">计算第8项</button>
+                    <button class="demo-btn" id="calcGeoSum">计算前8项和</button>
+                    <div class="seq-result" id="geoResult"></div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">示例计算</div>
+                    <p>等比数列：2,4,8,16,32,... （a₁=2，q=2）</p>
+                    <ul>
+                        <li>第8项：a₈ = 2 × 2^(8-1) = 256；</li>
+                        <li>前8项和：S₈ = 2×(1-2⁸)/(1-2) = 510。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 等差/等比数列C++实现 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💻</span> 三、等差/等比数列 C++ 实现</h2>
+            </div>
+            <div class="slide-content">
+                <div class="skill-card">
+                    <div class="skill-title">1. 等差数列计算函数</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <iomanip><br>
+using namespace std;<br>
+<br>
+// 计算等差数列第n项<br>
+long long arithmeticTerm(long long a1, long long d, int n) {<br>
+&nbsp;&nbsp;if (n < 1) return -1; // 边界处理：n≥1<br>
+&nbsp;&nbsp;return a1 + (n - 1) * d;<br>
+}<br>
+<br>
+// 计算等差数列前n项和<br>
+long long arithmeticSum(long long a1, long long d, int n) {<br>
+&nbsp;&nbsp;if (n < 1) return 0;<br>
+&nbsp;&nbsp;// 公式1：Sₙ = n*(a₁ + aₙ)/2<br>
+&nbsp;&nbsp;long long an = arithmeticTerm(a1, d, n);<br>
+&nbsp;&nbsp;return n * (a1 + an) / 2;<br>
+}<br>
+<br>
+// 生成等差数列前n项<br>
+void generateArithmeticSeq(long long a1, long long d, int n) {<br>
+&nbsp;&nbsp;cout << "等差数列前" << n << "项：";<br>
+&nbsp;&nbsp;for (int i = 1; i <= n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << arithmeticTerm(a1, d, i);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (i < n) cout << ", ";<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;cout << endl;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;long long a1 = 2, d = 3;<br>
+&nbsp;&nbsp;int n = 10;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cout << "等差数列第" << n << "项：" << arithmeticTerm(a1, d, n) << endl; // 29<br>
+&nbsp;&nbsp;cout << "前" << n << "项和：" << arithmeticSum(a1, d, n) << endl; // 155<br>
+&nbsp;&nbsp;generateArithmeticSeq(a1, d, 5); // 2, 5, 8, 11, 14<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">2. 等比数列计算函数（结合快速幂）</div>
+                    <div class="code-block">
+// 快速幂：计算a^b（用于等比数列通项）<br>
+long long fastPower(long long a, long long b) {<br>
+&nbsp;&nbsp;long long res = 1;<br>
+&nbsp;&nbsp;while (b > 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (b % 2 == 1) res *= a;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a *= a;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b /= 2;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return res;<br>
+}<br>
+<br>
+// 计算等比数列第n项<br>
+long long geometricTerm(long long a1, long long q, int n) {<br>
+&nbsp;&nbsp;if (n < 1) return -1;<br>
+&nbsp;&nbsp;if (q == 0) return 0; // 公比为0的特殊情况<br>
+&nbsp;&nbsp;return a1 * fastPower(q, n - 1);<br>
+}<br>
+<br>
+// 计算等比数列前n项和<br>
+long long geometricSum(long long a1, long long q, int n) {<br>
+&nbsp;&nbsp;if (n < 1) return 0;<br>
+&nbsp;&nbsp;if (q == 1) return a1 * n; // 公比为1的特殊情况<br>
+&nbsp;&nbsp;return a1 * (fastPower(q, n) - 1) / (q - 1);<br>
+}<br>
+<br>
+// 生成等比数列前n项<br>
+void generateGeometricSeq(long long a1, long long q, int n) {<br>
+&nbsp;&nbsp;cout << "等比数列前" << n << "项：";<br>
+&nbsp;&nbsp;for (int i = 1; i <= n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << geometricTerm(a1, q, i);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (i < n) cout << ", ";<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;cout << endl;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;long long a1 = 2, q = 2;<br>
+&nbsp;&nbsp;int n = 8;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cout << "等比数列第" << n << "项：" << geometricTerm(a1, q, n) << endl; // 256<br>
+&nbsp;&nbsp;cout << "前" << n << "项和：" << geometricSum(a1, q, n) << endl; // 510<br>
+&nbsp;&nbsp;generateGeometricSeq(a1, q, 5); // 2, 4, 8, 16, 32<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 找规律与周期性数列 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔍</span> 四、找规律：周期性数列</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 找规律核心方法</h3>
+                <ol>
+                    <li>列出数列前若干项，观察数值变化；</li>
+                    <li>计算相邻项的差/比，判断是否为等差/等比；</li>
+                    <li>检查是否有周期性（如奇偶周期、固定长度周期）；</li>
+                    <li>归纳通项公式或递推公式。</li>
+                </ol>
+                
+                <div class="seq-demo-container">
+                    <h3>周期性数列演示：余数周期</h3>
+                    <p>示例：数列 aₙ = n % 3 + 1</p>
+                    <div class="seq-list" id="cycleSeqList">
+                        <div class="seq-item">1</div>
+                        <div class="seq-item">2</div>
+                        <div class="seq-item">3</div>
+                        <div class="seq-item">1</div>
+                        <div class="seq-item">2</div>
+                        <div class="seq-item">3</div>
+                        <div class="seq-item">1</div>
+                    </div>
+                    <p>周期长度：3 → 1,2,3,1,2,3,...</p>
+                    <button class="demo-btn" id="findCycle">查找第100项的值</button>
+                    <div class="seq-result" id="cycleResult"></div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">经典规律题：兔子数列（斐波那契前置）</div>
+                    <p>数列：1,1,2,3,5,8,13,21,... 规律：从第3项起，每项=前两项之和</p>
+                    <p>递推公式：aₙ = aₙ₋₁ + aₙ₋₂（a₁=1，a₂=1）</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 斐波那契数列（递推法） -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🐰</span> 五、斐波那契数列（递推法实现）</h2>
+            </div>
+            <div class="slide-content">
+                <h3>1. 斐波那契数列定义</h3>
+                <p>递推公式：F(n) = F(n-1) + F(n-2)（n≥3），初始条件：F(1)=1，F(2)=1。</p>
+                
+                <div class="seq-demo-container">
+                    <h3>斐波那契数列演示</h3>
+                    <div class="seq-list" id="fibSeqList">
+                        <div class="seq-item">1</div>
+                        <div class="seq-item">1</div>
+                        <div class="seq-item">2</div>
+                        <div class="seq-item">3</div>
+                        <div class="seq-item">5</div>
+                        <div class="seq-item">8</div>
+                    </div>
+                    <button class="demo-btn" id="calcFib">计算第20项</button>
+                    <div class="seq-result" id="fibResult"></div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">2. 斐波那契数列 C++ 实现（递推法）</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <vector><br>
+using namespace std;<br>
+<br>
+// 递推法计算斐波那契数列第n项（迭代版，避免递归栈溢出）<br>
+long long fibonacci(int n) {<br>
+&nbsp;&nbsp;// 边界条件处理<br>
+&nbsp;&nbsp;if (n < 1) return -1;<br>
+&nbsp;&nbsp;if (n == 1 || n == 2) return 1;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 递推计算：用两个变量保存前两项，空间复杂度O(1)<br>
+&nbsp;&nbsp;long long prev_prev = 1; // F(n-2)<br>
+&nbsp;&nbsp;long long prev = 1;      // F(n-1)<br>
+&nbsp;&nbsp;long long curr = 0;      // F(n)<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;for (int i = 3; i <= n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;curr = prev_prev + prev;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;prev_prev = prev; // 更新前前项<br>
+&nbsp;&nbsp;&nbsp;&nbsp;prev = curr;     // 更新前项<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return curr;<br>
+}<br>
+<br>
+// 生成斐波那契数列前n项<br>
+vector<long long> generateFibonacci(int n) {<br>
+&nbsp;&nbsp;vector<long long> fib;<br>
+&nbsp;&nbsp;if (n < 1) return fib;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;fib.push_back(1);<br>
+&nbsp;&nbsp;if (n == 1) return fib;<br>
+&nbsp;&nbsp;fib.push_back(1);<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;for (int i = 2; i < n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;fib.push_back(fib[i-1] + fib[i-2]);<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return fib;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;int n = 20;<br>
+&nbsp;&nbsp;cout << "斐波那契数列第" << n << "项：" << fibonacci(n) << endl; // 6765<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 生成前10项<br>
+&nbsp;&nbsp;vector<long long> fibSeq = generateFibonacci(10);<br>
+&nbsp;&nbsp;cout << "前10项：";<br>
+&nbsp;&nbsp;for (size_t i = 0; i < fibSeq.size(); ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << fibSeq[i];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (i < fibSeq.size()-1) cout << ", ";<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;// 输出：1, 1, 2, 3, 5, 8, 13, 21, 34, 55<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 实战例题 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> 六、实战例题</h2>
+            </div>
+            <div class="slide-content">
+                <div class="example-box">
+                    <div class="example-title">例1：找规律求数列第n项</div>
+                    <p>数列：2,5,8,11,14,... 求第50项和前50项和。</p>
+                    <p>解：等差数列，a₁=2，d=3</p>
+                    <ul>
+                        <li>第50项：2 + (50-1)×3 = 149；</li>
+                        <li>前50项和：50×(2+149)/2 = 3775。</li>
+                    </ul>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">例2：周期性数列求项</div>
+                    <p>数列：3,1,4,3,1,4,3,1,4,... 求第100项的值。</p>
+                    <p>解：周期长度3，100 % 3 = 1 → 第100项=周期第1项=3。</p>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">例3：斐波那契数列应用</div>
+                    <p>有一对兔子，从第3个月起每月生一对兔子，小兔子长到第3个月后每月也生一对，求第12个月的兔子总数。</p>
+                    <p>解：兔子数符合斐波那契数列，第12项=144对。</p>
+                </div>
+                
+                <button class="demo-btn" id="showPracticeCode" style="display: block; margin: 20px auto;">查看例题C++实现</button>
+                <div id="practiceCode" style="display: none;">
+                    <div class="skill-card">
+                        <div class="skill-title">例题1+2+3 完整实现</div>
+                        <div class="code-block">
+#include <iostream><br>
+#include <vector><br>
+using namespace std;<br>
+<br>
+// 等差数列第n项<br>
+long long arithmeticTerm(long long a1, long long d, int n) {<br>
+&nbsp;&nbsp;return a1 + (n-1)*d;<br>
+}<br>
+<br>
+// 等差数列前n项和<br>
+long long arithmeticSum(long long a1, long long d, int n) {<br>
+&nbsp;&nbsp;return n * (a1 + arithmeticTerm(a1, d, n)) / 2;<br>
+}<br>
+<br>
+// 周期性数列第n项<br>
+int cycleTerm(const vector<int>& cycle, int n) {<br>
+&nbsp;&nbsp;int len = cycle.size();<br>
+&nbsp;&nbsp;return cycle[(n-1) % len]; // 注意下标从0开始<br>
+}<br>
+<br>
+// 斐波那契数列第n项<br>
+long long fibonacci(int n) {<br>
+&nbsp;&nbsp;if (n == 1 || n == 2) return 1;<br>
+&nbsp;&nbsp;long long a=1, b=1, c;<br>
+&nbsp;&nbsp;for (int i=3; i<=n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;c = a + b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a = b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b = c;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return c;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 例1：等差数列计算<br>
+&nbsp;&nbsp;cout << "例1：" << endl;<br>
+&nbsp;&nbsp;cout << "第50项：" << arithmeticTerm(2, 3, 50) << endl; // 149<br>
+&nbsp;&nbsp;cout << "前50项和：" << arithmeticSum(2, 3, 50) << endl; // 3775<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 例2：周期性数列<br>
+&nbsp;&nbsp;cout << "\n例2：" << endl;<br>
+&nbsp;&nbsp;vector<int> cycle = {3,1,4};<br>
+&nbsp;&nbsp;cout << "第100项：" << cycleTerm(cycle, 100) << endl; // 3<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 例3：兔子问题（斐波那契）<br>
+&nbsp;&nbsp;cout << "\n例3：" << endl;<br>
+&nbsp;&nbsp;cout << "第12个月兔子数：" << fibonacci(12) << "对" << endl; // 144<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 常见易错点 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 七、常见易错点（C++ 重点）</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">下标错误</span> <strong>数列项数下标</strong>：混淆数列的项数下标（如a₁对应n=1，而非n=0），导致通项公式计算错误。</li>
+                    <li><span class="mistake-tag">溢出问题</span> <strong>大数溢出</strong>：斐波那契/等比数列用int存储会快速溢出，必须用long long（第40项斐波那契数已超int范围）。</li>
+                    <li><span class="mistake-tag">公式错误</span> <strong>等比数列求和</strong>：忘记处理q=1的特殊情况，导致除以0错误。</li>
+                    <li><span class="mistake-tag">周期计算</span> <strong>周期取模</strong>：周期性数列取模时未调整下标（如n从1开始，需(n-1)%周期长度）。</li>
+                    <li><span class="mistake-tag">递归效率</span> <strong>斐波那契递归</strong>：用递归法计算斐波那契数列（重复计算），时间复杂度O(2ⁿ)，应使用递推法。</li>
+                    <li><span class="mistake-tag">边界处理</span> <strong>n<1的情况</strong>：未处理n<1的非法输入，导致程序崩溃。</li>
+                </ul>
+                
+                <div class="conclusion">
+                    <strong>C++ 避坑技巧：</strong><br>
+                    1. 数列项数统一从1开始，代码中明确注释下标规则；<br>
+                    2. 所有数列计算函数使用long long类型，避免溢出；<br>
+                    3. 等比数列求和必须先判断q=1的情况；<br>
+                    4. 斐波那契数列优先用递推法（迭代），而非递归；<br>
+                    5. 所有函数添加边界条件判断（n<1）；<br>
+                    6. 周期性数列取模时，用(n-1)%周期长度适配从1开始的项数。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 总结与练习 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 八、总结与练习</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#E8F5E9; padding:30px; border-radius:12px;">
+                        <h3>核心知识</h3>
+                        <p>等差数列：通项aₙ=a₁+(n-1)d，求和Sₙ=n(a₁+aₙ)/2；</p>
+                        <p>等比数列：通项aₙ=a₁q^(n-1)，求和Sₙ=a₁(1-qⁿ)/(1-q)（q≠1）；</p>
+                        <p>找规律：列前项→看差/比→查周期→归纳公式；</p>
+                        <p>斐波那契：递推公式F(n)=F(n-1)+F(n-2)，迭代法实现；</p>
+                        <p>避坑要点：下标规则、溢出、边界条件、周期取模。</p>
+                    </div>
+                    <div class="col" style="background:#C8E6C9; padding:30px; border-radius:12px;">
+                        <h3>课后练习（C++ 实现）</h3>
+                        <p>1. 实现函数判断一个数列是否为等差数列/等比数列；</p>
+                        <p>2. 优化斐波那契数列，计算第100项模1e9+7的值；</p>
+                        <p>3. 找规律：数列1,2,4,7,11,16,... 实现通项公式计算；</p>
+                        <p>4. 实现杨辉三角（帕斯卡三角）的生成函数。</p>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    掌握了数列与找规律后，我们将学习算法进阶内容——<strong>递推与动态规划入门</strong>，将数列递推思想应用到更复杂的问题求解中！
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 9</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 等差数列交互 ---
+            document.getElementById('calcArithN').addEventListener('click', () => {
+                const a1 = 2, d = 3, n = 10;
+                const an = a1 + (n-1)*d;
+                document.getElementById('arithResult').textContent = `第10项：${a1} + (${n}-1)×${d} = ${an}`;
+            });
+            
+            document.getElementById('calcArithSum').addEventListener('click', () => {
+                const a1 = 2, d = 3, n = 10;
+                const an = a1 + (n-1)*d;
+                const sum = n*(a1 + an)/2;
+                document.getElementById('arithResult').textContent = `前10项和：${n}×(${a1}+${an})/2 = ${sum}`;
+            });
+
+            // --- 等比数列交互 ---
+            function fastPower(a, b) {
+                let res = 1;
+                while (b > 0) {
+                    if (b % 2 === 1) res *= a;
+                    a *= a;
+                    b /= 2;
+                }
+                return res;
+            }
+            
+            document.getElementById('calcGeoN').addEventListener('click', () => {
+                const a1 = 2, q = 2, n = 8;
+                const an = a1 * fastPower(q, n-1);
+                document.getElementById('geoResult').textContent = `第8项：${a1} × ${q}^(${n}-1) = ${an}`;
+            });
+            
+            document.getElementById('calcGeoSum').addEventListener('click', () => {
+                const a1 = 2, q = 2, n = 8;
+                const sum = a1 * (fastPower(q, n) - 1) / (q - 1);
+                document.getElementById('geoResult').textContent = `前8项和：${a1}×(${q}^${n}-1)/(${q}-1) = ${sum}`;
+            });
+
+            // --- 周期性数列交互 ---
+            document.getElementById('findCycle').addEventListener('click', () => {
+                const cycle = [1,2,3];
+                const n = 100;
+                const val = cycle[(n-1) % cycle.length];
+                document.getElementById('cycleResult').textContent = `第100项：100 % 3 = 1 → 周期第1项 = ${val}`;
+            });
+
+            // --- 斐波那契数列交互 ---
+            function fibonacci(n) {
+                if (n === 1 || n === 2) return 1;
+                let a = 1, b = 1, c;
+                for (let i = 3; i <= n; ++i) {
+                    c = a + b;
+                    a = b;
+                    b = c;
+                }
+                return c;
+            }
+            
+            document.getElementById('calcFib').addEventListener('click', () => {
+                const n = 20;
+                const val = fibonacci(n);
+                document.getElementById('fibResult').textContent = `第20项斐波那契数：${val}`;
+                
+                // 扩展显示前20项
+                const fibList = document.getElementById('fibSeqList');
+                fibList.innerHTML = '';
+                let a = 1, b = 1;
+                fibList.innerHTML += `<div class="seq-item">${a}</div><div class="seq-item">${b}</div>`;
+                for (let i = 3; i <= 10; ++i) { // 只显示前10项避免过长
+                    const c = a + b;
+                    fibList.innerHTML += `<div class="seq-item">${c}</div>`;
+                    a = b;
+                    b = c;
+                }
+            });
+
+            // --- 实战例题代码展示 ---
+            document.getElementById('showPracticeCode').addEventListener('click', function() {
+                document.getElementById('practiceCode').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+        });
+    </script>
+
+</body>
+</html>

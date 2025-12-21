@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - Chapter 6: 组合计数 (编程版)</title>
+    <style>
+        /* --- 基础和布局 (保持一致) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(103, 58, 183, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #673AB7;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #673AB7; border-bottom: 4px solid #ede7f6; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; text-align: center; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.5; color: #333; margin-bottom: 15px; }
+        ul { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #673AB7; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #ede7f6; border-left: 8px solid #673AB7; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; }
+        .col { flex: 1; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #673AB7; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #673AB7; margin-bottom: 15px; }
+
+        /* 捆绑法动画 */
+        .bundle-box {
+            display: flex; justify-content: center; gap: 15px; margin-top: 40px;
+        }
+        .person {
+            width: 70px; height: 90px; background: #eee; border: 3px solid #999; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;
+        }
+        .bundle-group {
+            display: flex; gap: 5px; padding: 10px; border: 4px dashed #F44336; border-radius: 15px;
+            background: #FFEBEE; transition: 0.5s;
+        }
+
+        /* 插空法动画 */
+        .gap-box {
+            display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 40px;
+        }
+        .gap {
+            width: 40px; height: 40px; background: #E0F7FA; border: 3px dashed #00BCD4; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 0.9em; color: #006064; font-weight: bold;
+        }
+
+        /* 隔板法动画 */
+        .apple-row {
+            display: flex; justify-content: center; gap: 8px; margin-top: 40px; align-items: center;
+        }
+        .apple {
+            width: 50px; height: 50px; background: #FF5252; border-radius: 50%;
+        }
+        .divider {
+            width: 6px; height: 70px; background: #333; margin: 0 5px;
+        }
+
+        /* 杨辉三角 */
+        .pascal-triangle {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px;
+        }
+        .pascal-row { display: flex; gap: 10px; }
+        .pascal-cell {
+            width: 50px; height: 50px; background: #eee; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
+            transition: 0.5s; opacity: 0; transform: translateY(20px);
+        }
+        .pascal-cell.show { opacity: 1; transform: translateY(0); }
+        .pascal-cell.highlight { background: #673AB7; color: white; }
+
+        /* 代码块 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #673AB7; margin-top: 20px; font-size: 1.2em; line-height: 1.4;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🧮</div>
+                <h1>Chapter 6: 组合计数</h1>
+                <h3>—— 怎么数才不会漏？</h3>
+            </div>
+        </section>
+
+        <!-- Slide 2: 两个基本原理 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚖️</span> 核心基础：两个原理</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col skill-card">
+                        <div class="skill-title">➕ 加法原理 (分类)</div>
+                        <p><strong>关键词：</strong> 分类、互斥、任选其一。</p>
+                        <p><strong>公式：</strong> N = m<sub>1</sub> + m<sub>2</sub> + ...</p>
+                        <p style="font-size: 0.9em; color: #666;">例：去北京，飞机(3) 或 高铁(5) → 8种。</p>
+                    </div>
+                    <div class="col skill-card">
+                        <div class="skill-title">✖️ 乘法原理 (分步)</div>
+                        <p><strong>关键词：</strong> 分步、关联、依次完成。</p>
+                        <p><strong>公式：</strong> N = m<sub>1</sub> × m<sub>2</sub> × ...</p>
+                        <p style="font-size: 0.9em; color: #666;">例：穿衣，上衣(3) 和 裤子(5) → 15种。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 排列 vs 组合 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🆚</span> 核心概念：排列 vs 组合</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <h3>排列 (Arrangement)</h3>
+                        <p><strong>有序</strong>：顺序不同算不同。</p>
+                        <p>公式：A<sub>n</sub><sup>m</sup> = n! / (n-m)!</p>
+                        <p>例：选班长、学委。</p>
+                    </div>
+                    <div class="col">
+                        <h3>组合 (Combination)</h3>
+                        <p><strong>无序</strong>：顺序不同算相同。</p>
+                        <p>公式：C<sub>n</sub><sup>m</sup> = A<sub>n</sub><sup>m</sup> / m!</p>
+                        <p>例：选代表参会。</p>
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>判断技巧：</strong> 交换两个元素，结果变了吗？变了是排列，没变是组合。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 技巧1 - 捆绑法 -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔗</span> 技巧1：相邻问题 (捆绑法)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 5人排队，甲乙必须相邻。</p>
+                <p><strong>思路：</strong> 把甲乙“捆”在一起看作 1 个人。</p>
+                
+                <div class="bundle-box">
+                    <div class="bundle-group">
+                        <div class="person">甲</div>
+                        <div class="person">乙</div>
+                    </div>
+                    <div class="person">丙</div>
+                    <div class="person">丁</div>
+                    <div class="person">戊</div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>步骤：</strong><br>
+                    1. 整体排列：4个元素 (捆绑体+3人) → A<sub>4</sub><sup>4</sup><br>
+                    2. 内部排列：甲乙互换 → A<sub>2</sub><sup>2</sup><br>
+                    3. 总数：24 × 2 = 48
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 技巧2 - 插空法 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🌵</span> 技巧2：不相邻问题 (插空法)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 5人排队，甲乙不能相邻。</p>
+                <p><strong>思路：</strong> 先排其他人，再把甲乙插进去。</p>
+                
+                <div class="gap-box">
+                    <div class="gap">1</div>
+                    <div class="person">丙</div>
+                    <div class="gap">2</div>
+                    <div class="person">丁</div>
+                    <div class="gap">3</div>
+                    <div class="person">戊</div>
+                    <div class="gap">4</div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>步骤：</strong><br>
+                    1. 排其他人：3人全排列 → A<sub>3</sub><sup>3</sup> = 6<br>
+                    2. 找空隙：3人有 4 个空隙 (含两端)<br>
+                    3. 插入甲乙：从 4 个空隙选 2 个排列 → A<sub>4</sub><sup>2</sup> = 12<br>
+                    4. 总数：6 × 12 = 72
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 技巧3 - 隔板法 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📏</span> 技巧3：相同元素分配 (隔板法)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 10个<strong>相同</strong>苹果分给 3 个小朋友，每人至少 1 个。</p>
+                <p><strong>思路：</strong> 10个苹果排成一排，中间插 2 个板子。</p>
+                
+                <div class="apple-row">
+                    <div class="apple"></div><div class="apple"></div><div class="apple"></div>
+                    <div class="divider"></div>
+                    <div class="apple"></div><div class="apple"></div><div class="apple"></div><div class="apple"></div>
+                    <div class="divider"></div>
+                    <div class="apple"></div><div class="apple"></div><div class="apple"></div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>公式：</strong><br>
+                    10个苹果有 9 个空隙。<br>
+                    选 2 个空隙插板子 → C<sub>9</sub><sup>2</sup> = 36 种。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 技巧4 - 间接法 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">↩️</span> 技巧4：复杂问题 (间接法)</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>题目：</strong> 5人排队，甲乙<strong>不</strong>相邻。</p>
+                <p><strong>思路：</strong> 正面不好算，算反面。</p>
+                <div class="container">
+                    <div class="col skill-card">
+                        <div class="skill-title">总情况</div>
+                        <p>5人任意排</p>
+                        <p>A<sub>5</sub><sup>5</sup> = 120</p>
+                    </div>
+                    <div class="col" style="display:flex;align-items:center;justify-content:center;font-size:3em;">-</div>
+                    <div class="col skill-card">
+                        <div class="skill-title">反面情况</div>
+                        <p>甲乙相邻 (捆绑法)</p>
+                        <p>48 (见Slide 4)</p>
+                    </div>
+                    <div class="col" style="display:flex;align-items:center;justify-content:center;font-size:3em;">=</div>
+                    <div class="col skill-card">
+                        <div class="skill-title">答案</div>
+                        <p>120 - 48</p>
+                        <p>72</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 实际应用场景 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🌍</span> 实际应用场景</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <ul>
+                            <li><strong>招聘选拔：</strong> 10人选3人任不同岗位 → A<sub>10</sub><sup>3</sup></li>
+                            <li><strong>抽奖概率：</strong> 50张奖券1个一等奖 → C<sub>1</sub><sup>1</sup> / C<sub>50</sub><sup>1</sup></li>
+                            <li><strong>密码设置：</strong> 6位数字密码 → 10<sup>6</sup></li>
+                            <li><strong>赛事安排：</strong> 8队单循环赛 → C<sub>8</sub><sup>2</sup></li>
+                        </ul>
+                    </div>
+                    <div class="col" style="text-align: center;">
+                        <div style="font-size: 8em;">🏆</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 编程求解 - 杨辉三角 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💻</span> 编程求解：杨辉三角</h2>
+            </div>
+            <div class="slide-content">
+                <p>组合数递推公式：C(n, k) = C(n-1, k-1) + C(n-1, k)</p>
+                <button id="btn-pascal" style="padding:15px 40px; background:#673AB7; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:1.5em; display:block; margin: 20px auto;">▶ 生成三角</button>
+                
+                <div class="pascal-triangle" id="triangle"></div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 代码实现 -->
+        <section class="slide" id="slide-10">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📝</span> 代码实现 (C++)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="code-block">
+                    long long C[100][100];<br>
+                    void init() {<br>
+                    &nbsp;&nbsp;for(int i=0; i<=n; i++) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;C[i][0] = 1;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;for(int j=1; j<=i; j++)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C[i][j] = C[i-1][j-1] + C[i-1][j];<br>
+                    &nbsp;&nbsp;}<br>
+                    }
+                </div>
+                <div class="conclusion">
+                    <strong>优点：</strong> 避免了阶乘溢出，且可以取模。<br>
+                    <strong>缺点：</strong> 只能处理 N 较小的情况 (N <= 2000)。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 常见易错点 -->
+        <section class="slide" id="slide-11">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 常见易错点</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">混淆</span> <strong>排列 vs 组合</strong>：记得用“交换法”测试。</li>
+                    <li><span class="mistake-tag">混淆</span> <strong>分类 vs 分步</strong>：问自己“做完这一步，事情做完了吗？”</li>
+                    <li><span class="mistake-tag">忽略</span> <strong>元素相同</strong>：相同元素分堆用隔板法，不同元素用排列。</li>
+                    <li><span class="mistake-tag">遗漏</span> <strong>内部排列</strong>：捆绑后别忘了松绑（内部互换）。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 12: 总结 -->
+        <section class="slide" id="slide-12">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 本章小结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#f3e5f5; padding:30px; border-radius:12px;">
+                        <h3>原理</h3>
+                        <p>分类用加法</p>
+                        <p>分步用乘法</p>
+                    </div>
+                    <div class="col" style="background:#ede7f6; padding:30px; border-radius:12px;">
+                        <h3>技巧</h3>
+                        <p>捆绑、插空</p>
+                        <p>隔板、排除</p>
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    我们将离开数字的世界，进入图形的世界——<strong>几何基础</strong>。
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 12</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 杨辉三角逻辑 ---
+            const btnPascal = document.getElementById('btn-pascal');
+            const triangle = document.getElementById('triangle');
+            let rows = 0;
+            const maxRows = 5;
+            let C = [[1]]; // C[0][0] = 1
+
+            btnPascal.addEventListener('click', function() {
+                if (rows >= maxRows) {
+                    triangle.innerHTML = '';
+                    rows = 0;
+                    C = [[1]];
+                    btnPascal.innerText = "▶ 生成三角";
+                    return;
+                }
+
+                // Calculate next row
+                let nextRow = [];
+                let prevRow = C[rows];
+                for (let i = 0; i <= rows + 1; i++) {
+                    let val = (i === 0 || i === rows + 1) ? 1 : (prevRow[i-1] + prevRow[i]);
+                    nextRow.push(val);
+                }
+                C.push(nextRow);
+
+                // Render
+                let rowDiv = document.createElement('div');
+                rowDiv.className = 'pascal-row';
+                
+                nextRow.forEach(val => {
+                    let cell = document.createElement('div');
+                    cell.className = 'pascal-cell';
+                    cell.innerText = val;
+                    rowDiv.appendChild(cell);
+                    // Animation
+                    setTimeout(() => cell.classList.add('show'), 100);
+                });
+                
+                triangle.appendChild(rowDiv);
+                rows++;
+                
+                if (rows === maxRows) btnPascal.innerText = "↺ 重置";
+            });
+        });
+    </script>
+
+</body>
+</html>

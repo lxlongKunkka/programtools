@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - Chapter 2: 质数判定与埃氏筛</title>
+    <style>
+        /* --- 基础布局 (延续上一章风格) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(25, 118, 210, 0.7); /* 蓝色系 (区分上一章紫色) */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #1976D2;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #1976D2; border-bottom: 4px solid #e3f2fd; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.6; color: #333; margin-bottom: 15px; }
+        ul, ol { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #1976D2; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #e3f2fd; border-left: 8px solid #1976D2; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #1976D2; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #1976D2; margin-bottom: 15px; }
+
+        /* 公式块 */
+        .formula {
+            font-size: 1.5em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 埃氏筛动画样式 */
+        .sieve-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            margin: 30px auto;
+            max-width: 800px;
+        }
+        .sieve-cell {
+            width: 100%;
+            aspect-ratio: 1/1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .sieve-cell.prime {
+            background: #1976D2;
+            color: white;
+            border-color: #0D47A1;
+        }
+        .sieve-cell.non-prime {
+            background: #f44336;
+            color: white;
+            border-color: #b71c1c;
+            opacity: 0.6;
+        }
+        .sieve-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .sieve-btn {
+            padding: 12px 25px;
+            background: #1976D2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        .sieve-btn:hover {
+            background: #0D47A1;
+            transform: scale(1.05);
+        }
+        .sieve-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* 试除法演示 */
+        .trial-div-demo {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            border: 2px solid #1976D2;
+            border-radius: 12px;
+        }
+        .trial-step {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: #e3f2fd;
+        }
+        .trial-step.active {
+            border-left: 6px solid #1976D2;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+
+        /* 代码块 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #1976D2; margin-top: 20px; font-size: 1.2em; line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        /* 示例盒子 */
+        .example-box {
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #bbdefb;
+        }
+        .example-title {
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🔐</div>
+                <h1>Chapter 2: 质数判定与埃氏筛</h1>
+                <h3>—— 高效找质数的核心方法</h3>
+                <p style="margin-top: 20px;">Primes & Sieve of Eratosthenes (C++ 实现)</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: 质数的定义 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 一、质数的核心定义</h2>
+            </div>
+            <div class="slide-content">
+                <p>质数（素数）是数论中最基础也最重要的概念，是构成整数的“基本单元”。</p>
+                
+                <div class="formula">
+                    质数：大于1的自然数，除了1和它本身，没有其他正约数。<br>
+                    合数：大于1的自然数，不是质数的数（有除1和自身外的约数）。
+                </div>
+                
+                <h3>关键说明：</h3>
+                <ul>
+                    <li><strong>边界条件：</strong> 1既不是质数也不是合数（唯一例外）；</li>
+                    <li><strong>最小质数：</strong> 2（唯一的偶质数）；</li>
+                    <li><strong>质数分布：</strong> 质数在自然数中分布越来越稀疏，但有无穷多个（欧几里得证明）。</li>
+                </ul>
+                
+                <div class="example-box">
+                    <div class="example-title">示例：1~20的质数列表</div>
+                    <p>2, 3, 5, 7, 11, 13, 17, 19（共8个）</p>
+                    <p>合数：4, 6, 8, 9, 10, 12, 14, 15, 16, 18, 20</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 试除法基础 -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✏️</span> 二、试除法：最朴素的质数判定</h2>
+            </div>
+            <div class="slide-content">
+                <p>试除法是判定质数的基础方法，核心思想：<strong>验证是否存在除1和自身外的约数</strong>。</p>
+                
+                <h3>基本思路：</h3>
+                <ol>
+                    <li>对于自然数n（n>1），遍历2到n-1的所有整数；</li>
+                    <li>若存在整数k能整除n（n%k=0），则n是合数；</li>
+                    <li>若遍历结束都没有找到这样的k，则n是质数。</li>
+                </ol>
+                
+                <div class="example-box">
+                    <div class="example-title">示例：判定17是否为质数</div>
+                    <p>遍历2~16：17%2=1，17%3=2，17%4=1，…，17%16=1</p>
+                    <p>无约数 → 17是质数。</p>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">朴素版试除法 (C++)</div>
+                    <div class="code-block">
+// 朴素版：效率低，仅作演示<br>
+bool isPrime_naive(int n) {<br>
+&nbsp;&nbsp;if (n <= 1) return false;<br>
+&nbsp;&nbsp;for (int i = 2; i < n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (n % i == 0) return false;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return true;<br>
+}
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>问题：</strong> 遍历到n-1效率太低！如何优化？
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 试除法优化 (核心：除到√n) -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚡</span> 二、试除法优化：为什么只需除到√n？</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <p><strong>核心定理：</strong> 若n是合数，则n必有一个不大于√n的质因子。</p>
+                        
+                        <h3>证明思路：</h3>
+                        <p>假设n=ab（a≤b，a>1，b>1），则：</p>
+                        <div class="formula">a ≤ √n （否则 b ≤ a < √n → ab < n，矛盾）</div>
+                        
+                        <p>结论：只需检查2到√n之间的数，即可判定n是否为质数。</p>
+                    </div>
+                    <div class="col">
+                        <div class="trial-div-demo">
+                            <h3 style="text-align: center; margin-top: 0;">示例：判定29是否为质数</h3>
+                            <div class="trial-step active">√29 ≈ 5.38 → 只需检查2~5</div>
+                            <div class="trial-step">29%2=1 → 不能整除</div>
+                            <div class="trial-step">29%3=2 → 不能整除</div>
+                            <div class="trial-step">29%4=1 → 不能整除</div>
+                            <div class="trial-step">29%5=4 → 不能整除</div>
+                            <div class="trial-step">结论：29是质数</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">试除法优化版 (C++)</div>
+                    <div class="code-block">
+#include <cmath><br>
+// 优化版：仅遍历到√n，且跳过偶数<br>
+bool isPrime(int n) {<br>
+&nbsp;&nbsp;if (n <= 1) return false;<br>
+&nbsp;&nbsp;if (n == 2) return true; // 唯一偶质数<br>
+&nbsp;&nbsp;if (n % 2 == 0) return false; // 偶数直接排除<br>
+&nbsp;&nbsp;// 只遍历奇数，到√n为止<br>
+&nbsp;&nbsp;for (int i = 3; i <= sqrt(n); i += 2) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (n % i == 0) return false;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return true;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 试除法例题 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📝</span> 二、试除法实战例题</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>例1：</strong> 判定下列数是否为质数：① 97 ② 121 ③ 173</p>
+                
+                <button id="showTrialSol" class="sieve-btn" style="display: block; margin: 20px auto;">查看解析</button>
+                
+                <div id="trialSolution" style="display: none;">
+                    <div class="example-box">
+                        <p>① 97：√97≈9.8 → 检查2~9</p>
+                        <p>97是偶数？否；97%3=1，97%5=2，97%7=6，97%9=7 → 质数。</p>
+                        <br>
+                        <p>② 121：√121=11 → 121%11=0 → 合数（11×11）。</p>
+                        <br>
+                        <p>③ 173：√173≈13.15 → 检查2~13</p>
+                        <p>173是偶数？否；173%3=2，173%5=3，173%7=5，173%9=2，173%11=7，173%13=4 → 质数。</p>
+                    </div>
+                    
+                    <div class="skill-card">
+                        <div class="skill-title">测试代码 (C++)</div>
+                        <div class="code-block">
+#include <iostream><br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;int nums[] = {97, 121, 173};<br>
+&nbsp;&nbsp;for (int n : nums) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cout << n << " is " << (isPrime(n) ? "prime" : "not prime") << endl;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;// 输出：<br>
+&nbsp;&nbsp;// 97 is prime<br>
+&nbsp;&nbsp;// 121 is not prime<br>
+&nbsp;&nbsp;// 173 is prime<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>试除法特点：</strong> 适合单个数的质数判定，时间复杂度O(√n)；<br>
+                    <strong>缺点：</strong> 批量找1~N的质数时，重复计算多，效率低。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 埃氏筛法原理 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🧩</span> 三、埃氏筛法：批量找质数的高效算法</h2>
+            </div>
+            <div class="slide-content">
+                <p>埃拉托斯特尼筛法（Sieve of Eratosthenes）是古希腊数学家提出的高效找质数算法，核心思想：<strong>筛掉合数，剩下的就是质数</strong>。</p>
+                
+                <h3>核心步骤：</h3>
+                <ol>
+                    <li>初始化：创建长度为N+1的布尔数组is_prime，初始值全为true（假设所有数都是质数）；</li>
+                    <li>边界处理：将is_prime[0]和is_prime[1]设为false（0和1不是质数）；</li>
+                    <li>筛除过程：从2开始，将每个质数的所有倍数标记为合数；</li>
+                    <li>结果：最终is_prime[i]为true的数i就是质数。</li>
+                </ol>
+                
+                <div class="formula">
+                    时间复杂度：O(N log log N)（远优于试除法的O(N√N)）<br>
+                    空间复杂度：O(N)（需要存储布尔数组）
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 埃氏筛法动画演示 -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🎬</span> 三、埃氏筛法动画演示（找1~50的质数）</h2>
+            </div>
+            <div class="slide-content">
+                <div class="sieve-controls">
+                    <button id="sieveReset" class="sieve-btn">重置</button>
+                    <button id="sieveStep" class="sieve-btn">分步演示</button>
+                    <button id="sieveFull" class="sieve-btn">一键完成</button>
+                </div>
+                
+                <div class="sieve-container" id="sieveGrid">
+                    <!-- 动态生成1~50的格子 -->
+                </div>
+                
+                <div class="example-box" style="margin-top: 30px;">
+                    <div class="example-title">埃氏筛法关键优化</div>
+                    <p>1. 从i²开始筛除（更小的倍数已被更小的质数筛过）；</p>
+                    <p>2. 只处理奇数（偶数除了2都是合数）；</p>
+                    <p>3. 筛到√N即可（大于√N的数若未被筛除，必为质数）。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 埃氏筛法代码实现 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💻</span> 三、埃氏筛法代码实现 (C++)</h2>
+            </div>
+            <div class="slide-content">
+                <div class="skill-card">
+                    <div class="skill-title">基础版埃氏筛</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <vector><br>
+#include <cmath><br>
+using namespace std;<br>
+<br>
+// 埃氏筛法：返回1~n的所有质数<br>
+vector<int> sieve(int n) {<br>
+&nbsp;&nbsp;if (n < 2) return {};<br>
+&nbsp;&nbsp;// 初始化布尔数组，默认所有数都是质数<br>
+&nbsp;&nbsp;vector<bool> is_prime(n + 1, true);<br>
+&nbsp;&nbsp;is_prime[0] = is_prime[1] = false; // 0和1不是质数<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 从2开始筛除倍数<br>
+&nbsp;&nbsp;for (int i = 2; i <= sqrt(n); ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (is_prime[i]) { // i是质数，筛除其倍数<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// 从i²开始（更小的倍数已被筛过）<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (int j = i * i; j <= n; j += i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;is_prime[j] = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 收集所有质数<br>
+&nbsp;&nbsp;vector<int> primes;<br>
+&nbsp;&nbsp;for (int i = 2; i <= n; ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (is_prime[i]) primes.push_back(i);<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return primes;<br>
+}<br>
+<br>
+// 测试示例<br>
+int main() {<br>
+&nbsp;&nbsp;vector<int> primes = sieve(50);<br>
+&nbsp;&nbsp;cout << "Primes from 1 to 50: ";<br>
+&nbsp;&nbsp;for (int p : primes) cout << p << " ";<br>
+&nbsp;&nbsp;// 输出：2 3 5 7 11 13 17 19 23 29 31 37 41 43 47<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">优化版埃氏筛（仅处理奇数）</div>
+                    <div class="code-block">
+// 优化版：节省一半空间，仅处理奇数<br>
+vector<int> sieve_optimized(int n) {<br>
+&nbsp;&nbsp;if (n < 2) return {};<br>
+&nbsp;&nbsp;vector<int> primes;<br>
+&nbsp;&nbsp;primes.push_back(2); // 单独处理唯一偶质数<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;vector<bool> is_prime(n + 1, true);<br>
+&nbsp;&nbsp;is_prime[0] = is_prime[1] = false;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 只遍历奇数<br>
+&nbsp;&nbsp;for (int i = 3; i <= sqrt(n); i += 2) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (is_prime[i]) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// 从i²开始，步长2i（筛除奇数倍）<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (int j = i * i; j <= n; j += 2 * i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;is_prime[j] = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 收集奇数质数<br>
+&nbsp;&nbsp;for (int i = 3; i <= n; i += 2) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (is_prime[i]) primes.push_back(i);<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return primes;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 实战：统计区间质数个数 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> 四、实战：统计区间内的质数个数</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>问题：</strong> 给定区间[L, R]，统计其中的质数个数（例如：统计100~200之间的质数个数）。</p>
+                
+                <h3>解题思路：</h3>
+                <ol>
+                    <li>先用埃氏筛法生成1~√R的所有质数；</li>
+                    <li>创建长度为R-L+1的布尔数组，初始值为true；</li>
+                    <li>用每个质数p，筛除[L, R]中p的倍数；</li>
+                    <li>统计剩余true的数量（注意处理边界）。</li>
+                </ol>
+                
+                <div class="example-box">
+                    <div class="example-title">示例：统计100~200的质数个数</div>
+                    <p>步骤1：生成1~√200≈14.14的质数 → [2,3,5,7,11,13]</p>
+                    <p>步骤2：筛除100~200中这些质数的倍数；</p>
+                    <p>步骤3：统计剩余质数：101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193,197,199；</p>
+                    <p>结论：共21个质数。</p>
+                </div>
+                
+                <button id="showRangeCode" class="sieve-btn" style="display: block; margin: 20px auto;">查看区间质数统计代码</button>
+                <div id="rangeCode" style="display: none;">
+                    <div class="code-block">
+#include <iostream><br>
+#include <vector><br>
+#include <cmath><br>
+using namespace std;<br>
+<br>
+// 生成1~n的质数（基础埃氏筛）<br>
+vector<int> sieve(int n) {<br>
+&nbsp;&nbsp;if (n < 2) return {};<br>
+&nbsp;&nbsp;vector<bool> is_prime(n + 1, true);<br>
+&nbsp;&nbsp;is_prime[0] = is_prime[1] = false;<br>
+&nbsp;&nbsp;for (int i = 2; i <= sqrt(n); ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (is_prime[i]) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (int j = i * i; j <= n; j += i) is_prime[j] = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;vector<int> primes;<br>
+&nbsp;&nbsp;for (int i = 2; i <= n; ++i) if (is_prime[i]) primes.push_back(i);<br>
+&nbsp;&nbsp;return primes;<br>
+}<br>
+<br>
+// 统计[L, R]区间内的质数个数<br>
+int countPrimesInRange(int L, int R) {<br>
+&nbsp;&nbsp;if (R < 2) return 0;<br>
+&nbsp;&nbsp;int sqrt_R = sqrt(R);<br>
+&nbsp;&nbsp;vector<int> base_primes = sieve(sqrt_R); // 生成1~√R的质数<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 初始化区间数组：is_prime[i] 对应 L+i<br>
+&nbsp;&nbsp;vector<bool> is_prime(R - L + 1, true);<br>
+&nbsp;&nbsp;if (L <= 0) is_prime[0 - L] = false;<br>
+&nbsp;&nbsp;if (L <= 1 && 1 <= R) is_prime[1 - L] = false;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 筛除区间内的合数<br>
+&nbsp;&nbsp;for (int p : base_primes) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// 找到>=L的最小p的倍数<br>
+&nbsp;&nbsp;&nbsp;&nbsp;int start = max(p * p, (L + p - 1) / p * p);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;for (int j = start; j <= R; j += p) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;is_prime[j - L] = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 统计质数个数<br>
+&nbsp;&nbsp;int count = 0;<br>
+&nbsp;&nbsp;for (bool val : is_prime) if (val) count++;<br>
+&nbsp;&nbsp;return count;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;int L = 100, R = 200;<br>
+&nbsp;&nbsp;cout << "质数个数: " << countPrimesInRange(L, R) << endl; // 输出21<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 常见易错点 -->
+        <section class="slide" id="slide-10">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 五、常见易错点与规避</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">边界错误</span> <strong>1的处理</strong>：忘记1既不是质数也不是合数，导致判定错误。</li>
+                    <li><span class="mistake-tag">效率问题</span> <strong>试除法未优化</strong>：遍历到n-1而非√n，时间复杂度飙升。</li>
+                    <li><span class="mistake-tag">筛除错误</span> <strong>埃氏筛起始点</strong>：从i而非i²开始筛除，重复操作降低效率。</li>
+                    <li><span class="mistake-tag">内存溢出</span> <strong>大区间筛法</strong>：直接生成1~R的数组，R过大时内存不足（C++中vector<int>需注意内存限制）。</li>
+                    <li><span class="mistake-tag">偶质数遗漏</span> <strong>优化版筛法</strong>：忘记2是唯一的偶质数，导致结果缺失。</li>
+                    <li><span class="mistake-tag">类型溢出</span> <strong>C++特有的问题</strong>：int类型范围不足（如n>2e9时需用long long）。</li>
+                </ul>
+                
+                <div class="conclusion">
+                    <strong>C++避坑技巧：</strong><br>
+                    1. 优先使用vector<bool>存储筛法数组（空间优化）；<br>
+                    2. 大数运算用long long避免溢出；<br>
+                    3. 区间筛法替代全局筛法处理大R；<br>
+                    4. 预处理常用质数表提升效率。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 总结与练习 -->
+        <section class="slide" id="slide-11">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 六、总结与练习</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#e3f2fd; padding:30px; border-radius:12px;">
+                        <h3>核心知识</h3>
+                        <p>质数定义（1的特殊处理）</p>
+                        <p>试除法（优化：除到√n，C++实现）</p>
+                        <p>埃氏筛法（批量找质数，空间优化）</p>
+                        <p>区间质数统计（C++区间筛法）</p>
+                    </div>
+                    <div class="col" style="background:#bbdefb; padding:30px; border-radius:12px;">
+                        <h3>课后练习（C++实现）</h3>
+                        <p>1. 用试除法判定199、209是否为质数；</p>
+                        <p>2. 用埃氏筛法找出1~100的所有质数；</p>
+                        <p>3. 统计200~300之间的质数个数；</p>
+                        <p>4. 优化埃氏筛法，用bitset替代vector<bool>进一步节省空间。</p>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    掌握了质数判定方法后，我们将学习质数的进阶应用——<strong>质因数分解与欧拉函数</strong>，进一步探索数论的核心规律！
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 11</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 试除法例题解析 ---
+            document.getElementById('showTrialSol').addEventListener('click', function() {
+                document.getElementById('trialSolution').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+
+            // --- 区间质数代码展示 ---
+            document.getElementById('showRangeCode').addEventListener('click', function() {
+                document.getElementById('rangeCode').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+
+            // --- 埃氏筛动画逻辑 ---
+            const sieveGrid = document.getElementById('sieveGrid');
+            const sieveReset = document.getElementById('sieveReset');
+            const sieveStep = document.getElementById('sieveStep');
+            const sieveFull = document.getElementById('sieveFull');
+            let sieveCells = [];
+            let currentPrime = 2;
+            const maxNum = 50;
+
+            // 初始化筛法网格
+            function initSieve() {
+                sieveGrid.innerHTML = '';
+                sieveCells = [];
+                currentPrime = 2;
+                
+                for (let i = 0; i <= maxNum; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'sieve-cell';
+                    cell.textContent = i;
+                    cell.dataset.num = i;
+                    
+                    // 初始标记0和1为非质数
+                    if (i === 0 || i === 1) {
+                        cell.classList.add('non-prime');
+                    }
+                    
+                    sieveGrid.appendChild(cell);
+                    sieveCells.push(cell);
+                }
+                
+                sieveStep.disabled = false;
+            }
+
+            // 分步筛除
+            function stepSieve() {
+                // 找到下一个未标记的质数
+                while (currentPrime <= maxNum) {
+                    if (!sieveCells[currentPrime].classList.contains('non-prime')) {
+                        break;
+                    }
+                    currentPrime++;
+                }
+                
+                if (currentPrime > maxNum) {
+                    sieveStep.disabled = true;
+                    return;
+                }
+                
+                // 标记当前质数
+                sieveCells[currentPrime].classList.add('prime');
+                
+                // 筛除当前质数的倍数
+                for (let j = currentPrime * 2; j <= maxNum; j += currentPrime) {
+                    if (!sieveCells[j].classList.contains('prime')) {
+                        sieveCells[j].classList.add('non-prime');
+                    }
+                }
+                
+                currentPrime++;
+                
+                // 所有数处理完后禁用按钮
+                if (currentPrime > maxNum) {
+                    sieveStep.disabled = true;
+                }
+            }
+
+            // 一键完成筛法
+            function fullSieve() {
+                initSieve();
+                currentPrime = 2;
+                
+                while (currentPrime <= maxNum) {
+                    if (!sieveCells[currentPrime].classList.contains('non-prime')) {
+                        sieveCells[currentPrime].classList.add('prime');
+                        for (let j = currentPrime * 2; j <= maxNum; j += currentPrime) {
+                            if (!sieveCells[j].classList.contains('prime')) {
+                                sieveCells[j].classList.add('non-prime');
+                            }
+                        }
+                    }
+                    currentPrime++;
+                }
+                
+                sieveStep.disabled = true;
+            }
+
+            // 绑定筛法按钮事件
+            initSieve();
+            sieveReset.addEventListener('click', initSieve);
+            sieveStep.addEventListener('click', stepSieve);
+            sieveFull.addEventListener('click', fullSieve);
+        });
+    </script>
+
+</body>
+</html>

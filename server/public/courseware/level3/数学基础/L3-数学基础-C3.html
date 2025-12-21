@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学基础 - Chapter 3: 最大公约数与最小公倍数</title>
+    <style>
+        /* --- 基础布局 (延续前章风格) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #000;
+        }
+
+        .ppt-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            padding: 4vh 6vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* --- 导航按钮 --- */
+        .nav-button {
+            position: absolute;
+            bottom: 30px;
+            z-index: 10;
+            background-color: rgba(76, 175, 80, 0.7); /* 绿色系 (区分前章蓝色) */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .nav-button:hover {
+            background-color: #4CAF50;
+            transform: scale(1.1);
+        }
+        #prevBtn { left: 30px; }
+        #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        /* --- 页面计数器 --- */
+        #slideCounter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+        }
+
+        /* --- 内容样式 --- */
+        h1 { font-size: clamp(3em, 6vw, 5em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2.5em, 5vw, 3.5em); color: #4CAF50; border-bottom: 4px solid #e8f5e9; padding-bottom: 20px; margin-top: 0; margin-bottom: 3vh; }
+        h3 { font-size: clamp(1.8em, 3vw, 2.5em); color: #555; margin-top: 30px; }
+        p, li { font-size: clamp(1.5em, 2.5vw, 2em); line-height: 1.6; color: #333; margin-bottom: 15px; }
+        ul, ol { padding-left: 40px; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(5em, 8vw, 6em); margin-bottom: 30px; }
+        .highlight { color: #4CAF50; font-weight: bold; }
+        .conclusion { margin-top: 4vh; padding: 25px; background-color: #e8f5e9; border-left: 8px solid #4CAF50; border-radius: 8px; font-style: italic; font-size: 1.1em; }
+        
+        /* 本章特定样式 */
+        .container { display: flex; width: 100%; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; text-align: left; }
+
+        /* 技巧卡片 */
+        .skill-card {
+            background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; transition: 0.3s;
+        }
+        .skill-card:hover { border-color: #4CAF50; transform: translateY(-5px); }
+        .skill-title { font-weight: bold; font-size: 1.3em; color: #4CAF50; margin-bottom: 15px; }
+
+        /* 公式块 */
+        .formula {
+            font-size: 1.5em;
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #eee;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background: #f5f5f5; padding: 25px; border-radius: 12px; font-family: monospace;
+            border-left: 6px solid #4CAF50; margin-top: 20px; font-size: 1.2em; line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        /* 示例盒子 */
+        .example-box {
+            background-color: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c8e6c9;
+        }
+        .example-title {
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* GCD/LCM 动画样式 */
+        .gcd-demo-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            border: 2px solid #4CAF50;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .factor-box {
+            display: inline-block;
+            padding: 15px 25px;
+            margin: 10px;
+            background: #f1f8e9;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .common-factor {
+            background: #81c784;
+            color: white;
+        }
+        .gcd-lcm-controls {
+            margin: 30px 0;
+        }
+        .demo-btn {
+            padding: 12px 25px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        .demo-btn:hover {
+            background: #388e3c;
+            transform: scale(1.05);
+        }
+        .euclid-step {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f1f8e9;
+            text-align: left;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .euclid-step.active {
+            opacity: 1;
+            border-left: 6px solid #4CAF50;
+        }
+
+        /* 易错点列表 */
+        .mistake-list li { margin-bottom: 25px; }
+        .mistake-tag { background: #F44336; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.8em; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <section class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🔢</div>
+                <h1>Chapter 3: 最大公约数与最小公倍数</h1>
+                <h3>—— GCD & LCM 核心算法与 C++ 实现</h3>
+                <p style="margin-top: 20px;">Greatest Common Divisor & Least Common Multiple</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: 基本定义 -->
+        <section class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📚</span> 一、核心定义</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col">
+                        <h3>1. 最大公约数 (GCD)</h3>
+                        <p>两个或多个整数共有约数中<strong>最大</strong>的那个数，记为 gcd(a, b)。</p>
+                        <div class="formula">
+                            例：gcd(12, 18) = 6<br>
+                            12的约数：1,2,3,4,6,12<br>
+                            18的约数：1,2,3,6,9,18<br>
+                            公约数：1,2,3,6 → 最大为6
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3>2. 最小公倍数 (LCM)</h3>
+                        <p>两个或多个整数共有倍数中<strong>最小</strong>的那个正整数，记为 lcm(a, b)。</p>
+                        <div class="formula">
+                            例：lcm(12, 18) = 36<br>
+                            12的倍数：12,24,36,48,...<br>
+                            18的倍数：18,36,54,72,...<br>
+                            公倍数：36,72,... → 最小为36
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">关键说明</div>
+                    <ul>
+                        <li>GCD 性质：gcd(a, b) = gcd(b, a)，gcd(a, 0) = a；</li>
+                        <li>LCM 性质：lcm(a, b) ≥ max(a, b)，lcm(a, a) = a；</li>
+                        <li>特殊值：gcd(0, 0) 无意义，lcm(0, 0) 无意义。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 质因数分解法求GCD/LCM -->
+        <section class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✏️</span> 二、质因数分解法（基础方法）</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>核心思想：</strong> 将数分解为质因数乘积，通过质因数的幂次计算 GCD/LCM。</p>
+                
+                <h3>步骤：</h3>
+                <ol>
+                    <li>对 a、b 分别做质因数分解；</li>
+                    <li>GCD：取相同质因数的<strong>最小幂次</strong>相乘；</li>
+                    <li>LCM：取所有质因数的<strong>最大幂次</strong>相乘。</li>
+                </ol>
+                
+                <div class="gcd-demo-container" id="factorDemo">
+                    <h3>动画演示：求 gcd(24, 36) 和 lcm(24, 36)</h3>
+                    <div id="factorContent">
+                        <p>点击按钮查看分解过程</p>
+                    </div>
+                    <button class="demo-btn" id="showFactorDemo">开始演示</button>
+                </div>
+                
+                <div class="formula">
+                    核心公式：gcd(a, b) × lcm(a, b) = a × b<br>
+                    → lcm(a, b) = (a × b) / gcd(a, b)
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 欧几里得算法（辗转相除法） -->
+        <section class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚡</span> 三、欧几里得算法（高效求GCD）</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>欧几里得算法（辗转相除法）</strong>是求 GCD 的高效算法，核心定理：</p>
+                <div class="formula">
+                    gcd(a, b) = gcd(b, a % b) （a > b > 0）
+                </div>
+                
+                <h3>算法步骤：</h3>
+                <ol>
+                    <li>若 b = 0，返回 a 作为 GCD；</li>
+                    <li>否则，计算 a % b = r，递归求 gcd(b, r)；</li>
+                    <li>直到余数为0，此时的除数即为 GCD。</li>
+                </ol>
+                
+                <div class="gcd-demo-container" id="euclidDemo">
+                    <h3>动画演示：求 gcd(1071, 462)</h3>
+                    <div id="euclidSteps">
+                        <div class="euclid-step" id="step1">Step 1: gcd(1071, 462) → 1071 % 462 = 147</div>
+                        <div class="euclid-step" id="step2">Step 2: gcd(462, 147) → 462 % 147 = 21</div>
+                        <div class="euclid-step" id="step3">Step 3: gcd(147, 21) → 147 % 21 = 0</div>
+                        <div class="euclid-step" id="step4">Step 4: 余数为0，返回21 → gcd(1071, 462) = 21</div>
+                    </div>
+                    <div class="gcd-lcm-controls">
+                        <button class="demo-btn" id="prevEuclid" disabled>上一步</button>
+                        <button class="demo-btn" id="nextEuclid">下一步</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 欧几里得算法C++实现 -->
+        <section class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">💻</span> 三、欧几里得算法 C++ 实现</h2>
+            </div>
+            <div class="slide-content">
+                <div class="skill-card">
+                    <div class="skill-title">1. 递归版实现</div>
+                    <div class="code-block">
+#include <iostream><br>
+using namespace std;<br>
+<br>
+// 递归版欧几里得算法求GCD<br>
+long long gcd_recursive(long long a, long long b) {<br>
+&nbsp;&nbsp;// 保证a ≥ b，处理负数（取绝对值）<br>
+&nbsp;&nbsp;a = abs(a);<br>
+&nbsp;&nbsp;b = abs(b);<br>
+&nbsp;&nbsp;if (b == 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return a; // 边界条件：gcd(a, 0) = a<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return gcd_recursive(b, a % b); // 递归调用<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;long long a = 1071, b = 462;<br>
+&nbsp;&nbsp;cout << "gcd(" << a << ", " << b << ") = " << gcd_recursive(a, b) << endl;<br>
+&nbsp;&nbsp;// 输出：gcd(1071, 462) = 21<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+                
+                <div class="skill-card">
+                    <div class="skill-title">2. 迭代版实现（更高效）</div>
+                    <div class="code-block">
+// 迭代版欧几里得算法（避免递归栈开销）<br>
+long long gcd_iterative(long long a, long long b) {<br>
+&nbsp;&nbsp;a = abs(a);<br>
+&nbsp;&nbsp;b = abs(b);<br>
+&nbsp;&nbsp;// 循环直到余数为0<br>
+&nbsp;&nbsp;while (b != 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;long long r = a % b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a = b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b = r;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return a;<br>
+}<br>
+<br>
+// 测试代码<br>
+int main() {<br>
+&nbsp;&nbsp;cout << gcd_iterative(24, 36) << endl; // 输出12<br>
+&nbsp;&nbsp;cout << gcd_iterative(0, 5) << endl;  // 输出5<br>
+&nbsp;&nbsp;cout << gcd_iterative(-18, -24) << endl; // 输出6<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: LCM的C++实现 -->
+        <section class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">🔧</span> 四、最小公倍数 (LCM) C++ 实现</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>核心公式：</strong> lcm(a, b) = (a × b) / gcd(a, b)</p>
+                <p><strong>注意：</strong> 先除后乘避免整数溢出（C++ 关键优化）！</p>
+                
+                <div class="skill-card">
+                    <div class="skill-title">LCM 实现（防溢出版）</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <algorithm> // 也可使用C++17的std::gcd<br>
+using namespace std;<br>
+<br>
+// 先实现GCD（迭代版）<br>
+long long gcd(long long a, long long b) {<br>
+&nbsp;&nbsp;a = abs(a);<br>
+&nbsp;&nbsp;b = abs(b);<br>
+&nbsp;&nbsp;while (b != 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;long long r = a % b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a = b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b = r;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return a;<br>
+}<br>
+<br>
+// 计算LCM（先除后乘，避免溢出）<br>
+long long lcm(long long a, long long b) {<br>
+&nbsp;&nbsp;if (a == 0 || b == 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return 0; // 0的LCM无意义，返回0标识<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;// 先除以GCD再相乘，避免a*b溢出<br>
+&nbsp;&nbsp;return (a / gcd(a, b)) * b;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;long long a = 24, b = 36;<br>
+&nbsp;&nbsp;cout << "gcd(" << a << ", " << b << ") = " << gcd(a, b) << endl; // 12<br>
+&nbsp;&nbsp;cout << "lcm(" << a << ", " << b << ") = " << lcm(a, b) << endl; // 72<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 测试大数（验证防溢出）<br>
+&nbsp;&nbsp;long long c = 1e18, d = 1e18 - 1;<br>
+&nbsp;&nbsp;cout << "gcd(" << c << ", " << d << ") = " << gcd(c, d) << endl; // 1<br>
+&nbsp;&nbsp;cout << "lcm(" << c << ", " << d << ") = " << lcm(c, d) << endl; // 1e18*(1e18-1)<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">C++17 简化实现</div>
+                    <p>C++17 标准库已内置 gcd/lcm 函数（需包含 <numeric>）：</p>
+                    <div class="code-block">
+#include <iostream><br>
+#include <numeric> // std::gcd, std::lcm (C++17)<br>
+using namespace std;<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;int a = 12, b = 18;<br>
+&nbsp;&nbsp;cout << "gcd: " << gcd(a, b) << endl; // 6<br>
+&nbsp;&nbsp;cout << "lcm: " << lcm(a, b) << endl; // 36<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 多个数的GCD/LCM -->
+        <section class="slide" id="slide-7">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">📊</span> 五、多个数的GCD/LCM 计算</h2>
+            </div>
+            <div class="slide-content">
+                <p><strong>核心思想：</strong> 迭代计算，两两求解（满足结合律）。</p>
+                
+                <h3>示例：求 gcd(12, 18, 24) 和 lcm(12, 18, 24)</h3>
+                <ol>
+                    <li>gcd(12,18)=6 → gcd(6,24)=6 → 最终GCD=6；</li>
+                    <li>lcm(12,18)=36 → lcm(36,24)=72 → 最终LCM=72。</li>
+                </ol>
+                
+                <div class="skill-card">
+                    <div class="skill-title">多个数的GCD/LCM C++实现</div>
+                    <div class="code-block">
+#include <iostream><br>
+#include <vector><br>
+using namespace std;<br>
+<br>
+// 基础GCD函数<br>
+long long gcd(long long a, long long b) {<br>
+&nbsp;&nbsp;a = abs(a); b = abs(b);<br>
+&nbsp;&nbsp;while (b != 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;long long r = a % b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a = b; b = r;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return a;<br>
+}<br>
+<br>
+// 基础LCM函数<br>
+long long lcm(long long a, long long b) {<br>
+&nbsp;&nbsp;if (a == 0 || b == 0) return 0;<br>
+&nbsp;&nbsp;return (a / gcd(a, b)) * b;<br>
+}<br>
+<br>
+// 多个数的GCD<br>
+long long gcd_multi(const vector<long long>& nums) {<br>
+&nbsp;&nbsp;if (nums.empty()) return 0;<br>
+&nbsp;&nbsp;long long result = nums[0];<br>
+&nbsp;&nbsp;for (size_t i = 1; i < nums.size(); ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;result = gcd(result, nums[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (result == 1) break; // 优化：GCD=1无需继续计算<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return result;<br>
+}<br>
+<br>
+// 多个数的LCM<br>
+long long lcm_multi(const vector<long long>& nums) {<br>
+&nbsp;&nbsp;if (nums.empty()) return 0;<br>
+&nbsp;&nbsp;long long result = nums[0];<br>
+&nbsp;&nbsp;for (size_t i = 1; i < nums.size(); ++i) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;result = lcm(result, nums[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (result == 0) break; // 包含0则LCM无意义<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return result;<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;vector<long long> nums = {12, 18, 24};<br>
+&nbsp;&nbsp;cout << "Multi-GCD: " << gcd_multi(nums) << endl; // 6<br>
+&nbsp;&nbsp;cout << "Multi-LCM: " << lcm_multi(nums) << endl; // 72<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 实战例题 -->
+        <section class="slide" id="slide-8">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚔️</span> 六、实战例题</h2>
+            </div>
+            <div class="slide-content">
+                <div class="example-box">
+                    <div class="example-title">例1：分数化简</div>
+                    <p>将分数 45/75 化为最简形式 → 分子分母同除以 gcd(45,75)=15 → 3/5。</p>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">例2：行程问题</div>
+                    <p>甲每12分钟跑一圈，乙每18分钟跑一圈，两人同时起跑，多久后再次同时回到起点？</p>
+                    <p>解：求 lcm(12,18)=36 → 36分钟后再次相遇。</p>
+                </div>
+                
+                <button class="demo-btn" id="showPracticeCode" style="display: block; margin: 20px auto;">查看例题C++实现</button>
+                <div id="practiceCode" style="display: none;">
+                    <div class="skill-card">
+                        <div class="skill-title">例题代码实现</div>
+                        <div class="code-block">
+#include <iostream><br>
+using namespace std;<br>
+<br>
+long long gcd(long long a, long long b) {<br>
+&nbsp;&nbsp;a = abs(a); b = abs(b);<br>
+&nbsp;&nbsp;while (b != 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;long long r = a % b;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;a = b; b = r;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;return a;<br>
+}<br>
+<br>
+long long lcm(long long a, long long b) {<br>
+&nbsp;&nbsp;return (a / gcd(a, b)) * b;<br>
+}<br>
+<br>
+// 分数化简<br>
+void simplify_fraction(long long& numerator, long long& denominator) {<br>
+&nbsp;&nbsp;long long g = gcd(numerator, denominator);<br>
+&nbsp;&nbsp;numerator /= g;<br>
+&nbsp;&nbsp;denominator /= g;<br>
+&nbsp;&nbsp;// 保证分母为正<br>
+&nbsp;&nbsp;if (denominator < 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;numerator = -numerator;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;denominator = -denominator;<br>
+&nbsp;&nbsp;}<br>
+}<br>
+<br>
+int main() {<br>
+&nbsp;&nbsp;// 例1：分数化简<br>
+&nbsp;&nbsp;long long num = 45, den = 75;<br>
+&nbsp;&nbsp;simplify_fraction(num, den);<br>
+&nbsp;&nbsp;cout << "最简分数：" << num << "/" << den << endl; // 3/5<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// 例2：行程问题<br>
+&nbsp;&nbsp;long long t1 = 12, t2 = 18;<br>
+&nbsp;&nbsp;cout << "再次相遇时间：" << lcm(t1, t2) << "分钟" << endl; // 36<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;return 0;<br>
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 常见易错点 -->
+        <section class="slide" id="slide-9">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">⚠️</span> 七、常见易错点（C++ 重点）</h2>
+            </div>
+            <div class="slide-content">
+                <ul class="mistake-list">
+                    <li><span class="mistake-tag">溢出问题</span> <strong>整数溢出</strong>：直接计算a*b导致溢出（如1e9*1e9超出int范围），需先除后乘。</li>
+                    <li><span class="mistake-tag">边界错误</span> <strong>0的处理</strong>：gcd(0, a)=a，lcm(0, a)无意义，代码需做边界判断。</li>
+                    <li><span class="mistake-tag">符号错误</span> <strong>负数处理</strong>：GCD/LCM是正数，需先取绝对值再计算。</li>
+                    <li><span class="mistake-tag">效率问题</span> <strong>递归栈溢出</strong>：递归版GCD处理大数时可能栈溢出，优先用迭代版。</li>
+                    <li><span class="mistake-tag">版本兼容</span> <strong>C++17依赖</strong>：std::gcd/std::lcm仅C++17支持，需手动实现兼容低版本。</li>
+                </ul>
+                
+                <div class="conclusion">
+                    <strong>C++ 避坑技巧：</strong><br>
+                    1. 统一使用long long类型避免溢出；<br>
+                    2. 计算LCM时严格遵循「先除后乘」；<br>
+                    3. 所有输入先取绝对值，处理负数；<br>
+                    4. 优先实现迭代版GCD，避免递归风险；<br>
+                    5. 对0做显式判断，避免逻辑错误。
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 总结与练习 -->
+        <section class="slide" id="slide-10">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.2em; vertical-align: middle;">✅</span> 八、总结与练习</h2>
+            </div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="col" style="background:#e8f5e9; padding:30px; border-radius:12px;">
+                        <h3>核心知识</h3>
+                        <p>GCD/LCM 定义与基本性质；</p>
+                        <p>质因数分解法求GCD/LCM；</p>
+                        <p>欧几里得算法（迭代/递归）；</p>
+                        <p>C++ 实现（防溢出、边界处理）；</p>
+                        <p>多个数的GCD/LCM 计算。</p>
+                    </div>
+                    <div class="col" style="background:#c8e6c9; padding:30px; border-radius:12px;">
+                        <h3>课后练习（C++ 实现）</h3>
+                        <p>1. 实现函数求 gcd(12345, 67890) 和 lcm(12345, 67890)；</p>
+                        <p>2. 编写程序化简任意分数（处理负数）；</p>
+                        <p>3. 求 10, 15, 20, 25 的GCD和LCM；</p>
+                        <p>4. 优化欧几里得算法，实现二进制GCD（更高效）。</p>
+                    </div>
+                </div>
+                
+                <div class="conclusion">
+                    <strong>下一章预告：</strong><br>
+                    掌握了GCD/LCM后，我们将学习数论的进阶应用——<strong>扩展欧几里得算法与线性同余方程</strong>，解决更多实际编程问题！
+                </div>
+            </div>
+        </section>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 10</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => { if (currentSlide > 0) showSlide(currentSlide - 1); });
+            nextBtn.addEventListener('click', () => { if (currentSlide < totalSlides - 1) showSlide(currentSlide + 1); });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'ArrowRight') nextBtn.click();
+            });
+
+            showSlide(0);
+
+            // --- 质因数分解演示逻辑 ---
+            const showFactorDemo = document.getElementById('showFactorDemo');
+            const factorContent = document.getElementById('factorContent');
+            let factorDemoStep = 0;
+            
+            showFactorDemo.addEventListener('click', function() {
+                factorDemoStep++;
+                switch(factorDemoStep) {
+                    case 1:
+                        factorContent.innerHTML = `
+                            <p>步骤1：质因数分解</p>
+                            <div>24 = <span class="factor-box">2³</span> × <span class="factor-box">3¹</span></div>
+                            <div>36 = <span class="factor-box">2²</span> × <span class="factor-box">3²</span></div>
+                        `;
+                        break;
+                    case 2:
+                        factorContent.innerHTML = `
+                            <p>步骤2：计算GCD（取最小幂次）</p>
+                            <div>gcd(24,36) = 2<sup>min(3,2)</sup> × 3<sup>min(1,2)</sup> = 2² × 3¹ = <span class="factor-box common-factor">12</span></div>
+                        `;
+                        break;
+                    case 3:
+                        factorContent.innerHTML = `
+                            <p>步骤3：计算LCM（取最大幂次）</p>
+                            <div>24 = 2³ × 3¹</div>
+                            <div>36 = 2² × 3²</div>
+                            <div>lcm(24,36) = 2<sup>max(3,2)</sup> × 3<sup>max(1,2)</sup> = 2³ × 3² = <span class="factor-box common-factor">72</span></div>
+                            <p>验证：12 × 72 = 24 × 36 = 864 ✔️</p>
+                        `;
+                        this.disabled = true;
+                        this.style.opacity = 0.5;
+                        break;
+                }
+            });
+
+            // --- 欧几里得算法步骤演示 ---
+            const prevEuclid = document.getElementById('prevEuclid');
+            const nextEuclid = document.getElementById('nextEuclid');
+            let euclidStep = 0;
+            const euclidSteps = ['step1', 'step2', 'step3', 'step4'];
+            
+            function updateEuclidSteps() {
+                euclidSteps.forEach((stepId, idx) => {
+                    const step = document.getElementById(stepId);
+                    step.classList.toggle('active', idx < euclidStep);
+                });
+                prevEuclid.disabled = euclidStep <= 0;
+                nextEuclid.disabled = euclidStep >= euclidSteps.length;
+            }
+            
+            nextEuclid.addEventListener('click', () => {
+                euclidStep++;
+                updateEuclidSteps();
+            });
+            
+            prevEuclid.addEventListener('click', () => {
+                euclidStep--;
+                updateEuclidSteps();
+            });
+
+            // --- 实战例题代码展示 ---
+            document.getElementById('showPracticeCode').addEventListener('click', function() {
+                document.getElementById('practiceCode').style.display = 'block';
+                this.disabled = true;
+                this.style.opacity = 0.5;
+            });
+        });
+    </script>
+
+</body>
+</html>
