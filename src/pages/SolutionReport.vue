@@ -89,6 +89,27 @@ export default {
     if (this.modelOptions.length > 0) {
       this.model = this.modelOptions[0].id
     }
+
+    // 检查是否有自动生成任务
+    const reportDataStr = localStorage.getItem('solution_report_data');
+    if (reportDataStr) {
+      try {
+        const reportData = JSON.parse(reportDataStr);
+        if (reportData.problem) this.problemText = reportData.problem;
+        if (reportData.code) this.codeText = reportData.code;
+        
+        // 清除数据
+        localStorage.removeItem('solution_report_data');
+
+        if (reportData.autoStart && this.problemText && this.codeText) {
+          this.$nextTick(() => {
+            this.generate();
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse report data', e);
+      }
+    }
   },
   methods: {
     async generate() {
