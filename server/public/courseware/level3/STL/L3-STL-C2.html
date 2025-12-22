@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>C++ Vector 核心课程 - 竞赛解题实战版</title>
+    <title>C++ Set 核心课程 - 竞赛解题实战版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* 全局重置 & 基础变量 */
@@ -554,49 +554,49 @@
         <!-- 第1页：标题页 -->
         <div class="slide active" id="slide1">
             <div style="width: 100%;">
-                <h1 class="title-h1"><i class="fas fa-vector-square"></i>C++ Vector 核心课程</h1>
-                <h2 class="title-h2"><i class="fas fa-code"></i>竞赛解题实战版 · 动态数组从入门到精通</h2>
+                <h1 class="title-h1"><i class="fas fa-database"></i>C++ Set 核心课程</h1>
+                <h2 class="title-h2"><i class="fas fa-code"></i>竞赛解题实战版 · 有序去重的查找神器</h2>
             </div>
         </div>
 
-        <!-- 第2页：为什么需要Vector？（数组的痛点） -->
+        <!-- 第2页：为什么需要Set？（vector的痛点） -->
         <div class="slide" id="slide2">
-            <h1 class="title-h1"><i class="fas fa-question-circle"></i>为什么需要Vector？</h1>
-            <div class="text"><i class="fas fa-angle-right"></i>先思考：用普通数组解题时，你是否遇到过这些问题？</div>
+            <h1 class="title-h1"><i class="fas fa-question-circle"></i>为什么需要Set？</h1>
+            <div class="text"><i class="fas fa-angle-right"></i>先思考：用vector解题时，你是否遇到过这些效率/便捷性问题？</div>
             
             <div class="compare-block">
                 <div class="compare-item">
-                    <div class="compare-title"><i class="fas fa-times-circle"></i>普通数组的痛点</div>
-                    <div class="compare-text">✘ 长度固定，无法动态扩容</div>
-                    <div class="compare-text">✘ 输入数据量未知时，易越界/浪费空间</div>
-                    <div class="compare-text">✘ 插入/删除元素需手动移动数据</div>
-                    <div class="compare-text">✘ 无内置长度判断，需手动记录</div>
+                    <div class="compare-title"><i class="fas fa-times-circle"></i>Vector的痛点</div>
+                    <div class="compare-text">✘ 查找元素需要遍历（O(n)），大数据量效率低</div>
+                    <div class="compare-text">✘ 去重需要手动实现（遍历+判断），代码繁琐</div>
+                    <div class="compare-text">✘ 有序输出需要额外sort，多一步操作</div>
+                    <div class="compare-text">✘ 数据流去重+查找场景，代码冗余</div>
                 </div>
                 <div class="compare-item">
-                    <div class="compare-title"><i class="fas fa-check-circle"></i>Vector的优势</div>
-                    <div class="compare-text">✔ 动态扩容，按需分配空间</div>
-                    <div class="compare-text">✔ 无需预设长度，适配任意数据量</div>
-                    <div class="compare-text">✔ 内置增删方法，操作更便捷</div>
-                    <div class="compare-text">✔ size()/empty() 安全判断长度</div>
+                    <div class="compare-title"><i class="fas fa-check-circle"></i>Set的核心优势</div>
+                    <div class="compare-text">✔ 自动去重：插入重复元素无效，无需手动处理</div>
+                    <div class="compare-text">✔ 有序存储：默认升序，无需额外排序</div>
+                    <div class="compare-text">✔ 高效查找：O(logn)时间复杂度，远超vector</div>
+                    <div class="compare-text">✔ 简洁API：insert/find/erase一站式操作</div>
                 </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心结论：竞赛解题中，Vector几乎可以完全替代普通数组，更安全、更高效！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心结论：Set是“有序+唯一”的关联容器，专为“去重+快速查找”场景设计，竞赛中替代vector解决效率问题！</div>
             </div>
 
-            <div class="text" style="margin-top: 20px;"><i class="fas fa-quote-left"></i> Vector本质是「动态数组」——底层仍是连续内存，但自动管理扩容和内存分配。</div>
+            <div class="text" style="margin-top: 20px;"><i class="fas fa-quote-left"></i> Set底层基于红黑树实现，无需理解底层，只需掌握“什么时候用、怎么用”！</div>
         </div>
 
-        <!-- 第3页：Vector基础语法 -->
+        <!-- 第3页：Set基础语法 -->
         <div class="slide" id="slide3">
-            <h1 class="title-h1"><i class="fas fa-book"></i>Vector基础语法（必掌握）</h1>
+            <h1 class="title-h1"><i class="fas fa-book"></i>Set基础语法（必掌握）</h1>
             
             <h2 class="title-h2"><i class="fas fa-cogs"></i>1. 基础准备</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                 <pre>// 1. 包含头文件（必须！）
-#include &lt;vector&gt;
+#include &lt;set&gt;
 // 2. 使用命名空间（简化代码）
 using namespace std;</pre>
             </div>
@@ -604,296 +604,354 @@ using namespace std;</pre>
             <h2 class="title-h2"><i class="fas fa-pencil-alt"></i>2. 定义与初始化</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 方式1：空vector（最常用）
-vector<int> v;                // 存储int类型的空vector
-vector<string> str_v;         // 存储string类型的空vector
+                <pre>// 方式1：空set（最常用）
+set<int> s;                // 存储int类型的空set
+set<string> str_s;         // 存储string类型的空set
 
-// 方式2：定长初始化（指定长度+初始值）
-vector<int> v1(5, 0);         // 5个元素，每个元素初始值为0
-vector<int> v2(10);           // 10个元素，默认初始值为0
+// 方式2：数组/vector转set（自动去重+排序）
+int a[] = {3, 1, 2, 2, 4};
+set<int> s1(a, a+5);       // 结果：{1,2,3,4}（去重+升序）
 
-// 方式3：数组转vector
-int a[] = {1,2,3,4,5};
-vector<int> v3(a, a+5);       // 从数组a的第0个到第4个元素初始化</pre>
+vector<int> v = {5, 3, 5, 1};
+set<int> s2(v.begin(), v.end()); // 结果：{1,3,5}</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>3. 核心访问操作</h2>
+            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>3. 核心操作（竞赛高频）</h2>
             <div class="table">
                 <tr>
                     <th>操作</th>
                     <th>语法</th>
                     <th>说明</th>
-                    <th>解题场景</th>
+                    <th>时间复杂度</th>
                 </tr>
                 <tr>
-                    <td>尾部添加</td>
-                    <td>v.push_back(val)</td>
-                    <td>向vector末尾添加元素</td>
-                    <td>输入数据、动态收集元素</td>
+                    <td>插入元素</td>
+                    <td>s.insert(val)</td>
+                    <td>自动去重+排序，重复插入无效</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>尾部删除</td>
-                    <td>v.pop_back()</td>
-                    <td>删除vector最后一个元素</td>
-                    <td>栈模拟、数据筛选</td>
+                    <td>查找元素</td>
+                    <td>s.find(val)</td>
+                    <td>返回迭代器，未找到则为s.end()</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>元素访问</td>
-                    <td>v[i] / v.at(i)</td>
-                    <td>下标访问，at()有越界检查</td>
-                    <td>遍历、修改元素</td>
+                    <td>判断存在</td>
+                    <td>s.count(val)</td>
+                    <td>返回0（不存在）/1（存在）</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>长度判断</td>
-                    <td>v.size()</td>
-                    <td>返回vector元素个数</td>
-                    <td>循环遍历、边界判断</td>
+                    <td>删除元素</td>
+                    <td>s.erase(val) / s.erase(it)</td>
+                    <td>删除指定值/迭代器指向元素</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>空判断</td>
-                    <td>v.empty()</td>
-                    <td>是否为空（size()==0）</td>
-                    <td>避免访问空vector</td>
+                    <td>基础判断</td>
+                    <td>s.size() / s.empty()</td>
+                    <td>元素个数 / 是否为空</td>
+                    <td>O(1)</td>
+                </tr>
+                <tr>
+                    <td>边界元素</td>
+                    <td>s.begin() / s.rbegin()</td>
+                    <td>最小值（首元素）/ 最大值（尾元素）</td>
+                    <td>O(1)</td>
                 </tr>
             </div>
 
             <div class="warning">
-                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>易错点：空vector直接用v[0]会越界！务必先判断v.empty()或v.size()>0！</div>
+                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>易错点：Set不支持下标访问！s[0]、s.at(0)均会报错，只能用迭代器/范围for遍历！</div>
             </div>
         </div>
 
-        <!-- 第4页：Vector基础实战 -->
+        <!-- 第4页：Set基础实战 -->
         <div class="slide" id="slide4">
-            <h1 class="title-h1"><i class="fas fa-laptop-code"></i>Vector基础实战</h1>
+            <h1 class="title-h1"><i class="fas fa-laptop-code"></i>Set基础实战</h1>
             
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战1：动态收集数据并求和</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数（以-1结束），存入vector，输出所有元素的和。</div>
+                <div class="exercise-title"><i class="fas fa-calculator"></i>实战1：自动去重+有序输出</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数（以-1结束），用set存储并升序输出（去重）。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                     <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;set&gt;
 using namespace std;
 
 int main() {
-    vector<int> v;
-    int num, sum = 0;
+    set<int> s;
+    int num;
     
     // 输入数据（以-1结束）
     while (cin >> num && num != -1) {
-        v.push_back(num);  // 尾部添加元素
+        s.insert(num);  // 自动去重+排序
     }
     
-    // 遍历求和
-    for (int i = 0; i < v.size(); i++) {
-        sum += v[i];
+    // 方式1：迭代器遍历
+    cout << "迭代器遍历：";
+    for (set<int>::iterator it = s.begin(); it != s.end(); it++) {
+        cout << *it << " ";
     }
+    cout << endl;
     
-    cout << "元素个数：" << v.size() << endl;
-    cout << "元素和：" << sum << endl;
+    // 方式2：范围for遍历（C++11+，推荐）
+    cout << "范围for遍历：";
+    for (auto x : s) {
+        cout << x << " ";
+    }
+    cout << endl;
+    
     return 0;
-}</pre>
+}
+// 输入：5 2 3 2 5 -1
+// 输出：2 3 5</pre>
                 </div>
             </div>
 
             <div class="exercise" style="margin-top: 20px;">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战2：定长初始化与修改</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：创建长度为5、全0的vector，修改第3个元素为10，输出所有元素。</div>
+                <div class="exercise-title"><i class="fas fa-calculator"></i>实战2：快速查找+动态增删</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：输入一个数，存在则删除，不存在则插入，最后输出set大小和最大值。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                     <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;set&gt;
 using namespace std;
 
 int main() {
-    // 初始化：5个元素，初始值0
-    vector<int> v(5, 0);
+    set<int> s = {1, 3, 5, 7, 9};
+    int num;
+    cout << "请输入一个整数：";
+    cin >> num;
     
-    // 修改第3个元素（下标从0开始，第3个是v[2]）
-    v[2] = 10;
-    
-    // 范围for循环遍历（C++11+）
-    for (auto x : v) {
-        cout << x << " ";
+    // 判断是否存在
+    if (s.count(num)) {
+        s.erase(num); // 存在则删除
+        cout << num << " 已删除" << endl;
+    } else {
+        s.insert(num); // 不存在则插入
+        cout << num << " 已插入" << endl;
     }
-    // 输出：0 0 10 0 0
+    
+    cout << "Set大小：" << s.size() << endl;
+    if (!s.empty()) {
+        cout << "最大值：" << *s.rbegin() << endl; // rbegin()是反向迭代器
+    }
+    
     return 0;
 }</pre>
                 </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>技巧：范围for循环（for(auto x : v)）适合仅读取元素的场景，代码更简洁！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>技巧：s.rbegin()可直接获取最大值，无需遍历，比vector更高效！</div>
             </div>
         </div>
 
-        <!-- 第5页：Vector进阶操作 -->
+        <!-- 第5页：Set进阶变体 -->
         <div class="slide" id="slide5">
-            <h1 class="title-h1"><i class="fas fa-rocket"></i>Vector进阶操作（解题效率翻倍）</h1>
+            <h1 class="title-h1"><i class="fas fa-rocket"></i>Set进阶变体（竞赛高频）</h1>
             
-            <h2 class="title-h2"><i class="fas fa-sort"></i>1. 排序与反转（高频！）</h2>
+            <h2 class="title-h2"><i class="fas fa-sort-amount-down"></i>1. unordered_set（无序高效版）</h2>
+            <div class="compare-block">
+                <div class="compare-item">
+                    <div class="compare-title"><i class="fas fa-sort"></i>set</div>
+                    <div class="compare-text">✓ 有序存储（升序）</div>
+                    <div class="compare-text">✓ 查找O(logn)</div>
+                    <div class="compare-text">✓ 底层红黑树</div>
+                    <div class="compare-text">✓ 适合需要有序的场景</div>
+                </div>
+                <div class="compare-item">
+                    <div class="compare-title"><i class="fas fa-random"></i>unordered_set</div>
+                    <div class="compare-text">✗ 无序存储</div>
+                    <div class="compare-text">✓ 查找O(1)（平均）</div>
+                    <div class="compare-text">✓ 底层哈希表</div>
+                    <div class="compare-text">✓ 适合仅需去重+快速查找</div>
+                </div>
+            </div>
+
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
-#include &lt;algorithm&gt;  // sort/reverse需要的头文件
+                <pre>// unordered_set使用示例（需包含<unordered_set>）
+#include &lt;iostream&gt;
+#include &lt;unordered_set&gt;
 using namespace std;
 
 int main() {
-    vector<int> v = {5, 2, 8, 1, 9};
+    unordered_set<int> us = {3,1,2,4};
+    // 无序输出：顺序不确定（如1 3 2 4）
+    for (auto x : us) {
+        cout << x << " ";
+    }
     
-    // 升序排序（默认）
-    sort(v.begin(), v.end());
-    // 输出：1 2 5 8 9
-    
-    // 降序排序
-    sort(v.rbegin(), v.rend());
-    // 输出：9 8 5 2 1
-    
-    // 反转vector
-    reverse(v.begin(), v.end());
-    // 输出：1 2 5 8 9
-    
+    // 查找效率更高
+    if (us.count(2)) {
+        cout << "\n2 存在" << endl;
+    }
     return 0;
 }</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-plus-minus"></i>2. 任意位置增删</h2>
+            <h2 class="title-h2"><i class="fas fa-layer-group"></i>2. multiset（允许重复版）</h2>
+            <div class="text"><i class="fas fa-angle-right"></i>核心特性：有序存储，但允许重复元素，count()返回实际出现次数</div>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                 <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;set&gt;
 using namespace std;
 
 int main() {
-    vector<int> v = {1, 2, 3, 4, 5};
+    multiset<int> ms;
+    ms.insert(5);
+    ms.insert(5);
+    ms.insert(3);
     
-    // 在第2个位置（v[1]后）插入6
-    v.insert(v.begin() + 2, 6);
-    // 结果：1 2 6 3 4 5
-    
-    // 删除第4个元素（v[3]）
-    v.erase(v.begin() + 3);
-    // 结果：1 2 6 4 5
-    
-    // 清空所有元素（size()变为0）
-    v.clear();
-    
+    cout << "5出现次数：" << ms.count(5) << endl; // 输出2
+    cout << "所有元素：";
+    for (auto x : ms) {
+        cout << x << " "; // 输出：3 5 5
+    }
     return 0;
 }</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-memory"></i>3. 容量优化（提升效率）</h2>
-            <div class="text"><i class="fas fa-angle-right"></i>reserve(n)：提前预留n个元素的空间，避免多次扩容（适合已知数据量）</div>
+            <h2 class="title-h2"><i class="fas fa-filter"></i>3. 自定义排序（降序/规则）</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 已知要存储1e5个元素，提前预留空间
-vector<int> v;
-v.reserve(100000);  // 预留1e5个空间，避免扩容耗时
-for (int i = 0; i < 100000; i++) {
-    v.push_back(i); // 无扩容开销，效率更高
-}</pre>
-            </div>
+                <pre>// 降序排列的set
+#include &lt;iostream&gt;
+#include &lt;set&gt;
+using namespace std;
 
-            <div class="warning">
-                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>注意：insert/erase中间元素会移动数据（O(n)时间），解题中尽量用尾部操作！</div>
+int main() {
+    // greater<int>指定降序
+    set<int, greater<int>> s = {3,1,4,2};
+    for (auto x : s) {
+        cout << x << " "; // 输出：4 3 2 1
+    }
+    return 0;
+}</pre>
             </div>
         </div>
 
-        <!-- 第6页：二维Vector（矩阵操作） -->
+        <!-- 第6页：容器选型指南 -->
         <div class="slide" id="slide6">
-            <h1 class="title-h1"><i class="fas fa-table"></i>二维Vector（矩阵操作核心）</h1>
+            <h1 class="title-h1"><i class="fas fa-compass"></i>Set/Vector/Unordered_set 选型指南</h1>
             
-            <h2 class="title-h2"><i class="fas fa-pencil-alt"></i>1. 二维Vector定义</h2>
-            <div class="code-block">
-                <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
-using namespace std;
-
-int main() {
-    // 方式1：空二维vector
-    vector<vector<int>> v;
-    
-    // 方式2：3行4列，初始值0（最常用）
-    vector<vector<int>> v1(3, vector<int>(4, 0));
-    
-    // 方式3：动态添加行
-    vector<vector<int>> v2;
-    v2.push_back(vector<int>{1, 2, 3});  // 第一行
-    v2.push_back(vector<int>{4, 5, 6});  // 第二行
-    
-    return 0;
-}</pre>
-            </div>
-
-            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>2. 二维Vector遍历</h2>
-            <div class="code-block">
-                <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 遍历3行4列的二维vector
-vector<vector<int>> v(3, vector<int>(4, 0));
-// 修改第2行第3列（v[1][2]）为5
-v[1][2] = 5;
-
-// 方式1：普通双重循环
-for (int i = 0; i < v.size(); i++) {       // 遍历行
-    for (int j = 0; j < v[i].size(); j++) { // 遍历列
-        cout << v[i][j] << " ";
-    }
-    cout << endl;
-}
-
-// 方式2：范围for循环
-for (auto row : v) {
-    for (auto val : row) {
-        cout << val << " ";
-    }
-    cout << endl;
-}</pre>
+            <div class="table">
+                <tr>
+                    <th>需求场景</th>
+                    <th>优先选择</th>
+                    <th>核心原因</th>
+                    <th>效率对比（数据量1e5）</th>
+                </tr>
+                <tr>
+                    <td>去重+有序+查找</td>
+                    <td>set</td>
+                    <td>有序+O(logn)查找，满足排序需求</td>
+                    <td>查找：~1ms</td>
+                </tr>
+                <tr>
+                    <td>去重+无需有序+快速查找</td>
+                    <td>unordered_set</td>
+                    <td>O(1)平均查找，效率最高</td>
+                    <td>查找：~0.1ms</td>
+                </tr>
+                <tr>
+                    <td>频繁修改+随机访问+排序</td>
+                    <td>vector</td>
+                    <td>下标访问+sort灵活，适合频繁修改</td>
+                    <td>查找：~10ms（遍历）</td>
+                </tr>
+                <tr>
+                    <td>允许重复+有序</td>
+                    <td>multiset</td>
+                    <td>有序+支持重复元素，count()返回实际次数</td>
+                    <td>查找：~1ms</td>
+                </tr>
+                <tr>
+                    <td>数据量小（<1000）</td>
+                    <td>vector</td>
+                    <td>无需额外容器开销，简单够用</td>
+                    <td>无明显差异</td>
+                </tr>
             </div>
 
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战：二维vector求和</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：创建3行4列的二维vector，计算所有元素的和、每行的和。</div>
+                <div class="exercise-title"><i class="fas fa-trophy"></i>实战：集合交集运算</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：求两个数组的交集（不重复），按升序输出。</div>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
+                    <pre>#include &lt;iostream&gt;
+#include &lt;set&gt;
+#include &lt;algorithm&gt; // set_intersection需要
+#include &lt;vector&gt;
+using namespace std;
+
+int main() {
+    int a[] = {1,3,5,7,9};
+    int b[] = {2,3,6,7,8};
+    set<int> s1(a, a+5), s2(b, b+5);
+    vector<int> res;
+    
+    // 求交集（结果存入vector）
+    set_intersection(s1.begin(), s1.end(),
+                     s2.begin(), s2.end(),
+                     back_inserter(res));
+    
+    cout << "交集：";
+    for (auto x : res) {
+        cout << x << " "; // 输出：3 7
+    }
+    return 0;
+}</pre>
+                </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心：二维vector的每行长度可以不同（不规则矩阵），解题中默认是规则矩阵！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>选型口诀：有序去重选set，无序高效选unordered_set，修改访问选vector！</div>
             </div>
         </div>
 
-        <!-- 第7页：Vector避坑指南 -->
+        <!-- 第7页：Set避坑指南 -->
         <div class="slide" id="slide7">
-            <h1 class="title-h1"><i class="fas fa-exclamation-circle"></i>Vector避坑指南（解题必看）</h1>
+            <h1 class="title-h1"><i class="fas fa-exclamation-circle"></i>Set避坑指南（解题必看）</h1>
             
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑1：下标越界</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误代码：vector<int> v; cout << v[0];（空vector访问）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：先判断!v.empty() 或 i < v.size()</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>调试技巧：用v.at(i)替代v[i]，越界时抛异常定位错误</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑1：下标访问Set</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误代码：set<int> s={1,2,3}; cout << s[0];（编译报错）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：改用迭代器/范围for遍历，或先转vector（vector<int> v(s.begin(), s.end())）</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑2：混淆resize和reserve</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>resize(n)：改变元素个数（创建/删除元素），会初始化值</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>reserve(n)：仅预留空间，不改变元素个数（size()不变）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解题建议：已知数据量用reserve(n)，需要初始化用resize(n, val)</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑2：迭代器失效</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：auto it = s.begin(); s.erase(it); *it;（erase后it失效）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：删除时保存下一个迭代器：it = s.erase(it)</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>注意：insert不会导致其他迭代器失效</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑3：迭代器失效</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：auto it = v.begin(); v.push_back(10); *it;（扩容后迭代器失效）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：扩容后重新获取迭代器，避免迭代器跨push_back使用</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑3：混淆set和multiset的count()</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>set的count()：仅返回0/1（是否存在）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>multiset的count()：返回元素实际出现次数</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：根据是否允许重复选择容器，调用前明确容器类型</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑4：二维vector行未初始化</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：vector<vector<int>> v(3); v[0][0] = 1;（行是空的）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：初始化每行：v[i].resize(m, 0) 或直接定义v(n, vector<int>(m, 0))</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑4：unordered_set自定义类型无哈希函数</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：unordered_set<Person> s;（Person为自定义类型，无哈希）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：要么改用set，要么为自定义类型编写哈希函数（竞赛少用）</div>
+            </div>
+
+            <div class="pitfall-block">
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑5：盲目用set替代vector</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>小数据量下，vector遍历（O(n)）比set查找（O(logn)）更快</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：数据量<1e4时，优先用vector+sort+find</div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>避坑口诀：先判空再访问，提前reserve提效率，尾部操作更高效！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>避坑核心：理解Set的特性（无下标、有序/无序），根据场景选择，不盲目替代！</div>
             </div>
         </div>
 
@@ -902,36 +960,31 @@ for (auto row : v) {
             <h1 class="title-h1"><i class="fas fa-flag-checkered"></i>综合实战 & 课程总结</h1>
             
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-trophy"></i>综合实战：偶数前移，奇数后移</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数，将偶数移到前面，奇数移到后面，保持相对顺序。</div>
+                <div class="exercise-title"><i class="fas fa-trophy"></i>综合实战：数据流去重判断</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数，每次输入判断是否重复，重复输出“重复”，否则加入并输出“新增”。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                    <pre>// 解法：双vector分离，再合并
+                    <pre>// 用unordered_set实现高效查找
 #include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;unordered_set&gt;
 using namespace std;
 
 int main() {
-    vector<int> v, even, odd;
+    unordered_set<int> us;
     int num;
     
-    // 输入数据
-    while (cin >> num) {
-        if (num % 2 == 0) {
-            even.push_back(num); // 偶数
+    cout << "请输入若干整数（输入-1结束）：" << endl;
+    while (cin >> num && num != -1) {
+        if (us.count(num)) {
+            cout << num << " 重复" << endl;
         } else {
-            odd.push_back(num);  // 奇数
+            us.insert(num);
+            cout << num << " 新增" << endl;
         }
     }
     
-    // 合并：偶数 + 奇数
-    v = even;
-    for (auto x : odd) {
-        v.push_back(x);
-    }
-    
-    // 输出结果
-    for (auto x : v) {
+    cout << "最终去重结果：";
+    for (auto x : us) {
         cout << x << " ";
     }
     return 0;
@@ -940,17 +993,17 @@ int main() {
             </div>
 
             <div class="mind-map">
-                <li style="--i: 1;"><i class="fas fa-vector-square"></i>Vector核心知识点
+                <li style="--i: 1;"><i class="fas fa-database"></i>Set核心知识点
                     <ul class="mind-map">
-                        <li style="--i: 2;"><i class="fas fa-book"></i>基础：定义→push_back→size()→遍历</li>
-                        <li style="--i: 3;"><i class="fas fa-rocket"></i>进阶：sort→reverse→insert/erase→reserve</li>
-                        <li style="--i: 4;"><i class="fas fa-table"></i>二维：定义→遍历→矩阵操作</li>
-                        <li style="--i: 5;"><i class="fas fa-shield-alt"></i>避坑：判空→reserve/resize→迭代器</li>
+                        <li style="--i: 2;"><i class="fas fa-book"></i>基础：有序+唯一，无下标访问，insert/find/erase</li>
+                        <li style="--i: 3;"><i class="fas fa-rocket"></i>变体：unordered_set（无序高效）、multiset（允许重复）</li>
+                        <li style="--i: 4;"><i class="fas fa-compass"></i>选型：有序选set，无序选unordered_set，小数据选vector</li>
+                        <li style="--i: 5;"><i class="fas fa-shield-alt"></i>避坑：不下标访问，注意迭代器失效，不盲目替代vector</li>
                     </ul>
                 </li>
             </div>
 
-            <div class="text" style="margin-top: 20px; font-weight: 600;"><i class="fas fa-check-circle"></i> 课程核心：解题中优先用Vector，替代普通数组，掌握高频操作，避开常见陷阱！</div>
+            <div class="text" style="margin-top: 20px; font-weight: 600;"><i class="fas fa-check-circle"></i> 课程核心：Set的价值在于“有序去重+高效查找”，竞赛中精准选型才能发挥最大优势！</div>
         </div>
 
         <!-- 翻页按钮 -->

@@ -12,6 +12,7 @@ import ProblemManager from '../pages/ProblemManager.vue'
 import Typing from '../pages/Typing.vue'
 import LearningMap from '../pages/LearningMap.vue'
 import ChapterDetail from '../pages/ChapterDetail.vue'
+import DailyProblem from '../pages/DailyProblem.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -26,7 +27,8 @@ const routes = [
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
-  { path: '/course/:levelId/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } }
+  { path: '/course/:levelId/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
+  { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

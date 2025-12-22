@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>C++ Vector 核心课程 - 竞赛解题实战版</title>
+    <title>C++ map 核心课程 - 竞赛解题实战版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* 全局重置 & 基础变量 */
@@ -554,49 +554,49 @@
         <!-- 第1页：标题页 -->
         <div class="slide active" id="slide1">
             <div style="width: 100%;">
-                <h1 class="title-h1"><i class="fas fa-vector-square"></i>C++ Vector 核心课程</h1>
-                <h2 class="title-h2"><i class="fas fa-code"></i>竞赛解题实战版 · 动态数组从入门到精通</h2>
+                <h1 class="title-h1"><i class="fas fa-map-marked-alt"></i>C++ map 核心课程</h1>
+                <h2 class="title-h2"><i class="fas fa-code"></i>竞赛解题实战版 · 键值对的映射神器</h2>
             </div>
         </div>
 
-        <!-- 第2页：为什么需要Vector？（数组的痛点） -->
+        <!-- 第2页：为什么需要map？（vector/set的痛点） -->
         <div class="slide" id="slide2">
-            <h1 class="title-h1"><i class="fas fa-question-circle"></i>为什么需要Vector？</h1>
-            <div class="text"><i class="fas fa-angle-right"></i>先思考：用普通数组解题时，你是否遇到过这些问题？</div>
+            <h1 class="title-h1"><i class="fas fa-question-circle"></i>为什么需要map？</h1>
+            <div class="text"><i class="fas fa-angle-right"></i>先思考：用vector/set解题时，处理“映射关系”是否遇到这些问题？</div>
             
             <div class="compare-block">
                 <div class="compare-item">
-                    <div class="compare-title"><i class="fas fa-times-circle"></i>普通数组的痛点</div>
-                    <div class="compare-text">✘ 长度固定，无法动态扩容</div>
-                    <div class="compare-text">✘ 输入数据量未知时，易越界/浪费空间</div>
-                    <div class="compare-text">✘ 插入/删除元素需手动移动数据</div>
-                    <div class="compare-text">✘ 无内置长度判断，需手动记录</div>
+                    <div class="compare-title"><i class="fas fa-times-circle"></i>vector/set的痛点</div>
+                    <div class="compare-text">✘ 统计次数：需额外存储“数+次数”，代码繁琐</div>
+                    <div class="compare-text">✘ 映射关系：如姓名→分数，无专属存储结构</div>
+                    <div class="compare-text">✘ 按键查找：需手动遍历，效率低（O(n)）</div>
+                    <div class="compare-text">✘ 一键一值：无法高效建立唯一键的映射</div>
                 </div>
                 <div class="compare-item">
-                    <div class="compare-title"><i class="fas fa-check-circle"></i>Vector的优势</div>
-                    <div class="compare-text">✔ 动态扩容，按需分配空间</div>
-                    <div class="compare-text">✔ 无需预设长度，适配任意数据量</div>
-                    <div class="compare-text">✔ 内置增删方法，操作更便捷</div>
-                    <div class="compare-text">✔ size()/empty() 安全判断长度</div>
+                    <div class="compare-title"><i class="fas fa-check-circle"></i>map的核心优势</div>
+                    <div class="compare-text">✔ 键值对存储：一键一值，天然适配映射场景</div>
+                    <div class="compare-text">✔ 键唯一：自动去重，避免重复映射</div>
+                    <div class="compare-text">✔ 高效查找：按键查找O(logn)，远超遍历</div>
+                    <div class="compare-text">✔ 有序存储：默认按键升序，无需额外排序</div>
                 </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心结论：竞赛解题中，Vector几乎可以完全替代普通数组，更安全、更高效！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心结论：map是“键值对”关联容器，专为“映射关系+快速按键查找”设计，竞赛中解决统计/映射类问题的首选！</div>
             </div>
 
-            <div class="text" style="margin-top: 20px;"><i class="fas fa-quote-left"></i> Vector本质是「动态数组」——底层仍是连续内存，但自动管理扩容和内存分配。</div>
+            <div class="text" style="margin-top: 20px;"><i class="fas fa-quote-left"></i> map底层基于红黑树实现，无需理解底层，只需掌握“键值对操作+选型逻辑”！</div>
         </div>
 
-        <!-- 第3页：Vector基础语法 -->
+        <!-- 第3页：map基础语法 -->
         <div class="slide" id="slide3">
-            <h1 class="title-h1"><i class="fas fa-book"></i>Vector基础语法（必掌握）</h1>
+            <h1 class="title-h1"><i class="fas fa-book"></i>map基础语法（必掌握）</h1>
             
             <h2 class="title-h2"><i class="fas fa-cogs"></i>1. 基础准备</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                 <pre>// 1. 包含头文件（必须！）
-#include &lt;vector&gt;
+#include &lt;map&gt;
 // 2. 使用命名空间（简化代码）
 using namespace std;</pre>
             </div>
@@ -604,296 +604,381 @@ using namespace std;</pre>
             <h2 class="title-h2"><i class="fas fa-pencil-alt"></i>2. 定义与初始化</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 方式1：空vector（最常用）
-vector<int> v;                // 存储int类型的空vector
-vector<string> str_v;         // 存储string类型的空vector
+                <pre>// 方式1：空map（最常用）
+map<int, int> m1;                // 键int，值int
+map<string, int> m2;             // 键string，值int（如姓名→分数）
 
-// 方式2：定长初始化（指定长度+初始值）
-vector<int> v1(5, 0);         // 5个元素，每个元素初始值为0
-vector<int> v2(10);           // 10个元素，默认初始值为0
+// 方式2：直接初始化键值对
+map<int, int> m3{{1, 10}, {2, 20}, {3, 30}};
 
-// 方式3：数组转vector
-int a[] = {1,2,3,4,5};
-vector<int> v3(a, a+5);       // 从数组a的第0个到第4个元素初始化</pre>
+// 方式3：批量插入初始化
+map<int, int> m4;
+m4.insert({{4, 40}, {5, 50}, {6, 60}});</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>3. 核心访问操作</h2>
+            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>3. 核心操作（竞赛高频）</h2>
             <div class="table">
                 <tr>
                     <th>操作</th>
                     <th>语法</th>
                     <th>说明</th>
-                    <th>解题场景</th>
+                    <th>时间复杂度</th>
                 </tr>
                 <tr>
-                    <td>尾部添加</td>
-                    <td>v.push_back(val)</td>
-                    <td>向vector末尾添加元素</td>
-                    <td>输入数据、动态收集元素</td>
+                    <td>赋值/插入</td>
+                    <td>m[key] = val</td>
+                    <td>键存在则修改值，不存在则插入（值默认初始化）</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>尾部删除</td>
-                    <td>v.pop_back()</td>
-                    <td>删除vector最后一个元素</td>
-                    <td>栈模拟、数据筛选</td>
+                    <td>插入（不覆盖）</td>
+                    <td>m.insert({key, val})</td>
+                    <td>键存在则插入失败，不覆盖原有值</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>元素访问</td>
-                    <td>v[i] / v.at(i)</td>
-                    <td>下标访问，at()有越界检查</td>
-                    <td>遍历、修改元素</td>
+                    <td>查找键</td>
+                    <td>m.find(key)</td>
+                    <td>返回迭代器，未找到则为m.end()</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>长度判断</td>
-                    <td>v.size()</td>
-                    <td>返回vector元素个数</td>
-                    <td>循环遍历、边界判断</td>
+                    <td>判断键存在</td>
+                    <td>m.count(key)</td>
+                    <td>返回0（不存在）/1（存在）</td>
+                    <td>O(logn)</td>
                 </tr>
                 <tr>
-                    <td>空判断</td>
-                    <td>v.empty()</td>
-                    <td>是否为空（size()==0）</td>
-                    <td>避免访问空vector</td>
+                    <td>删除键值对</td>
+                    <td>m.erase(key) / m.erase(it)</td>
+                    <td>删除指定键/迭代器指向的键值对</td>
+                    <td>O(logn)</td>
+                </tr>
+                <tr>
+                    <td>遍历访问</td>
+                    <td>it->first/it->second</td>
+                    <td>迭代器访问键（first）和值（second）</td>
+                    <td>O(n)</td>
+                </tr>
+                <tr>
+                    <td>基础判断</td>
+                    <td>m.size() / m.empty()</td>
+                    <td>键值对个数 / 是否为空</td>
+                    <td>O(1)</td>
                 </tr>
             </div>
 
             <div class="warning">
-                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>易错点：空vector直接用v[0]会越界！务必先判断v.empty()或v.size()>0！</div>
+                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>易错点：用m[key]判断键是否存在会自动插入空值！应改用m.find(key) != m.end()！</div>
             </div>
         </div>
 
-        <!-- 第4页：Vector基础实战 -->
+        <!-- 第4页：map基础实战 -->
         <div class="slide" id="slide4">
-            <h1 class="title-h1"><i class="fas fa-laptop-code"></i>Vector基础实战</h1>
+            <h1 class="title-h1"><i class="fas fa-laptop-code"></i>map基础实战</h1>
             
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战1：动态收集数据并求和</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数（以-1结束），存入vector，输出所有元素的和。</div>
+                <div class="exercise-title"><i class="fas fa-calculator"></i>实战1：统计整数出现次数</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数（以-1结束），统计每个数出现次数，按键升序输出。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                     <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;map&gt;
 using namespace std;
 
 int main() {
-    vector<int> v;
-    int num, sum = 0;
+    map<int, int> cnt; // 键=数，值=出现次数
+    int num;
     
-    // 输入数据（以-1结束）
+    // 输入数据
     while (cin >> num && num != -1) {
-        v.push_back(num);  // 尾部添加元素
+        cnt[num]++; // 键存在则值+1，不存在则插入并初始化为1
     }
     
-    // 遍历求和
-    for (int i = 0; i < v.size(); i++) {
-        sum += v[i];
+    // 迭代器遍历
+    cout << "迭代器遍历（按键升序）：" << endl;
+    for (map<int, int>::iterator it = cnt.begin(); it != cnt.end(); it++) {
+        cout << it->first << " 出现 " << it->second << " 次" << endl;
     }
     
-    cout << "元素个数：" << v.size() << endl;
-    cout << "元素和：" << sum << endl;
+    // 范围for遍历（推荐，C++11+）
+    cout << "\n范围for遍历：" << endl;
+    for (auto& p : cnt) { // 用引用避免拷贝开销
+        cout << p.first << " 出现 " << p.second << " 次" << endl;
+    }
     return 0;
-}</pre>
+}
+// 输入：5 2 3 2 5 5 -1
+// 输出：2 出现 2 次；3 出现 1 次；5 出现 3 次</pre>
                 </div>
             </div>
 
             <div class="exercise" style="margin-top: 20px;">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战2：定长初始化与修改</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：创建长度为5、全0的vector，修改第3个元素为10，输出所有元素。</div>
+                <div class="exercise-title"><i class="fas fa-calculator"></i>实战2：姓名→分数映射查询</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：建立姓名到分数的映射，输入姓名查询分数，不存在则提示“未找到”。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                     <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;map&gt;
+#include &lt;string&gt;
 using namespace std;
 
 int main() {
-    // 初始化：5个元素，初始值0
-    vector<int> v(5, 0);
+    map<string, int> score;
+    // 插入映射关系
+    score["张三"] = 95;
+    score["李四"] = 88;
+    score["王五"] = 92;
     
-    // 修改第3个元素（下标从0开始，第3个是v[2]）
-    v[2] = 10;
+    string name;
+    cout << "请输入要查询的姓名：";
+    cin >> name;
     
-    // 范围for循环遍历（C++11+）
-    for (auto x : v) {
-        cout << x << " ";
+    // 正确判断键是否存在（避免自动插入）
+    if (score.find(name) != score.end()) {
+        cout << name << " 的分数：" << score[name] << endl;
+    } else {
+        cout << "未找到 " << name << " 的分数" << endl;
     }
-    // 输出：0 0 10 0 0
     return 0;
 }</pre>
                 </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>技巧：范围for循环（for(auto x : v)）适合仅读取元素的场景，代码更简洁！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>技巧：遍历map时用auto& p替代auto p，避免拷贝键值对，提升大数据量效率！</div>
             </div>
         </div>
 
-        <!-- 第5页：Vector进阶操作 -->
+        <!-- 第5页：map进阶变体 -->
         <div class="slide" id="slide5">
-            <h1 class="title-h1"><i class="fas fa-rocket"></i>Vector进阶操作（解题效率翻倍）</h1>
+            <h1 class="title-h1"><i class="fas fa-rocket"></i>map进阶变体（竞赛高频）</h1>
             
-            <h2 class="title-h2"><i class="fas fa-sort"></i>1. 排序与反转（高频！）</h2>
+            <h2 class="title-h2"><i class="fas fa-random"></i>1. unordered_map（无序高效版）</h2>
+            <div class="compare-block">
+                <div class="compare-item">
+                    <div class="compare-title"><i class="fas fa-sort"></i>map</div>
+                    <div class="compare-text">✓ 按键升序存储</div>
+                    <div class="compare-text">✓ 查找O(logn)</div>
+                    <div class="compare-text">✓ 底层红黑树</div>
+                    <div class="compare-text">✓ 适合需要有序的场景</div>
+                </div>
+                <div class="compare-item">
+                    <div class="compare-title"><i class="fas fa-bolt"></i>unordered_map</div>
+                    <div class="compare-text">✗ 无序存储</div>
+                    <div class="compare-text">✓ 查找O(1)（平均）</div>
+                    <div class="compare-text">✓ 底层哈希表</div>
+                    <div class="compare-text">✓ 适合仅需映射+快速查找</div>
+                </div>
+            </div>
+
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
-#include &lt;algorithm&gt;  // sort/reverse需要的头文件
+                <pre>// unordered_map使用示例（需包含<unordered_map>）
+#include &lt;iostream&gt;
+#include &lt;unordered_map&gt;
+#include &lt;string&gt;
 using namespace std;
 
 int main() {
-    vector<int> v = {5, 2, 8, 1, 9};
+    unordered_map<string, int> um;
+    um["苹果"] = 5;
+    um["香蕉"] = 3;
+    um["橙子"] = 4;
     
-    // 升序排序（默认）
-    sort(v.begin(), v.end());
-    // 输出：1 2 5 8 9
+    // 无序输出：顺序不确定
+    for (auto& p : um) {
+        cout << p.first << "：" << p.second << "元" << endl;
+    }
     
-    // 降序排序
-    sort(v.rbegin(), v.rend());
-    // 输出：9 8 5 2 1
-    
-    // 反转vector
-    reverse(v.begin(), v.end());
-    // 输出：1 2 5 8 9
-    
+    // 查找效率更高
+    if (um.count("苹果")) {
+        cout << "\n苹果价格：" << um["苹果"] << "元" << endl;
+    }
     return 0;
 }</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-plus-minus"></i>2. 任意位置增删</h2>
+            <h2 class="title-h2"><i class="fas fa-layer-group"></i>2. multimap（一键多值版）</h2>
+            <div class="text"><i class="fas fa-angle-right"></i>核心特性：键可重复，支持一键多值，不支持下标访问（[]）</div>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
                 <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
+#include &lt;map&gt;
+#include &lt;string&gt;
 using namespace std;
 
 int main() {
-    vector<int> v = {1, 2, 3, 4, 5};
+    multimap<string, int> mm;
+    // 插入重复键
+    mm.insert({"张三", 95});
+    mm.insert({"张三", 88}); // 同一姓名多个分数
+    mm.insert({"李四", 90});
     
-    // 在第2个位置（v[1]后）插入6
-    v.insert(v.begin() + 2, 6);
-    // 结果：1 2 6 3 4 5
-    
-    // 删除第4个元素（v[3]）
-    v.erase(v.begin() + 3);
-    // 结果：1 2 6 4 5
-    
-    // 清空所有元素（size()变为0）
-    v.clear();
-    
+    // 查找张三的所有分数
+    string name = "张三";
+    auto range = mm.equal_range(name);
+    cout << name << " 的所有分数：";
+    for (auto it = range.first; it != range.second; it++) {
+        cout << it->second << " "; // 输出：95 88
+    }
     return 0;
 }</pre>
             </div>
 
-            <h2 class="title-h2"><i class="fas fa-memory"></i>3. 容量优化（提升效率）</h2>
-            <div class="text"><i class="fas fa-angle-right"></i>reserve(n)：提前预留n个元素的空间，避免多次扩容（适合已知数据量）</div>
+            <h2 class="title-h2"><i class="fas fa-sort-down"></i>3. 自定义排序（按键降序）</h2>
             <div class="code-block">
                 <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 已知要存储1e5个元素，提前预留空间
-vector<int> v;
-v.reserve(100000);  // 预留1e5个空间，避免扩容耗时
-for (int i = 0; i < 100000; i++) {
-    v.push_back(i); // 无扩容开销，效率更高
-}</pre>
-            </div>
+                <pre>// 按键降序排列的map
+#include &lt;iostream&gt;
+#include &lt;map&gt;
+using namespace std;
 
-            <div class="warning">
-                <div class="warning-text"><i class="fas fa-exclamation-triangle"></i>注意：insert/erase中间元素会移动数据（O(n)时间），解题中尽量用尾部操作！</div>
+int main() {
+    // greater<int>指定按键降序
+    map<int, int, greater<int>> m{{1,10}, {2,20}, {3,30}};
+    for (auto& p : m) {
+        cout << p.first << "：" << p.second << endl; // 输出：3:30 2:20 1:10
+    }
+    return 0;
+}</pre>
             </div>
         </div>
 
-        <!-- 第6页：二维Vector（矩阵操作） -->
+        <!-- 第6页：容器选型指南 -->
         <div class="slide" id="slide6">
-            <h1 class="title-h1"><i class="fas fa-table"></i>二维Vector（矩阵操作核心）</h1>
+            <h1 class="title-h1"><i class="fas fa-compass"></i>map/unordered_map/set/数组 选型指南</h1>
             
-            <h2 class="title-h2"><i class="fas fa-pencil-alt"></i>1. 二维Vector定义</h2>
-            <div class="code-block">
-                <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>#include &lt;iostream&gt;
-#include &lt;vector&gt;
-using namespace std;
-
-int main() {
-    // 方式1：空二维vector
-    vector<vector<int>> v;
-    
-    // 方式2：3行4列，初始值0（最常用）
-    vector<vector<int>> v1(3, vector<int>(4, 0));
-    
-    // 方式3：动态添加行
-    vector<vector<int>> v2;
-    v2.push_back(vector<int>{1, 2, 3});  // 第一行
-    v2.push_back(vector<int>{4, 5, 6});  // 第二行
-    
-    return 0;
-}</pre>
-            </div>
-
-            <h2 class="title-h2"><i class="fas fa-hand-pointer"></i>2. 二维Vector遍历</h2>
-            <div class="code-block">
-                <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                <pre>// 遍历3行4列的二维vector
-vector<vector<int>> v(3, vector<int>(4, 0));
-// 修改第2行第3列（v[1][2]）为5
-v[1][2] = 5;
-
-// 方式1：普通双重循环
-for (int i = 0; i < v.size(); i++) {       // 遍历行
-    for (int j = 0; j < v[i].size(); j++) { // 遍历列
-        cout << v[i][j] << " ";
-    }
-    cout << endl;
-}
-
-// 方式2：范围for循环
-for (auto row : v) {
-    for (auto val : row) {
-        cout << val << " ";
-    }
-    cout << endl;
-}</pre>
+            <div class="table">
+                <tr>
+                    <th>需求场景</th>
+                    <th>优先选择</th>
+                    <th>核心原因</th>
+                    <th>效率对比（数据量1e5）</th>
+                </tr>
+                <tr>
+                    <td>键值对+按键有序+查找</td>
+                    <td>map</td>
+                    <td>有序+O(logn)查找，满足排序需求</td>
+                    <td>查找：~1ms</td>
+                </tr>
+                <tr>
+                    <td>键值对+无需有序+快速查找</td>
+                    <td>unordered_map</td>
+                    <td>O(1)平均查找，效率最高</td>
+                    <td>查找：~0.1ms</td>
+                </tr>
+                <tr>
+                    <td>仅需键+有序+去重</td>
+                    <td>set</td>
+                    <td>无值存储，更节省内存</td>
+                    <td>查找：~1ms</td>
+                </tr>
+                <tr>
+                    <td>键值对+键可重复</td>
+                    <td>multimap</td>
+                    <td>支持一键多值，有序存储</td>
+                    <td>查找：~1ms</td>
+                </tr>
+                <tr>
+                    <td>键为连续整数（1~1e5）</td>
+                    <td>数组/vector</td>
+                    <td>O(1)访问，比map更快</td>
+                    <td>访问：~0.01ms</td>
+                </tr>
+                <tr>
+                    <td>数据量小（<1000）</td>
+                    <td>map/unordered_map</td>
+                    <td>无明显效率差异，按代码简洁选</td>
+                    <td>无明显差异</td>
+                </tr>
             </div>
 
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-calculator"></i>实战：二维vector求和</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：创建3行4列的二维vector，计算所有元素的和、每行的和。</div>
+                <div class="exercise-title"><i class="fas fa-trophy"></i>实战：map按值降序排序</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：统计单词出现次数，按出现次数降序输出（需转vector后自定义排序）。</div>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
+                    <pre>#include &lt;iostream&gt;
+#include &lt;unordered_map&gt;
+#include &lt;vector&gt;
+#include &lt;algorithm&gt;
+#include &lt;string&gt;
+using namespace std;
+
+// 自定义排序规则：按值降序，值相同按键升序
+bool cmp(pair<string, int>& a, pair<string, int>& b) {
+    if (a.second != b.second) {
+        return a.second > b.second;
+    }
+    return a.first < b.first;
+}
+
+int main() {
+    unordered_map<string, int> um;
+    string word;
+    
+    // 输入单词（以end结束）
+    while (cin >> word && word != "end") {
+        um[word]++;
+    }
+    
+    // 转vector排序
+    vector<pair<string, int>> vec(um.begin(), um.end());
+    sort(vec.begin(), vec.end(), cmp);
+    
+    // 输出结果
+    for (auto& p : vec) {
+        cout << p.first << "：" << p.second << "次" << endl;
+    }
+    return 0;
+}
+// 输入：apple banana apple orange banana apple end
+// 输出：apple：3次；banana：2次；orange：1次</pre>
+                </div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>核心：二维vector的每行长度可以不同（不规则矩阵），解题中默认是规则矩阵！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>选型口诀：有序映射选map，高效映射选unordered_map，连续键选数组！</div>
             </div>
         </div>
 
-        <!-- 第7页：Vector避坑指南 -->
+        <!-- 第7页：map避坑指南 -->
         <div class="slide" id="slide7">
-            <h1 class="title-h1"><i class="fas fa-exclamation-circle"></i>Vector避坑指南（解题必看）</h1>
+            <h1 class="title-h1"><i class="fas fa-exclamation-circle"></i>map避坑指南（解题必看）</h1>
             
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑1：下标越界</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误代码：vector<int> v; cout << v[0];（空vector访问）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：先判断!v.empty() 或 i < v.size()</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>调试技巧：用v.at(i)替代v[i]，越界时抛异常定位错误</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑1：用m[key]判断键是否存在</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误代码：if (m[key]) { ... }（键不存在时自动插入，值为默认值）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：改用m.find(key) != m.end() 或 m.count(key)</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑2：混淆resize和reserve</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>resize(n)：改变元素个数（创建/删除元素），会初始化值</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>reserve(n)：仅预留空间，不改变元素个数（size()不变）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解题建议：已知数据量用reserve(n)，需要初始化用resize(n, val)</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑2：遍历map未用引用</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：for (auto p : m) { ... }（每次拷贝pair，大数据量效率低）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：用for (auto& p : m) { ... }，减少拷贝开销</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑3：迭代器失效</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：auto it = v.begin(); v.push_back(10); *it;（扩容后迭代器失效）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：扩容后重新获取迭代器，避免迭代器跨push_back使用</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑3：multimap使用下标访问</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：multimap<string, int> mm; mm["张三"] = 95;（编译报错）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：multimap用insert()插入，equal_range()查找所有值</div>
             </div>
 
             <div class="pitfall-block">
-                <div class="pitfall-title"><i class="fas fa-bug"></i>坑4：二维vector行未初始化</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：vector<vector<int>> v(3); v[0][0] = 1;（行是空的）</div>
-                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：初始化每行：v[i].resize(m, 0) 或直接定义v(n, vector<int>(m, 0))</div>
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑4：unordered_map自定义键无哈希函数</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>错误：unordered_map<Person, int> um;（Person为自定义结构体）</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：要么改用map，要么为自定义类型编写哈希函数（竞赛少用）</div>
+            </div>
+
+            <div class="pitfall-block">
+                <div class="pitfall-title"><i class="fas fa-bug"></i>坑5：盲目用map替代数组</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>键为连续整数（如1~1e5）时，数组访问（O(1)）比map更快</div>
+                <div class="pitfall-text"><i class="fas fa-angle-right"></i>解决方案：连续整数键优先用数组/vector，非连续键用map</div>
             </div>
 
             <div class="tip">
-                <div class="tip-text"><i class="fas fa-lightbulb"></i>避坑口诀：先判空再访问，提前reserve提效率，尾部操作更高效！</div>
+                <div class="tip-text"><i class="fas fa-lightbulb"></i>避坑核心：理解map的键值对特性，区分[]和insert的差异，根据场景选择容器！</div>
             </div>
         </div>
 
@@ -902,37 +987,35 @@ for (auto row : v) {
             <h1 class="title-h1"><i class="fas fa-flag-checkered"></i>综合实战 & 课程总结</h1>
             
             <div class="exercise">
-                <div class="exercise-title"><i class="fas fa-trophy"></i>综合实战：偶数前移，奇数后移</div>
-                <div class="text"><i class="fas fa-angle-right"></i>题目：输入若干整数，将偶数移到前面，奇数移到后面，保持相对顺序。</div>
+                <div class="exercise-title"><i class="fas fa-trophy"></i>综合实战：数组映射查询</div>
+                <div class="text"><i class="fas fa-angle-right"></i>题目：建立数组A[i]→B[i]的映射，输入查询值输出对应值（无则输出-1），要求高效查找。</div>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i>复制代码</button>
-                    <pre>// 解法：双vector分离，再合并
+                    <pre>// 用unordered_map实现高效映射查询
 #include &lt;iostream&gt;
+#include &lt;unordered_map&gt;
 #include &lt;vector&gt;
 using namespace std;
 
 int main() {
-    vector<int> v, even, odd;
-    int num;
+    vector<int> A = {1, 3, 5, 7, 9};
+    vector<int> B = {2, 4, 6, 8, 10};
+    unordered_map<int, int> um;
     
-    // 输入数据
-    while (cin >> num) {
-        if (num % 2 == 0) {
-            even.push_back(num); // 偶数
+    // 建立映射
+    for (int i = 0; i < A.size(); i++) {
+        um[A[i]] = B[i];
+    }
+    
+    // 查询
+    int q;
+    cout << "请输入查询值（输入-1结束）：" << endl;
+    while (cin >> q && q != -1) {
+        if (um.count(q)) {
+            cout << q << " → " << um[q] << endl;
         } else {
-            odd.push_back(num);  // 奇数
+            cout << q << " → -1" << endl;
         }
-    }
-    
-    // 合并：偶数 + 奇数
-    v = even;
-    for (auto x : odd) {
-        v.push_back(x);
-    }
-    
-    // 输出结果
-    for (auto x : v) {
-        cout << x << " ";
     }
     return 0;
 }</pre>
@@ -940,17 +1023,17 @@ int main() {
             </div>
 
             <div class="mind-map">
-                <li style="--i: 1;"><i class="fas fa-vector-square"></i>Vector核心知识点
+                <li style="--i: 1;"><i class="fas fa-map-marked-alt"></i>map核心知识点
                     <ul class="mind-map">
-                        <li style="--i: 2;"><i class="fas fa-book"></i>基础：定义→push_back→size()→遍历</li>
-                        <li style="--i: 3;"><i class="fas fa-rocket"></i>进阶：sort→reverse→insert/erase→reserve</li>
-                        <li style="--i: 4;"><i class="fas fa-table"></i>二维：定义→遍历→矩阵操作</li>
-                        <li style="--i: 5;"><i class="fas fa-shield-alt"></i>避坑：判空→reserve/resize→迭代器</li>
+                        <li style="--i: 2;"><i class="fas fa-book"></i>基础：键值对、键唯一、[]赋值、find()查找、遍历（first/second）</li>
+                        <li style="--i: 3;"><i class="fas fa-rocket"></i>变体：unordered_map（无序高效）、multimap（一键多值）</li>
+                        <li style="--i: 4;"><i class="fas fa-compass"></i>选型：有序选map，高效选unordered_map，连续键选数组</li>
+                        <li style="--i: 5;"><i class="fas fa-shield-alt"></i>避坑：不用[]判断存在、遍历用引用、multimap不用[]</li>
                     </ul>
                 </li>
             </div>
 
-            <div class="text" style="margin-top: 20px; font-weight: 600;"><i class="fas fa-check-circle"></i> 课程核心：解题中优先用Vector，替代普通数组，掌握高频操作，避开常见陷阱！</div>
+            <div class="text" style="margin-top: 20px; font-weight: 600;"><i class="fas fa-check-circle"></i> 课程核心：map的价值在于“键值对映射+快速按键查找”，竞赛中精准选型才能发挥最大优势！</div>
         </div>
 
         <!-- 翻页按钮 -->
@@ -996,77 +1079,3 @@ int main() {
             
             // 隐藏当前页
             const currentEl = document.getElementById(`slide${currentSlide}`);
-            currentEl.classList.remove('active');
-            
-            // 更新当前页码
-            currentSlide = newPage;
-            
-            // 显示新页 + 强制滚动到顶部
-            const newEl = document.getElementById(`slide${currentSlide}`);
-            newEl.scrollTop = 0; // 强制复位滚动条
-            newEl.classList.add('active');
-            
-            // 更新按钮状态
-            updateBtnStatus();
-        }
-
-        // 复制代码功能
-        function copyCode(btn) {
-            const pre = btn.nextElementSibling;
-            const code = pre.textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                btn.innerHTML = "<i class='fas fa-check'></i>已复制";
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    btn.innerHTML = "<i class='fas fa-copy'></i>复制代码";
-                    btn.classList.remove('copied');
-                }, 2000);
-            }).catch(() => {
-                btn.innerHTML = "<i class='fas fa-times'></i>复制失败";
-                setTimeout(() => {
-                    btn.innerHTML = "<i class='fas fa-copy'></i>复制代码";
-                }, 2000);
-            });
-        }
-
-        // 键盘控制（仅保留按钮/键盘翻页）
-        document.addEventListener('keydown', (e) => {
-            // 左/右方向键翻页
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                changeSlide(-1);
-            }
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                changeSlide(1);
-            }
-            
-            // F11全屏
-            if (e.key === 'F11') {
-                e.preventDefault();
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen();
-                } else {
-                    document.exitFullscreen();
-                }
-            }
-        });
-
-        // 禁用滚轮翻页（核心：仅保留页面内滚动）
-        document.querySelectorAll('.slide').forEach(slide => {
-            slide.addEventListener('wheel', (e) => {
-                // 仅允许页面内滚动，不触发任何翻页逻辑
-                e.stopPropagation();
-            });
-        });
-
-        // 初始化：更新按钮状态 + 所有页面滚动到顶部
-        window.addEventListener('load', () => {
-            updateBtnStatus();
-            document.querySelectorAll('.slide').forEach(slide => {
-                slide.scrollTop = 0;
-            });
-        });
-    </script>
-</body>
-</html>

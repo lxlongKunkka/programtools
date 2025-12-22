@@ -19,6 +19,12 @@
           <div class="card-desc">题目翻译、代码与数据脚本，自动生成并打包。</div>
         </router-link>
 
+        <router-link to="/daily" class="card">
+          <div class="card-icon">📅</div>
+          <div class="card-title">每日一题</div>
+          <div class="card-desc">每天一道精选题目，保持编程手感。</div>
+        </router-link>
+
         <router-link to="/checker" class="card">
           <div class="card-icon">🔍</div>
           <div class="card-title">代码校验</div>
