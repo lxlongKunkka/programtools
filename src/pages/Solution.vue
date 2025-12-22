@@ -81,7 +81,7 @@ problemText: '',
 codeText: '',
 result: '',
 loading: false,
-model: 'gemini-2.0-flash',
+model: 'gemini-2.5-flash',
 rawModelOptions: []
 }
 },
@@ -97,7 +97,7 @@ computed: {
     modelOptions() {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
-      return all.filter(m => m.id === 'gemini-2.0-flash')
+      return all.filter(m => m.id === 'gemini-2.5-flash')
     },
 inputText() {
 let combined = ''

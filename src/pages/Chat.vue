@@ -121,7 +121,7 @@ export default {
 			inputText: '',
 			messages: [],
 			loading: false,
-			model: 'o4-mini',
+			model: 'grok-4-fast',
 			modelOptions: [],
 			sessionId: null,
 			showSettings: false,
