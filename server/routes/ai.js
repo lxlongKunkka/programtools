@@ -667,7 +667,9 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     }
 
     const { problem, code, model } = req.body
-    if (!problem || !code) return res.status(400).json({ error: '缺少 problem 或 code 字段' })
+    if (!problem) return res.status(400).json({ error: '缺少 problem 字段' })
+
+    const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）'
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
@@ -675,7 +677,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 
     const messages = [
       { role: 'system', content: SOLUTION_REPORT_PROMPT },
-      { role: 'user', content: `题目描述：\n${problem}\n\n代码：\n${code}` }
+      { role: 'user', content: `题目描述：\n${problem}\n\n代码：\n${codeContent}` }
     ]
 
     const payload = {

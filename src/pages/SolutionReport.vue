@@ -10,7 +10,7 @@
         </select>
       </div>
       <div class="toolbar-right">
-        <button @click="generate" :disabled="loading || !problemText.trim() || !codeText.trim()" class="btn-primary">
+        <button @click="generate" :disabled="loading || !problemText.trim()" class="btn-primary">
           {{ loading ? '⏳ 生成中...' : '🚀 生成报告' }}
         </button>
         <button @click="clear" class="btn-secondary">🧹 清空</button>
@@ -113,7 +113,7 @@ export default {
   },
   methods: {
     async generate() {
-      if (!this.problemText.trim() || !this.codeText.trim()) return
+      if (!this.problemText.trim()) return
       
       this.loading = true
       this.resultHtml = ''

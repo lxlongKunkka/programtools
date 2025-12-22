@@ -309,9 +309,12 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
    - **题目解析页**：简明扼要的题目描述和约束条件。**必须包含输入格式、输出格式和数据范围的说明**。
      - **关键要求**：所有数学符号、变量名、公式、数据范围**必须严格使用 LaTeX 格式**（即用 \`$\` 包裹）。
      - **严禁**使用 HTML 标签（如 \`<sub>\`, \`<sup>\`, \`&le;\`）来表示数学内容。
-     - 错误示例：\`A<sub>i</sub>\`, \`1 &le; N &le; 10<sup>5</sup>\`
-     - 正确示例：\`$A_i$\`, \`$1 \\le N \\le 10^5$\`
+     - **防吞字检查（重要）**：请特别注意 LaTeX 命令的反斜杠不要丢失。
+       - 错误：\`1 le N le 10^5\`
+       - 正确：\`$1 \\le N \\le 10^5$\` (注意 \\le 前的反斜杠)
+       - 如果你需要输出一个反斜杠，请确保它不会被转义消失。
    - **思路探讨页**：这是报告的核心。请**详细且通俗易懂**地讲解解题思路。
+     - **排版要求**：正文使用 `<p>` 标签。小标题使用 `<h3>` 或 `<h4>`，**严禁**使用 `<h1>` 或 `<h2>`，以免字体过大。
      - 必须包含**从暴力解法到优化解法**的推导过程。
      - 详细解释算法的关键步骤（如状态定义、转移方程、贪心策略证明）。
      - 使用类比或生活中的例子来辅助解释抽象概念。
@@ -333,11 +336,12 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
        - 错误：\`desc: "计算 $2 \\times 3$"\` （JS 会把 \\t 解析为制表符，导致显示为 "2 imes 3"）
        - 正确：\`desc: "计算 $2 \\\\times 3$"\`
    - **代码实现页**：
-     - **严禁自己生成代码**，必须直接使用用户提供的 AC 代码。
-     - **必须为代码添加详细的中文注释**：
+     - **代码处理规则**：
+       - **情况A（用户提供代码）**：如果用户提供了具体代码，**严禁**修改代码逻辑，必须直接使用用户代码，并添加详细中文注释。
+       - **情况B（用户未提供代码）**：如果用户代码为空或提示“未提供代码”，请**自动生成**一份正确的 C++ AC 代码，并添加详细中文注释。
+     - **注释要求**：
        - 关键变量定义处必须有注释说明含义。
        - 核心算法逻辑（如状态转移、循环条件）必须有注释解释。
-       - **即使原代码没有注释，你也必须补充上高质量的中文注释**。
      - **必须使用特定的高亮样式**（见下文 CSS）。
    - **总结页**：
      - **复杂度分析**：明确给出时间复杂度和空间复杂度。
@@ -372,17 +376,20 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
         
         /* --- 导航按钮 --- */
-        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
-        .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.8); color: white; border: none; border-radius: 30px; padding: 10px 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .nav-button:hover { background-color: #007aff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .nav-button:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         #prevBtn { left: 30px; } #nextBtn { right: 30px; }
-        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
-        #slideCounter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+        #slideCounter { position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); }
 
         /* --- 内容样式 --- */
         .slide-header { flex-shrink: 0; }
         .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
         h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
         h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.5em, 3vw, 2em); color: #007aff; margin-top: 20px; margin-bottom: 10px; }
+        h4 { font-size: clamp(1.3em, 2.8vw, 1.8em); color: #333; margin-top: 15px; margin-bottom: 8px; }
         p, li { font-size: clamp(1.2em, 2.5vw, 1.5em); line-height: 1.6; color: #444; }
         .problem-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; font-size: clamp(1.1em, 2.2vw, 1.4em); }
         .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; font-size: clamp(1.1em, 2.2vw, 1.4em); }
@@ -429,8 +436,8 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         <!-- Slide 3: 思路 -->
         <div class="slide">
             <div class="slide-header"><h2>🤔 思路探讨</h2></div>
-            <div class="slide-content" style="justify-content: flex-start;">
-                <div style="font-size: 1.1em; line-height: 1.8;">
+            <div class="slide-content" style="justify-content: flex-start; overflow-y: auto;">
+                <div class="content-body">
                     <!-- 请生成详细的思路讲解，可以包含多个段落、列表或图示说明 -->
                     <p>...</p>
                 </div>
@@ -502,8 +509,8 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
             </div>
         </div>
 
-        <button id="prevBtn" class="nav-button">‹</button>
-        <button id="nextBtn" class="nav-button">›</button>
+        <button id="prevBtn" class="nav-button">‹ 上一页</button>
+        <button id="nextBtn" class="nav-button">下一页 ›</button>
         <div id="slideCounter">1 / 7</div>
     </div>
 
@@ -613,6 +620,8 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
    - **渲染函数**：实现 \`renderStep(index)\` 函数，根据传入的 \`index\` 清空并重新绘制 \`animArea\` 的内容，并更新 \`stepDescription\` 的文字。
    - **保留信息**：在 \`stepDescription\` 中，不仅要说明当前动作（如“交换 A 和 B”），还要保留关键上下文（如“当前最大值 max = 5”），防止用户遗忘。
    - **代码实现**：在 \`<script>\` 标签的最后，定义 \`steps\` 数组，设置 \`totalSteps = steps.length\`，实现 \`renderStep\` 函数，并调用一次 \`updateControls()\` 初始化。
+
+4. **缺失代码处理**：如果用户提供的代码为空或提示“未提供代码”，请你根据题目描述，自动生成一份标准的、高质量的 C++ AC 代码，并添加详细的中文注释，填入“代码实现”页面的代码块中。
 
 请直接输出 HTML 代码，不要包含 markdown 的代码块标记（如 \`\`\`html ... \`\`\`），也不要包含其他多余的文字。`
 

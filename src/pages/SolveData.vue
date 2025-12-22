@@ -47,7 +47,7 @@
             </div>
             <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
             <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all'" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
-            <button @click="goToReport" :disabled="!translationText || !(manualCodeMode ? manualCode : codeOutput)" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
+            <button @click="goToReport" :disabled="!problemText.trim()" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
             <button @click="runAndDownload" :disabled="isGenerating || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
             <button @click="clearAll" class="btn-clear">清空</button>
           </div>
@@ -570,11 +570,15 @@ export default {
       const codeContent = this.manualCodeMode ? this.manualCode : this.codeOutput;
       
       // 提取纯代码
-      let pureCode = codeContent;
-      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
-      const matches = [...codeContent.matchAll(codeBlockRegex)];
-      if (matches.length > 0) {
-        pureCode = matches[0][1].trim();
+      let pureCode = codeContent || '';
+      if (pureCode) {
+        const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
+        const matches = [...codeContent.matchAll(codeBlockRegex)];
+        if (matches.length > 0) {
+          pureCode = matches[0][1].trim();
+        }
+      } else {
+        pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。";
       }
 
       const reportData = {
