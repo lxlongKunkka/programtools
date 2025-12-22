@@ -529,7 +529,8 @@ export default {
              
              const hasMarkdown = manualContent.includes('```')
              const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
-             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后']
+             // 增加日语关键词支持
+             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答']
              const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
              
              if (hasMarkdown) {
@@ -587,10 +588,19 @@ export default {
             if (isRawManualCode) {
                 contentToSave = sourceForCode
             } else {
-                // 兜底：如果没匹配到特定模式，尝试通用匹配
+                // 兜底1：尝试通用匹配
                 const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
                 const matches = [...sourceForCode.matchAll(codeBlockRegex)]
-                if (matches.length > 0) contentToSave = matches[0][1].trim()
+                if (matches.length > 0) {
+                    contentToSave = matches[0][1].trim()
+                } else {
+                    // 兜底2：如果 sourceForCode 不为空，且包含明显的代码特征，直接保存
+                    // 这可以处理 AI 生成了代码但忘记加 Markdown 标记的情况
+                    const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+                    if (sourceForCode && strongCodeStart.test(sourceForCode)) {
+                        contentToSave = sourceForCode.trim()
+                    }
+                }
             }
           }
           
@@ -867,11 +877,33 @@ export default {
         let requests = []
         
         // 1. 请求生成代码
+        let promptText = this.problemText
+        // 如果 manualCode 存在且被判定为非纯代码（即参考资料），则将其加入 Prompt
+        if (this.manualCode && this.manualCode.trim()) {
+             const manualContent = this.manualCode.trim()
+             const hasMarkdown = manualContent.includes('```')
+             const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答']
+             const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
+             
+             let isReference = false
+             if (hasMarkdown || hasTextKeywords) {
+                 isReference = true
+             } else if (!strongCodeStart.test(manualContent)) {
+                 // 既没有代码特征，也没有明显文本特征，可能是纯文本描述
+                 isReference = true
+             }
+             
+             if (isReference) {
+                 promptText += `\n\n【参考解法/思路】\n${manualContent}\n\n请参考上述思路（如果有）编写 AC 代码。`
+             }
+        }
+
         requests.push(
           request('/api/solve', {
             method: 'POST',
             body: JSON.stringify({
-              text: this.problemText,
+              text: promptText,
               model: this.selectedModel,
               language: this.language
             })
@@ -932,24 +964,40 @@ export default {
         const hasMarkdown = manualContent.includes('```')
         
         // 2. 强代码特征 (必须出现在行首或前面)
-        const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+        // 针对 C++ 语言进行更严格的判定：只有看起来像 C++ 的才算 ManualCode
+        // 如果是 Python/Java 代码但当前语言选的是 C++，则应视为参考代码，交给 AI 转换
+        const isCppLike = /^\s*(#include|using\s+namespace|template\s*<|int\s+main|void\s+\w+)/m.test(manualContent)
+        const isPythonLike = /^\s*(def\s+|import\s+|from\s+|class\s+)/m.test(manualContent)
+        const isJavaLike = /^\s*(package\s+|import\s+java|public\s+class)/m.test(manualContent)
         
         // 3. 文本特征：检查是否包含大量非代码的自然语言句子
-        const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后']
+        const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答', '実装', '参考', '注意', '問題', '詳細', '下記', '場合', '用いて']
         const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
         
         if (hasMarkdown) {
             isManualCode = false 
         } else if (hasTextKeywords) {
             isManualCode = false
-        } else if (strongCodeStart.test(manualContent)) {
-            isManualCode = true
         } else {
-            // 兜底：符号密度检查，提高阈值
-            const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
-            const lineCount = manualContent.split('\n').length
-            if (symbolCount / lineCount > 0.8) {
-               isManualCode = true
+            // 根据目标语言进行判定
+            if (this.language === 'C++') {
+                // 如果目标是 C++，只有看起来像 C++ 的才直接使用
+                // 如果是 Python/Java 风格，或者完全不像代码，都交给 AI
+                if (isCppLike) isManualCode = true
+                else isManualCode = false
+            } else if (this.language === 'Python') {
+                if (isPythonLike) isManualCode = true
+                else isManualCode = false
+            } else if (this.language === 'Java') {
+                if (isJavaLike) isManualCode = true
+                else isManualCode = false
+            } else {
+                // 兜底：符号密度检查
+                const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
+                const lineCount = manualContent.split('\n').length
+                if (symbolCount / lineCount > 0.8) {
+                   isManualCode = true
+                }
             }
         }
       }
@@ -990,6 +1038,9 @@ export default {
               })
             }).then(res => ({ type: 'code', data: res }))
           )
+        } else {
+          // 即使是手动代码模式，如果用户希望 AI 优化（例如包含非中文注释），这里可以增加逻辑
+          // 但目前保持原样：如果是纯代码，直接使用
         }
         
         // 2. 请求生成数据
