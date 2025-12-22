@@ -13,7 +13,8 @@ import {
   CHECKER_PROMPT, 
   getSolvePrompt, 
   getDataGenPrompt,
-  SOLUTION_REPORT_PROMPT
+  SOLUTION_REPORT_PROMPT,
+  META_PROMPT
 } from '../prompts.js'
 
 const router = express.Router()
@@ -131,7 +132,29 @@ router.post('/translate', checkModelPermission, async (req, res) => {
       fixed = fixed.replace(/(```)\s*(#+\s+)/g, '$1\n\n$2')
       fixed = fixed.replace(/([^\n])\s*(##+\s+)/g, '$1\n\n$2')
 
-      return res.json({ result: fixed })
+      // Extract meta (title and tags) from the translated content
+      let meta = { title: '', tags: [] }
+      try {
+        // Extract title: First line starting with #
+        const titleMatch = fixed.match(/^#\s+(.+)$/m)
+        if (titleMatch) {
+          meta.title = titleMatch[1].trim()
+        }
+
+        // Extract tags: Content after ### 算法标签
+        const tagsMatch = fixed.match(/###\s*算法标签\s*\n+([\s\S]*?)(?:\n#|$)/)
+        if (tagsMatch) {
+          const tagsText = tagsMatch[1].trim()
+          // Split by common separators and clean up
+          meta.tags = tagsText.split(/[,，、\n]+/)
+            .map(t => t.trim())
+            .filter(t => t && !t.startsWith('Level') && !t.startsWith('**')) // Filter out level headers if present
+        }
+      } catch (e) {
+        console.warn('Failed to extract meta from translation:', e)
+      }
+
+      return res.json({ result: fixed, meta })
     } catch (e) {
       try {
         let fallback = content
@@ -400,7 +423,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
     const payload = {
       model: model || 'gemini-2.0-flash',
       messages,
-      temperature: 0.5,
+      temperature: 0.3,
       max_tokens: 32767
     }
 
@@ -541,120 +564,70 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
   }
 })
 
-router.post('/generate-problem-meta', async (req, res) => {
+router.post('/generate-problem-meta', checkModelPermission, async (req, res) => {
   try {
-    const { text } = req.body
+    const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const raw = String(text || '').trim()
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
-    const ALLOWED_TAGS = [
-      '顺序结构','条件结构','循环结构','暴力枚举1','数学1',
-      '数组','函数','字符串','结构体','排序','模拟2','暴力枚举2','数学2','二维数组',
-      'STL','暴力枚举3','模拟3','数学3','贪心3','思维3',
-      '递推','递归','前缀和','差分','二分','三分','BFS','DFS','双指针','栈','链表','离散化','ST表','贪心4','数学4','思维4','优先队列',
-      'DP','DP变形','线性DP','背包DP','区间DP','BFS进阶','DFS进阶','树形结构','倍增','反悔贪心','哈希','KMP','字典树','并查集','数学5','思维5','环','搜索进阶','树的直径',
-      '树状数组','线段树','概率DP','期望DP','单调队列优化DP','数位DP','状压DP','树上DP','换根DP','单源最短路径','floyd','差分约束','最小生成树','AC自动机','平衡树','二分图','博弈论','分块','莫队','矩阵','数学6','思维6'
+    const messages = [
+      { role: 'system', content: META_PROMPT },
+      { role: 'user', content: text }
     ]
 
-    let title = ''
-    let tags = []
-
-    try {
-      const textNormalized = raw.replace(/\r\n/g, '\n')
-
-      const jsonBlock = textNormalized.match(/```json\s*([\s\S]{0,10000}?)\s*```/i)
-      if (jsonBlock) {
-        try {
-          const parsed = JSON.parse(jsonBlock[1])
-          if (parsed && parsed.title) title = String(parsed.title).trim()
-          if (parsed && Array.isArray(parsed.tags)) tags = parsed.tags.map(t => String(t).trim()).filter(Boolean)
-        } catch (e) {
-        }
-      }
-
-      if (!title) {
-        const mdTitleMatch = textNormalized.match(/#{1,3}\s*(?:题目标题|题目|Title|Problem)[\s:：-]*\n?([^\n]{1,200})/i)
-        if (mdTitleMatch) title = mdTitleMatch[1].trim()
-      }
-
-      if (!title) {
-        const inline = textNormalized.match(/(?:题目标题|题目|Title|Problem)[\s:：-]+([^\n]{1,200})/i)
-        if (inline) title = inline[1].trim()
-      }
-
-      if (!title) {
-        const lines = textNormalized.split('\n').map(l => l.trim()).filter(Boolean)
-        for (const ln of lines) {
-          if (/^(?:题目背景|题目描述|输入格式|输出格式|样例|样例解释|数据范围)/i.test(ln)) continue
-          if (/^#{1,6}\s*/.test(ln)) continue
-          if (ln.length > 3 && ln.length <= 200) { title = ln; break }
-        }
-      }
-
-      const tagsSection = textNormalized.match(/(?:知识点标签|知识点|算法标签|算法标签列表)[\s:\：-]*\n?([\s\S]{0,400}?)(?:\n#{1,6}|\n\n|$)/i)
-      if (tagsSection) {
-        const rawTags = (tagsSection[1] || '').split(/[,，、\n;；]+/)
-        tags = rawTags.map(t => t.trim()).map(t => t.replace(/^[-\s*]+/, '')).map(t => t.replace(/[。.,，、;；]+$/, '')).filter(Boolean)
-      }
-
-      if (!tags || tags.length === 0) {
-        const found = new Set()
-        const lower = textNormalized
-        for (const t of ALLOWED_TAGS) {
-          try {
-            const re = new RegExp('\\b' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i')
-            if (re.test(lower)) found.add(t)
-          } catch (e) { }
-          if (found.size >= 3) break
-        }
-        if (found.size) tags = Array.from(found).slice(0, 3)
-      }
-
-      if (!title) {
-        const lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
-        const skipPattern = /^(?:背景|题目背景|题目描述|描述|输入格式|输出格式|样例|样例解释|数据范围|注释)$/i
-        let firstLine = ''
-        for (const ln of lines) {
-          if (skipPattern.test(ln)) continue
-          const withoutHashes = ln.replace(/^#+\s*/, '')
-          if (skipPattern.test(withoutHashes)) continue
-          firstLine = ln
-          break
-        }
-        if (!firstLine) firstLine = lines.find(Boolean) || ''
-        title = firstLine.replace(/^#+\s*/, '') || '题目'
-      }
-
-      const skipTitlePattern = /^(?:背景|题目背景|题目描述|描述|说明|介绍|样例|样例解释)$/i
-      if (title && skipTitlePattern.test(String(title).replace(/^#+\s*/, '').trim())) {
-        title = ''
-      }
-
-      if (title.length > 120) title = title.slice(0, 120)
-
-      const finalTags = []
-      for (const t of tags) {
-        const clean = String(t || '').trim()
-        if (!clean) continue
-        if (ALLOWED_TAGS.includes(clean)) {
-          if (!finalTags.includes(clean)) finalTags.push(clean)
-        } else {
-          const found = ALLOWED_TAGS.find(a => a.toLowerCase().includes(clean.toLowerCase()))
-          if (found && !finalTags.includes(found)) finalTags.push(found)
-        }
-        if (finalTags.length >= 3) break
-      }
-
-      return res.json({ title: title.trim(), tags: finalTags, rawContent: raw })
-    } catch (e) {
-      debugLog('generate-problem-meta local parse failed:', e)
-      const fallbackTitle = raw.split('\n').map(l => l.trim()).find(Boolean) || '题目'
-      return res.json({ title: fallbackTitle, tags: [], rawContent: raw })
+    const payload = {
+      model: model || 'gemini-2.0-flash',
+      messages,
+      temperature: 0.3,
+      max_tokens: 1000
     }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 30000
+    })
+
+    const data = resp.data
+    let content = ''
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      content = data.choices[0].message.content
+    } else if (data.data && data.data[0] && data.data[0].text) {
+      content = data.data[0].text
+    } else {
+      content = '{}'
+    }
+
+    let result = { title: '', tags: [] }
+    try {
+      // 尝试提取 JSON 块
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[1] || jsonMatch[0])
+      } else {
+        result = JSON.parse(content)
+      }
+    } catch (e) {
+      console.warn('Meta JSON parse failed, raw content:', content)
+      // 简单的正则兜底
+      const titleMatch = content.match(/"title"\s*:\s*"([^"]+)"/)
+      if (titleMatch) result.title = titleMatch[1]
+    }
+
+    return res.json({ 
+      title: result.title || '未命名题目', 
+      tags: Array.isArray(result.tags) ? result.tags : [], 
+      rawContent: content 
+    })
+
   } catch (err) {
-    console.error('Generate problem meta (local) error:', err)
-    return res.status(500).json({ error: 'Problem meta parsing failed', detail: err?.message || String(err) })
+    console.error('Generate problem meta error:', err)
+    return res.status(500).json({ error: 'Problem meta generation failed', detail: err?.message || String(err) })
   }
 })
 
@@ -729,8 +702,13 @@ router.post('/send-package', authenticateToken, async (req, res) => {
     const user = await User.findById(req.user.id);
     const username = user ? user.uname : 'Unknown User';
     
-    // Always send to specific admin email
-    const targetEmail = '110076790@qq.com';
+    // Send to configured admin email only
+    const targetEmail = MAIL_CONFIG.to;
+
+    if (!targetEmail) {
+      console.warn('MAIL_TO not configured, skipping email backup');
+      return res.json({ success: false, message: 'Email backup skipped (not configured)' });
+    }
 
     const transporter = nodemailer.createTransport({
       host: MAIL_CONFIG.host,

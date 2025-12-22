@@ -2,25 +2,70 @@
 <div class="solve-data-container">
   <div class="top-bar">
     <h2>Solve + Data 生成器</h2>
-    <div class="model-selector">
-      <label for="model-select">模型:</label>
-      <select id="model-select" v-model="selectedModel">
-        <option v-for="m in (models && models.length ? models : [
-          { id: 'o4-mini', name: 'o4-mini' },
-          { id: 'o3-mini', name: 'o3-mini' },
-          { id: 'o2-mini', name: 'o2-mini' },
-          { id: 'o1-mini', name: 'o1-mini' },
-          { id: 'grok-4-fast', name: 'grok-4-fast' },
-          { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
-        ])" :key="m.id" :value="m.id">{{ m.name }}</option>
-      </select>
+    <div class="top-controls" style="display:flex; align-items:center; gap:15px;">
+      <button @click="toggleBatchMode" :class="['btn-batch', {active: isBatchMode}]">
+        {{ isBatchMode ? '退出批量模式' : '进入批量模式' }}
+      </button>
+      <div class="model-selector">
+        <label for="model-select">模型:</label>
+        <select id="model-select" v-model="selectedModel">
+          <option v-for="m in (models && models.length ? models : [
+            { id: 'o4-mini', name: 'o4-mini' },
+            { id: 'o3-mini', name: 'o3-mini' },
+            { id: 'o2-mini', name: 'o2-mini' },
+            { id: 'o1-mini', name: 'o1-mini' },
+            { id: 'grok-4-fast', name: 'grok-4-fast' },
+            { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
+          ])" :key="m.id" :value="m.id">{{ m.name }}</option>
+        </select>
+      </div>
     </div>
   </div>
+  
   <div class="main-layout new-layout" :style="{ '--left-width': leftWidth + '%' }">
+    
+    <!-- 批量任务列表侧边栏 -->
+    <div v-if="isBatchMode" class="batch-sidebar">
+      <div class="batch-header">
+        <h3>任务列表 ({{ tasks.length }})</h3>
+        <div class="batch-actions">
+          <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
+        </div>
+      </div>
+      <div class="task-list">
+        <div 
+          v-for="(task, index) in tasks" 
+          :key="index"
+          :class="['task-item', { active: currentTaskIndex === index }]"
+          @click="switchTask(index)"
+        >
+          <div class="task-status-dot" :class="task.status"></div>
+          <div class="task-info">
+            <div class="task-title">{{ getTaskTitle(task) }}</div>
+            <div class="task-meta">{{ getTaskStatusText(task) }}</div>
+          </div>
+          <button @click.stop="removeTask(index)" class="btn-icon-small">✕</button>
+        </div>
+      </div>
+      <div class="batch-footer">
+        <div class="batch-options" style="margin-bottom: 10px; display: flex; align-items: center;">
+          <input type="checkbox" id="batch-report" v-model="generateReportInBatch" style="margin-right: 5px;">
+          <label for="batch-report" style="font-size: 13px; color: #666; cursor: pointer;">同时生成解题报告 (消耗较多Token)</label>
+        </div>
+        <button @click="runBatch" :disabled="isBatchRunning" class="btn-batch-run">
+          {{ isBatchRunning ? '正在处理...' : '批量生成' }}
+        </button>
+        <button @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks" class="btn-batch-download">
+          批量下载
+        </button>
+      </div>
+    </div>
+
     <!-- 左侧输入区域，仅题目描述和手动代码 -->
     <div class="input-panel new-input-panel">
-      <div class="panel-header">
+      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h3>题目描述</h3>
+        <button @click="extractCodeFromProblem" v-if="problemText" class="btn-text-action" title="自动提取题目中的代码到下方">提取代码</button>
       </div>
       <textarea 
         v-model="problemText" 
@@ -28,28 +73,28 @@
         class="problem-input"
       ></textarea>
       <div class="panel-header" style="margin-top:18px;">
-        <h3>手动输入代码</h3>
+        <h3>参考 / AC 代码</h3>
       </div>
       <textarea 
         v-model="manualCode" 
-        placeholder="请输入你的 AC 代码..."
+        placeholder="在此处输入 AC 代码，将直接用于生成数据和报告，不再重新生成代码..."
         class="manual-code-input"
       ></textarea>
       <button @click="clearManualCode" class="btn-small-clear" style="margin-top:8px;">清空代码</button>
           <div class="input-actions-bar">
-            <button @click="generateAll" :disabled="isGenerating" class="btn-success" style="background: linear-gradient(90deg,#667eea,#764ba2);">{{ isGenerating ? '生成中...' : '一键生成全部' }}</button>
+            <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-success" style="background: linear-gradient(90deg,#667eea,#764ba2);">{{ isGenerating ? '生成中...' : '一键生成全部' }}</button>
             <div 
-              :class="['btn-translate', {disabled: isTranslating || isGenerating === 'all' || !problemText.trim()}]"
-              @click="!(isTranslating || isGenerating === 'all' || !problemText.trim()) && autoTranslate()"
+              :class="['btn-translate', {disabled: isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()}]"
+              @click="!(isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()) && autoTranslate()"
               style="display:inline-block; text-align:center;"
             >
               {{ isTranslating ? '翻译中...' : '生成翻译' }}
             </div>
-            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
-            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all'" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
-            <button @click="goToReport" :disabled="!problemText.trim()" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
-            <button @click="runAndDownload" :disabled="isGenerating || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
-            <button @click="clearAll" class="btn-clear">清空</button>
+            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
+            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
+            <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
+            <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
+            <button @click="clearAll" :disabled="isBatchRunning" class="btn-clear">清空</button>
           </div>
     </div>
 
@@ -57,6 +102,12 @@
 
     <!-- 右侧分栏输出区域 -->
     <div class="output-panel new-output-panel">
+      <div v-if="problemMeta" class="problem-meta-display">
+        <div class="meta-title">{{ problemMeta.title || '未命名题目' }}</div>
+        <div class="meta-tags" v-if="problemMeta.tags && problemMeta.tags.length">
+          <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
+        </div>
+      </div>
       <div class="output-tabs">
         <button :class="['tab-btn', {active: activeTab === 'translate'}]" @click="activeTab = 'translate'">🌐 翻译内容</button>
         <button :class="['tab-btn', {active: activeTab === 'code'}]" @click="activeTab = 'code'">📝 解题代码</button>
@@ -128,12 +179,67 @@ export default {
       manualCode: '',
       isTranslating: false,
       translationText: '',
-      problemMeta: null
+      problemMeta: null,
+      
+      // 批量模式相关数据
+      isBatchMode: false,
+      isBatchRunning: false,
+      generateReportInBatch: false, // 默认不生成报告以节省 Token
+      showBatchImport: false,
+      batchImportText: '',
+      currentTaskIndex: 0,
+      tasks: [
+        {
+          id: Date.now(),
+          status: 'pending', // pending, processing, completed, failed
+          problemText: '',
+          manualCode: '',
+          codeOutput: '',
+          dataOutput: '',
+          translationText: '',
+          problemMeta: null,
+          reportHtml: ''
+        }
+      ]
     }
   },
   mounted() {
     // 动态加载后端提供的模型列表
     this.loadModels()
+    
+    // 尝试从 localStorage 恢复任务列表
+    try {
+      const savedTasks = localStorage.getItem('solve_data_tasks')
+      if (savedTasks) {
+        this.tasks = JSON.parse(savedTasks)
+        if (this.tasks.length > 0) {
+          this.loadTask(0)
+        }
+      }
+    } catch (e) { console.error('Failed to load tasks', e) }
+  },
+  watch: {
+    // 监听当前任务数据的变化，同步到 tasks 数组
+    problemText(val) { 
+      this.updateCurrentTask('problemText', val)
+      if (!val || !val.trim()) {
+        this.problemMeta = null
+      }
+    },
+    manualCode(val) { this.updateCurrentTask('manualCode', val) },
+    codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
+    dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
+    translationText(val) { this.updateCurrentTask('translationText', val) },
+    problemMeta: {
+      handler(val) { this.updateCurrentTask('problemMeta', val) },
+      deep: true
+    },
+    tasks: {
+      handler(val) {
+        localStorage.setItem('solve_data_tasks', JSON.stringify(val))
+      },
+      deep: true
+    }
   },
   computed: {
     displayCode() {
@@ -141,9 +247,515 @@ export default {
         return '```\n' + this.manualCode + '\n```'
       }
       return this.codeOutput
+    },
+    hasCompletedTasks() {
+      return this.tasks.some(t => t.status === 'completed')
     }
   },
   methods: {
+    extractCodeFromProblem() {
+      if (!this.problemText) return
+      
+      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
+      const matches = [...this.problemText.matchAll(codeBlockRegex)]
+      
+      if (matches.length > 0) {
+        // Find the largest code block
+        let bestMatch = matches[0]
+        let maxLen = 0
+        for (const m of matches) {
+          if (m[1].length > maxLen) {
+            maxLen = m[1].length
+            bestMatch = m
+          }
+        }
+        
+        if (maxLen > 20) {
+           this.manualCode = bestMatch[1].trim()
+           this.showToastMessage('已提取代码到下方输入框')
+           return
+        }
+      }
+      this.showToastMessage('未在题目描述中发现明显的代码块')
+    },
+
+    // --- 批量模式方法 ---
+    toggleBatchMode() {
+      this.isBatchMode = !this.isBatchMode
+      // 如果进入批量模式且没有任务，确保有一个空任务
+      if (this.isBatchMode && this.tasks.length === 0) {
+        this.addNewTask()
+      }
+    },
+    
+    addNewTask() {
+      const newTask = {
+        id: Date.now(),
+        status: 'pending',
+        problemText: '',
+        manualCode: '',
+        codeOutput: '',
+        dataOutput: '',
+        translationText: '',
+        problemMeta: null,
+        reportHtml: ''
+      }
+      this.tasks.push(newTask)
+      this.switchTask(this.tasks.length - 1)
+    },
+    
+    removeTask(index) {
+      if (this.tasks.length <= 1) {
+        // 如果只剩一个，清空内容而不是删除
+        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '' }
+        this.loadTask(0)
+        return
+      }
+      
+      this.tasks.splice(index, 1)
+      if (this.currentTaskIndex >= this.tasks.length) {
+        this.switchTask(this.tasks.length - 1)
+      } else if (index === this.currentTaskIndex) {
+        this.loadTask(this.currentTaskIndex)
+      } else if (index < this.currentTaskIndex) {
+        this.currentTaskIndex--
+      }
+    },
+    
+    switchTask(index) {
+      if (index === this.currentTaskIndex) return
+      this.currentTaskIndex = index
+      this.loadTask(index)
+    },
+    
+    loadTask(index) {
+      const task = this.tasks[index]
+      if (!task) return
+      
+      // 暂停 watcher 以免触发 updateCurrentTask
+      // 但由于 Vue 2/3 响应式机制，直接赋值会触发 watcher
+      // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
+      this.problemText = task.problemText || ''
+      this.manualCode = task.manualCode || ''
+      this.codeOutput = task.codeOutput || ''
+      this.dataOutput = task.dataOutput || ''
+      this.translationText = task.translationText || ''
+      this.problemMeta = task.problemMeta || null
+    },
+    
+    updateCurrentTask(field, value) {
+      if (this.tasks[this.currentTaskIndex]) {
+        this.tasks[this.currentTaskIndex][field] = value
+        // 如果修改了输入，重置状态为 pending (除非正在运行)
+        if ((field === 'problemText' || field === 'manualCode') && 
+            this.tasks[this.currentTaskIndex].status === 'completed' && 
+            !this.isBatchRunning) {
+          this.tasks[this.currentTaskIndex].status = 'pending'
+        }
+      }
+    },
+    
+    getTaskTitle(task) {
+      if (task.problemMeta && task.problemMeta.title) return task.problemMeta.title
+      if (task.problemText) {
+        const lines = task.problemText.split('\n').filter(l => l.trim())
+        if (lines.length > 0) return lines[0].slice(0, 20) + (lines[0].length > 20 ? '...' : '')
+      }
+      return '新任务 ' + new Date(task.id).toLocaleTimeString()
+    },
+    
+    getTaskStatusText(task) {
+      const map = {
+        'pending': '等待中',
+        'processing': '处理中...',
+        'completed': '已完成',
+        'failed': '失败'
+      }
+      return map[task.status] || '未知'
+    },
+    
+    async runBatch() {
+      if (this.isBatchRunning) return
+      
+      const pendingTasks = this.tasks.map((t, i) => ({t, i})).filter(item => item.t.status === 'pending' || item.t.status === 'failed')
+      
+      if (pendingTasks.length === 0) {
+        this.showToastMessage('没有待处理的任务')
+        return
+      }
+      
+      this.isBatchRunning = true
+      
+      for (const item of pendingTasks) {
+        const { i } = item
+        this.switchTask(i)
+        
+        // 标记为处理中
+        this.tasks[i].status = 'processing'
+        
+        try {
+          // 1. 生成代码、数据、翻译
+          const success = await this.generateAll()
+          
+          if (!success) {
+             throw new Error('Generation failed')
+          }
+          
+          // 2. 生成解题报告 (如果开启)
+          if (this.generateReportInBatch) {
+            await this.generateReportForBatch(i)
+          }
+          
+          this.tasks[i].status = 'completed'
+        } catch (e) {
+          console.error(`Task ${i} failed:`, e)
+          this.tasks[i].status = 'failed'
+        }
+        
+        // 简单的延时，避免请求过快
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      
+      this.isBatchRunning = false
+      this.showToastMessage('批量任务处理完成！')
+    },
+    
+    async generateReportForBatch(index) {
+      const task = this.tasks[index]
+      if (!task.problemText) return
+      
+      // 提取纯代码
+      let pureCode = task.manualCode || task.codeOutput || ''
+      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
+      const matches = [...pureCode.matchAll(codeBlockRegex)]
+      if (matches.length > 0) {
+        pureCode = matches[0][1].trim()
+      }
+      
+      try {
+        const res = await request.post('/api/solution-report', {
+          problem: task.translationText || task.problemText,
+          code: pureCode,
+          model: this.selectedModel
+        })
+        
+        if (res.html) {
+          this.tasks[index].reportHtml = res.html
+        }
+      } catch (e) {
+        console.error('Batch report generation failed', e)
+      }
+    },
+    
+    async downloadBatch() {
+      const completedTasks = this.tasks.filter(t => t.status === 'completed')
+      if (completedTasks.length === 0) {
+        this.showToastMessage('没有已完成的任务可下载')
+        return
+      }
+      
+      try {
+        let JSZip
+        try {
+          const module = await import('jszip')
+          JSZip = module.default || module
+        } catch (e) {
+          console.error('Failed to load JSZip', e)
+          this.showToastMessage('下载组件加载失败')
+          return
+        }
+        
+        const masterZip = new JSZip()
+        
+        for (const task of completedTasks) {
+          // 智能提取标题
+          let title = `task_${task.id}`
+          if (task.problemMeta && task.problemMeta.title) {
+            title = task.problemMeta.title
+          } else {
+            // 尝试从文本中提取标题 (类似 generateProblemYaml 的逻辑)
+            const src = (task.translationText || task.problemText || '').trim()
+            const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
+            const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍)/
+            const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
+            
+            for (let i = 0; i < lines.length; i++) {
+              const m = lines[i].match(/^#{1,3}\s*(.+)$/)
+              if (m) {
+                const t = stripMd(m[1]).trim()
+                if (t && !badKeywords.test(t)) { title = t; break; }
+              }
+            }
+            if (title === `task_${task.id}`) {
+                for (let i = 0; i < lines.length; i++) {
+                  const t = stripMd(lines[i]).trim()
+                  if (!t) continue
+                  if (/^(输入|输出|数据范围|样例|说明)/.test(t)) continue
+                  if (badKeywords.test(t)) continue
+                  const cleaned = t.replace(/^[-*\s]+/, '')
+                  if (cleaned) { title = cleaned; break; }
+                }
+            }
+          }
+          
+          const safeTitle = title.replace(/[\\/:*?"<>|]/g, '_').trim() || `task_${task.id}`
+          const folder = masterZip.folder(safeTitle)
+          
+          // 1. 添加代码
+          let ext = 'cpp' // 默认
+          let lang = 'C++'
+          
+          // 简单的语言检测
+          if (task.codeOutput && (task.codeOutput.includes('```python') || task.codeOutput.includes('```py'))) {
+             ext = 'py'; lang = 'Python';
+          } else if (task.codeOutput && task.codeOutput.includes('```java')) {
+             ext = 'java'; lang = 'Java';
+          }
+          
+          // 提取纯代码
+          // 逻辑修正：优先使用 codeOutput (AI生成或已确认的手动代码)
+          // 只有当 codeOutput 为空时，才尝试检测 manualCode 是否为纯代码
+          
+          let contentToSave = ''
+          let sourceForCode = ''
+          let isRawManualCode = false
+          
+          if (task.codeOutput && task.codeOutput.trim()) {
+             sourceForCode = task.codeOutput
+          } else if (task.manualCode && task.manualCode.trim()) {
+             // 再次检测 manualCode 是否为代码 (复用 generateAll 的启发式逻辑)
+             const manualContent = task.manualCode.trim()
+             let looksLikeCode = false
+             
+             const hasMarkdown = manualContent.includes('```')
+             const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后']
+             const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
+             
+             if (hasMarkdown) {
+                 // 包含 Markdown，作为源文本尝试提取
+                 sourceForCode = manualContent
+             } else {
+                 // 不含 Markdown，检查是否为纯代码
+                 if (hasTextKeywords) {
+                     looksLikeCode = false
+                 } else if (strongCodeStart.test(manualContent)) {
+                     looksLikeCode = true
+                 } else {
+                     const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
+                     const lineCount = manualContent.split('\n').length
+                     if (symbolCount / lineCount > 0.8) {
+                        looksLikeCode = true
+                     }
+                 }
+                 
+                 if (looksLikeCode) {
+                    sourceForCode = manualContent
+                    isRawManualCode = true
+                 }
+             }
+          }
+          
+          // 尝试提取代码块
+          const codePatterns = [
+            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+            /```cpp([\s\S]*?)```/i,
+            /```c\+\+([\s\S]*?)```/i,
+            /```(?:python|py)\s*\n([\s\S]*?)```/i,
+            /```python([\s\S]*?)```/i,
+            /```py([\s\S]*?)```/i,
+            /```java\s*\n([\s\S]*?)```/i,
+            /```java([\s\S]*?)```/i,
+            /```\s*\n([\s\S]*?)```/
+          ]
+             
+          let extractedCode = ''
+          for (const pattern of codePatterns) {
+            const match = sourceForCode.match(pattern)
+            if (match && match[1]) {
+                extractedCode = match[1].trim()
+                // 移除可能残留的语言标识符
+                extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                break
+            }
+          }
+             
+          if (extractedCode) {
+            contentToSave = extractedCode
+          } else {
+            // 如果没提取到代码块，且被判定为纯代码
+            if (isRawManualCode) {
+                contentToSave = sourceForCode
+            } else {
+                // 兜底：如果没匹配到特定模式，尝试通用匹配
+                const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
+                const matches = [...sourceForCode.matchAll(codeBlockRegex)]
+                if (matches.length > 0) contentToSave = matches[0][1].trim()
+            }
+          }
+          
+          const stdFileName = lang === 'Java' ? 'Main.java' : `std.${ext}`
+          folder.file(stdFileName, contentToSave)
+          
+          // 2. 添加数据生成脚本
+          let script = task.dataOutput || ''
+          
+          // 使用与 runAndDownload 相同的健壮提取逻辑
+          const scriptPatterns = [
+            /```python\s*\n([\s\S]*?)```/i,
+            /```python([\s\S]*?)```/i,
+            /```py\s*\n([\s\S]*?)```/i,
+            /```py([\s\S]*?)```/i,
+            /```\s*\n([\s\S]*?)```/
+          ]
+          
+          let extractedScript = ''
+          for (const pattern of scriptPatterns) {
+            const match = script.match(pattern)
+            if (match && match[1]) {
+              extractedScript = match[1].trim()
+              extractedScript = extractedScript.replace(/^(?:python|py)\s+/i, '')
+              extractedScript = extractedScript.replace(/^#!\/usr\/bin\/env python[0-9]?\s*\n/, '')
+              break
+            }
+          }
+          
+          if (extractedScript) {
+             script = extractedScript
+          }
+          
+          // 额外清理 Markdown 伪代码
+          if (script) {
+            const lines = script.split('\n')
+            let cleanedLines = []
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i]
+              const trimmed = line.trim()
+              if (!trimmed.startsWith('#') && !trimmed.startsWith('"""') && !trimmed.startsWith("'''")) {
+                if (/^##\s+/.test(trimmed) || /^\*\*说明[：:]\*\*/.test(trimmed)) {
+                  break
+                }
+              }
+              cleanedLines.push(line)
+            }
+            script = cleanedLines.join('\n').trim()
+          }
+          
+          // 修改脚本中的 file_prefix 和 output_gen
+          let modifiedScript = script.replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
+          
+          if (lang === 'C++') {
+            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('std.exe')`)
+          } else if (lang === 'Python') {
+            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('python std.py')`)
+          } else if (lang === 'Java') {
+            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('java Main')`)
+          }
+          
+          folder.file('data_generator.py', modifiedScript)
+          
+          // 3. 添加题目描述
+          folder.file('problem.md', task.problemText)
+          if (task.translationText) folder.file('problem_zh.md', task.translationText)
+          
+          // 4. 添加解题报告
+          if (task.reportHtml) {
+            const reportName = `${safeTitle}.html`
+            folder.file(reportName, task.reportHtml)
+          }
+          
+          // 5. 添加 problem.yaml (使用完整生成逻辑)
+          const yamlContent = this.generateProblemYaml(task.problemMeta, task.problemText, task.translationText)
+          folder.file('problem.yaml', yamlContent)
+          
+          // 6. 添加运行脚本
+          folder.file('run.py', this.generateRunScript(lang))
+          folder.file('run.bat', this.generateBatScript(lang))
+
+          // 7. 添加 solution.md (原始代码输出)
+          if (task.codeOutput && task.codeOutput.trim()) {
+            folder.file('solution.md', task.codeOutput)
+          }
+        }
+        
+        const blob = await masterZip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        
+        // 生成带用户名和时间戳的文件名
+        let username = 'user'
+        try {
+          const userInfoStr = localStorage.getItem('user_info')
+          if (userInfoStr) {
+            const userInfo = JSON.parse(userInfoStr)
+            if (userInfo && (userInfo.uname || userInfo.username)) {
+              username = userInfo.uname || userInfo.username
+            }
+          }
+        } catch (e) { console.warn('Failed to get username', e) }
+        
+        const taskCount = completedTasks.length
+        const now = new Date()
+        const dateStr = now.getFullYear() +
+          String(now.getMonth() + 1).padStart(2, '0') +
+          String(now.getDate()).padStart(2, '0') + '_' +
+          String(now.getHours()).padStart(2, '0') +
+          String(now.getMinutes()).padStart(2, '0') +
+          String(now.getSeconds()).padStart(2, '0')
+          
+        const zipName = `batch_export_${username}_${taskCount}tasks_${dateStr}.zip`
+        
+        a.download = zipName
+        document.body.appendChild(a) // Firefox requires appending to body
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        // 静默发送邮件：将 zip 转为 base64 并调用后端
+        try {
+          const base64 = await (async () => {
+            const reader = new FileReader()
+            const p = new Promise((resolve, reject) => {
+              reader.onload = () => resolve(reader.result)
+              reader.onerror = reject
+            })
+            reader.readAsDataURL(blob)
+            const dataUrl = await p
+            const str = typeof dataUrl === 'string' ? dataUrl : ''
+            const commaIdx = str.indexOf(',')
+            return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
+          })()
+
+          const filename = zipName
+          const subject = `SolveData 批量导出: ${zipName}`
+
+          fetch('/api/send-package', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+            },
+            body: JSON.stringify({ filename, contentBase64: base64, subject })
+          })
+          .then(async res => {
+            if (!res.ok) {
+              const err = await res.json();
+              console.warn('邮件发送失败:', err);
+            } else {
+                this.showToastMessage('✅ 批量导出成功');
+            }
+          })
+          .catch(e => console.error('邮件请求错误:', e))
+        } catch (e) {
+          console.error('邮件准备失败:', e);
+        }
+      } catch (e) {
+        console.error('Batch download failed', e)
+        this.showToastMessage('批量下载失败: ' + e.message)
+      }
+    },
+
     startResize() {
       this.isDragging = true
       document.addEventListener('mousemove', this.onMouseMove)
@@ -192,7 +804,14 @@ export default {
               body: JSON.stringify({ text: this.problemText, model: this.selectedModel })
             });
             
-            if (data && data.result) this.translationText = data.result;
+            if (data && data.result) {
+              this.translationText = data.result;
+              // 如果翻译接口返回了元数据，直接使用，避免再次调用 generate-problem-meta
+              if (data.meta && (data.meta.title || (data.meta.tags && data.meta.tags.length))) {
+                this.problemMeta = data.meta;
+                console.log('从翻译结果中提取到元数据:', this.problemMeta);
+              }
+            }
             else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
             else this.translationText = '(无返回内容)';
           } catch (e) {
@@ -244,8 +863,11 @@ export default {
         if (!(this.translationText && this.translationText.trim())) {
           await this.autoTranslate()
         }
-        // 同时生成代码和题目元数据
-        const [codeData, metaData] = await Promise.all([
+        
+        let requests = []
+        
+        // 1. 请求生成代码
+        requests.push(
           request('/api/solve', {
             method: 'POST',
             body: JSON.stringify({
@@ -253,23 +875,32 @@ export default {
               model: this.selectedModel,
               language: this.language
             })
-          }),
-          request('/api/generate-problem-meta', {
-            method: 'POST',
-            body: JSON.stringify({
-              text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
-              model: this.selectedModel
-            })
-          }).catch(e => null) // 元数据生成失败不影响主流程
-        ])
+          }).then(res => ({ type: 'code', data: res }))
+        )
         
-        if (codeData && codeData.result) {
-          this.codeOutput = codeData.result
+        // 2. 如果元数据尚未生成，则请求生成元数据
+        if (!this.problemMeta || !this.problemMeta.title) {
+           requests.push(
+            request('/api/generate-problem-meta', {
+              method: 'POST',
+              body: JSON.stringify({
+                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
+                model: this.selectedModel
+              })
+            }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
+           )
         }
         
-        if (metaData) {
-          this.problemMeta = metaData
-          console.log('题目元数据:', metaData)
+        const responses = await Promise.all(requests)
+        
+        for (const res of responses) {
+           if (!res || !res.data) continue
+           if (res.type === 'code' && res.data.result) {
+              this.codeOutput = res.data.result
+           } else if (res.type === 'meta') {
+              this.problemMeta = res.data
+              console.log('题目元数据:', this.problemMeta)
+           }
         }
       } catch (error) {
         console.error('Generate code error:', error)
@@ -289,13 +920,46 @@ export default {
       this.dataOutput = ''
       this.translationText = ''
       
-      // 检查是否是手动输入代码模式
-      const isManualMode = this.manualCode.trim() !== ''
+      // 检查 manualCode 是代码还是题解文本
+      const manualContent = this.manualCode.trim()
+      let isManualCode = false
       
-      // 如果是手动输入模式，将手动代码赋值给 codeOutput
-      if (isManualMode) {
-        this.codeOutput = this.manualCode
+      if (manualContent) {
+        // 改进的启发式规则：更倾向于让 AI 处理（即判定为 false），除非非常确定是纯代码
+        
+        // 1. 检查是否有 Markdown 代码块标记
+        // 如果有 ```，说明是包含格式的文本，应由 AI 提取或处理
+        const hasMarkdown = manualContent.includes('```')
+        
+        // 2. 强代码特征 (必须出现在行首或前面)
+        const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+        
+        // 3. 文本特征：检查是否包含大量非代码的自然语言句子
+        const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后']
+        const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
+        
+        if (hasMarkdown) {
+            isManualCode = false 
+        } else if (hasTextKeywords) {
+            isManualCode = false
+        } else if (strongCodeStart.test(manualContent)) {
+            isManualCode = true
+        } else {
+            // 兜底：符号密度检查，提高阈值
+            const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
+            const lineCount = manualContent.split('\n').length
+            if (symbolCount / lineCount > 0.8) {
+               isManualCode = true
+            }
+        }
+      }
+      
+      // 如果判定为手动代码模式，直接使用
+      if (isManualCode) {
+        console.log('判定为手动代码模式')
+        this.codeOutput = manualContent
       } else {
+        console.log('判定为自动生成模式')
         this.codeOutput = ''
       }
       
@@ -306,106 +970,84 @@ export default {
         if (!(this.translationText && this.translationText.trim())) {
           await this.autoTranslate()
         }
-        // 如果是手动输入代码模式，跳过代码生成
+        
         let requests = []
         
-        if (!isManualMode) {
-          // 自动生成模式：生成代码、数据、翻译和元数据
-          requests = [
+        // 准备请求列表
+        // 1. 如果不是手动代码模式，请求生成代码
+        if (!isManualCode) {
+          let promptText = this.problemText
+          if (manualContent) {
+            promptText += `\n\n【参考解法/思路】\n${manualContent}\n\n请参考上述思路（如果有）编写 AC 代码。`
+          }
+          requests.push(
             request('/api/solve', {
               method: 'POST',
               body: JSON.stringify({
-                text: this.problemText,
+                text: promptText,
                 model: this.selectedModel,
                 language: this.language
               })
-            }),
-            request('/api/generate-data', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: this.problemText,
-                model: this.selectedModel
-              })
-            }),
-            // translate 已经执行过，跳过重复调用
+            }).then(res => ({ type: 'code', data: res }))
+          )
+        }
+        
+        // 2. 请求生成数据
+        requests.push(
+          request('/api/generate-data', {
+            method: 'POST',
+            body: JSON.stringify({
+              text: this.problemText,
+              model: this.selectedModel
+            })
+          }).then(res => ({ type: 'data', data: res }))
+        )
+        
+        // 3. 如果元数据尚未生成（例如 autoTranslate 未能提取到），则请求生成元数据
+        if (!this.problemMeta || !this.problemMeta.title) {
+           requests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
               body: JSON.stringify({
                 text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
                 model: this.selectedModel
               })
-            }).catch(e => null)
-          ]
-        } else {
-          // 手动输入模式：只生成数据、翻译和元数据
-          // 手动模式下也先保证翻译可用（以便生成元数据使用译文）
-          if (!(this.translationText && this.translationText.trim())) {
-            await this.autoTranslate()
-          }
-          requests = [
-            request('/api/generate-data', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: this.problemText,
-                model: this.selectedModel
-              })
-            }),
-            // translate 已在上面执行过
-            request('/api/generate-problem-meta', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
-                model: this.selectedModel
-              })
-            }).catch(e => null)
-          ]
+            }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
+           )
         }
         
         const responses = await Promise.all(requests)
         
-        if (!isManualMode) {
-          // 自动生成模式：解析响应（code, data, meta）
-          const [codeData, dataData, metaData] = responses
-          
-          if (codeData && codeData.result) {
-            this.codeOutput = codeData.result
-          }
-          
-          if (dataData && dataData.result) {
-            this.dataOutput = dataData.result
-          }
-          
-          if (metaData) {
-            this.problemMeta = metaData
-            console.log('题目元数据:', metaData)
-          }
-        } else {
-          // 手动输入模式：只解析2个响应 (data, meta)
-          const [dataData, metaData] = responses
-          
-          if (dataData && dataData.result) {
-            this.dataOutput = dataData.result
-          }
-          
-          if (metaData) {
-            this.problemMeta = metaData
-            console.log('手动模式 - 保存的元数据:', this.problemMeta)
-          }
+        // 处理响应
+        for (const res of responses) {
+           if (!res || !res.data) continue
+           
+           if (res.type === 'code' && res.data.result) {
+              this.codeOutput = res.data.result
+           } else if (res.type === 'data' && res.data.result) {
+              this.dataOutput = res.data.result
+           } else if (res.type === 'meta') {
+              this.problemMeta = res.data
+              console.log('题目元数据:', this.problemMeta)
+           }
         }
         
         // 检查是否有生成成功的内容
-        const hasContent = isManualMode 
+        const hasContent = isManualCode 
           ? (this.dataOutput || this.translationText)
           : (this.codeOutput || this.dataOutput || this.translationText)
         
         if (hasContent) {
           this.showToastMessage('✅ 全部生成完成！')
+          return true
         } else {
           this.showToastMessage('生成失败，请检查网络连接和后端服务')
+          return false
         }
       } catch (error) {
         console.error('Generate all error:', error)
         this.showToastMessage('生成失败: ' + error.message)
+        return false
       } finally {
         this.isGenerating = false
       }
@@ -430,31 +1072,43 @@ export default {
         if (!(this.translationText && this.translationText.trim())) {
           await this.autoTranslate()
         }
-        // 同时生成数据脚本和题目元数据
-        const [dataData, metaData] = await Promise.all([
+        
+        let requests = []
+        
+        // 1. 请求生成数据
+        requests.push(
           request('/api/generate-data', {
             method: 'POST',
             body: JSON.stringify({
               text: textForData,
               model: this.selectedModel
             })
-          }),
-          request('/api/generate-problem-meta', {
-            method: 'POST',
-            body: JSON.stringify({
-              text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
-              model: this.selectedModel
-            })
-          }).catch(e => null)
-        ])
+          }).then(res => ({ type: 'data', data: res }))
+        )
         
-        if (dataData && dataData.result) {
-          this.dataOutput = dataData.result
+        // 2. 如果元数据尚未生成，则请求生成元数据
+        if (!this.problemMeta || !this.problemMeta.title) {
+           requests.push(
+            request('/api/generate-problem-meta', {
+              method: 'POST',
+              body: JSON.stringify({
+                text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
+                model: this.selectedModel
+              })
+            }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
+           )
         }
         
-        if (metaData) {
-          this.problemMeta = metaData
-          console.log('题目元数据:', metaData)
+        const responses = await Promise.all(requests)
+        
+        for (const res of responses) {
+           if (!res || !res.data) continue
+           if (res.type === 'data' && res.data.result) {
+              this.dataOutput = res.data.result
+           } else if (res.type === 'meta') {
+              this.problemMeta = res.data
+              console.log('题目元数据:', this.problemMeta)
+           }
         }
       } catch (error) {
         console.error('Generate data error:', error)
@@ -564,6 +1218,8 @@ export default {
       this.dataOutput = ''
       this.manualCode = ''
       this.manualCodeMode = false
+      this.problemMeta = null
+      this.translationText = ''
     },
 
     goToReport() {
@@ -618,14 +1274,19 @@ export default {
         console.log('dataOutput 前200字符:', this.dataOutput.substring(0, 200))
         
         // 提取标准程序代码
-        const isManualMode = this.manualCode && this.manualCode.trim() !== ''
+        // 只有当 manualCodeMode 为 true 时，才优先使用 manualCode
+        // 否则（即使 manualCode 有内容，但被判定为非代码），使用 codeOutput
+        const useManualCode = this.manualCodeMode && this.manualCode && this.manualCode.trim() !== ''
         
-        if (isManualMode) {
+        if (useManualCode) {
           // 手动输入模式：直接使用手动输入的代码
           stdCode = this.manualCode.trim()
           console.log('使用手动输入代码，长度:', stdCode.length)
         } else {
           // 自动生成模式：从 Markdown 中提取代码块
+          // 注意：如果 manualCodeMode 为 false，即使 manualCode 有内容（如思路），也应忽略，使用 codeOutput
+          const sourceContent = this.codeOutput || ''
+          
           const codePatterns = [
             /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
             /```cpp([\s\S]*?)```/i,
@@ -639,7 +1300,7 @@ export default {
           ]
           
           for (const pattern of codePatterns) {
-            const match = this.codeOutput.match(pattern)
+            const match = sourceContent.match(pattern)
             if (match && match[1]) {
               stdCode = match[1].trim()
               stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
@@ -766,11 +1427,11 @@ export default {
         zip.file('README.md', readme)
         
         // 生成 Python 运行脚本（跨平台）
-        const runScript = this.generateRunScript()
+        const runScript = this.generateRunScript(this.language)
         zip.file('run.py', runScript)
         
         // 生成 Windows 批处理启动脚本
-        const batScript = this.generateBatScript()
+        const batScript = this.generateBatScript(this.language)
         zip.file('run.bat', batScript)
         
         // 生成 problem.yaml 文件（始终生成，即使没有元数据也使用默认值）
@@ -833,9 +1494,6 @@ export default {
                     if (!res.ok) {
                       const err = await res.json();
                       console.warn('邮件发送失败:', err);
-                      if (err.error === 'User email not found') {
-                        this.showToastMessage('⚠️ 包已下载，但未发送邮件：当前账号未绑定邮箱');
-                      }
                     }
                   })
                   .catch(e => console.error('邮件请求错误:', e))
@@ -855,7 +1513,8 @@ export default {
       }
     },
     
-    generateRunScript() {
+    generateRunScript(targetLang = null) {
+      const lang = targetLang || this.language
       const script = `#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -968,7 +1627,7 @@ def main():
     # 步骤 3: 编译标准程序
     print_step(3, 4, "编译标准程序...")
     
-    ${this.language === 'C++' ? `
+    ${lang === 'C++' ? `
     if not os.path.exists('std.cpp'):
         print("[X] 错误: 找不到 std.cpp 文件！")
         sys.exit(1)
@@ -981,7 +1640,7 @@ def main():
         print("\\n[X] 编译失败！请检查代码是否有语法错误\\n")
         sys.exit(1)
     print(f"[√] 编译成功: {exe_name}\\n")
-    ` : this.language === 'Python' ? `
+    ` : lang === 'Python' ? `
     if not os.path.exists('std.py'):
         print("[X] 错误: 找不到 std.py 文件！")
         sys.exit(1)
@@ -1070,7 +1729,9 @@ def main():
             
             # 创建 zip 文件名（去除特殊字符）
             import re
-            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', zip_name) + "ed"
+            if not zip_name:
+                zip_name = "problem"
+            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', str(zip_name)) + "ed"
             zip_path = os.path.join('..', f"{zip_name}.zip")
             
             print(f"\\n正在打包到: {zip_path}")
@@ -1125,7 +1786,7 @@ if __name__ == '__main__':
       return script
     },
     
-    generateBatScript() {
+    generateBatScript(targetLang = null) {
       return `@echo off
 REM Change to script directory
 cd /d "%~dp0"
@@ -1215,12 +1876,16 @@ python data_generator.py
 `
     },
     
-    generateProblemYaml() {
-      console.log('生成 problem.yaml，当前 problemMeta:', this.problemMeta)
+    generateProblemYaml(meta = null, pText = '', tText = '') {
+      const currentMeta = meta || this.problemMeta
+      const currentProblemText = pText || this.problemText
+      const currentTranslationText = tText || this.translationText
+      
+      console.log('生成 problem.yaml，meta:', currentMeta)
       
       // 1) 先构造标题的稳健兜底：优先 meta.title；否则取翻译/题面首行
       const fallbackTitle = (() => {
-        const src = (this.translationText || this.problemText || '').trim()
+        const src = (currentTranslationText || currentProblemText || '').trim()
         const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
         const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍)/
         const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
@@ -1250,8 +1915,8 @@ python data_generator.py
       const cleanTags = []
 
       // 3) 如果 meta 存在，合并其标签
-      if (this.problemMeta) {
-        const { title, tags } = this.problemMeta
+      if (currentMeta) {
+        const { title, tags } = currentMeta
         // 标题用 meta.title，否则用兜底
         var finalTitle = (title && String(title).trim()) ? String(title).trim() : fallbackTitle
         if (Array.isArray(tags)) {
@@ -1271,7 +1936,7 @@ python data_generator.py
       }
 
       // 4) 基于题面文本关键词自动补全算法标签
-      const text = (this.problemText + '\n' + this.translationText).toLowerCase()
+      const text = (currentProblemText + '\n' + currentTranslationText).toLowerCase()
       const addTag = (t) => { if (!cleanTags.includes(t)) cleanTags.push(t) }
       if (/two pointers|双指针/.test(text)) addTag('双指针')
       if (/greedy|贪心/.test(text)) addTag('贪心')
@@ -1286,7 +1951,7 @@ python data_generator.py
       if (/sorting|排序/.test(text)) addTag('排序')
 
       // 5) 依据数据范围粗估难度
-      const rangeMatch = (this.problemText || '').match(/10\^(\d+)/)
+      const rangeMatch = (currentProblemText || '').match(/10\^(\d+)/)
       if (rangeMatch) {
         const pow = parseInt(rangeMatch[1])
         level = Math.min(6, Math.max(level, pow <= 5 ? 2 : pow <= 6 ? 3 : pow <= 7 ? 4 : 5))
@@ -1621,11 +2286,210 @@ python data_generator.py
 
 .main-layout {
   flex: 1;
-  display: grid;
-  grid-template-columns: var(--left-width, 40%) 12px 1fr;
+  display: flex; /* Changed from grid to flex to support sidebar */
   gap: 0;
   padding: 20px;
   overflow: hidden;
+}
+
+/* 批量模式侧边栏样式 */
+.batch-sidebar {
+  width: 250px;
+  background: #fff;
+  border-radius: 12px;
+  margin-right: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.batch-header {
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.btn-icon:hover {
+  background: #e9ecef;
+}
+
+.task-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.task-item:hover {
+  background: #f8f9fa;
+}
+
+.task-item.active {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+.task-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.task-status-dot.pending { background: #d9d9d9; }
+.task-status-dot.processing { background: #1890ff; animation: pulse 1.5s infinite; }
+.task-status-dot.completed { background: #52c41a; }
+.task-status-dot.failed { background: #f5222d; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+
+.task-meta {
+  font-size: 12px;
+  color: #999;
+}
+
+.btn-icon-small {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.task-item:hover .btn-icon-small {
+  opacity: 1;
+}
+
+.btn-icon-small:hover {
+  color: #f5222d;
+}
+
+.batch-footer {
+  padding: 15px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-batch-run {
+  width: 100%;
+  padding: 8px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-batch-run:disabled {
+  background: #bae7ff;
+  cursor: not-allowed;
+}
+
+.btn-batch-download {
+  width: 100%;
+  padding: 8px;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-batch-download:disabled {
+  background: #b7eb8f;
+  cursor: not-allowed;
+}
+
+.btn-batch {
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.btn-batch.active {
+  background: #1890ff;
+  color: white;
+  border-color: #1890ff;
+}
+
+/* 调整原有布局以适应 flex */
+.input-panel {
+  width: var(--left-width, 40%); /* Use width instead of grid column */
+  flex-shrink: 0;
+}
+
+.resizer {
+  flex-shrink: 0;
+}
+
+.output-panel {
+  flex: 1;
+  min-width: 0; /* Prevent flex item from overflowing */
 }
 
 .resizer {
@@ -1938,5 +2802,44 @@ button:disabled {
   box-sizing: border-box;
   width: 100%;
   display: block;
+}
+
+.btn-text-action {
+  background: none;
+  border: none;
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  margin-left: auto;
+}
+
+.problem-meta-display {
+  padding: 15px 20px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+.meta-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+.meta-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.meta-tag {
+  background: #eef2f7;
+  color: #5c7cfa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.btn-text-action:hover {
+  text-decoration: underline;
+  color: #40a9ff;
 }
 </style>

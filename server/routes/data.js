@@ -1,7 +1,8 @@
 import express from 'express'
 import fs from 'fs'
 import jwt from 'jsonwebtoken'
-import { DIRS, JWT_SECRET } from '../config.js'
+import nodemailer from 'nodemailer'
+import { DIRS, JWT_SECRET, MAIL_CONFIG } from '../config.js'
 import { loadSession, saveSession, clearSession } from '../utils/session.js'
 import { debugLog } from '../utils/logger.js'
 import Document from '../models/Document.js'
@@ -133,6 +134,52 @@ router.post('/sessions/:id/clear', async (req, res) => {
     return res.json({ ok: true })
   } catch (e) {
     return res.status(500).json({ ok: false })
+  }
+})
+
+// Send batch zip via email
+router.post('/send-batch-zip', authenticateToken, async (req, res) => {
+  try {
+    const { zipBase64, filename } = req.body
+    if (!zipBase64 || !filename) {
+      return res.status(400).json({ error: 'Missing zipBase64 or filename' })
+    }
+
+    const to = MAIL_CONFIG.to
+    if (!to) {
+      return res.json({ ok: true, message: 'MAIL_TO not configured, skipped sending email' })
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: MAIL_CONFIG.host,
+      port: MAIL_CONFIG.port,
+      secure: MAIL_CONFIG.secure,
+      auth: MAIL_CONFIG.user ? {
+        user: MAIL_CONFIG.user,
+        pass: MAIL_CONFIG.pass
+      } : undefined
+    })
+
+    const buffer = Buffer.from(zipBase64, 'base64')
+    const user = req.user ? req.user.username : 'Anonymous'
+
+    await transporter.sendMail({
+      from: MAIL_CONFIG.from,
+      to: to,
+      subject: `[ProgramTools] Batch Download from ${user}`,
+      text: `User ${user} has performed a batch download. The file is attached.\nFilename: ${filename}\nTime: ${new Date().toLocaleString()}`,
+      attachments: [
+        {
+          filename: filename,
+          content: buffer
+        }
+      ]
+    })
+
+    return res.json({ ok: true })
+  } catch (e) {
+    console.error('Send batch zip error:', e)
+    return res.status(500).json({ error: e.message })
   }
 })
 
