@@ -1,4 +1,4 @@
-import { request } from './request'
+import request from './request'
 
 let cachedModels = null
 let fetchPromise = null

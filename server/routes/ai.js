@@ -12,7 +12,8 @@ import {
   SOLUTION_PROMPT, 
   CHECKER_PROMPT, 
   getSolvePrompt, 
-  getDataGenPrompt 
+  getDataGenPrompt,
+  SOLUTION_REPORT_PROMPT
 } from '../prompts.js'
 
 const router = express.Router()
@@ -654,6 +655,66 @@ router.post('/generate-problem-meta', async (req, res) => {
   } catch (err) {
     console.error('Generate problem meta (local) error:', err)
     return res.status(500).json({ error: 'Problem meta parsing failed', detail: err?.message || String(err) })
+  }
+})
+
+router.post('/solution-report', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
+  try {
+    console.log('[SolutionReport] Request received')
+    if (!SOLUTION_REPORT_PROMPT) {
+      console.error('[SolutionReport] SOLUTION_REPORT_PROMPT is undefined')
+      return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
+    }
+
+    const { problem, code, model } = req.body
+    if (!problem || !code) return res.status(400).json({ error: '缺少 problem 或 code 字段' })
+
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: SOLUTION_REPORT_PROMPT },
+      { role: 'user', content: `题目描述：\n${problem}\n\n代码：\n${code}` }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.5,
+      max_tokens: 32767
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      content = data.choices[0].message.content
+    } else {
+      content = JSON.stringify(data)
+    }
+
+    // Clean up markdown code blocks if present
+    content = content.replace(/^```html\s*/i, '').replace(/\s*```$/i, '')
+
+    // Ensure content is not empty
+    if (!content || !content.trim()) {
+       return res.status(500).json({ error: 'AI returned empty response' })
+    }
+
+    return res.json({ html: content })
+
+  } catch (err) {
+    console.error('Solution report error:', err)
+    const message = err?.response?.data ? JSON.stringify(err.response.data) : (err.message || 'unknown error')
+    return res.status(500).json({ error: 'Generation failed', detail: message })
   }
 })
 

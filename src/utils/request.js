@@ -53,8 +53,28 @@ export async function request(url, options = {}) {
     }
 
     if (!response.ok) {
-      const errorMessage = (data && (data.error || data.detail || JSON.stringify(data))) || `HTTP ${response.status}`
-      throw new Error(errorMessage)
+      let errorMessage = `HTTP ${response.status}`
+      if (data) {
+        if (data.error) errorMessage = data.error
+        else if (data.detail) errorMessage = data.detail
+        else if (data.rawText) {
+          const raw = data.rawText.trim()
+          if (raw === 'Unauthorized') {
+            errorMessage = '登录已过期，请重新登录'
+          } else if (raw === 'Forbidden') {
+            errorMessage = '权限不足'
+          } else {
+            // 尝试从 HTML 中提取错误信息
+            const match = raw.match(/<pre>(.*?)<\/pre>/s) || raw.match(/<title>(.*?)<\/title>/)
+            if (match) errorMessage = `Server Error: ${match[1].trim()}`
+            else errorMessage = `Server Error: ${raw.slice(0, 200)}`
+          }
+        }
+        else errorMessage = JSON.stringify(data)
+      }
+      const err = new Error(errorMessage)
+      err.response = { data, status: response.status }
+      throw err
     }
 
     return data
@@ -62,5 +82,21 @@ export async function request(url, options = {}) {
     throw error
   }
 }
+
+request.get = (url, options) => request(url, { ...options, method: 'GET' })
+
+request.post = (url, data, options = {}) => request(url, {
+  ...options,
+  method: 'POST',
+  body: JSON.stringify(data)
+})
+
+request.put = (url, data, options = {}) => request(url, {
+  ...options,
+  method: 'PUT',
+  body: JSON.stringify(data)
+})
+
+request.delete = (url, options) => request(url, { ...options, method: 'DELETE' })
 
 export default request

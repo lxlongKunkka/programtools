@@ -13,6 +13,7 @@ import Typing from '../pages/Typing.vue'
 import LearningMap from '../pages/LearningMap.vue'
 import ChapterDetail from '../pages/ChapterDetail.vue'
 import DailyProblem from '../pages/DailyProblem.vue'
+import SolutionReport from '../pages/SolutionReport.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -23,6 +24,7 @@ const routes = [
   { path: '/translate', component: Translate },
   { path: '/checker', component: Checker, meta: { requiresAuth: true } },
   { path: '/solution', component: Solution, meta: { requiresAuth: true } },
+  { path: '/solution-report', component: SolutionReport, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/solvedata', component: SolveData, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
