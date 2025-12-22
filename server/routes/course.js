@@ -11,6 +11,82 @@ const router = express.Router()
 
 // --- Public / User Routes ---
 
+
+// Get single chapter details (Protected)
+router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
+  try {
+    const { chapterId } = req.params
+    const userId = req.user.id
+
+    // 1. Check if user has unlocked this chapter
+    const progress = await UserProgress.findOne({ userId })
+    
+    // Allow admin/teacher to bypass check
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'teacher' || req.user.priv === -1
+    
+    if (!progress && !isAdmin) {
+        return res.status(403).json({ error: 'Access denied' })
+    }
+
+    // 2. Find the chapter
+    let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+    let chapter = null
+    
+    if (level) {
+      chapter = level.chapters.find(c => c.id === chapterId)
+    } else {
+      level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
+      if (level) {
+        for (const topic of level.topics) {
+          chapter = topic.chapters.find(c => c.id === chapterId)
+          if (chapter) break
+        }
+      }
+    }
+
+    if (!level || !chapter) {
+      return res.status(404).json({ error: 'Chapter not found' })
+    }
+
+    // 3. Check permissions
+    if (!isAdmin) {
+        const isUnlockedId = progress.unlockedChapters.includes(chapterId)
+        let isUnlocked = isUnlockedId
+        if (!isUnlocked && chapter._id && progress.unlockedChapterUids) {
+            isUnlocked = progress.unlockedChapterUids.some(id => id.toString() === chapter._id.toString())
+        }
+        
+        if (!isUnlocked) {
+            return res.status(403).json({ error: 'Chapter is locked' })
+        }
+    }
+
+    // 4. Populate problemIds
+    await level.populate('topics.chapters.problemIds', 'title docId domainId')
+    await level.populate('chapters.problemIds', 'title docId domainId')
+    
+    // Re-find the chapter after populate to get populated fields
+    if (level.topics && level.topics.length > 0) {
+         for (const topic of level.topics) {
+             const found = topic.chapters.find(c => c.id === chapterId)
+             if (found) {
+                 chapter = found
+                 break
+             }
+         }
+    } else {
+         chapter = level.chapters.find(c => c.id === chapterId)
+    }
+
+    res.json(chapter)
+
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+
 // Get all course levels (structure)
 router.get('/levels', async (req, res) => {
   try {
@@ -25,6 +101,7 @@ router.get('/levels', async (req, res) => {
       }
     }
     const levels = await CourseLevel.find(query)
+      .select('-topics.chapters.content -chapters.content')
       .sort({ level: 1 })
       .populate('topics.chapters.problemIds', 'title docId domainId')
       .populate('chapters.problemIds', 'title docId domainId') // Legacy support

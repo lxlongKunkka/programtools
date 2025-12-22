@@ -365,24 +365,23 @@ export default {
           if (matchedConfig) {
             localStorage.setItem('selected_subject', matchedConfig.name)
           }
-
-          // Try legacy chapters
-          this.chapter = this.level.chapters.find(c => c.id === this.chapterId)
-          
-          // Try topics if not found
-          if (!this.chapter && this.level.topics) {
-            for (const topic of this.level.topics) {
-              const found = topic.chapters.find(c => c.id === this.chapterId)
-              if (found) {
-                this.chapter = found
-                break
-              }
-            }
-          }
-          this.visibleSteps = 1
         }
         
         this.userProgress = progressData
+
+        // Fetch specific chapter content (Secure)
+        try {
+            const chapterDetail = await request(`/api/course/chapter/${this.chapterId}`)
+            this.chapter = chapterDetail
+            this.visibleSteps = 1
+        } catch (err) {
+            if (err.message.includes('locked') || err.message.includes('Access denied') || err.message.includes('403')) {
+                this.showToastMessage('Chapter is locked')
+                this.$router.push('/course')
+                return
+            }
+            throw err
+        }
       } catch (e) {
         this.showToastMessage('加载失败: ' + e.message)
       } finally {

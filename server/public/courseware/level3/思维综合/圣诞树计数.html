@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解题课件：圣诞树计数</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .ppt-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            min-height: 80vh;
+        }
+
+        .slide {
+            display: none;
+            background-color: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            min-height: 80vh;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .slide-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: calc(100% - 80px);
+        }
+
+        .center-content {
+            text-align: center;
+            padding: 50px 0;
+        }
+
+        .icon {
+            font-size: 5em;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        h2 {
+            color: #444;
+            font-size: 1.8em;
+        }
+
+        h3 {
+            color: #666;
+            font-size: 1.4em;
+        }
+
+        h4 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .problem-box {
+            background-color: #f0f7ff;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .conclusion {
+            background-color: #fff8e1;
+            border-left: 4px solid #f39c12;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            width: 100%;
+            font-size: 1.1em;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #3498db;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background-color: #2980b9;
+        }
+
+        #prevBtn {
+            left: -25px;
+        }
+
+        #nextBtn {
+            right: -25px;
+        }
+
+        #slideCounter {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .code-block {
+            background-color: #ffffff;
+            color: #333333;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre-wrap;
+            margin-top: 2vh;
+            font-size: clamp(0.8em, 1.6vw, 1em);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .code-block .comment { color: #008000; font-style: italic; }
+        .code-block .keyword { color: #0000ff; font-weight: bold; }
+        .code-block .type { color: #2b91af; }
+        .code-block .number { color: #a31515; }
+        .code-block .string { color: #a31515; }
+        .code-block .preprocessor { color: #808080; }
+
+        .animation-area {
+            height: 400px;
+            position: relative;
+            border: 2px dashed #ccc;
+            margin-top: 2vh;
+            padding: 10px;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .tree {
+            position: absolute;
+            text-align: center;
+            transition: all 0.5s ease;
+            cursor: pointer;
+        }
+
+        .tree.selected {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 8px #2ecc71);
+        }
+
+        .tree.ignored {
+            opacity: 0.3;
+            filter: grayscale(100%);
+        }
+
+        .tree-label {
+            margin-top: 5px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        #countDisplay {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <!-- Slide 1: 封面页 -->
+        <div class="slide active" id="slide-1">
+            <div class="center-content">
+                <div class="icon">🎄</div>
+                <h1>解题课件：圣诞树计数</h1>
+                <h3>—— 树形结构与深度优先搜索应用</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 题目描述 -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">📝</span> 题目解析</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="problem-box">
+                    <p><strong>题目核心：</strong></p>
+                    <p>给定一棵包含 n 个节点的圣诞树（树形结构），每个节点都有一个颜色值。请计算出这棵树上有多少个不同的子树，使得子树中所有节点的颜色都相同。</p>
+                    <p><strong>约束条件：</strong></p>
+                    <ul>
+                        <li>子树必须是连通的，且包含至少一个节点。</li>
+                        <li>单个节点也视为一个有效的子树。</li>
+                        <li>不同位置但结构和颜色分布相同的子树算不同的子树。</li>
+                    </ul>
+                </div>
+                <div class="conclusion">
+                    <strong>一句话目标：</strong>统计树上所有节点颜色相同的连通子树数量。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 思路探讨 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🤔</span> 思路探讨：如何计数？</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p>我们可以采用以下策略解决问题：</p>
+                <ul>
+                    <li>
+                        <strong>策略分析：</strong><br>
+                        对于树上的每个节点，我们可以考虑以它为根的子树中，有多少个符合条件的子树。
+                        当一个节点与其所有子节点颜色相同时，它们可以组成更大的符合条件的子树。
+                    </li>
+                    <li>
+                        <strong>核心思路：</strong><br>
+                        使用深度优先搜索(DFS)遍历整棵树，对每个节点计算以它为根的同色子树数量。
+                        如果当前节点与子节点颜色相同，则可以合并计算，否则单独计算。
+                    </li>
+                    <li>
+                        <strong>实现步骤：</strong><br>
+                        1. 构建树的邻接表表示<br>
+                        2. 从根节点开始进行DFS遍历<br>
+                        3. 对每个节点，统计其所有同色子节点的有效子树数量<br>
+                        4. 累加所有节点的有效子树数量
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 4: 动画演示 -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🎬</span> 动画演示：计数过程</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>样例树结构：</strong></p>
+                <p>节点颜色：1(红)、2(绿)、3(蓝)</p>
+                <div class="animation-area" id="treeAnimation">
+                    <!-- 根节点 -->
+                    <div class="tree" id="node1" style="top: 50px; left: 50%;">
+                        <div style="width: 40px; height: 40px; background-color: #e74c3c; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">1</div>
+                        <div class="tree-label">节点1(红)</div>
+                    </div>
+                    
+                    <!-- 第一层子节点 -->
+                    <div class="tree" id="node2" style="top: 150px; left: 30%;">
+                        <div style="width: 40px; height: 40px; background-color: #e74c3c; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">2</div>
+                        <div class="tree-label">节点2(红)</div>
+                    </div>
+                    
+                    <div class="tree" id="node3" style="top: 150px; left: 70%;">
+                        <div style="width: 40px; height: 40px; background-color: #2ecc71; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">3</div>
+                        <div class="tree-label">节点3(绿)</div>
+                    </div>
+                    
+                    <!-- 第二层子节点 -->
+                    <div class="tree" id="node4" style="top: 250px; left: 20%;">
+                        <div style="width: 40px; height: 40px; background-color: #e74c3c; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">4</div>
+                        <div class="tree-label">节点4(红)</div>
+                    </div>
+                    
+                    <div class="tree" id="node5" style="top: 250px; left: 40%;">
+                        <div style="width: 40px; height: 40px; background-color: #3498db; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">5</div>
+                        <div class="tree-label">节点5(蓝)</div>
+                    </div>
+                    
+                    <div class="tree" id="node6" style="top: 250px; left: 80%;">
+                        <div style="width: 40px; height: 40px; background-color: #2ecc71; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">6</div>
+                        <div class="tree-label">节点6(绿)</div>
+                    </div>
+                    
+                    <!-- 连接线 -->
+                    <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none;">
+                        <line x1="50%" y1="90" x2="30%" y2="150" stroke="#ccc" stroke-width="2"/>
+                        <line x1="50%" y1="90" x2="70%" y2="150" stroke="#ccc" stroke-width="2"/>
+                        <line x1="30%" y1="190" x2="20%" y2="250" stroke="#ccc" stroke-width="2"/>
+                        <line x1="30%" y1="190" x2="40%" y2="250" stroke="#ccc" stroke-width="2"/>
+                        <line x1="70%" y1="190" x2="80%" y2="250" stroke="#ccc" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div id="countDisplay">当前计数: 0</div>
+                <div id="status" class="status-text">点击“开始”按钮查看计数过程</div>
+                <button id="startAnimation" style="align-self: center; margin-top: 10px;">开始</button>
+            </div>
+        </div>
+
+        <!-- Slide 5: C++ 代码实现 -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">💻</span> C++ 代码实现</h2>
+            </div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <p><strong>核心步骤：</strong></p>
+                <ol>
+                    <li>使用邻接表表示树结构。</li>
+                    <li>从根节点开始进行深度优先搜索(DFS)。</li>
+                    <li>对于每个节点，计算以该节点为根的同色子树数量。</li>
+                    <li>如果子节点与当前节点颜色相同，则累加子节点的有效子树数量。</li>
+                    <li>将所有节点的有效子树数量求和，得到最终结果。</li>
+                </ol>
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;bits/stdc++.h&gt;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> std;
+
+<span class="preprocessor">#define endl '\n'</span>
+<span class="preprocessor">#define fst ios::sync_with_stdio(false); cin.tie(0); cout.tie(0);</span>
+
+<span class="type">vector</span>&lt;<span class="type">int</span>&gt; adj[<span class="number">100005</span>];  <span class="comment">// 邻接表存储树</span>
+<span class="type">int</span> color[<span class="number">100005</span>];        <span class="comment">// 每个节点的颜色</span>
+<span class="type">long long</span> ans = <span class="number">0</span>;         <span class="comment">// 最终答案</span>
+
+<span class="comment">// DFS函数，返回以u为根的同色子树数量</span>
+<span class="type">int</span> <span class="function">dfs</span>(<span class="type">int</span> u, <span class="type">int</span> parent) {
+    <span class="type">int</span> count = <span class="number">1</span>;  <span class="comment">// 至少包含自身节点</span>
+    
+    <span class="keyword">for</span>(<span class="type">int</span> v : adj[u]) {
+        <span class="keyword">if</span>(v == parent) <span class="keyword">continue</span>;  <span class="comment">// 跳过父节点</span>
+        
+        <span class="type">int</span> child_count = <span class="function">dfs</span>(v, u);
+        
+        <span class="comment">// 如果子节点颜色和当前节点相同，则可以合并</span>
+        <span class="keyword">if</span>(color[v] == color[u]) {
+            count += child_count;
+        }
+    }
+    
+    ans += count;  <span class="comment">// 累加当前节点的同色子树数量</span>
+    <span class="keyword">return</span> count;
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    fst;
+    <span class="type">int</span> n;
+    cin >> n;
+    
+    <span class="comment">// 读取颜色</span>
+    <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">1</span>; i <= n; i++) {
+        cin >> color[i];
+    }
+    
+    <span class="comment">// 构建树</span>
+    <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">0</span>; i < n - <span class="number">1</span>; i++) {
+        <span class="type">int</span> u, v;
+        cin >> u >> v;
+        adj[u].<span class="function">push_back</span>(v);
+        adj[v].<span class="function">push_back</span>(u);
+    }
+    
+    <span class="comment">// 从根节点(假设为1)开始DFS</span>
+    <span class="function">dfs</span>(<span class="number">1</span>, <span class="number">-1</span>);
+    
+    cout << ans << endl;
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点总结 -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <h2><span style="font-size: 1.5em; vertical-align: middle;">🧠</span> 知识点总结</h2>
+            </div>
+            <div class="slide-content">
+                <div class="problem-box">
+                    <h4>算法模型：树形结构的子树计数问题</h4>
+                    <p>这类问题的共同特征是：</p>
+                    <ul>
+                        <li>需要对树形结构进行遍历和分析。</li>
+                        <li>通常涉及子树的属性计算和统计。</li>
+                        <li>适合使用深度优先搜索(DFS)或广度优先搜索(BFS)解决。</li>
+                    </ul>
+                </div>
+                <div class="conclusion">
+                    <strong>核心解法：</strong>利用DFS遍历树，在回溯过程中计算每个节点的有效子树数量。当子节点与父节点满足特定条件（如颜色相同）时，合并计算它们的子树数量，否则单独计算。这种自底向上的计算方式能高效解决问题。
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航 -->
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / 6</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- PPT翻页逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                currentSlide = index;
+                updateNav();
+            }
+
+            function updateNav() {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    showSlide(currentSlide - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    showSlide(currentSlide + 1);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                }
+            });
+
+            showSlide(0);
+
+            // --- 动画逻辑 ---
+            const startBtn = document.getElementById('startAnimation');
+            const statusText = document.getElementById('status');
+            const countDisplay = document.getElementById('countDisplay');
+            
+            // 树节点数据：ID、父节点ID、颜色、子节点
+            const treeData = [
+                {id: 'node1', parent: null, color: '红', children: ['node2', 'node3'], count: 0},
+                {id: 'node2', parent: 'node1', color: '红', children: ['node4', 'node5'], count: 0},
+                {id: 'node3', parent: 'node1', color: '绿', children: ['node6'], count: 0},
+                {id: 'node4', parent: 'node2', color: '红', children: [], count: 0},
+                {id: 'node5', parent: 'node2', color: '蓝', children: [], count: 0},
+                {id: 'node6', parent: 'node3', color: '绿', children: [], count: 0}
+            ];
+
+            // 重置动画状态
+            function resetAnimation() {
+                treeData.forEach(node => {
+                    const el = document.getElementById(node.id);
+                    el.classList.remove('selected', 'ignored');
+                    node.count = 0;
+                });
+                countDisplay.textContent = '当前计数: 0';
+                statusText.textContent = '点击“开始”按钮查看计数过程';
+                startBtn.disabled = false;
+            }
+
+            // 延迟函数
+            const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+            // DFS遍历动画
+            async function dfsAnimation(nodeId, parentId) {
+                const node = treeData.find(n => n.id === nodeId);
+                const el = document.getElementById(nodeId);
+                
+                // 高亮当前节点
+                el.classList.add('selected');
+                statusText.textContent = `正在处理节点${nodeId.replace('node', '')}(${node.color})`;
+                await delay(1000);
+                
+                // 初始计数为1（自身）
+                node.count = 1;
+                statusText.textContent = `节点${nodeId.replace('node', '')}初始计数: 1（自身）`;
+                await delay(1000);
+                
+                // 处理子节点
+                for (const childId of node.children) {
+                    const child = treeData.find(n => n.id === childId);
+                    await dfsAnimation(childId, nodeId);
+                    
+                    // 检查子节点颜色是否与当前节点相同
+                    if (child.color === node.color) {
+                        statusText.textContent = `节点${childId.replace('node', '')}与节点${nodeId.replace('node', '')}颜色相同，合并计数`;
+                        node.count += child.count;
+                        await delay(1500);
+                        statusText.textContent = `节点${nodeId.replace('node', '')}当前计数: ${node.count}`;
+                        await delay(1000);
+                    } else {
+                        statusText.textContent = `节点${childId.replace('node', '')}与节点${nodeId.replace('node', '')}颜色不同，不合并`;
+                        await delay(1500);
+                    }
+                }
+                
+                // 累加总计数
+                const total = treeData.reduce((sum, n) => sum + n.count, 0);
+                countDisplay.textContent = `当前计数: ${total}`;
+                
+                // 如果不是根节点，标记为已处理
+                if (parentId !== null) {
+                    el.classList.remove('selected');
+                    el.classList.add('ignored');
+                }
+                
+                return node.count;
+            }
+
+            // 开始动画
+            startBtn.addEventListener('click', async () => {
+                startBtn.disabled = true;
+                resetAnimation();
+                
+                statusText.textContent = '开始DFS遍历...';
+                await delay(1000);
+                
+                // 从根节点开始DFS
+                await dfsAnimation('node1', null);
+                
+                const total = treeData.reduce((sum, n) => sum + n.count, 0);
+                statusText.textContent = `遍历完成，总计数为: ${total}`;
+                countDisplay.textContent = `最终计数: ${total}`;
+                startBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
