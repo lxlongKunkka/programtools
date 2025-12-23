@@ -75,16 +75,30 @@
         v-model="problemText" 
         placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
         class="problem-input"
+        style="flex: 2;"
       ></textarea>
-      <div class="panel-header" style="margin-top:18px;">
-        <h3>参考 / AC 代码</h3>
+
+      <div class="panel-header" style="margin-top:10px;">
+        <h3>参考思路 (可选)</h3>
+      </div>
+      <textarea 
+        v-model="referenceText" 
+        placeholder="在此输入解题思路、算法提示或参考文本，AI 将参考此内容生成代码..."
+        class="reference-input"
+        style="flex: 1; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; resize: none; font-family: inherit;"
+      ></textarea>
+
+      <div class="panel-header" style="margin-top:10px; display:flex; justify-content:space-between;">
+        <h3>手动 AC 代码 (可选)</h3>
+        <button @click="clearManualCode" class="btn-small-clear">清空</button>
       </div>
       <textarea 
         v-model="manualCode" 
-        placeholder="在此处输入 AC 代码，将直接用于生成数据和报告，不再重新生成代码..."
+        placeholder="在此输入标准 AC 代码。如果提供，将直接使用此代码生成数据和报告..."
         class="manual-code-input"
+        style="flex: 1; min-height: 100px;"
       ></textarea>
-      <button @click="clearManualCode" class="btn-small-clear" style="margin-top:8px;">清空代码</button>
+
           <div class="input-actions-bar">
             <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-success" style="background: linear-gradient(90deg,#667eea,#764ba2);">{{ isGenerating ? '生成中...' : '一键生成全部' }}</button>
             <div 
@@ -97,7 +111,7 @@
             <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
             <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
             <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
-            <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCodeMode ? manualCode : codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
+            <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
             <button @click="clearAll" :disabled="isBatchRunning" class="btn-clear">清空</button>
           </div>
     </div>
@@ -153,7 +167,7 @@
             <button @click="copyCode" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
             <button @click="saveCode" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
           </div>
-          <div class="rendered-output" v-if="manualCodeMode ? manualCode : codeOutput">
+          <div class="rendered-output" v-if="manualCode || codeOutput">
             <MarkdownViewer :content="displayCode" />
           </div>
           <div v-else class="translation-preview-empty">暂无解题代码</div>
@@ -199,8 +213,8 @@ export default {
       isGenerating: false,
       isGeneratingTitle: false,
       activeTab: 'code',
-      manualCodeMode: false,
       manualCode: '',
+      referenceText: '',
       isTranslating: false,
       translationText: '',
       problemMeta: null,
@@ -251,6 +265,7 @@ export default {
       }
     },
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
+    referenceText(val) { this.updateCurrentTask('referenceText', val) },
     codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
     dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
     translationText(val) { this.updateCurrentTask('translationText', val) },
@@ -267,7 +282,7 @@ export default {
   },
   computed: {
     displayCode() {
-      if (this.manualCodeMode && this.manualCode) {
+      if (this.manualCode && this.manualCode.trim()) {
         return '```\n' + this.manualCode + '\n```'
       }
       return this.codeOutput
@@ -318,6 +333,7 @@ export default {
         status: 'pending',
         problemText: '',
         manualCode: '',
+        referenceText: '',
         codeOutput: '',
         dataOutput: '',
         translationText: '',
@@ -331,7 +347,7 @@ export default {
     removeTask(index) {
       if (this.tasks.length <= 1) {
         // 如果只剩一个，清空内容而不是删除
-        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '' }
+        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', referenceText: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '' }
         this.loadTask(0)
         return
       }
@@ -361,6 +377,7 @@ export default {
       // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
       this.problemText = task.problemText || ''
       this.manualCode = task.manualCode || ''
+      this.referenceText = task.referenceText || ''
       this.codeOutput = task.codeOutput || ''
       this.dataOutput = task.dataOutput || ''
       this.translationText = task.translationText || ''
@@ -371,7 +388,7 @@ export default {
       if (this.tasks[this.currentTaskIndex]) {
         this.tasks[this.currentTaskIndex][field] = value
         // 如果修改了输入，重置状态为 pending (除非正在运行)
-        if ((field === 'problemText' || field === 'manualCode') && 
+        if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
             this.tasks[this.currentTaskIndex].status === 'completed' && 
             !this.isBatchRunning) {
           this.tasks[this.currentTaskIndex].status = 'pending'
@@ -894,11 +911,6 @@ export default {
             this.showToastMessage('✅ 已复制翻译到剪贴板');
           });
         },
-    onModeChange() {
-      if (this.manualCodeMode) {
-        this.activeTab = 'code'
-      }
-    },
     
     clearManualCode() {
       this.manualCode = ''
@@ -924,25 +936,9 @@ export default {
         
         // 1. 请求生成代码
         let promptText = this.problemText
-        // 如果 manualCode 存在且被判定为非纯代码（即参考资料），则将其加入 Prompt
-        if (this.manualCode && this.manualCode.trim()) {
-             const manualContent = this.manualCode.trim()
-             const hasMarkdown = manualContent.includes('```')
-             const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
-             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答']
-             const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
-             
-             let isReference = false
-             if (hasMarkdown || hasTextKeywords) {
-                 isReference = true
-             } else if (!strongCodeStart.test(manualContent)) {
-                 // 既没有代码特征，也没有明显文本特征，可能是纯文本描述
-                 isReference = true
-             }
-             
-             if (isReference) {
-                 promptText += `\n\n【参考解法/思路】\n${manualContent}\n\n请参考上述思路（如果有）编写 AC 代码。`
-             }
+        // 如果 referenceText 存在，则将其加入 Prompt
+        if (this.referenceText && this.referenceText.trim()) {
+             promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
         }
 
         requests.push(
@@ -998,62 +994,21 @@ export default {
       this.dataOutput = ''
       this.translationText = ''
       
-      // 检查 manualCode 是代码还是题解文本
+      // 检查 manualCode 是否存在
       const manualContent = this.manualCode.trim()
       let isManualCode = false
       
       if (manualContent) {
-        // 改进的启发式规则：更倾向于让 AI 处理（即判定为 false），除非非常确定是纯代码
-        
-        // 1. 检查是否有 Markdown 代码块标记
-        // 如果有 ```，说明是包含格式的文本，应由 AI 提取或处理
-        const hasMarkdown = manualContent.includes('```')
-        
-        // 2. 强代码特征 (必须出现在行首或前面)
-        // 针对 C++ 语言进行更严格的判定：只有看起来像 C++ 的才算 ManualCode
-        // 如果是 Python/Java 代码但当前语言选的是 C++，则应视为参考代码，交给 AI 转换
-        const isCppLike = /^\s*(#include|using\s+namespace|template\s*<|int\s+main|void\s+\w+)/m.test(manualContent)
-        const isPythonLike = /^\s*(def\s+|import\s+|from\s+|class\s+)/m.test(manualContent)
-        const isJavaLike = /^\s*(package\s+|import\s+java|public\s+class)/m.test(manualContent)
-        
-        // 3. 文本特征：检查是否包含大量非代码的自然语言句子
-        const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答', '実装', '参考', '注意', '問題', '詳細', '下記', '場合', '用いて']
-        const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
-        
-        if (hasMarkdown) {
-            isManualCode = false 
-        } else if (hasTextKeywords) {
-            isManualCode = false
-        } else {
-            // 根据目标语言进行判定
-            if (this.language === 'C++') {
-                // 如果目标是 C++，只有看起来像 C++ 的才直接使用
-                // 如果是 Python/Java 风格，或者完全不像代码，都交给 AI
-                if (isCppLike) isManualCode = true
-                else isManualCode = false
-            } else if (this.language === 'Python') {
-                if (isPythonLike) isManualCode = true
-                else isManualCode = false
-            } else if (this.language === 'Java') {
-                if (isJavaLike) isManualCode = true
-                else isManualCode = false
-            } else {
-                // 兜底：符号密度检查
-                const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
-                const lineCount = manualContent.split('\n').length
-                if (symbolCount / lineCount > 0.8) {
-                   isManualCode = true
-                }
-            }
-        }
+        // 只要 manualCode 有内容，就视为手动代码模式
+        isManualCode = true
       }
       
       // 如果判定为手动代码模式，直接使用
       if (isManualCode) {
-        console.log('判定为手动代码模式')
+        console.log('使用手动 AC 代码')
         this.codeOutput = manualContent
       } else {
-        console.log('判定为自动生成模式')
+        console.log('自动生成代码模式')
         this.codeOutput = ''
       }
       
@@ -1071,8 +1026,8 @@ export default {
         // 1. 如果不是手动代码模式，请求生成代码
         if (!isManualCode) {
           let promptText = this.problemText
-          if (manualContent) {
-            promptText += `\n\n【参考解法/思路】\n${manualContent}\n\n请参考上述思路（如果有）编写 AC 代码。`
+          if (this.referenceText && this.referenceText.trim()) {
+            promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
           }
           requests.push(
             request('/api/solve', {
@@ -1084,9 +1039,6 @@ export default {
               })
             }).then(res => ({ type: 'code', data: res }))
           )
-        } else {
-          // 即使是手动代码模式，如果用户希望 AI 优化（例如包含非中文注释），这里可以增加逻辑
-          // 但目前保持原样：如果是纯代码，直接使用
         }
         
         // 2. 请求生成数据
@@ -1130,9 +1082,12 @@ export default {
         }
         
         // 检查是否有生成成功的内容
-        const hasContent = isManualCode 
-          ? (this.dataOutput || this.translationText)
-          : (this.codeOutput || this.dataOutput || this.translationText)
+        let hasContent = false
+        if (isManualCode) {
+          hasContent = !!(this.dataOutput || this.translationText)
+        } else {
+          hasContent = !!(this.codeOutput || this.dataOutput || this.translationText)
+        }
         
         if (hasContent) {
           this.showToastMessage('✅ 全部生成完成！')
@@ -1151,7 +1106,8 @@ export default {
     },
     
     async generateData() {
-      const textForData = this.manualCodeMode 
+      const hasManualCode = this.manualCode && this.manualCode.trim()
+      const textForData = hasManualCode 
         ? (this.problemText || '请根据代码逻辑生成测试数据') 
         : this.problemText
         
@@ -1251,7 +1207,7 @@ export default {
     },
     
     copyCode() {
-      const textToCopy = this.manualCodeMode ? this.manualCode : this.codeOutput
+      const textToCopy = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
       navigator.clipboard.writeText(textToCopy).then(() => {
         this.showToastMessage('✅ 已复制全部内容到剪贴板')
       })
@@ -1259,7 +1215,7 @@ export default {
     
     copyPureCode() {
       // 提取纯代码，去除 Markdown 格式和文字说明
-      const content = this.manualCodeMode ? this.manualCode : this.codeOutput
+      const content = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
       if (!content) return
       
       // 匹配所有代码块，支持多种格式
@@ -1324,7 +1280,7 @@ export default {
     
     saveCode() {
       const extension = this.language === 'C++' ? 'cpp' : this.language === 'Python' ? 'py' : 'java'
-      const contentToSave = this.manualCodeMode ? this.manualCode : this.codeOutput
+      const contentToSave = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
       const blob = new Blob([contentToSave], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1349,13 +1305,14 @@ export default {
       this.codeOutput = ''
       this.dataOutput = ''
       this.manualCode = ''
-      this.manualCodeMode = false
+      this.referenceText = ''
       this.problemMeta = null
       this.translationText = ''
     },
 
     goToReport() {
-      const codeContent = this.manualCodeMode ? this.manualCode : this.codeOutput;
+      // 优先使用 manualCode，否则使用 codeOutput
+      const codeContent = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput;
       
       // 提取纯代码
       let pureCode = codeContent || '';
@@ -1368,9 +1325,15 @@ export default {
       } else {
         pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。";
       }
+      
+      // 构造题目描述，如果存在参考思路，则附加上去
+      let problemDesc = this.translationText || this.problemText;
+      if (this.referenceText && this.referenceText.trim()) {
+         problemDesc += `\n\n【参考思路】\n${this.referenceText.trim()}`;
+      }
 
       const reportData = {
-        problem: this.translationText || this.problemText,
+        problem: problemDesc,
         code: pureCode,
         autoStart: true
       };
@@ -1383,12 +1346,11 @@ export default {
     },
     
     async runAndDownload() {
-      const hasCode = this.manualCodeMode ? this.manualCode : this.codeOutput
+      // 优先使用 manualCode，否则使用 codeOutput
+      const hasCode = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
       
       if (!hasCode || !this.dataOutput) {
-        this.showToastMessage(this.manualCodeMode 
-          ? '请先输入代码并生成数据脚本' 
-          : '请先生成代码和数据脚本')
+        this.showToastMessage('请先生成代码和数据脚本')
         return
       }
       
@@ -1399,16 +1361,15 @@ export default {
         let dataScript = ''
         
         console.log('=== 开始提取代码 ===')
-        console.log('手动模式:', this.manualCodeMode ? 'true' : 'false')
+        console.log('手动模式:', (this.manualCode && this.manualCode.trim()) ? 'true' : 'false')
         console.log('manualCode 长度:', this.manualCode ? this.manualCode.length : 0)
         console.log('codeOutput 长度:', this.codeOutput ? this.codeOutput.length : 0)
         console.log('dataOutput 长度:', this.dataOutput.length)
         console.log('dataOutput 前200字符:', this.dataOutput.substring(0, 200))
         
         // 提取标准程序代码
-        // 只有当 manualCodeMode 为 true 时，才优先使用 manualCode
-        // 否则（即使 manualCode 有内容，但被判定为非代码），使用 codeOutput
-        const useManualCode = this.manualCodeMode && this.manualCode && this.manualCode.trim() !== ''
+        // 优先使用 manualCode，否则使用 codeOutput
+        const useManualCode = this.manualCode && this.manualCode.trim() !== ''
         
         if (useManualCode) {
           // 手动输入模式：直接使用手动输入的代码
@@ -1416,7 +1377,6 @@ export default {
           console.log('使用手动输入代码，长度:', stdCode.length)
         } else {
           // 自动生成模式：从 Markdown 中提取代码块
-          // 注意：如果 manualCodeMode 为 false，即使 manualCode 有内容（如思路），也应忽略，使用 codeOutput
           const sourceContent = this.codeOutput || ''
           
           const codePatterns = [
