@@ -538,14 +538,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            renderMathInElement(document.body, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false}
-                ],
-                throwOnError: false
-            });
-
+            // 1. 先初始化翻页逻辑（核心功能，必须先执行）
             const slides = document.querySelectorAll('.slide');
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
@@ -561,16 +554,42 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
                 slideCounter.textContent = \`\${currentSlide + 1} / \${totalSlides}\`;
             }
 
-            prevBtn.addEventListener('click', () => currentSlide > 0 && showSlide(currentSlide - 1));
-            nextBtn.addEventListener('click', () => currentSlide < totalSlides - 1 && showSlide(currentSlide + 1));
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowLeft') prevBtn.click();
-                else if (e.key === 'ArrowRight') nextBtn.click();
-            });
-            showSlide(0);
+            if(prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', () => currentSlide > 0 && showSlide(currentSlide - 1));
+                nextBtn.addEventListener('click', () => currentSlide < totalSlides - 1 && showSlide(currentSlide + 1));
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') prevBtn.click();
+                    else if (e.key === 'ArrowRight') nextBtn.click();
+                });
+                showSlide(0);
+            }
+
+            // 2. 再尝试渲染公式（加上 try-catch 和 typeof 检查）
+            try {
+                if (typeof renderMathInElement !== 'undefined') {
+                    renderMathInElement(document.body, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                } else {
+                    console.warn('KaTeX 资源加载失败，公式将显示为源码，但不影响翻页。');
+                }
+            } catch (e) {
+                console.error('公式渲染出错:', e);
+            }
 
             // --- 动画逻辑 (请AI根据题目生成) ---
             // 必须实现: steps 数组 (包含状态数据和描述), renderStep 函数
+            
+            // 🛑 CRITICAL SYNTAX WARNING / 语法警告 🛑
+            // 在生成 steps 数组时，对象属性赋值必须使用冒号 (:)，绝对不能使用等号 (=)！
+            // ❌ 错误写法: { i=0, p=1, ans=3 }  <-- 会导致脚本崩溃！
+            // ✅ 正确写法: { i:0, p:1, ans:3 }
+            // 请务必检查每一个属性赋值！
+            
             let currentStep = 0;
             let totalSteps = 0; // AI 需修改此值
             
@@ -588,15 +607,17 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
                 if (typeof renderStep === 'function') {
                     renderStep(currentStep);
                     // 渲染动态内容中的公式
-                    const mathOptions = {
-                        delimiters: [
-                            {left: '$$', right: '$$', display: true},
-                            {left: '$', right: '$', display: false}
-                        ],
-                        throwOnError: false
-                    };
-                    if(animArea) renderMathInElement(animArea, mathOptions);
-                    if(stepDesc) renderMathInElement(stepDesc, mathOptions);
+                    if (typeof renderMathInElement !== 'undefined') {
+                        const mathOptions = {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '$', right: '$', display: false}
+                            ],
+                            throwOnError: false
+                        };
+                        if(animArea) renderMathInElement(animArea, mathOptions);
+                        if(stepDesc) renderMathInElement(stepDesc, mathOptions);
+                    }
                 }
             }
 

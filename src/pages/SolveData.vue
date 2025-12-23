@@ -525,6 +525,12 @@ export default {
         }
         
         const masterZip = new JSZip()
+        // 修正 ZIP 文件时间戳为东八区 (UTC+8)
+        // 使用 toLocaleString 获取北京时间的本地表示，确保无论客户端时区如何，Date 对象的本地时间组件都等于北京时间
+        const now = new Date()
+        const beijingString = now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })
+        const targetTime = new Date(beijingString)
+        const zipOptions = { date: targetTime }
         
         for (let i = 0; i < completedTasks.length; i++) {
           const task = completedTasks[i]
@@ -668,7 +674,7 @@ export default {
           }
           
           const stdFileName = lang === 'Java' ? 'Main.java' : `std.${ext}`
-          folder.file(stdFileName, contentToSave)
+          folder.file(stdFileName, contentToSave, zipOptions)
           
           // 2. 添加数据生成脚本
           let script = task.dataOutput || ''
@@ -725,59 +731,86 @@ export default {
             modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('java Main')`)
           }
           
-          folder.file('data_generator.py', modifiedScript)
+          if (modifiedScript && modifiedScript.trim()) {
+            folder.file('data_generator.py', modifiedScript, zipOptions)
+          }
           
           // 3. 添加题目描述
-          folder.file('problem.md', task.problemText)
-          if (task.translationText) folder.file('problem_zh.md', task.translationText)
+          folder.file('problem.md', task.problemText, zipOptions)
+          if (task.translationText) folder.file('problem_zh.md', task.translationText, zipOptions)
           
           // 4. 添加解题报告
           if (task.reportHtml) {
             const reportName = `${safeTitle}.html`
-            folder.file(reportName, task.reportHtml)
+            folder.file(reportName, task.reportHtml, zipOptions)
           }
           
           // 5. 添加 problem.yaml (使用完整生成逻辑)
           const yamlContent = this.generateProblemYaml(task.problemMeta, task.problemText, task.translationText)
-          folder.file('problem.yaml', yamlContent)
+          folder.file('problem.yaml', yamlContent, zipOptions)
           
           // 6. 添加运行脚本
-          folder.file('run.py', this.generateRunScript(lang))
-          folder.file('run.bat', this.generateBatScript(lang))
+          folder.file('run.py', this.generateRunScript(lang), zipOptions)
+          folder.file('run.bat', this.generateBatScript(lang), zipOptions)
 
           // 7. 添加 solution.md (原始代码输出)
           if (task.codeOutput && task.codeOutput.trim()) {
-            folder.file('solution.md', task.codeOutput)
+            folder.file('solution.md', task.codeOutput, zipOptions)
           }
         }
 
-        // 添加批量运行脚本
+        // 添加批量运行脚本 (包含运行任务和提取报告)
         const runAllBat = `@echo off
 chcp 65001
-title Batch Runner
+title Batch Runner & Report Extractor
+
 echo ==========================================
-echo      Batch Runner for All Tasks
+echo      1. Running All Tasks
 echo ==========================================
 echo.
 
 for /d %%D in (*) do (
     if exist "%%D\\run.py" (
-        echo ------------------------------------------
-        echo Entering directory: %%D
-        echo ------------------------------------------
-        pushd "%%D"
-        python run.py
-        popd
-        echo.
+        if exist "%%D\\data_generator.py" (
+            echo ------------------------------------------
+            echo Running in: %%D
+            echo ------------------------------------------
+            pushd "%%D"
+            python run.py
+            popd
+            echo.
+        ) else (
+            echo ------------------------------------------
+            echo Skipping %%D (No data_generator.py)
+            echo ------------------------------------------
+        )
     )
 )
 
 echo.
 echo ==========================================
-echo      All Tasks Completed
+echo      2. Extracting HTML Reports
 echo ==========================================
+echo.
+
+for /d %%D in (*) do (
+    if exist "%%D\\*.html" (
+        pushd "%%D"
+        for %%F in (*.html) do (
+            echo Extracting: %%D\\%%F -^> %%D.html
+            copy "%%F" "..\\%%D.html" >nul
+        )
+        popd
+    )
+)
+
+echo.
+echo ==========================================
+echo      All Operations Completed
+echo ==========================================
+pause
 `
-        masterZip.file('run_all_tasks.bat', runAllBat)
+        masterZip.file('run_all_tasks.bat', runAllBat, zipOptions)
         
         const blob = await masterZip.generateAsync({ type: 'blob' })
         const url = URL.createObjectURL(blob)
@@ -797,13 +830,14 @@ echo ==========================================
         } catch (e) { console.warn('Failed to get username', e) }
         
         const taskCount = completedTasks.length
-        const now = new Date()
-        const dateStr = now.getFullYear() +
-          String(now.getMonth() + 1).padStart(2, '0') +
-          String(now.getDate()).padStart(2, '0') + '_' +
-          String(now.getHours()).padStart(2, '0') +
-          String(now.getMinutes()).padStart(2, '0') +
-          String(now.getSeconds()).padStart(2, '0')
+        // 使用之前计算的 targetTime (北京时间) 作为文件名时间戳
+        const downloadTime = targetTime
+        const dateStr = downloadTime.getFullYear() +
+          String(downloadTime.getMonth() + 1).padStart(2, '0') +
+          String(downloadTime.getDate()).padStart(2, '0') + '_' +
+          String(downloadTime.getHours()).padStart(2, '0') +
+          String(downloadTime.getMinutes()).padStart(2, '0') +
+          String(downloadTime.getSeconds()).padStart(2, '0')
           
         const zipName = `batch_export_${username}_${taskCount}tasks_${dateStr}.zip`
         
@@ -1506,10 +1540,15 @@ echo ==========================================
         
         const JSZip = (await import('jszip')).default
         const zip = new JSZip()
+        // 修正 ZIP 文件时间戳为东八区 (UTC+8)
+        const now = new Date()
+        const beijingString = now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })
+        const targetTime = new Date(beijingString)
+        const zipOptions = { date: targetTime }
         
         const extension = this.language === 'C++' ? 'cpp' : this.language === 'Python' ? 'py' : 'java'
         const stdFileName = this.language === 'Java' ? 'Main.java' : `std.${extension}`
-        zip.file(stdFileName, stdCode)
+        zip.file(stdFileName, stdCode, zipOptions)
         
         let modifiedScript = dataScript
           .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
@@ -1536,12 +1575,12 @@ echo ==========================================
         console.log('脚本总长度:', modifiedScript.length)
         console.log('脚本行数:', modifiedScript.split('\n').length)
         
-        zip.file('data_generator.py', modifiedScript)
+        zip.file('data_generator.py', modifiedScript, zipOptions)
         // 将 codeOutput 一并打包：作为 Markdown 保存，并尝试提取纯源码写入合适扩展名
         try {
           if (this.codeOutput && this.codeOutput.toString().trim()) {
             // 写入原始 codeOutput Markdown（如果是 Markdown 则保留）
-            zip.file('solution.md', this.codeOutput)
+            zip.file('solution.md', this.codeOutput, zipOptions)
 
           }
         } catch (e) {
@@ -1549,26 +1588,26 @@ echo ==========================================
         }
 
         const readme = this.generateReadme()
-        zip.file('README.md', readme)
+        zip.file('README.md', readme, zipOptions)
         
         // 生成 Python 运行脚本（跨平台）
         const runScript = this.generateRunScript(this.language)
-        zip.file('run.py', runScript)
+        zip.file('run.py', runScript, zipOptions)
         
         // 生成 Windows 批处理启动脚本
         const batScript = this.generateBatScript(this.language)
-        zip.file('run.bat', batScript)
+        zip.file('run.bat', batScript, zipOptions)
         
         // 生成 problem.yaml 文件（始终生成，即使没有元数据也使用默认值）
         console.log('当前 problemMeta:', this.problemMeta)
         const yamlContent = this.generateProblemYaml()
-        zip.file('problem.yaml', yamlContent)
+        zip.file('problem.yaml', yamlContent, zipOptions)
 
                 // 如果有翻译内容则一并打包
                 if (this.translationText && this.translationText.trim()) {
-                  zip.file('problem_zh.md', this.translationText)
+                  zip.file('problem_zh.md', this.translationText, zipOptions)
                 } else if (this.problemText && this.problemText.trim()) {
-                  zip.file('problem_zh.md', this.problemText)
+                  zip.file('problem_zh.md', this.problemText, zipOptions)
                 }
 
                 const blob = await zip.generateAsync({ type: 'blob' })
