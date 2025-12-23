@@ -48,9 +48,13 @@
         </div>
       </div>
       <div class="batch-footer">
-        <div class="batch-options" style="margin-bottom: 10px; display: flex; align-items: center;">
-          <input type="checkbox" id="batch-report" v-model="generateReportInBatch" style="margin-right: 5px;">
-          <label for="batch-report" style="font-size: 13px; color: #666; cursor: pointer;">同时生成解题报告 (消耗较多Token)</label>
+        <div class="batch-options" style="margin-bottom: 10px;">
+          <label style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">生成模式:</label>
+          <select v-model="batchMode" style="width: 100%; padding: 4px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
+            <option value="code_data">仅代码和数据</option>
+            <option value="code_data_report">代码、数据和报告</option>
+            <option value="report_only">仅解题报告</option>
+          </select>
         </div>
         <button @click="runBatch" :disabled="isBatchRunning" class="btn-batch-run">
           {{ isBatchRunning ? '正在处理...' : '批量生成' }}
@@ -184,7 +188,7 @@ export default {
       // 批量模式相关数据
       isBatchMode: false,
       isBatchRunning: false,
-      generateReportInBatch: false, // 默认不生成报告以节省 Token
+      batchMode: 'code_data', // code_data, code_data_report, report_only
       showBatchImport: false,
       batchImportText: '',
       currentTaskIndex: 0,
@@ -394,16 +398,34 @@ export default {
         this.tasks[i].status = 'processing'
         
         try {
-          // 1. 生成代码、数据、翻译
-          const success = await this.generateAll()
-          
-          if (!success) {
-             throw new Error('Generation failed')
-          }
-          
-          // 2. 生成解题报告 (如果开启)
-          if (this.generateReportInBatch) {
-            await this.generateReportForBatch(i)
+          // 根据模式选择执行逻辑
+          if (this.batchMode === 'report_only') {
+             // 仅生成报告模式：跳过 generateAll，直接生成报告
+             // 注意：如果需要元数据（标题），可能需要单独请求，或者依赖报告生成时的逻辑
+             // 这里我们尝试先生成元数据（如果缺失），以便下载时有正确的文件名
+             if (!this.problemMeta || !this.problemMeta.title) {
+                try {
+                  const metaRes = await request('/api/generate-problem-meta', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      text: this.problemText,
+                      model: this.selectedModel
+                    })
+                  })
+                  if (metaRes) this.problemMeta = metaRes
+                } catch (e) { console.warn('Meta generation failed in report-only mode', e) }
+             }
+             
+             await this.generateReportForBatch(i)
+          } else {
+             // 标准模式：生成代码、数据、翻译
+             const success = await this.generateAll()
+             if (!success) throw new Error('Generation failed')
+             
+             // 如果选择了包含报告
+             if (this.batchMode === 'code_data_report') {
+                await this.generateReportForBatch(i)
+             }
           }
           
           this.tasks[i].status = 'completed'
@@ -467,7 +489,8 @@ export default {
         
         const masterZip = new JSZip()
         
-        for (const task of completedTasks) {
+        for (let i = 0; i < completedTasks.length; i++) {
+          const task = completedTasks[i]
           // 智能提取标题
           let title = `task_${task.id}`
           if (task.problemMeta && task.problemMeta.title) {
@@ -479,16 +502,16 @@ export default {
             const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍)/
             const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
             
-            for (let i = 0; i < lines.length; i++) {
-              const m = lines[i].match(/^#{1,3}\s*(.+)$/)
+            for (let j = 0; j < lines.length; j++) {
+              const m = lines[j].match(/^#{1,3}\s*(.+)$/)
               if (m) {
                 const t = stripMd(m[1]).trim()
                 if (t && !badKeywords.test(t)) { title = t; break; }
               }
             }
             if (title === `task_${task.id}`) {
-                for (let i = 0; i < lines.length; i++) {
-                  const t = stripMd(lines[i]).trim()
+                for (let j = 0; j < lines.length; j++) {
+                  const t = stripMd(lines[j]).trim()
                   if (!t) continue
                   if (/^(输入|输出|数据范围|样例|说明)/.test(t)) continue
                   if (badKeywords.test(t)) continue
@@ -499,7 +522,10 @@ export default {
           }
           
           const safeTitle = title.replace(/[\\/:*?"<>|]/g, '_').trim() || `task_${task.id}`
-          const folder = masterZip.folder(safeTitle)
+          // 添加序号前缀 (01, 02, ...)
+          const prefix = String(i + 1).padStart(2, '0')
+          const folderName = `${prefix}_${safeTitle}`
+          const folder = masterZip.folder(folderName)
           
           // 1. 添加代码
           let ext = 'cpp' // 默认
