@@ -18,6 +18,7 @@
         <router-link v-if="isPremium" to="/solvedata">Data</router-link>
         <router-link v-if="isPremium" to="/chat">Chat</router-link>
         <router-link v-if="isAdmin || isTeacher" to="/admin">Admin</router-link>
+        <router-link v-if="isAdmin || isTeacher" to="/design">Design</router-link>
         <div v-if="user" class="user-menu">
           <router-link to="/profile" class="username-link">{{ user.username }}</router-link>
           <button @click="logout" class="btn-logout">退出</button>
