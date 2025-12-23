@@ -18,7 +18,7 @@
           <!-- Level Node -->
           <div 
             :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
-            @click="selectNode('level', level)"
+            @click="selectNode('level', level); toggleLevelDesc(level)"
           >
             <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
             <span class="tree-label">Level {{ level.level }}</span>
@@ -33,7 +33,7 @@
               <!-- Topic Node -->
               <div 
                 :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
-                @click="selectNode('topic', topic, level)"
+                @click="selectNode('topic', topic, level); toggleTopicCollapse(topic)"
               >
                 <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
                 <span class="tree-label">{{ topic.title }}</span>
@@ -103,8 +103,23 @@
         <div class="editor-header">
           <h2>{{ editingTopic._id ? '编辑知识点' : '新建知识点' }}</h2>
           <div class="header-actions">
+            <select v-model="selectedModel" class="model-select" title="选择 AI 模型">
+                <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
             <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="btn-delete">删除知识点</button>
             <button @click="saveTopic" class="btn-save">保存更改</button>
+          </div>
+        </div>
+
+        <!-- AI Assistant Section for Topic -->
+        <div class="ai-assistant-box">
+          <div class="ai-header">
+            <h3>🤖 AI 章节规划</h3>
+            <span v-if="aiLoading" class="ai-status">{{ aiStatus }}</span>
+          </div>
+          <div class="ai-controls" :class="{ disabled: aiLoading }">
+            <button @click="generateTopicDescription" class="btn-ai" :disabled="aiLoading">📝 自动生成描述</button>
+            <button @click="generateTopicChapters" class="btn-ai" :disabled="aiLoading">📑 自动生成章节列表</button>
           </div>
         </div>
 
@@ -132,12 +147,31 @@
         <div class="editor-header">
           <h2>{{ editingChapter.isNew ? '新建章节' : '编辑章节' }}</h2>
           <div class="header-actions">
+            <select v-model="selectedModel" class="model-select" title="选择 AI 模型">
+                <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
             <div v-if="!editingChapter.isNew" class="move-actions">
                <button @click="moveChapter('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveChapter('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
             <button v-if="!editingChapter.isNew" @click="deleteChapter(editingLevelForChapter._id, editingTopicForChapter._id, editingChapter._id || editingChapter.id)" class="btn-delete">删除章节</button>
             <button @click="saveChapter" class="btn-save">保存更改</button>
+          </div>
+        </div>
+
+        <!-- AI Assistant Section -->
+        <div class="ai-assistant-box">
+          <div class="ai-header">
+            <h3>🤖 AI 备课助手</h3>
+            <span v-if="aiLoading" class="ai-status">{{ aiStatus }}</span>
+          </div>
+          <div class="ai-controls" :class="{ disabled: aiLoading }">
+            <input v-model="aiRequirements" placeholder="输入额外要求 (例如: 多一些生活例子, 侧重C++语法...)" class="form-input ai-input">
+            <div class="ai-buttons">
+              <button @click="generateLessonPlan" class="btn-ai" :disabled="aiLoading">📝 生成教案</button>
+              <button @click="generatePPT" class="btn-ai" :disabled="aiLoading">📊 生成 PPT</button>
+              <button @click="generateSolutionReport" class="btn-ai" :disabled="aiLoading">💡 生成题解</button>
+            </div>
           </div>
         </div>
 
@@ -163,21 +197,27 @@
         <div class="form-group">
           <div class="label-row">
              <label>内容 ({{ editingChapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
-             <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
+             <button v-if="editingChapter.contentType === 'html'" @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
                {{ showPreview ? '关闭预览' : '开启预览' }}
              </button>
           </div>
 
-          <div v-if="!showPreview">
-            <input v-if="editingChapter.contentType === 'html'" v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
-            <textarea v-else v-model="editingChapter.content" class="form-input code-font" rows="15"></textarea>
+          <!-- Markdown Mode: Split View -->
+          <div v-if="editingChapter.contentType === 'markdown'" class="split-view" style="height: 700px;">
+            <textarea v-model="editingChapter.content" class="form-input code-font" style="height: 100%;"></textarea>
+            <div class="preview-box" style="height: 100%;">
+              <MarkdownViewer :content="editingChapter.content" />
+            </div>
           </div>
 
-          <div v-else class="preview-container-large">
-             <iframe v-if="editingChapter.contentType === 'html'" :src="getPreviewUrl(editingChapter.resourceUrl)" class="preview-iframe"></iframe>
-             <div v-else class="markdown-preview">
-               <MarkdownViewer :content="editingChapter.content" />
-             </div>
+          <!-- HTML Mode: Input or Preview -->
+          <div v-else>
+            <div v-if="!showPreview">
+              <input v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
+            </div>
+            <div v-else class="preview-container-large">
+               <iframe :src="getPreviewUrl(editingChapter.resourceUrl)" class="preview-iframe"></iframe>
+            </div>
           </div>
         </div>
 
@@ -203,8 +243,10 @@ import request from '../utils/request'
 import { marked } from 'marked'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
+import { getModels } from '../utils/models'
 
 export default {
+  name: 'Design',
   components: { MarkdownViewer },
   inject: ['showToastMessage'],
   data() {
@@ -229,18 +271,44 @@ export default {
       editingTopicForChapter: null,
       
       showPreview: false,
-      isInitialLoad: true
+      isInitialLoad: true,
+
+      // AI State
+      aiRequirements: '',
+      aiLoading: false,
+      aiStatus: '',
+      
+      // Models
+      selectedModel: 'gemini-2.5-flash',
+      rawModelOptions: []
     }
   },
   computed: {
     currentSubjectConfig() {
       return SUBJECTS_CONFIG.find(s => s.name === this.selectedSubject)
+    },
+    user() {
+      try {
+        return JSON.parse(localStorage.getItem('user_info'))
+      } catch (e) { return null }
+    },
+    isPremium() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher' || this.user.priv === -1)
+    },
+    modelOptions() {
+      const all = this.rawModelOptions || []
+      if (this.isPremium) return all
+      return all.filter(m => m.id === 'gemini-2.0-flash' || m.id === 'gemini-2.5-flash')
     }
   },
   mounted() {
     this.fetchLevels()
+    this.fetchModels()
   },
   methods: {
+    async fetchModels() {
+        this.rawModelOptions = await getModels()
+    },
     // --- Selection Logic ---
     isSelected(type, id) {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
@@ -450,20 +518,28 @@ export default {
     },
     async saveTopic() {
       try {
+        let updatedLevel;
         if (this.editingTopic._id) {
-          await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}`, {
+          updatedLevel = await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}`, {
             method: 'PUT',
             body: JSON.stringify(this.editingTopic)
           })
         } else {
-          await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics`, {
+          updatedLevel = await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics`, {
             method: 'POST',
             body: JSON.stringify(this.editingTopic)
           })
+          
+          // Update ID for new topic (assuming appended to end)
+          if (updatedLevel && updatedLevel.topics && updatedLevel.topics.length > 0) {
+              const newTopic = updatedLevel.topics[updatedLevel.topics.length - 1]
+              this.editingTopic._id = newTopic._id
+              this.selectedNode.id = newTopic._id
+          }
         }
         this.showToastMessage('保存知识点成功')
-        this.fetchLevels()
-        this.selectedNode = null
+        await this.fetchLevels()
+        // this.selectedNode = null // Keep selection
       } catch (e) {
         this.showToastMessage('保存知识点失败: ' + e.message)
       }
@@ -481,7 +557,7 @@ export default {
     },
     async saveChapter() {
       try {
-        const problemIds = this.editingChapter.problemIdsStr
+        const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
         const chapterData = {
@@ -494,22 +570,36 @@ export default {
           optional: this.editingChapter.optional
         }
 
+        let updatedLevel;
         if (this.editingChapter.isNew) {
-           await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters`, {
+           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters`, {
              method: 'POST',
              body: JSON.stringify(chapterData)
            })
+           
+           // Update ID for new chapter
+           if (updatedLevel && updatedLevel.topics) {
+               const topic = updatedLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
+               if (topic && topic.chapters && topic.chapters.length > 0) {
+                   // Assuming appended to end
+                   const newChapter = topic.chapters[topic.chapters.length - 1]
+                   this.editingChapter.id = newChapter.id
+                   this.editingChapter._id = newChapter._id
+                   this.editingChapter.isNew = false
+                   this.selectedNode.id = newChapter.id || newChapter._id
+               }
+           }
         } else {
            const chId = this.editingChapter._id || this.editingChapter.id
-           await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters/${chId}`, {
+           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters/${chId}`, {
              method: 'PUT',
              body: JSON.stringify(chapterData)
            })
         }
         
         this.showToastMessage('保存章节成功')
-        this.fetchLevels()
-        this.selectedNode = null
+        await this.fetchLevels()
+        // this.selectedNode = null // Keep selection
       } catch (e) {
         this.showToastMessage('保存章节失败: ' + e.message)
       }
@@ -542,6 +632,291 @@ export default {
         this.showToastMessage('移动失败: ' + e.message)
       }
     },
+    // --- AI Methods ---
+    async generateLessonPlan() {
+      if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      this.aiLoading = true
+      this.aiStatus = '正在生成教案...'
+      try {
+        const res = await request('/api/lesson-plan', {
+          method: 'POST',
+          body: JSON.stringify({
+            topic: this.editingChapter.title,
+            context: this.editingTopicForChapter ? this.editingTopicForChapter.title : '',
+            level: `Level ${this.editingLevelForChapter.level}`,
+            requirements: this.aiRequirements,
+            model: this.selectedModel
+          })
+        })
+        this.editingChapter.content = res.content
+        this.editingChapter.contentType = 'markdown'
+        this.showToastMessage('教案生成成功')
+      } catch (e) {
+        this.showToastMessage('生成失败: ' + e.message)
+      } finally {
+        this.aiLoading = false
+        this.aiStatus = ''
+      }
+    },
+
+    async generatePPT() {
+      if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      this.aiLoading = true
+      this.aiStatus = '正在生成 PPT...'
+      try {
+        // 1. Generate HTML
+        const res = await request('/api/generate-ppt', {
+          method: 'POST',
+          body: JSON.stringify({
+            topic: this.editingChapter.title,
+            context: this.editingTopicForChapter ? this.editingTopicForChapter.title : '',
+            level: `Level ${this.editingLevelForChapter.level}`,
+            model: this.selectedModel
+          })
+        })
+        
+        // 2. Upload HTML
+        this.aiStatus = '正在保存课件...'
+        const uploadRes = await request('/api/course/upload-courseware', {
+          method: 'POST',
+          body: JSON.stringify({
+            htmlContent: res.content,
+            level: this.editingLevelForChapter.level,
+            topicTitle: this.editingTopicForChapter.title,
+            chapterTitle: this.editingChapter.title,
+            filename: `ppt_${this.editingChapter.title}` // Fallback
+          })
+        })
+
+        this.editingChapter.resourceUrl = uploadRes.url
+        this.editingChapter.contentType = 'html'
+        this.showToastMessage('PPT 生成并保存成功')
+      } catch (e) {
+        this.showToastMessage('生成失败: ' + e.message)
+      } finally {
+        this.aiLoading = false
+        this.aiStatus = ''
+      }
+    },
+
+    async generateSolutionReport() {
+      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      
+      // Get the first problem ID
+      const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
+      if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
+
+      this.aiLoading = true
+      this.aiStatus = '正在获取题目信息...'
+      
+      try {
+        // 1. Fetch problem details
+        // We need to resolve the ID first. The backend helper `resolveProblemIds` does this, 
+        // but here we are on frontend. We can try to fetch the document directly if we have an API.
+        // Or we can use a new endpoint to get problem text by ID string.
+        // Let's assume we can use the existing /api/data/documents endpoint with a query if we are admin,
+        // but that might be complex.
+        // Simpler way: Let's assume the user inputs a docId (number) or domain:docId.
+        
+        let docId = firstProblemId
+        let domainId = 'system'
+        if (firstProblemId.includes(':')) {
+            [domainId, docId] = firstProblemId.split(':')
+        }
+        
+        // We need an endpoint to get problem content by docId/domainId.
+        // Currently /api/data/documents filters by domainId but returns a list.
+        // Let's try to find it in the list (might be slow if many docs).
+        // Better: Use the `check-problem` logic or similar? No.
+        // Let's use the `problemIds` array if it's already resolved in `editingChapter`?
+        // `editingChapter.problemIds` contains ObjectIds.
+        // We need the TEXT content of the problem.
+        
+        // Let's fetch the problem content using a search or specific endpoint.
+        // Since we don't have a direct "get problem by display ID" endpoint exposed easily here,
+        // we will try to use the `problemIds` (ObjectIds) if available.
+        
+        let problemText = ''
+        
+        // If we have resolved ObjectIds in the original chapter data
+        if (this.editingChapter.problemIds && this.editingChapter.problemIds.length > 0) {
+             // But `editingChapter` here is the form data, `problemIds` might be stale or just strings if we didn't reload.
+             // The `problemIdsStr` is what the user edited.
+        }
+        
+        // Let's call a new helper endpoint or just search.
+        // For now, let's try to fetch all docs in that domain and find it (inefficient but works for now)
+        // OR, add a specific endpoint.
+        // Let's try to use the existing `request` to get the problem content.
+        // We will assume the user has access to `/api/problems/:id` if it existed.
+        // Actually, `Solution.vue` uses `/api/documents?domainId=...`
+        
+        const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`) // Potential perf issue
+        const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
+        
+        if (!doc) throw new Error('未找到该题目')
+        problemText = doc.content
+        
+        // 1.5 Fetch User's Best Submission
+        let userCode = ''
+        try {
+            const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
+            if (subRes && subRes.code) {
+                userCode = subRes.code
+                this.showToastMessage('已找到您的 AC 代码，将基于此生成讲解')
+            }
+        } catch (e) {
+            console.warn('Failed to fetch submission', e)
+        }
+
+        // 2. Generate Report (Background Mode)
+        this.aiStatus = '正在提交后台生成任务...'
+        
+        await request.post('/api/solution-report/background', {
+            problem: problemText,
+            code: userCode,
+            reference: '',
+            level: this.editingLevelForChapter.level,
+            topicTitle: this.editingTopicForChapter.title,
+            chapterTitle: this.editingChapter.title,
+            problemTitle: doc.title,
+            chapterId: this.editingChapter.id,
+            model: this.selectedModel
+        })
+        
+        this.aiStatus = ''
+        this.showToastMessage('后台生成任务已提交！您可以关闭页面，稍后刷新查看结果。')
+        
+        /* Legacy Synchronous Mode
+        const res = await request.post('/api/solution-report', {
+            problem: problemText,
+            code: userCode, // Use user code if available
+            reference: ''
+        })
+        
+        // 3. Upload HTML
+        this.aiStatus = '正在保存课件...'
+        const uploadRes = await request('/api/course/upload-courseware', {
+          method: 'POST',
+          body: JSON.stringify({
+            htmlContent: res.html,
+            level: this.editingLevelForChapter.level,
+            topicTitle: this.editingTopicForChapter.title,
+            chapterTitle: this.editingChapter.title,
+            filename: `solution_${docId}`
+          })
+        })
+
+        this.editingChapter.resourceUrl = uploadRes.url
+        this.editingChapter.contentType = 'html'
+        this.showToastMessage('解题报告生成成功')
+        */
+
+      } catch (e) {
+        this.showToastMessage('生成失败: ' + e.message)
+      } finally {
+        this.aiLoading = false
+        this.aiStatus = ''
+      }
+    },
+
+    async generateTopicDescription() {
+      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
+      this.aiLoading = true
+      this.aiStatus = '正在生成描述...'
+      try {
+        const res = await request('/api/topic-plan', {
+          method: 'POST',
+          body: JSON.stringify({
+            topic: this.editingTopic.title,
+            level: `Level ${this.editingLevelForTopic.level}`,
+            mode: 'description',
+            model: this.selectedModel
+          })
+        })
+        
+        const description = res.description || ''
+        if (!description) {
+            this.showToastMessage('AI 未生成有效描述')
+            return
+        }
+
+        this.editingTopic.description = description
+        this.showToastMessage('描述生成成功，请点击保存')
+        
+      } catch (e) {
+        this.showToastMessage('生成失败: ' + e.message)
+      } finally {
+        this.aiLoading = false
+        this.aiStatus = ''
+      }
+    },
+
+    async generateTopicChapters() {
+      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
+      this.aiLoading = true
+      this.aiStatus = '正在规划章节...'
+      try {
+        const res = await request('/api/topic-plan', {
+          method: 'POST',
+          body: JSON.stringify({
+            topic: this.editingTopic.title,
+            level: `Level ${this.editingLevelForTopic.level}`,
+            mode: 'chapters', // Default mode, but explicit
+            model: this.selectedModel
+          })
+        })
+        
+        const newChapters = res.chapters || []
+        // Note: We ignore description here as user requested separate buttons
+        // const description = res.description || ''
+
+        if (newChapters.length === 0) {
+            this.showToastMessage('AI 未生成有效章节')
+            return
+        }
+
+        // Add chapters to the topic
+        if (!this.editingTopic.chapters) this.editingTopic.chapters = []
+        
+        // We need to save these chapters one by one or update the topic.
+        // Since we don't have a batch update for chapters, we will iterate and call create API.
+        // But wait, `saveTopic` updates the topic object which contains chapters?
+        // Let's check `server/routes/course.js` -> `PUT /levels/:id/topics/:topicId`
+        // It only updates title and description. It does NOT update chapters array.
+        
+        // So we must call POST /chapters for each new chapter.
+        
+        this.aiStatus = `正在创建 ${newChapters.length} 个章节...`
+        
+        for (let i = 0; i < newChapters.length; i++) {
+            const title = newChapters[i]
+            const chapterData = {
+                id: `${this.editingLevelForTopic.level}-${Date.now()}-${i}`, // Temp ID, server will renumber
+                title: title,
+                content: '',
+                contentType: 'markdown',
+                optional: false,
+                problemIds: []
+            }
+            
+            await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}/chapters`, {
+                method: 'POST',
+                body: JSON.stringify(chapterData)
+            })
+        }
+        
+        this.showToastMessage(`成功生成 ${newChapters.length} 个章节`)
+        this.fetchLevels() // Refresh tree
+        
+      } catch (e) {
+        this.showToastMessage('规划失败: ' + e.message)
+      } finally {
+        this.aiLoading = false
+        this.aiStatus = ''
+      }
+    },
+
     getPreviewUrl(url) {
       if (!url) return ''
       if (url.indexOf('public/courseware') !== -1) {
@@ -693,8 +1068,19 @@ export default {
 }
 .editor-header h2 { margin: 0; font-size: 20px; color: #2c3e50; }
 
-.header-actions { display: flex; gap: 10px; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
 .move-actions { display: flex; gap: 5px; margin-right: 10px; }
+
+.model-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-right: 10px;
+  font-size: 14px;
+  background-color: #fff;
+  color: #333;
+  min-width: 150px;
+}
 
 .btn-save {
   padding: 8px 20px;
@@ -787,5 +1173,73 @@ export default {
   padding: 20px;
   height: 100%;
   overflow-y: auto;
+}
+
+/* AI Assistant */
+.ai-assistant-box {
+  background: linear-gradient(135deg, #f6f8ff 0%, #f1f4ff 100%);
+  border: 1px solid #dbe4ff;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+.ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ai-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-status {
+  font-size: 13px;
+  color: #666;
+  animation: pulse 1.5s infinite;
+}
+.ai-controls {
+  display: flex;
+  gap: 10px;
+}
+.ai-controls.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.ai-input {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+.ai-buttons {
+  display: flex;
+  gap: 10px;
+}
+.btn-ai {
+  padding: 8px 15px;
+  background: #6c5ce7;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-ai:hover {
+  background: #5b4bc4;
+}
+.btn-ai:disabled {
+  background: #a29bfe;
+  cursor: not-allowed;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 </style>

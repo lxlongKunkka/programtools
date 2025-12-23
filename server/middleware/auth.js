@@ -28,10 +28,10 @@ export function checkModelPermission(req, res, next) {
     }
   }
 
-  // Rule: Guest and Normal User can ONLY use gemini-2.0-flash
+  // Rule: Guest and Normal User can ONLY use gemini-2.0-flash or gemini-2.5-flash
   if (userRole === 'guest' || userRole === 'user') {
-    if (modelId && modelId !== 'gemini-2.0-flash') {
-      return res.status(403).json({ error: 'Access denied: Current plan only supports gemini-2.0-flash' })
+    if (modelId && modelId !== 'gemini-2.0-flash' && modelId !== 'gemini-2.5-flash') {
+      return res.status(403).json({ error: 'Access denied: Current plan only supports gemini-2.0-flash and gemini-2.5-flash' })
     }
     // If no model specified, the route usually defaults. 
     // We should probably enforce the default in the route or here.

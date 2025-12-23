@@ -27,7 +27,11 @@
       </nav>
     </header>
     <main>
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <keep-alive include="Design">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </main>
 
     <!-- 全局 Toast -->

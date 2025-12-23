@@ -24,7 +24,7 @@ router.get('/documents/domains', authenticateToken, requireRole('admin'), async 
 })
 
 // Get documents by domainId
-router.get('/documents', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/documents', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { domainId, page = 1, limit = 50 } = req.query
     const query = { docType: 10 }

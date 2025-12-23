@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import nodemailer from 'nodemailer'
 import User from '../models/User.js'
+import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
@@ -14,7 +15,11 @@ import {
   getSolvePrompt, 
   getDataGenPrompt,
   SOLUTION_REPORT_PROMPT,
-  META_PROMPT
+  META_PROMPT,
+  LESSON_PLAN_PROMPT,
+  PPT_PROMPT,
+  TOPIC_PLAN_PROMPT,
+  TOPIC_DESC_PROMPT
 } from '../prompts.js'
 
 const router = express.Router()
@@ -655,6 +660,7 @@ router.post('/generate-problem-meta', checkModelPermission, async (req, res) => 
 })
 
 router.post('/solution-report', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
+  console.log('[SolutionReport] Route hit!')
   try {
     console.log('[SolutionReport] Request received')
     if (!SOLUTION_REPORT_PROMPT) {
@@ -721,6 +727,107 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
   }
 })
 
+router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
+  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId } = req.body;
+  
+  if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+
+  // Respond immediately
+  res.json({ status: 'processing', message: 'Task started in background' });
+
+  // Start background process
+  (async () => {
+      try {
+          console.log(`[Background] Starting solution report for chapter ${chapterId}`);
+          
+          // 1. Generate HTML
+          const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）';
+          let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
+          if (reference && reference.trim()) {
+              userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+          }
+
+          const messages = [
+              { role: 'system', content: SOLUTION_REPORT_PROMPT },
+              { role: 'user', content: userContent }
+          ];
+
+          const payload = {
+              model: model || 'o4-mini',
+              messages,
+              temperature: 0.3,
+              max_tokens: 32767
+          };
+
+          const resp = await axios.post(YUN_API_URL, payload, {
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${YUN_API_KEY}`
+              },
+              timeout: 600000 // 10 minutes
+          });
+
+          let htmlContent = resp.data.choices?.[0]?.message?.content || '';
+          htmlContent = htmlContent.replace(/```html\s*/g, '').replace(/```/g, '').trim();
+
+          // 2. Save File
+          const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
+          const safeLevel = 'level' + sanitize(String(level));
+          const safeTopic = sanitize(topicTitle);
+          // Use problemTitle if available, otherwise fallback to chapterTitle
+          const filenameBase = problemTitle ? sanitize(problemTitle) : sanitize(chapterTitle);
+          const safeChapter = filenameBase + '.html';
+          
+          const baseDir = path.join(process.cwd(), 'server', 'public', 'courseware');
+          const targetDir = path.join(baseDir, safeLevel, safeTopic);
+          
+          if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
+          }
+          
+          const fullPath = path.join(targetDir, safeChapter);
+          const relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+          
+          fs.writeFileSync(fullPath, htmlContent, 'utf8');
+          console.log(`[Background] File saved to ${fullPath}`);
+
+          // 3. Update Database
+          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          if (courseLevel) {
+              let chapterFound = false;
+              for (const topic of courseLevel.topics) {
+                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  if (chapter) {
+                      chapter.resourceUrl = relativePath;
+                      chapter.contentType = 'html';
+                      chapterFound = true;
+                      break;
+                  }
+              }
+              if (chapterFound) {
+                  await courseLevel.save();
+                  console.log(`[Background] Database updated for chapter ${chapterId}`);
+              }
+          } else {
+               // Try legacy 'chapters'
+               const legacyLevel = await CourseLevel.findOne({ 'chapters.id': chapterId });
+               if (legacyLevel) {
+                   const chapter = legacyLevel.chapters.find(c => c.id === chapterId);
+                   if (chapter) {
+                       chapter.resourceUrl = relativePath;
+                       chapter.contentType = 'html';
+                       await legacyLevel.save();
+                       console.log(`[Background] Database updated for legacy chapter ${chapterId}`);
+                   }
+               }
+          }
+
+      } catch (err) {
+          console.error('[Background] Error generating solution report:', err);
+      }
+  })();
+});
+
 // Send package email route (moved from admin to allow user access)
 router.post('/send-package', authenticateToken, async (req, res) => {
   try {
@@ -774,5 +881,178 @@ router.post('/send-package', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to send email', details: error.message });
   }
 });
+
+// Generate Lesson Plan
+router.post('/lesson-plan', authenticateToken, async (req, res) => {
+  try {
+    const { topic, context, level, requirements, model } = req.body
+    if (!topic) return res.status(400).json({ error: 'Missing topic' })
+
+    let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}\n额外要求：${requirements || '无'}`
+    if (context) {
+        userPrompt = `所属知识点：${context}\n` + userPrompt
+    }
+    
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    
+    const messages = [
+      { role: 'system', content: LESSON_PLAN_PROMPT },
+      { role: 'user', content: userPrompt }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 4000
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 120000
+    })
+
+    const content = resp.data.choices?.[0]?.message?.content || ''
+    res.json({ content })
+
+  } catch (e) {
+    console.error('Lesson Plan Error:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Generate PPT
+router.post('/generate-ppt', authenticateToken, async (req, res) => {
+  try {
+    const { topic, context, level, model } = req.body
+    if (!topic) return res.status(400).json({ error: 'Missing topic' })
+
+    let fullTopic = topic
+    if (context) {
+        fullTopic = `${context} - ${topic}`
+    }
+
+    const systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
+    
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。` }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 4000
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 120000
+    })
+
+    let content = resp.data.choices?.[0]?.message?.content || ''
+    // Clean up markdown code blocks if present
+    content = content.replace(/^```html\s*/, '').replace(/```$/, '')
+    
+    res.json({ content })
+
+  } catch (e) {
+    console.error('PPT Gen Error:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Generate Topic Plan (Chapters list) or Description
+router.post('/topic-plan', authenticateToken, async (req, res) => {
+  try {
+    const { topic, level, model, mode } = req.body
+    if (!topic) return res.status(400).json({ error: 'Missing topic' })
+
+    const userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+    
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    
+    let systemPrompt = TOPIC_PLAN_PROMPT
+    if (mode === 'description') {
+        systemPrompt = TOPIC_DESC_PROMPT
+    }
+    
+    if (!systemPrompt) {
+        console.error('System prompt is missing for mode:', mode)
+        return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
+    }
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+
+    console.log(`[TopicPlan] Generating with mode=${mode}, topic=${topic}`)
+
+    const payload = {
+      model: model || 'gemini-2.5-flash', // Switch default to gemini-2.5-flash
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000
+    }
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 60000
+    })
+
+    let content = resp.data.choices?.[0]?.message?.content || ''
+    console.log(`[TopicPlan] Received content length: ${content.length}`)
+
+    if (!content) {
+        console.warn('[TopicPlan] Empty content received. Full response:', JSON.stringify(resp.data))
+    }
+    
+    if (mode === 'description') {
+        // Just return the text content
+        return res.json({ description: content, chapters: [] })
+    }
+
+    // Default mode: chapters (and maybe description)
+    content = content.replace(/```json\s*/g, '').replace(/```/g, '').trim()
+    
+    let result = {}
+    try {
+      const parsed = JSON.parse(content)
+      if (Array.isArray(parsed)) {
+          // Legacy format: just an array of strings
+          result = { chapters: parsed, description: '' }
+      } else {
+          // New format: object with description and chapters
+          result = parsed
+      }
+    } catch (e) {
+      // Fallback if not valid JSON, try to split by newlines
+      const list = content.split('\n').filter(line => line.trim().length > 0).map(l => l.replace(/^\d+\.\s*/, ''))
+      result = { chapters: list, description: '' }
+    }
+
+    res.json(result)
+
+  } catch (e) {
+    console.error('Topic Plan Error:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
 
 export default router

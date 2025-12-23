@@ -1,5 +1,7 @@
 import express from 'express'
 import mongoose from 'mongoose'
+import fs from 'fs'
+import path from 'path'
 import CourseLevel from '../models/CourseLevel.js'
 import UserProgress from '../models/UserProgress.js'
 import User from '../models/User.js'
@@ -681,6 +683,34 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
   }
 })
 
+// Get user's best submission for a problem
+router.get('/submission/best', authenticateToken, async (req, res) => {
+  try {
+    const { domainId, docId } = req.query
+    const userId = req.user.id
+    
+    if (!docId) return res.status(400).json({ error: 'Missing docId' })
+
+    const query = { 
+        uid: userId, 
+        pid: isNaN(docId) ? docId : Number(docId), 
+        status: 1 // Accepted
+    }
+    if (domainId) query.domainId = domainId
+
+    // Find the latest AC submission
+    const submission = await Submission.findOne(query).sort({ submitAt: -1 })
+    
+    if (submission) {
+        return res.json({ code: submission.code })
+    } else {
+        return res.json({ code: null })
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // --- Admin Routes ---
 
 // Create a Level
@@ -1091,6 +1121,55 @@ router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(
     await level.save()
     res.json(level)
   } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Upload generated courseware (HTML)
+router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { htmlContent, level, topicTitle, chapterTitle, filename } = req.body
+    if (!htmlContent) return res.status(400).json({ error: 'Missing content' })
+
+    let relativePath = ''
+    let fullPath = ''
+
+    // Helper to sanitize filenames
+    const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '')
+
+    if (level && topicTitle && chapterTitle) {
+        // New structure: /public/courseware/level{N}/{topic}/{chapter}.html
+        const safeLevel = 'level' + sanitize(String(level))
+        const safeTopic = sanitize(topicTitle)
+        const safeChapter = sanitize(chapterTitle) + '.html'
+        
+        const baseDir = path.join(process.cwd(), 'server', 'public', 'courseware')
+        const targetDir = path.join(baseDir, safeLevel, safeTopic)
+        
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true })
+        }
+        
+        fullPath = path.join(targetDir, safeChapter)
+        relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`
+    } else {
+        // Fallback to old behavior
+        const safeFilename = (filename ? sanitize(filename) : 'generated') + '_' + Date.now() + '.html'
+        const publicDir = path.join(process.cwd(), 'server', 'public', 'courseware', 'generated')
+        
+        if (!fs.existsSync(publicDir)) {
+          fs.mkdirSync(publicDir, { recursive: true })
+        }
+    
+        fullPath = path.join(publicDir, safeFilename)
+        relativePath = `/public/courseware/generated/${safeFilename}`
+    }
+
+    fs.writeFileSync(fullPath, htmlContent, 'utf8')
+
+    res.json({ url: relativePath })
+  } catch (e) {
+    console.error('Upload Courseware Error:', e)
     res.status(500).json({ error: e.message })
   }
 })

@@ -50,6 +50,7 @@ app.use('/api/public', express.static(path.join(__dirname, 'public')))
 app.use(requestLogger)
 
 // --- Routes ---
+console.log('Registering routes...')
 app.use('/api', authRoutes)
 app.use('/api', chatRoutes)
 app.use('/api', aiRoutes)
