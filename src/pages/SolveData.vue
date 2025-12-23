@@ -761,12 +761,12 @@ echo ==========================================
 echo.
 
 for /d %%D in (*) do (
-    if exist "%%D\\run.bat" (
+    if exist "%%D\\run.py" (
         echo ------------------------------------------
         echo Entering directory: %%D
         echo ------------------------------------------
         pushd "%%D"
-        call run.bat
+        python run.py
         popd
         echo.
     )
@@ -776,7 +776,6 @@ echo.
 echo ==========================================
 echo      All Tasks Completed
 echo ==========================================
-pause
 `
         masterZip.file('run_all_tasks.bat', runAllBat)
         
