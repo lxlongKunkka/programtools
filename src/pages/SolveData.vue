@@ -750,6 +750,35 @@ export default {
             folder.file('solution.md', task.codeOutput)
           }
         }
+
+        // 添加批量运行脚本
+        const runAllBat = `@echo off
+chcp 65001
+title Batch Runner
+echo ==========================================
+echo      Batch Runner for All Tasks
+echo ==========================================
+echo.
+
+for /d %%D in (*) do (
+    if exist "%%D\\run.bat" (
+        echo ------------------------------------------
+        echo Entering directory: %%D
+        echo ------------------------------------------
+        pushd "%%D"
+        call run.bat
+        popd
+        echo.
+    )
+)
+
+echo.
+echo ==========================================
+echo      All Tasks Completed
+echo ==========================================
+pause
+`
+        masterZip.file('run_all_tasks.bat', runAllBat)
         
         const blob = await masterZip.generateAsync({ type: 'blob' })
         const url = URL.createObjectURL(blob)
@@ -1811,24 +1840,28 @@ def main():
             import yaml
             
             # 读取 problem.yaml 获取题目标题
-            zip_name = "problem"
-            if os.path.exists('problem.yaml'):
-                try:
-                    with open('problem.yaml', 'r', encoding='utf-8') as f:
-                        yaml_content = yaml.safe_load(f)
-                        if yaml_content and 'title' in yaml_content:
-                            zip_name = yaml_content['title']
-                            print(f"题目标题: {zip_name}")
-                except:
-                    print("[!] 无法读取 problem.yaml，使用默认名称")
-            else:
-                print("[!] problem.yaml 不存在，使用默认名称")
+            # zip_name = "problem"
+            # if os.path.exists('problem.yaml'):
+            #     try:
+            #         with open('problem.yaml', 'r', encoding='utf-8') as f:
+            #             yaml_content = yaml.safe_load(f)
+            #             if yaml_content and 'title' in yaml_content:
+            #                 zip_name = yaml_content['title']
+            #                 print(f"题目标题: {zip_name}")
+            #     except:
+            #         print("[!] 无法读取 problem.yaml，使用默认名称")
+            # else:
+            #     print("[!] problem.yaml 不存在，使用默认名称")
+            
+            # 使用当前目录名作为文件名，以保留序号
+            current_dir_name = os.path.basename(os.getcwd())
+            zip_name = current_dir_name + "ed"
             
             # 创建 zip 文件名（去除特殊字符）
             import re
-            if not zip_name:
-                zip_name = "problem"
-            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', str(zip_name)) + "ed"
+            # if not zip_name:
+            #     zip_name = "problem"
+            zip_name = re.sub(r'[\\\\/:*?\\"<>|]', '_', str(zip_name))
             zip_path = os.path.join('..', f"{zip_name}.zip")
             
             print(f"\\n正在打包到: {zip_path}")
