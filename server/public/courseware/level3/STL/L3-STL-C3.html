@@ -1079,3 +1079,77 @@ int main() {
             
             // 隐藏当前页
             const currentEl = document.getElementById(`slide${currentSlide}`);
+            currentEl.classList.remove('active');
+            
+            // 更新当前页码
+            currentSlide = newPage;
+            
+            // 显示新页 + 强制滚动到顶部
+            const newEl = document.getElementById(`slide${currentSlide}`);
+            newEl.scrollTop = 0; // 强制复位滚动条
+            newEl.classList.add('active');
+            
+            // 更新按钮状态
+            updateBtnStatus();
+        }
+
+        // 复制代码功能
+        function copyCode(btn) {
+            const pre = btn.nextElementSibling;
+            const code = pre.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.innerHTML = "<i class='fas fa-check'></i>已复制";
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerHTML = "<i class='fas fa-copy'></i>复制代码";
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(() => {
+                btn.innerHTML = "<i class='fas fa-times'></i>复制失败";
+                setTimeout(() => {
+                    btn.innerHTML = "<i class='fas fa-copy'></i>复制代码";
+                }, 2000);
+            });
+        }
+
+        // 键盘控制（仅保留按钮/键盘翻页）
+        document.addEventListener('keydown', (e) => {
+            // 左/右方向键翻页
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                changeSlide(-1);
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                changeSlide(1);
+            }
+            
+            // F11全屏
+            if (e.key === 'F11') {
+                e.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // 禁用滚轮翻页（核心：仅保留页面内滚动）
+        document.querySelectorAll('.slide').forEach(slide => {
+            slide.addEventListener('wheel', (e) => {
+                // 仅允许页面内滚动，不触发任何翻页逻辑
+                e.stopPropagation();
+            });
+        });
+
+        // 初始化：更新按钮状态 + 所有页面滚动到顶部
+        window.addEventListener('load', () => {
+            updateBtnStatus();
+            document.querySelectorAll('.slide').forEach(slide => {
+                slide.scrollTop = 0;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -106,9 +106,28 @@
 
     <!-- 右侧分栏输出区域 -->
     <div class="output-panel new-output-panel">
-      <div v-if="problemMeta" class="problem-meta-display">
-        <div class="meta-title">{{ problemMeta.title || '未命名题目' }}</div>
-        <div class="meta-tags" v-if="problemMeta.tags && problemMeta.tags.length">
+      <div class="problem-meta-display">
+        <div class="meta-row" style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+           <input 
+             v-if="problemMeta" 
+             v-model="problemMeta.title" 
+             class="meta-title-input" 
+             placeholder="题目标题"
+             style="flex:1; font-size:16px; font-weight:bold; padding:4px 8px; border:1px solid #ddd; border-radius:4px;"
+           />
+           <div v-else style="flex:1; color:#888; font-style:italic;">暂无标题信息</div>
+           
+           <button 
+             @click="generateTitle" 
+             :disabled="isGeneratingTitle || !problemText" 
+             class="btn-small" 
+             style="white-space:nowrap;"
+             title="AI 自动总结标题"
+           >
+             {{ isGeneratingTitle ? '生成中...' : '✨ 总结标题' }}
+           </button>
+        </div>
+        <div class="meta-tags" v-if="problemMeta && problemMeta.tags && problemMeta.tags.length">
           <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
         </div>
       </div>
@@ -178,6 +197,7 @@ export default {
       models: [],
       language: 'C++',
       isGenerating: false,
+      isGeneratingTitle: false,
       activeTab: 'code',
       manualCodeMode: false,
       manualCode: '',
@@ -360,7 +380,7 @@ export default {
     },
     
     getTaskTitle(task) {
-      if (task.problemMeta && task.problemMeta.title) return task.problemMeta.title
+      if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') return task.problemMeta.title
       if (task.problemText) {
         const lines = task.problemText.split('\n').filter(l => l.trim())
         if (lines.length > 0) return lines[0].slice(0, 20) + (lines[0].length > 20 ? '...' : '')
@@ -493,13 +513,13 @@ export default {
           const task = completedTasks[i]
           // 智能提取标题
           let title = `task_${task.id}`
-          if (task.problemMeta && task.problemMeta.title) {
+          if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') {
             title = task.problemMeta.title
           } else {
             // 尝试从文本中提取标题 (类似 generateProblemYaml 的逻辑)
             const src = (task.translationText || task.problemText || '').trim()
             const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
-            const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍)/
+            const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍|题目标题)/
             const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
             
             for (let j = 0; j < lines.length; j++) {
@@ -1194,6 +1214,41 @@ export default {
         this.isGenerating = false
       }
     },
+
+    async generateTitle() {
+      if (!this.problemText.trim()) {
+        this.showToastMessage('请先输入题目描述')
+        return
+      }
+      
+      this.isGeneratingTitle = true
+      try {
+        // 优先使用翻译后的文本，如果没有则使用原文
+        const textToUse = (this.translationText && this.translationText.trim()) 
+          ? this.translationText 
+          : this.problemText
+          
+        const res = await request('/api/generate-problem-meta', {
+          method: 'POST',
+          body: JSON.stringify({
+            text: textToUse,
+            model: this.selectedModel
+          })
+        })
+        
+        if (res && res.title) {
+          this.problemMeta = res
+          this.showToastMessage('✅ 标题已更新')
+        } else {
+          this.showToastMessage('未能生成有效标题')
+        }
+      } catch (e) {
+        console.error('Generate title error:', e)
+        this.showToastMessage('生成标题失败: ' + e.message)
+      } finally {
+        this.isGeneratingTitle = false
+      }
+    },
     
     copyCode() {
       const textToCopy = this.manualCodeMode ? this.manualCode : this.codeOutput
@@ -1384,6 +1439,11 @@ export default {
               break
             }
           }
+          
+          // 兜底逻辑：如果未提取到代码块，但内容不为空且不含 Markdown 标记，视为纯代码
+          if (!stdCode && sourceContent.trim() && !sourceContent.includes('```')) {
+             stdCode = sourceContent.trim()
+          }
         }
         
         const scriptPatterns = [
@@ -1441,7 +1501,7 @@ export default {
         
         if (!stdCode || !dataScript) {
           let errorMsg = '无法提取代码或脚本：\n'
-          if (!stdCode) errorMsg += isManualMode
+          if (!stdCode) errorMsg += useManualCode
             ? '- 手动输入的代码为空\n' 
             : '- 未找到有效的 AC 代码块\n'
           if (!dataScript) errorMsg += '- 未找到有效的 Python 脚本块\n'

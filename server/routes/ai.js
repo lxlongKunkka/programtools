@@ -138,7 +138,30 @@ router.post('/translate', checkModelPermission, async (req, res) => {
         // Extract title: First line starting with #
         const titleMatch = fixed.match(/^#\s+(.+)$/m)
         if (titleMatch) {
-          meta.title = titleMatch[1].trim()
+          let extractedTitle = titleMatch[1].trim()
+          
+          // Fix: If title is literally "题目标题", look for the next non-empty line
+          if (extractedTitle === '题目标题' || extractedTitle === 'Title') {
+             const matchIndex = titleMatch.index + titleMatch[0].length
+             const remainingText = fixed.substring(matchIndex)
+             // Find first non-empty line that doesn't start with #
+             const nextLineMatch = remainingText.match(/^\s*([^#\s].*)$/m)
+             if (nextLineMatch) {
+                extractedTitle = nextLineMatch[1].trim()
+             } else {
+                // If still not found, clear it to avoid showing "题目标题"
+                extractedTitle = ''
+             }
+          }
+          
+          // Fix: If title is like "题目标题：Real Title"
+          if (/^题目标题[:：]/.test(extractedTitle)) {
+             extractedTitle = extractedTitle.replace(/^题目标题[:：]\s*/, '')
+          }
+          
+          if (extractedTitle === '题目标题') extractedTitle = ''
+          
+          meta.title = extractedTitle
         }
 
         // Extract tags: Content after ### 算法标签
