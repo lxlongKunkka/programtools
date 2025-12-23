@@ -662,10 +662,15 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
 
-    const { problem, code, model } = req.body
+    const { problem, code, reference, model } = req.body
     if (!problem) return res.status(400).json({ error: '缺少 problem 字段' })
 
     const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）'
+    
+    let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`
+    if (reference && reference.trim()) {
+      userContent += `\n\n参考思路/提示：\n${reference.trim()}`
+    }
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
@@ -673,7 +678,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 
     const messages = [
       { role: 'system', content: SOLUTION_REPORT_PROMPT },
-      { role: 'user', content: `题目描述：\n${problem}\n\n代码：\n${codeContent}` }
+      { role: 'user', content: userContent }
     ]
 
     const payload = {

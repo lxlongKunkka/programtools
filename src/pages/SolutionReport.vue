@@ -20,7 +20,7 @@
 
     <div class="content-area">
       <div class="input-panel">
-        <div class="input-section">
+        <div class="input-section" style="flex: 2">
           <label class="section-label">📝 题目描述</label>
           <textarea 
             v-model="problemText" 
@@ -28,7 +28,15 @@
             :disabled="loading"
           ></textarea>
         </div>
-        <div class="input-section">
+        <div class="input-section" style="flex: 1">
+          <label class="section-label">💡 参考思路 (可选)</label>
+          <textarea 
+            v-model="referenceText" 
+            placeholder="输入解题思路或提示..."
+            :disabled="loading"
+          ></textarea>
+        </div>
+        <div class="input-section" style="flex: 2">
           <label class="section-label">💻 AC 代码</label>
           <textarea 
             v-model="codeText" 
@@ -63,6 +71,7 @@ export default {
     return {
       problemText: '',
       codeText: '',
+      referenceText: '',
       resultHtml: '',
       loading: false,
       model: 'gemini-2.0-flash',
@@ -97,6 +106,7 @@ export default {
         const reportData = JSON.parse(reportDataStr);
         if (reportData.problem) this.problemText = reportData.problem;
         if (reportData.code) this.codeText = reportData.code;
+        if (reportData.reference) this.referenceText = reportData.reference;
         
         // 清除数据
         localStorage.removeItem('solution_report_data');
@@ -122,6 +132,7 @@ export default {
         const res = await request.post('/api/solution-report', {
           problem: this.problemText,
           code: this.codeText,
+          reference: this.referenceText,
           model: this.model
         })
         
@@ -139,6 +150,7 @@ export default {
     clear() {
       this.problemText = ''
       this.codeText = ''
+      this.referenceText = ''
       this.resultHtml = ''
     },
     downloadHtml() {
