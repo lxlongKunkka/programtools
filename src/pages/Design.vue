@@ -51,6 +51,14 @@
                   @click="selectNode('chapter', chapter, level, topic)"
                 >
                   <span class="tree-label">{{ chapter.title }}</span>
+                  <div class="tree-meta">
+                    <span class="meta-badge" :class="chapter.contentType === 'html' ? 'badge-html' : 'badge-md'">
+                      {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
+                    </span>
+                    <span v-if="chapter.problemIds && chapter.problemIds.length > 0" class="meta-count" title="题目数量">
+                      {{ chapter.problemIds.length }}题
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -115,11 +123,11 @@
         <div class="ai-assistant-box">
           <div class="ai-header">
             <h3>🤖 AI 章节规划</h3>
-            <span v-if="aiLoading" class="ai-status">{{ aiStatus }}</span>
+            <span v-if="currentAiLoading" class="ai-status">{{ currentAiStatus }}</span>
           </div>
-          <div class="ai-controls" :class="{ disabled: aiLoading }">
-            <button @click="generateTopicDescription" class="btn-ai" :disabled="aiLoading">📝 自动生成描述</button>
-            <button @click="generateTopicChapters" class="btn-ai" :disabled="aiLoading">📑 自动生成章节列表</button>
+          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
+            <button @click="generateTopicDescription" class="btn-ai" :disabled="currentAiLoading">📝 自动生成描述</button>
+            <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
           </div>
         </div>
 
@@ -163,14 +171,14 @@
         <div class="ai-assistant-box">
           <div class="ai-header">
             <h3>🤖 AI 备课助手</h3>
-            <span v-if="aiLoading" class="ai-status">{{ aiStatus }}</span>
+            <span v-if="currentAiLoading" class="ai-status">{{ currentAiStatus }}</span>
           </div>
-          <div class="ai-controls" :class="{ disabled: aiLoading }">
+          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
             <input v-model="aiRequirements" placeholder="输入额外要求 (例如: 多一些生活例子, 侧重C++语法...)" class="form-input ai-input">
             <div class="ai-buttons">
-              <button @click="generateLessonPlan" class="btn-ai" :disabled="aiLoading">📝 生成教案</button>
-              <button @click="generatePPT" class="btn-ai" :disabled="aiLoading">📊 生成 PPT</button>
-              <button @click="generateSolutionReport" class="btn-ai" :disabled="aiLoading">💡 生成题解</button>
+              <button @click="generateLessonPlan" class="btn-ai" :disabled="currentAiLoading">📝 生成教案</button>
+              <button @click="generatePPT" class="btn-ai" :disabled="currentAiLoading">📊 生成 PPT</button>
+              <button @click="generateSolutionReport" class="btn-ai" :disabled="currentAiLoading">💡 生成题解</button>
             </div>
           </div>
         </div>
@@ -203,19 +211,22 @@
           </div>
 
           <!-- Markdown Mode: Split View -->
-          <div v-if="editingChapter.contentType === 'markdown'" class="split-view" style="height: 700px;">
-            <textarea v-model="editingChapter.content" class="form-input code-font" style="height: 100%;"></textarea>
+          <div v-if="editingChapter.contentType === 'markdown' || editingChapter.content" class="split-view" style="height: 700px;">
+            <textarea v-model="editingChapter.content" class="form-input code-font" style="height: 100%;" placeholder="在此输入教案/大纲内容..."></textarea>
             <div class="preview-box" style="height: 100%;">
               <MarkdownViewer :content="editingChapter.content" />
             </div>
           </div>
 
           <!-- HTML Mode: Input or Preview -->
-          <div v-else>
-            <div v-if="!showPreview">
-              <input v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
+          <div v-if="editingChapter.contentType === 'html'">
+            <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
+                <strong>PPT 课件已生成</strong>
+                <div v-if="!showPreview" style="margin-top: 8px;">
+                    <input v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
+                </div>
             </div>
-            <div v-else class="preview-container-large">
+            <div v-if="showPreview" class="preview-container-large">
                <iframe :src="getPreviewUrl(editingChapter.resourceUrl)" class="preview-iframe"></iframe>
             </div>
           </div>
@@ -275,8 +286,8 @@ export default {
 
       // AI State
       aiRequirements: '',
-      aiLoading: false,
-      aiStatus: '',
+      aiLoadingMap: {},
+      aiStatusMap: {},
       
       // Models
       selectedModel: 'gemini-2.5-flash',
@@ -299,6 +310,16 @@ export default {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
       return all.filter(m => m.id === 'gemini-2.0-flash' || m.id === 'gemini-2.5-flash')
+    },
+    currentAiLoading() {
+      if (!this.selectedNode) return false
+      const id = this.selectedNode.id
+      return !!this.aiLoadingMap[id]
+    },
+    currentAiStatus() {
+      if (!this.selectedNode) return ''
+      const id = this.selectedNode.id
+      return this.aiStatusMap[id] || ''
     }
   },
   mounted() {
@@ -635,67 +656,201 @@ export default {
     // --- AI Methods ---
     async generateLessonPlan() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
-      this.aiLoading = true
-      this.aiStatus = '正在生成教案...'
+      
+      // Capture context
+      const chapterId = this.editingChapter._id || this.editingChapter.id
+      const levelId = this.editingLevelForChapter._id
+      const topicId = this.editingTopicForChapter._id
+      const levelNum = this.editingLevelForChapter.level
+      const topicTitle = this.editingTopicForChapter.title
+      const chapterTitle = this.editingChapter.title
+      const requirements = this.aiRequirements
+      const model = this.selectedModel
+
+      this.aiLoadingMap[chapterId] = true
+      this.aiStatusMap[chapterId] = '正在生成教案...'
+      
       try {
         const res = await request('/api/lesson-plan', {
           method: 'POST',
           body: JSON.stringify({
-            topic: this.editingChapter.title,
-            context: this.editingTopicForChapter ? this.editingTopicForChapter.title : '',
-            level: `Level ${this.editingLevelForChapter.level}`,
-            requirements: this.aiRequirements,
-            model: this.selectedModel
+            topic: chapterTitle,
+            context: topicTitle,
+            level: `Level ${levelNum}`,
+            requirements: requirements,
+            model: model
           })
         })
-        this.editingChapter.content = res.content
-        this.editingChapter.contentType = 'markdown'
-        this.showToastMessage('教案生成成功')
+        
+        const newContent = res.content;
+
+        // Auto-save to Backend
+        let chapterToSave = null;
+        const levelObj = this.levels.find(l => l._id === levelId);
+        if (levelObj && levelObj.topics) {
+            const topicObj = levelObj.topics.find(t => t._id === topicId);
+            if (topicObj && topicObj.chapters) {
+                chapterToSave = topicObj.chapters.find(c => (c.id === chapterId || c._id === chapterId));
+            }
+        }
+
+        if (chapterToSave) {
+            // Update local source of truth
+            chapterToSave.content = newContent;
+            chapterToSave.contentType = 'markdown';
+
+            // Prepare payload
+            const payload = {
+                id: chapterToSave.id,
+                title: chapterToSave.title,
+                content: newContent,
+                contentType: 'markdown',
+                resourceUrl: chapterToSave.resourceUrl,
+                optional: chapterToSave.optional,
+                problemIds: []
+            };
+
+            if (chapterToSave.problemIds && Array.isArray(chapterToSave.problemIds)) {
+                payload.problemIds = chapterToSave.problemIds.map(p => {
+                    if (typeof p === 'object' && p) {
+                        return (p.domainId && p.domainId !== 'system') ? `${p.domainId}:${p.docId}` : p.docId;
+                    }
+                    return p;
+                });
+            }
+
+            await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+        }
+
+        // Update View if still selected
+        if (this.editingChapter && (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId)) {
+            this.editingChapter.content = newContent;
+            this.editingChapter.contentType = 'markdown';
+        }
+
+        this.showToastMessage(`"${chapterTitle}" 教案生成并自动保存成功`)
       } catch (e) {
         this.showToastMessage('生成失败: ' + e.message)
       } finally {
-        this.aiLoading = false
-        this.aiStatus = ''
+        this.aiLoadingMap[chapterId] = false
+        this.aiStatusMap[chapterId] = ''
       }
     },
 
     async generatePPT() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
-      this.aiLoading = true
-      this.aiStatus = '正在生成 PPT...'
+      
+      // Capture context to handle navigation during generation
+      const chapterId = this.editingChapter._id || this.editingChapter.id
+      const levelId = this.editingLevelForChapter._id
+      const topicId = this.editingTopicForChapter._id
+      const levelNum = this.editingLevelForChapter.level
+      const topicTitle = this.editingTopicForChapter.title
+      const chapterTitle = this.editingChapter.title
+      const model = this.selectedModel
+      const chapterContent = this.editingChapter.content
+      const requirements = this.aiRequirements
+
+      // Gather full chapter list for context
+      let chapterList = []
+      let currentChapterIndex = -1
+      if (this.editingTopicForChapter && this.editingTopicForChapter.chapters) {
+          chapterList = this.editingTopicForChapter.chapters.map(c => c.title)
+          currentChapterIndex = this.editingTopicForChapter.chapters.findIndex(c => c.id === chapterId || c._id === chapterId)
+      }
+
+      this.aiLoadingMap[chapterId] = true
+      this.aiStatusMap[chapterId] = '正在生成 PPT...'
+      
       try {
         // 1. Generate HTML
         const res = await request('/api/generate-ppt', {
           method: 'POST',
           body: JSON.stringify({
-            topic: this.editingChapter.title,
-            context: this.editingTopicForChapter ? this.editingTopicForChapter.title : '',
-            level: `Level ${this.editingLevelForChapter.level}`,
-            model: this.selectedModel
+            topic: chapterTitle,
+            context: topicTitle,
+            level: `Level ${levelNum}`,
+            model: model,
+            chapterList: chapterList,
+            currentChapterIndex: currentChapterIndex,
+            chapterContent: chapterContent,
+            requirements: requirements
           })
         })
         
         // 2. Upload HTML
-        this.aiStatus = '正在保存课件...'
+        this.aiStatusMap[chapterId] = '正在保存课件...'
         const uploadRes = await request('/api/course/upload-courseware', {
           method: 'POST',
           body: JSON.stringify({
             htmlContent: res.content,
-            level: this.editingLevelForChapter.level,
-            topicTitle: this.editingTopicForChapter.title,
-            chapterTitle: this.editingChapter.title,
-            filename: `ppt_${this.editingChapter.title}` // Fallback
+            level: levelNum,
+            topicTitle: topicTitle,
+            chapterTitle: chapterTitle,
+            filename: `ppt_${chapterTitle}`
           })
         })
 
-        this.editingChapter.resourceUrl = uploadRes.url
-        this.editingChapter.contentType = 'html'
-        this.showToastMessage('PPT 生成并保存成功')
+        // 3. Auto-save to Backend (Update Chapter)
+        // Find the chapter in the local tree to get its current state (problemIds, etc.)
+        let chapterToSave = null;
+        const levelObj = this.levels.find(l => l._id === levelId);
+        if (levelObj && levelObj.topics) {
+            const topicObj = levelObj.topics.find(t => t._id === topicId);
+            if (topicObj && topicObj.chapters) {
+                chapterToSave = topicObj.chapters.find(c => (c.id === chapterId || c._id === chapterId));
+            }
+        }
+
+        if (chapterToSave) {
+            // Update local source of truth
+            chapterToSave.resourceUrl = uploadRes.url;
+            chapterToSave.contentType = 'html';
+            // Important: Update content from the editor state, not the stale tree state
+            chapterToSave.content = this.editingChapter.content;
+
+            // Prepare payload for API
+            const payload = {
+                id: chapterToSave.id,
+                title: chapterToSave.title,
+                content: this.editingChapter.content, // Use current editor content
+                contentType: 'html',
+                resourceUrl: uploadRes.url,
+                optional: chapterToSave.optional,
+                problemIds: []
+            };
+
+            // Handle problemIds formatting
+            if (chapterToSave.problemIds && Array.isArray(chapterToSave.problemIds)) {
+                payload.problemIds = chapterToSave.problemIds.map(p => {
+                    if (typeof p === 'object' && p) {
+                        return (p.domainId && p.domainId !== 'system') ? `${p.domainId}:${p.docId}` : p.docId;
+                    }
+                    return p;
+                });
+            }
+
+            await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+        }
+
+        // 4. Update View if user is still on the same chapter
+        if (this.editingChapter && (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId)) {
+            this.editingChapter.resourceUrl = uploadRes.url;
+            this.editingChapter.contentType = 'html';
+        }
+
+        this.showToastMessage(`"${chapterTitle}" PPT 生成并自动保存成功`)
       } catch (e) {
         this.showToastMessage('生成失败: ' + e.message)
       } finally {
-        this.aiLoading = false
-        this.aiStatus = ''
+        this.aiLoadingMap[chapterId] = false
+        this.aiStatusMap[chapterId] = ''
       }
     },
 
@@ -706,8 +861,9 @@ export default {
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
 
-      this.aiLoading = true
-      this.aiStatus = '正在获取题目信息...'
+      const id = this.editingChapter._id || this.editingChapter.id
+      this.aiLoadingMap[id] = true
+      this.aiStatusMap[id] = '正在获取题目信息...'
       
       try {
         // 1. Fetch problem details
@@ -770,7 +926,7 @@ export default {
         }
 
         // 2. Generate Report (Background Mode)
-        this.aiStatus = '正在提交后台生成任务...'
+        this.aiStatusMap[id] = '正在提交后台生成任务...'
         
         await request.post('/api/solution-report/background', {
             problem: problemText,
@@ -784,7 +940,7 @@ export default {
             model: this.selectedModel
         })
         
-        this.aiStatus = ''
+        this.aiStatusMap[id] = ''
         this.showToastMessage('后台生成任务已提交！您可以关闭页面，稍后刷新查看结果。')
         
         /* Legacy Synchronous Mode
@@ -815,21 +971,33 @@ export default {
       } catch (e) {
         this.showToastMessage('生成失败: ' + e.message)
       } finally {
-        this.aiLoading = false
-        this.aiStatus = ''
+        this.aiLoadingMap[id] = false
+        this.aiStatusMap[id] = ''
       }
     },
 
     async generateTopicDescription() {
       if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
-      this.aiLoading = true
-      this.aiStatus = '正在生成描述...'
+      
+      // Capture the ID and Title of the topic being generated to handle context switching
+      const targetTopicId = this.editingTopic._id || this.editingTopic.id;
+      const targetTopicTitle = this.editingTopic.title;
+
+      this.aiLoadingMap[targetTopicId] = true
+      this.aiStatusMap[targetTopicId] = '正在生成描述...'
       try {
+        // Prepare existing chapters info
+        const existingChapters = (this.editingTopic.chapters || []).map(c => ({
+            title: c.title,
+            contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
+        }))
+
         const res = await request('/api/topic-plan', {
           method: 'POST',
           body: JSON.stringify({
             topic: this.editingTopic.title,
             level: `Level ${this.editingLevelForTopic.level}`,
+            existingChapters: existingChapters,
             mode: 'description',
             model: this.selectedModel
           })
@@ -841,21 +1009,49 @@ export default {
             return
         }
 
-        this.editingTopic.description = description
-        this.showToastMessage('描述生成成功，请点击保存')
+        // 1. Update the source of truth (this.levels)
+        // Find the topic in the levels tree
+        let topicFound = false;
+        for (const level of this.levels) {
+            if (level.topics) {
+                const topic = level.topics.find(t => (t._id === targetTopicId || t.id === targetTopicId));
+                if (topic) {
+                    topic.description = description;
+                    topicFound = true;
+                    break;
+                }
+            }
+        }
+
+        // 2. Check context to decide how to update view and notify user
+        const isSameNode = this.selectedNode && this.selectedNode.type === 'topic' && 
+           (this.editingTopic._id === targetTopicId || this.editingTopic.id === targetTopicId);
+        const isOnDesignPage = this.$route.path === '/design';
+
+        if (isSameNode) {
+            this.editingTopic.description = description;
+        }
+
+        if (isSameNode && isOnDesignPage) {
+            this.showToastMessage('描述生成成功，请点击保存');
+        } else {
+            // If user navigated away (different node OR different page), notify them
+            this.showToastMessage(`"${targetTopicTitle}" 的描述已生成 (后台更新)`);
+        }
         
       } catch (e) {
         this.showToastMessage('生成失败: ' + e.message)
       } finally {
-        this.aiLoading = false
-        this.aiStatus = ''
+        this.aiLoadingMap[targetTopicId] = false
+        this.aiStatusMap[targetTopicId] = ''
       }
     },
 
     async generateTopicChapters() {
       if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
-      this.aiLoading = true
-      this.aiStatus = '正在规划章节...'
+      const id = this.editingTopic._id || this.editingTopic.id
+      this.aiLoadingMap[id] = true
+      this.aiStatusMap[id] = '正在规划章节...'
       try {
         const res = await request('/api/topic-plan', {
           method: 'POST',
@@ -887,14 +1083,17 @@ export default {
         
         // So we must call POST /chapters for each new chapter.
         
-        this.aiStatus = `正在创建 ${newChapters.length} 个章节...`
+        this.aiStatusMap[id] = `正在创建 ${newChapters.length} 个章节...`
         
         for (let i = 0; i < newChapters.length; i++) {
-            const title = newChapters[i]
+            const chapterItem = newChapters[i]
+            const title = typeof chapterItem === 'string' ? chapterItem : chapterItem.title
+            const content = (typeof chapterItem === 'object' && chapterItem.content) ? chapterItem.content : ''
+
             const chapterData = {
                 id: `${this.editingLevelForTopic.level}-${Date.now()}-${i}`, // Temp ID, server will renumber
                 title: title,
-                content: '',
+                content: content,
                 contentType: 'markdown',
                 optional: false,
                 problemIds: []
@@ -912,8 +1111,8 @@ export default {
       } catch (e) {
         this.showToastMessage('规划失败: ' + e.message)
       } finally {
-        this.aiLoading = false
-        this.aiStatus = ''
+        this.aiLoadingMap[id] = false
+        this.aiStatusMap[id] = ''
       }
     },
 
@@ -935,221 +1134,369 @@ export default {
 </script>
 
 <style scoped>
+/* Variables & Reset */
 .design-container {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary-color: #64748b;
+  --success-color: #10b981;
+  --danger-color: #ef4444;
+  --bg-color: #f3f4f6;
+  --sidebar-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #1e293b;
+  --text-secondary: #64748b;
+  --active-bg: #eef2ff;
+  --active-border: #4f46e5;
+  
   display: flex;
-  height: calc(100vh - 60px); /* Adjust based on header height */
+  height: calc(100vh - 60px);
   overflow: hidden;
-  background: #f5f7fa;
+  background: var(--bg-color);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-main);
 }
 
 /* Sidebar */
 .sidebar {
   width: 320px;
   min-width: 320px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+  z-index: 10;
 }
 
 .sidebar-header {
-  padding: 15px;
-  border-bottom: 1px solid #eee;
-  background: #fcfcfc;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: #fff;
 }
+
 .sidebar-header h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #2c3e50;
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.subject-selector {
+  margin-bottom: 12px;
+}
+
 .subject-select {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: #f8fafc;
+  transition: all 0.2s;
+  cursor: pointer;
 }
+.subject-select:hover { border-color: #cbd5e1; }
+.subject-select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
 .btn-add-level {
   width: 100%;
-  padding: 8px;
-  background: #2ecc71;
+  padding: 10px;
+  background: var(--success-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
-.btn-add-level:hover { background: #27ae60; }
+.btn-add-level:hover { background: #059669; transform: translateY(-1px); }
+.btn-add-level:active { transform: translateY(0); }
 
 .tree-container {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 0;
+  padding: 12px;
+}
+
+/* Scrollbar Styling */
+.tree-container::-webkit-scrollbar,
+.editor-panel::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.tree-container::-webkit-scrollbar-thumb,
+.editor-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.tree-container::-webkit-scrollbar-track,
+.editor-panel::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Tree Items */
+.tree-node-level { margin-bottom: 4px; }
+
 .tree-item {
   padding: 8px 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background 0.1s;
-  user-select: none;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  position: relative;
 }
-.tree-item:hover { background: #f0f2f5; }
-.tree-item.active { background: #e3f2fd; color: #1976d2; border-right: 3px solid #1976d2; }
+
+.tree-item:hover { background: #f1f5f9; }
+.tree-item.active { 
+  background: var(--active-bg); 
+  color: var(--primary-color); 
+  border-color: rgba(79, 70, 229, 0.1);
+}
+.tree-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--primary-color);
+  border-radius: 0 3px 3px 0;
+}
 
 .tree-icon {
-  width: 20px;
-  text-align: center;
-  color: #999;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
   font-size: 10px;
-  margin-right: 5px;
+  margin-right: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
+.tree-item:hover .tree-icon { color: #64748b; }
+.tree-icon:hover { background: rgba(0,0,0,0.05); }
+
 .tree-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 1.5;
 }
+
 .tree-actions {
   display: none;
+  margin-left: 8px;
 }
-.tree-item:hover .tree-actions {
-  display: block;
-}
-.btn-icon {
-  background: none;
-  border: none;
-  color: #666;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 0 5px;
-}
-.btn-icon:hover { color: #3498db; }
+.tree-item:hover .tree-actions { display: flex; }
 
-.level-item { font-weight: 600; color: #2c3e50; }
-.topic-item { padding-left: 25px; font-size: 14px; }
-.chapter-item { padding-left: 45px; font-size: 13px; color: #555; }
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-icon:hover { 
+  color: var(--primary-color); 
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+.level-item { font-weight: 600; color: var(--text-main); }
+.topic-item { padding-left: 28px; font-size: 13.5px; color: #334155; }
+.chapter-item { padding-left: 48px; font-size: 13px; color: #475569; }
 
 .empty-node {
-  padding-left: 45px;
+  padding-left: 48px;
   font-size: 12px;
-  color: #ccc;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  color: #94a3b8;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-style: italic;
 }
 
 /* Editor Panel */
 .editor-panel {
   flex: 1;
-  padding: 30px;
+  padding: 40px;
   overflow-y: auto;
-  background: #fff;
+  background: #f8fafc;
 }
+
+.editor-form {
+  max-width: 1600px;
+  margin: 0 auto;
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
 .empty-state {
   display: flex;
+  flex-direction: column;
   height: 100%;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: #94a3b8;
+  text-align: center;
+}
+.empty-state p {
   font-size: 16px;
+  margin-top: 16px;
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
 }
-.editor-header h2 { margin: 0; font-size: 20px; color: #2c3e50; }
+.editor-header h2 { 
+  margin: 0; 
+  font-size: 24px; 
+  font-weight: 700;
+  color: var(--text-main); 
+  letter-spacing: -0.5px;
+}
 
-.header-actions { display: flex; gap: 10px; align-items: center; }
-.move-actions { display: flex; gap: 5px; margin-right: 10px; }
+.header-actions { display: flex; gap: 12px; align-items: center; }
+.move-actions { display: flex; gap: 8px; margin-right: 12px; padding-right: 12px; border-right: 1px solid var(--border-color); }
 
 .model-select {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-right: 10px;
-  font-size: 14px;
-  background-color: #fff;
-  color: #333;
-  min-width: 150px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  background-color: #f8fafc;
+  color: var(--text-main);
+  min-width: 160px;
+  cursor: pointer;
 }
+.model-select:focus { border-color: var(--primary-color); outline: none; }
 
 .btn-save {
-  padding: 8px 20px;
-  background: #3498db;
+  padding: 8px 24px;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
 }
-.btn-save:hover { background: #2980b9; }
+.btn-save:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3); }
+.btn-save:active { transform: translateY(0); }
+
 .btn-delete {
-  padding: 8px 15px;
-  background: #fff;
-  color: #e74c3c;
-  border: 1px solid #e74c3c;
-  border-radius: 4px;
+  padding: 8px 16px;
+  background: white;
+  color: var(--danger-color);
+  border: 1px solid #fecaca;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s;
 }
-.btn-delete:hover { background: #fceae9; }
+.btn-delete:hover { background: #fef2f2; border-color: var(--danger-color); }
+
 .btn-small {
-  padding: 5px 10px;
+  padding: 6px 12px;
   font-size: 12px;
-  border-radius: 3px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: var(--text-secondary);
   cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
 }
-.btn-move:hover { background: #f0f0f0; }
+.btn-small:hover { background: #f8fafc; color: var(--primary-color); border-color: #cbd5e1; }
 
 /* Forms */
-.form-group { margin-bottom: 20px; }
-.form-row { display: flex; gap: 20px; }
+.form-group { margin-bottom: 24px; }
+.form-row { display: flex; gap: 24px; }
 .half { flex: 1; }
 
 .form-group label {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: #555;
+  color: #334155;
   font-size: 14px;
 }
 .form-input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
+  transition: all 0.2s;
+  background: #fff;
 }
-.form-input:focus { border-color: #3498db; outline: none; }
-.form-input.disabled { background: #f9f9f9; color: #999; cursor: not-allowed; }
-.code-font { font-family: Consolas, Monaco, 'Courier New', monospace; }
+.form-input:focus { 
+  border-color: var(--primary-color); 
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); 
+}
+.form-input.disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
+.code-font { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 13px; line-height: 1.6; }
 
-.hint { font-size: 12px; color: #999; margin-top: 5px; display: block; }
+.hint { font-size: 12px; color: #94a3b8; margin-top: 6px; display: block; }
 
 .split-view {
   display: flex;
-  gap: 20px;
-  height: 500px;
+  gap: 24px;
+  height: 600px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
 }
-.split-view .form-input { flex: 1; resize: none; }
+.split-view .form-input { 
+  flex: 1; 
+  resize: none; 
+  border: none; 
+  border-right: 1px solid var(--border-color);
+  border-radius: 0;
+  padding: 16px;
+}
 .preview-box {
   flex: 1;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
-  background: #fafafa;
+  background: #fff;
 }
 
 .label-row {
@@ -1159,87 +1506,176 @@ export default {
   margin-bottom: 8px;
 }
 .preview-container-large {
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   height: 600px;
   background: #fff;
+  overflow: hidden;
 }
 .preview-iframe {
   width: 100%;
   height: 100%;
   border: none;
 }
-.markdown-preview {
-  padding: 20px;
-  height: 100%;
-  overflow-y: auto;
+
+/* Checkbox */
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 /* AI Assistant */
 .ai-assistant-box {
-  background: linear-gradient(135deg, #f6f8ff 0%, #f1f4ff 100%);
-  border: 1px solid #dbe4ff;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
 }
+.ai-assistant-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .ai-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 .ai-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  font-weight: 700;
+  color: #3730a3;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .ai-status {
   font-size: 13px;
-  color: #666;
-  animation: pulse 1.5s infinite;
+  color: #4f46e5;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.ai-status::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4f46e5;
+  animation: pulse-dot 1.5s infinite;
+}
+
 .ai-controls {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .ai-controls.disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   pointer-events: none;
+  filter: grayscale(0.5);
 }
 .ai-input {
   flex: 1;
   margin-bottom: 0 !important;
+  min-width: 200px;
+  border-color: #c7d2fe;
 }
+.ai-input:focus { border-color: #4f46e5; }
+
 .ai-buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 .btn-ai {
-  padding: 8px 15px;
-  background: #6c5ce7;
+  padding: 10px 16px;
+  background: #4f46e5;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13px;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .btn-ai:hover {
-  background: #5b4bc4;
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
 }
+.btn-ai:active { transform: translateY(0); }
 .btn-ai:disabled {
-  background: #a29bfe;
+  background: #a5b4fc;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+@keyframes pulse-dot {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+/* Tree Meta Info */
+.tree-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.meta-badge {
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.badge-md {
+  background-color: #e2e8f0;
+  color: #64748b;
+}
+
+.badge-html {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.meta-count {
+  font-size: 10px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 5px;
+  border-radius: 10px;
 }
 </style>

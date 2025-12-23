@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一维数组 - 概念与特点</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
+        .ppt-container { width: 100%; height: 100%; position: relative; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        
+        /* --- 导航按钮 --- */
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
+        .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
+        #prevBtn { left: 30px; } #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
+        #slideCounter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+
+        /* --- 内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        
+        /* --- 布局组件 --- */
+        .two-columns { display: flex; flex-wrap: wrap; gap: 30px; width: 100%; margin-top: 2vh; }
+        .column { flex: 1; min-width: 280px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .column h4 { margin-top: 0; font-size: clamp(1.1em, 2.2vw, 1.4em); color: #333; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .flow-step { margin-top: 1.5vh; padding-left: 20px; border-left: 3px solid #007aff; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* --- 代码块 --- */
+        pre { background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 0.9em; }
+
+        /* --- 动画演示区域 --- */
+        .animation-area { height: 300px; position: relative; border: 2px dashed #ccc; margin-top: 2vh; padding: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: #fdfdfd; }
+        .anim-controls { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
+        .anim-btn { padding: 8px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: opacity 0.2s; }
+        .anim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-prev { background-color: #6c757d; }
+        .btn-next { background-color: #007aff; }
+        .btn-reset { background-color: #dc3545; }
+        #stepDescription { margin-top: 15px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007aff; border-radius: 4px; min-height: 40px; font-size: 1.1em; color: #333; }
+
+        /* --- 数组动画特定样式 --- */
+        .array-container { display: flex; justify-content: center; align-items: flex-start; height: 100%; gap: 5px; }
+        .array-element-wrapper { display: flex; flex-direction: column; align-items: center; margin: 0 5px; }
+        .array-element { width: 60px; height: 60px; border: 2px solid #3498db; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2em; background-color: #ecf0f1; border-radius: 4px; transition: all 0.3s ease; }
+        .array-element.current { border-color: #e74c3c; background-color: #fcebeb; transform: scale(1.1); }
+        .array-element.max-found { border-color: #27ae60; background-color: #e8f9ed; }
+        .array-index { font-size: 0.8em; color: #555; margin-top: 5px; }
+        .max-indicator { position: absolute; top: 20px; right: 20px; padding: 10px 15px; background-color: #f39c12; color: white; border-radius: 5px; font-weight: bold; font-size: 1.1em; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .max-indicator.updated { animation: pulse 0.5s ease-out; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>一维数组 - 概念与特点</h1>
+                <h3>信奥初探：数据组织的小帮手</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 教学目标 (知识/能力/素养) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎯 教学目标</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📚 知识与技能</h4>
+                        <ul>
+                            <li>理解一维数组的定义和作用。</li>
+                            <li>掌握一维数组的声明、初始化和访问方法。</li>
+                            <li>能识别一维数组在实际问题中的应用场景。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>💡 过程与方法</h4>
+                        <ul>
+                            <li>通过生活实例类比，抽象出数组概念。</li>
+                            <li>通过代码练习，培养动手实践能力。</li>
+                            <li>学会分析问题，选择合适的数据结构。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>❤️ 情感态度与价值观：</strong> 培养解决问题的兴趣和耐心，体验数据结构带来的便利性，激发探索编程世界的求知欲。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 趣味引入 (真实场景) -->
+        <div class="slide">
+            <div class="slide-header"><h2>❓ 趣味引入</h2></div>
+            <div class="slide-content">
+                <p><strong>场景描述：</strong></p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>🤔 想象一下...</h4>
+                        <p>你的班级有 <span class="highlight">50个同学</span>，老师想记录每个同学的期末考试成绩。</p>
+                        <p>如果不用数组，我们可能需要声明 <span class="highlight">50个不同的变量</span>：</p>
+                        <pre><code>int score1;
+int score2;
+// ...
+int score50;</code></pre>
+                        <p>这太麻烦了！🤯 如果有1000个同学呢？</p>
+                    </div>
+                    <div class="column">
+                        <h4>💡 思考一下...</h4>
+                        <p>这些成绩都是 <span class="highlight">“整数”</span> 类型，而且都代表 <span class="highlight">“学生成绩”</span>，它们是 <span class="highlight">“同类”</span> 的数据。</p>
+                        <p>有没有一种方法，能把这些“同类”的数据 <span class="highlight">“打包”</span> 放在一起，方便我们统一管理和操作呢？</p>
+                        <p>👉 就像图书馆的书架，每一层放一类书，每一本书都有自己的编号！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 什么是数组？ (Concept Introduction) -->
+        <div class="slide">
+            <div class="slide-header"><h2>📦 什么是数组？</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>🏡 生活中的类比</h4>
+                        <p>数组就像一个 <span class="highlight">“多格子的储物柜”</span> 📦，每个格子都有一个 <span class="highlight">编号（索引）</span>，可以存放 <span class="highlight">同一种类型</span> 的东西。</p>
+                        <ul>
+                            <li><strong>柜子名称：</strong> 数组名</li>
+                            <li><strong>格子编号：</strong> 下标 (从 0 开始哦！)</li>
+                            <li><strong>格子里的东西：</strong> 数组元素（数据）</li>
+                        </ul>
+                        <p>比如，一个放苹果的柜子，你不能把香蕉也放进去！🍎🍎🍎</p>
+                    </div>
+                    <div class="column">
+                        <h4>📚 编程中的定义</h4>
+                        <p>在C++中，数组是存储 <span class="highlight">相同类型数据</span> 的集合。</p>
+                        <p>这些数据在内存中是 <span class="highlight">连续存放</span> 的，每个数据元素都有一个唯一的 <span class="highlight">下标（或索引）</span> 来标识它的位置。</p>
+                        <p><strong>数组的特点：</strong></p>
+                        <ul>
+                            <li>所有元素的数据类型必须相同。</li>
+                            <li>元素在内存中是连续存储的。</li>
+                            <li>通过下标（索引）来访问和操作数组中的元素。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 一维数组的声明与初始化 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🛠️ 一维数组的声明与初始化</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📝 数组的声明</h4>
+                        <p>告诉编译器你要创建一个什么类型的“储物柜”，能放多少个“格子”。</p>
+                        <pre><code>数据类型 数组名[大小];</code></pre>
+                        <p><strong>例子：</strong></p>
+                        <ul>
+                            <li>`int scores[10];`  // 声明一个能放10个整数的数组，名为`scores`。</li>
+                            <li>`char letters[5];` // 声明一个能放5个字符的数组，名为`letters`。</li>
+                        </ul>
+                        <p><strong>类比：</strong> 就像你买了一个空储物柜，还没放东西。</p>
+                    </div>
+                    <div class="column">
+                        <h4>🎁 数组的初始化</h4>
+                        <p>在声明数组的同时，给数组的元素赋初始值。</p>
+                        <pre><code>// 1. 完全初始化
+int scores[3] = {90, 85, 92};
+
+// 2. 部分初始化（未初始化的元素默认为0）
+int ages[5] = {10, 12}; // ages[2], ages[3], ages[4] 会是0
+
+// 3. 不指定大小，编译器自动计算（根据初始化列表）
+double prices[] = {19.9, 24.5, 9.9}; // 数组大小为3</code></pre>
+                        <p><strong>类比：</strong> 你买了一个储物柜，并且马上把东西放了进去。</p>
+                    </div>
+                </div>
+                <p class="conclusion" style="margin-top: 20px;">
+                    <strong>小贴士：</strong> 数组的大小必须是 <span class="highlight">常量表达式</span>，不能是运行时才确定的变量哦！
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 6: 一维数组的访问 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🔍 一维数组的访问与修改</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>🔢 通过下标访问元素</h4>
+                        <p>要取出或修改数组中的某个元素，我们需要使用它的 <span class="highlight">下标（索引）</span>。</p>
+                        <pre><code>数组名[下标];</code></pre>
+                        <p><strong>特别注意：</strong> 数组的下标是从 <span class="highlight">0</span> 开始的！</p>
+                        <ul>
+                            <li>如果数组有 `N` 个元素，那么它的下标范围是 `0` 到 `N-1`。</li>
+                            <li>`arr[0]` 代表第一个元素。</li>
+                            <li>`arr[N-1]` 代表最后一个元素。</li>
+                        </ul>
+                        <p><strong>生活类比：</strong> 储物柜上的标签从0号开始编号，你告诉管理员“请帮我拿0号格子的东西！”</p>
+                    </div>
+                    <div class="column">
+                        <h4>💻 代码示例</h4>
+                        <pre><code>#include &lt;iostream&gt;
+
+int main() {
+    int ages[5] = {10, 12, 11, 13, 10}; // 声明并初始化一个整数数组
+
+    std::cout << "第一个同学的年龄是: " << ages[0] << std::endl; // 输出 10
+    std::cout << "第三个同学的年龄是: " << ages[2] << std::endl; // 输出 11
+
+    // 修改数组元素的值
+    ages[3] = 14; // 将第四个同学的年龄从13修改为14
+    std::cout << "第四个同学的新年龄是: " << ages[3] << std::endl; // 输出 14
+
+    return 0;
+}</code></pre>
+                        <p><strong>思考：</strong> 如果你尝试访问 `ages[5]` 会发生什么？（数组越界，危险！）</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 核心算法演示 - 查找数组最大值 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎬 核心算法演示：查找数组最大值</h2></div>
+            <div class="slide-content">
+                <div class="animation-area" id="animArea">
+                    <!-- 动画元素容器 -->
+                </div>
+                <div id="stepDescription">准备就绪，请点击“下一步”开始演示如何在一个数组中找到最大值。</div>
+                <div class="anim-controls">
+                    <button id="prevStepBtn" class="anim-btn btn-prev">上一步</button>
+                    <button id="nextStepBtn" class="anim-btn btn-next">下一步</button>
+                    <button id="resetBtn" class="anim-btn btn-reset">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 典型例题 1: 统计学生成绩 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📊 典型例题 1: 统计学生成绩</h2></div>
+            <div class="slide-content">
+                <h4>📋 例题描述</h4>
+                <p>假设有 <span class="highlight">5名学生</span> 的成绩，请用一维数组存储这些成绩，并计算他们的 <span class="highlight">总分</span> 和 <span class="highlight">平均分</span>。</p>
+                <h4>🧠 思路分析</h4>
+                <div class="flow-step">
+                    <p>1. <strong>声明数组：</strong> 创建一个 `int` 类型的数组，大小为5，用于存储成绩。</p>
+                    <p>2. <strong>初始化数组：</strong> 将5名学生的成绩赋值给数组元素。</p>
+                    <p>3. <strong>计算总分：</strong> 使用 <span class="highlight">循环</span> 遍历数组的每个元素，将它们累加到一个变量中（总分）。</p>
+                    <p>4. <strong>计算平均分：</strong> 将总分除以学生人数（数组大小）。</p>
+                </div>
+                <h4>💻 代码实现</h4>
+                <pre><code>#include &lt;iostream&gt;
+
+int main() {
+    int scores[5] = {85, 90, 78, 92, 88}; // 存储5名学生成绩
+    int totalScore = 0; // 初始化总分为0
+
+    // 遍历数组，累加每个成绩到 totalScore
+    for (int i = 0; i < 5; ++i) {
+        totalScore += scores[i]; // totalScore = totalScore + scores[i];
+    }
+
+    // 计算平均分，注意类型转换，避免整数除法
+    double averageScore = static_cast&lt;double&gt;(totalScore) / 5;
+
+    std::cout << "学生总分: " << totalScore << std::endl;
+    std::cout << "学生平均分: " << averageScore << std::endl;
+
+    return 0;
+}
+</code></pre>
+            </div>
+        </div>
+
+        <!-- Slide 9: 典型例题 2: 逆序输出数组元素 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🔄 典型例题 2: 逆序输出数组元素</h2></div>
+            <div class="slide-content">
+                <h4>📋 例题描述</h4>
+                <p>给定一个包含若干整数的数组，请编写程序将其中的元素 <span class="highlight">逆序输出</span>。</p>
+                <p>例如：输入 `{1, 2, 3, 4, 5}`，输出 `{5, 4, 3, 2, 1}`。</p>
+                <h4>🧠 思路分析</h4>
+                <div class="flow-step">
+                    <p>1. <strong>声明并初始化数组：</strong> 准备好需要逆序输出的数组。</p>
+                    <p>2. <strong>确定遍历方向：</strong> 平常我们从下标0开始遍历到 `N-1`。要逆序输出，就应该从 <span class="highlight">最后一个元素</span> 开始，向前遍历到 <span class="highlight">第一个元素</span>。</p>
+                    <p>3. <strong>循环输出：</strong> 使用 `for` 循环，将循环变量 `i` 从 `N-1` 递减到 `0`，每次输出 `numbers[i]`。</p>
+                </div>
+                <h4>💻 代码实现</h4>
+                <pre><code>#include &lt;iostream&gt;
+
+int main() {
+    int numbers[5] = {1, 2, 3, 4, 5}; // 待逆序输出的数组
+    int size = sizeof(numbers) / sizeof(numbers[0]); // 计算数组大小
+
+    std::cout << "原始数组: ";
+    for (int i = 0; i < size; ++i) {
+        std::cout << numbers[i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "逆序输出: ";
+    // 从最后一个元素 (size-1) 开始，遍历到第一个元素 (0)
+    for (int i = size - 1; i >= 0; --i) {
+        std::cout << numbers[i] << " ";
+    }
+    std::cout << std::endl;
+
+    return 0;
+}
+</code></pre>
+            </div>
+        </div>
+
+        <!-- Slide 10: 课堂互动 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💬 课堂互动</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>❓ 抢答环节</h4>
+                        <ul>
+                            <li>如果我们要存储班级所有同学的名字（字符串），能用一个 `int` 类型的数组吗？为什么？</li>
+                            <li>数组 `char letters[5] = {'a', 'b', 'c'};` 它的第四个元素是什么？（`letters[3]`）</li>
+                            <li>一个有10个元素的数组，它的最后一个元素的下标是多少？</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>🤝 小组任务</h4>
+                        <p>请小组讨论，并尝试编写代码：</p>
+                        <ol>
+                            <li>如果需要存储 <span class="highlight">一周的每日最高气温数据</span>（7天），你会如何声明和使用数组？</li>
+                            <li>尝试编写C++代码，将这7天的气温数据输入数组，并找出 <span class="highlight">最低气温</span> 是多少。</li>
+                        </ol>
+                        <p>完成后请小组代表分享你们的思路和代码片段！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 练习题目 -->
+        <div class="slide">
+            <div class="slide-header"><h2>✍️ 练习题目</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>⭐ 基础题</h4>
+                        <ol>
+                            <li><strong>数组初始化：</strong> 声明一个可以存储8个浮点数（`double`类型）的数组，并将其所有元素初始化为 `0.0`。</li>
+                            <li><strong>输入与求和：</strong> 编写程序，让用户输入4个整数到一个数组中，然后计算并输出这4个整数的和。</li>
+                        </ol>
+                    </div>
+                    <div class="column">
+                        <h4>🚀 进阶题 (信奥初阶)</h4>
+                        <ol>
+                            <li><strong>统计正负零：</strong> 给定一个整数数组，统计其中正数、负数和零的个数，并输出结果。</li>
+                            <li><strong>相邻元素交换：</strong> 编写程序，将数组中 <span class="highlight">相邻的两个元素</span> 进行交换。例如，如果数组是 `{1, 2, 3, 4, 5, 6}`，交换后变为 `{2, 1, 4, 3, 6, 5}`。</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 总结与展望 -->
+        <div class="slide">
+            <div class="slide-header"><h2>✅ 总结与展望</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📝 本节课我们学到了什么？</h4>
+                        <ul>
+                            <li>一维数组是存储 <span class="highlight">同类型数据</span> 的有序集合。</li>
+                            <li>掌握了数组的 <span class="highlight">声明、初始化和访问</span> 方法。</li>
+                            <li>最重要的特点是：<span class="highlight">下标从 0 开始</span>，到 `N-1` 结束。</li>
+                            <li>数组能极大简化大量同类数据的管理和操作。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>🔮 数组的未来与应用</h4>
+                        <ul>
+                            <li>除了数字，数组还能存储字符、字符串，甚至是其他数组（多维数组）！</li>
+                            <li>数组是许多高级数据结构（如链表、栈、队列）的 <span class="highlight">基础</span>。</li>
+                            <li>在信奥竞赛中，数组是解决大部分问题不可或缺的工具！</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>📚 课后作业：</strong>
+                    <ol>
+                        <li>完成所有练习题目，特别是进阶题。</li>
+                        <li>尝试用数组存储你家一周的菜品名称（字符数组/字符串数组），并输出其中你最喜欢的一道菜。</li>
+                        <li>思考：如果数组大小不确定，应该怎么办？（预告：动态数组/`vector`！）</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / N</div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const slideCounter = document.getElementById('slideCounter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            currentSlide = index;
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+            slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+
+            // Reset animation when leaving the animation slide
+            if (slides[index] && !slides[index].querySelector('#animArea')) {
+                resetAnimation();
+            }
+        }
+
+        prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+        nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+        });
+        showSlide(0);
+
+        // --- 动画逻辑 for Slide 7 (查找最大值) ---
+        const numbers = [12, 5, 45, 18, 9, 30, 22]; // 示例数组
+        let currentMax = numbers[0];
+        let maxIndex = 0;
+
+        const animSteps = [
+            { desc: "<strong>初始化：</strong>假设数组的第一个元素 `numbers[0]` (值为 " + numbers[0] + ") 是最大值 `maxNum`。", action: (animArea, descElem) => {
+                animArea.innerHTML = renderArray(numbers, 0, 0); // Highlight index 0
+                descElem.innerHTML = "<strong>初始化：</strong>假设数组的第一个元素 `numbers[0]` (值为 " + numbers[0] + ") 是最大值 `maxNum`。";
+                currentMax = numbers[0];
+                maxIndex = 0;
+            }},
+            // Loop steps
+            ...numbers.slice(1).flatMap((num, i) => {
+                const actualIndex = i + 1;
+                const prevMax = currentMax;
+                const prevMaxIndex = maxIndex;
+                let stepActions = [];
+
+                // Step 1: Compare
+                stepActions.push({
+                    desc: `<strong>遍历：</strong>当前元素 ` + `numbers[${actualIndex}]` + ` (值为 ` + num + `)。将其与当前最大值 ` + prevMax + ` 进行比较。`,
+                    action: (animArea, descElem) => {
+                        animArea.innerHTML = renderArray(numbers, actualIndex, prevMaxIndex);
+                        descElem.innerHTML = `<strong>遍历：</strong>当前元素 ` + `numbers[${actualIndex}]` + ` (值为 ` + num + `)。将其与当前最大值 ` + prevMax + ` 进行比较。`;
+                    }
+                });
+
+                // Step 2: Update if greater
+                if (num > prevMax) {
+                    currentMax = num;
+                    maxIndex = actualIndex;
+                    stepActions.push({
+                        desc: `因为 ` + num + ` > ` + prevMax + `，所以 <span class="highlight">更新最大值</span> ` + `maxNum` + ` 为 ` + num + `。`,
+                        action: (animArea, descElem) => {
+                            animArea.innerHTML = renderArray(numbers, actualIndex, actualIndex, true); // Highlight updated max
+                            descElem.innerHTML = `因为 ` + num + ` > ` + prevMax + `，所以 <span class="highlight">更新最大值</span> ` + `maxNum` + ` 为 ` + num + `。`;
+                        }
+                    });
+                } else {
+                    stepActions.push({
+                        desc: `因为 ` + num + ` <= ` + prevMax + `，当前最大值 ` + `maxNum` + ` 保持不变。`,
+                        action: (animArea, descElem) => {
+                            animArea.innerHTML = renderArray(numbers, actualIndex, prevMaxIndex); // Still highlight prev max
+                            descElem.innerHTML = `因为 ` + num + ` <= ` + prevMax + `，当前最大值 ` + `maxNum` + ` 保持不变。`;
+                        }
+                    });
+                }
+                return stepActions;
+            }),
+            { desc: "<strong>遍历结束：</strong>所有元素已比较完毕，数组中的最大值为 <span class='highlight'>" + numbers.reduce((a, b) => Math.max(a, b)) + "</span>。", action: (animArea, descElem) => {
+                animArea.innerHTML = renderArray(numbers, -1, numbers.indexOf(numbers.reduce((a, b) => Math.max(a, b)))); // Final max highlight
+                descElem.innerHTML = "<strong>遍历结束：</strong>所有元素已比较完毕，数组中的最大值为 <span class='highlight'>" + numbers.reduce((a, b) => Math.max(a, b)) + "</span>。";
+            }}
+        ];
+        const totalSteps = animSteps.length;
+        let currentAnimStep = 0;
+        
+        const animArea = document.getElementById('animArea');
+        const stepDesc = document.getElementById('stepDescription');
+        const prevStepBtn = document.getElementById('prevStepBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function renderArray(arr, currentIndex = -1, maxValIndex = -1, isMaxUpdated = false) {
+            let elementsHtml = arr.map((val, index) => {
+                let classes = 'array-element';
+                if (index === currentIndex) classes += ' current';
+                if (index === maxValIndex) classes += ' max-found'; // Always highlight current max
+
+                return `
+                    <div class="array-element-wrapper">
+                        <div class="${classes}">${val}</div>
+                        <div class="array-index">[${index}]</div>
+                    </div>
+                `;
+            }).join('');
+
+            let maxIndicatorHtml = '';
+            if (maxValIndex !== -1) {
+                const currentMaxVal = arr[maxValIndex];
+                maxIndicatorHtml = `<div class="max-indicator ${isMaxUpdated ? 'updated' : ''}">当前最大值: ${currentMaxVal}</div>`;
+            }
+
+            return `<div class="array-container">${elementsHtml}</div>${maxIndicatorHtml}`;
+        }
+
+        function updateAnimControls() {
+            if (!prevStepBtn || !nextStepBtn) return;
+            prevStepBtn.disabled = currentAnimStep <= 0;
+            nextStepBtn.disabled = currentAnimStep >= totalSteps - 1;
+        }
+        
+        function executeAnimStep(stepIndex) {
+            if (stepIndex < 0 || stepIndex >= totalSteps) return;
+            currentAnimStep = stepIndex;
+            animSteps[currentAnimStep].action(animArea, stepDesc);
+            updateAnimControls();
+            renderMathInElement(animArea); // Re-render math in animation area
+            renderMathInElement(stepDesc); // Re-render math in step description
+        }
+
+        function resetAnimation() {
+            currentAnimStep = 0;
+            currentMax = numbers[0]; // Reset max value for animation
+            maxIndex = 0;
+            executeAnimStep(0); // Start from the first step
+            stepDesc.innerHTML = "准备就绪，请点击“下一步”开始演示如何在一个数组中找到最大值。";
+            animArea.innerHTML = renderArray(numbers, -1, -1); // Clear highlights
+            updateAnimControls();
+        }
+
+        prevStepBtn.addEventListener('click', () => {
+            if (currentAnimStep > 0) {
+                // Re-evaluate currentMax and maxIndex for previous step
+                // This is a bit tricky for a perfect rewind without storing history for each step
+                // For simplicity, we'll just execute the previous step's action.
+                // A full undo would require storing state at each step.
+                currentAnimStep--;
+                executeAnimStep(currentAnimStep);
+            }
+        });
+
+        nextStepBtn.addEventListener('click', () => {
+            if (currentAnimStep < totalSteps - 1) {
+                executeAnimStep(currentAnimStep + 1);
+            }
+        });
+
+        resetBtn.addEventListener('click', resetAnimation);
+
+        // Initial setup for animation area on load
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+            resetAnimation(); // Initialize the animation when page loads
+        });
+
+        // Ensure KaTeX renders for dynamic content
+        function renderMathInElement(element) {
+            if (window.renderMathInElement) {
+                window.renderMathInElement(element, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -671,57 +671,284 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
 
 export const LESSON_PLAN_PROMPT = `你是一位经验丰富的少儿编程/信奥金牌教练。请根据用户提供的主题、难度等级和要求，生成一份详细的 Markdown 格式教案。
 
-【输出要求】
+【核心原则】
+1. **目标明确**：紧扣学情，拆解为 “知识、能力、素养” 三层目标，可量化、可达成。
+2. **逻辑清晰**：遵循 “已知→未知”“简单→复杂”“理论→实践” 的认知规律。
+3. **互动性强**：结合案例、实操、提问、小组任务等，避免单向灌输。
+4. **实用性高**：关联真实场景，让学生理解 “学了能用”。
+5. **评价闭环**：包含过程性反馈和结果性检验。
+6. **适配性好**：匹配学生基础，兼顾分层需求。
+
+【输出格式要求】
 1. 必须使用 Markdown 格式。
-2. 包含以下二级标题（##）：
-   - 教学目标
-   - 趣味引入 (结合生活实例)
-   - 知识点讲解 (深入浅出)
-   - 代码示例 (C++ 语言，关键行加注释)
-   - 课堂互动 (提问与思考)
-   - 练习题目 (推荐 2-3 道相关题目)
-   - 课后作业
-3. 代码块请使用 \`\`\`cpp ... \`\`\` 包裹。
-4. 语气亲切、鼓励性强，适合中小学生。
-5. 不要包含任何无关的对话或前言后语，直接输出教案内容。
+2. **重要：** 每个主要板块之间请使用 \`===NEXT===\` 进行分割（独占一行），以便于后续解析。
+3. 包含以下板块（请保持顺序，使用二级标题 ##）：
+   - **教学目标** (拆解为知识、能力、素养)
+   - **趣味引入** (真实场景，已知引出未知)
+   - **知识点讲解** (理论到实践，简单到复杂)
+   - **代码示例** (C++ 语言，关键行注释)
+   - **课堂互动** (提问、小组任务)
+   - **练习题目** (分层练习：基础/进阶)
+   - **教学评价与作业** (过程反馈 + 课后巩固)
+4. 代码块请使用 \`\`\`cpp ... \`\`\` 包裹。
+5. 语气亲切、鼓励性强，适合中小学生。
+6. 不要包含任何无关的对话或前言后语，直接输出教案内容。
 
 用户输入的主题是：`
 
 export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同时也是一位编程教育专家。请根据用户的主题，生成一个单文件的 HTML 幻灯片课件。
 
+【核心原则】
+1. **目标明确**：拆解为 “知识、能力、素养” 三层目标。
+2. **趣味引入**：强调真实场景和已知引出未知。
+3. **知识点讲解**：强调理论到实践、简单到复杂。**核心要求：深入浅出。对于抽象概念，必须使用生活中的类比（如“变量是盒子”、“循环是跑圈”）进行解释，配合 Emoji 图标辅助理解。必须包含 2-3 个典型例题，通过“例题描述 -> 思路分析 -> 代码实现”的步骤进行讲解，帮助学员巩固知识。**
+4. **课堂互动**：明确包含提问和小组任务。
+5. **练习题目**：要求分层练习（基础/进阶）。
+6. **教学评价与作业**：包含过程反馈和结果检验。
+
 【技术要求】
 1. 输出一个完整的 HTML5 文件内容，包含 <html>, <head>, <body>。
-2. 使用简单的 CSS 实现幻灯片效果（可以使用 Scroll Snap 或者简单的 JavaScript 切换）。
-3. 样式美观、现代，适合投影展示。字体清晰，代码块高亮（可以使用简单的 CSS 样式模拟）。
-4. 包含以下幻灯片页面（每页一个 <section>）：
-   - 封面页（标题、副标题）
-   - 目录页
-   - 引入页（图文并茂）
-   - 知识点讲解页（多页）
-   - 代码示例页
-   - 练习页
-   - 总结页
-5. **不要**依赖外部复杂的 CDN 库（如 Reveal.js），除非是极轻量级的，或者直接内联 CSS/JS 以确保离线可用。推荐使用原生 CSS Scroll Snap 实现纵向或横向滚动翻页，或者简单的 JS 控制显隐。
-6. 代码块样式要像 VS Code 一样深色背景。
+2. **必须使用以下 CSS 样式模板**（请保持核心样式不变，可根据内容微调）：
+   - 全屏深色背景，白色幻灯片卡片。
+   - 响应式字体 (clamp)。
+   - 底部圆形导航按钮。
+   - 包含 .two-columns, .flow-step, .conclusion 等实用类。
+3. **不要**依赖外部复杂的 CDN 库（如 Reveal.js），使用原生 JS 实现简单的显隐切换。
+4. 代码块样式要使用白色背景，黑色字体，确保投屏清晰可见。
+
+【HTML 结构模板】
+\`\`\`html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课件标题</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
+        .ppt-container { width: 100%; height: 100%; position: relative; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        
+        /* --- 导航按钮 --- */
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
+        .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
+        #prevBtn { left: 30px; } #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
+        #slideCounter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+
+        /* --- 内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        
+        /* --- 布局组件 --- */
+        .two-columns { display: flex; flex-wrap: wrap; gap: 30px; width: 100%; margin-top: 2vh; }
+        .column { flex: 1; min-width: 280px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .column h4 { margin-top: 0; font-size: clamp(1.1em, 2.2vw, 1.4em); color: #333; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .flow-step { margin-top: 1.5vh; padding-left: 20px; border-left: 3px solid #007aff; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* --- 代码块 --- */
+        pre { background-color: #ffffff; color: #000000; padding: 15px; border-radius: 6px; border: 1px solid #ddd; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* --- 动画演示区域 --- */
+        .animation-area { height: 300px; position: relative; border: 2px dashed #ccc; margin-top: 2vh; padding: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: #fdfdfd; }
+        .anim-controls { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
+        .anim-btn { padding: 8px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: opacity 0.2s; }
+        .anim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-prev { background-color: #6c757d; }
+        .btn-next { background-color: #007aff; }
+        .btn-reset { background-color: #dc3545; }
+        #stepDescription { margin-top: 15px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007aff; border-radius: 4px; min-height: 40px; font-size: 1.1em; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>{{topic}}</h1>
+                <h3>{{level}}</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 教学目标 (知识/能力/素养) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎯 教学目标</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📚 知识与技能</h4>
+                        <ul><li>...</li></ul>
+                    </div>
+                    <div class="column">
+                        <h4>💡 过程与方法</h4>
+                        <ul><li>...</li></ul>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>❤️ 情感态度与价值观：</strong> ...
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 趣味引入 (真实场景) -->
+        <div class="slide">
+            <div class="slide-header"><h2>❓ 趣味引入</h2></div>
+            <div class="slide-content">
+                <p><strong>场景描述：</strong>...</p>
+                <!-- 使用 .two-columns 或 .flow-step 展示 -->
+            </div>
+        </div>
+
+        <!-- Slide 4: 核心算法演示 (动画) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎬 核心算法演示</h2></div>
+            <div class="slide-content">
+                <div class="animation-area" id="animArea">
+                    <!-- 动画元素容器 -->
+                </div>
+                <div id="stepDescription">准备就绪，请点击“下一步”开始演示</div>
+                <div class="anim-controls">
+                    <button id="prevStepBtn" class="anim-btn btn-prev">上一步</button>
+                    <button id="nextStepBtn" class="anim-btn btn-next">下一步</button>
+                    <button id="resetBtn" class="anim-btn btn-reset">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5+: 知识点讲解 & 典型例题 (例题1, 例题2, 例题3...) -->
+        <!-- Slide X: 课堂互动 (提问/小组) -->
+        <!-- Slide Y: 练习题目 (分层) -->
+        <!-- Slide Z: 总结与作业 (评价) -->
+
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / N</div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const slideCounter = document.getElementById('slideCounter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            currentSlide = index;
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+            slideCounter.textContent = \`\${currentSlide + 1} / \${slides.length}\`;
+        }
+
+        prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+        nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+        });
+        showSlide(0);
+
+        // --- 动画逻辑 ---
+        // 请生成 steps 数组和 renderStep 函数
+        // 示例: const steps = [{desc: "初始状态", draw: () => {...}}, ...];
+        let currentStep = 0;
+        // const steps = ... (AI 生成)
+        // const totalSteps = steps.length;
+        
+        const animArea = document.getElementById('animArea');
+        const stepDesc = document.getElementById('stepDescription');
+        const prevStepBtn = document.getElementById('prevStepBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function updateAnimControls() {
+            if (!prevStepBtn || !nextStepBtn) return;
+            // prevStepBtn.disabled = currentStep <= 0;
+            // nextStepBtn.disabled = currentStep >= totalSteps - 1;
+            // renderStep(currentStep);
+        }
+        
+        // 绑定事件...
+        
+        // 初始化 KaTeX
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+
+        // 动画渲染时也需要重新渲染公式
+        function renderStep(index) {
+            // ... (AI 生成的渲染逻辑)
+            
+            // 渲染完成后，重新渲染公式
+            renderMathInElement(animArea, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+             renderMathInElement(stepDesc, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        }
+    </script>
+</body>
+</html>
+\`\`\`
 
 【内容要求】
 - 主题：{{topic}}
 - 难度：{{level}}
 - 内容要与少儿编程/信奥相关，C++ 语言。
+- **幻灯片总页数控制在 10-15 页左右。** 确保有足够的篇幅把知识点讲透，不要匆匆带过。
+- **请严格按照上述 HTML 结构生成，确保包含所有要求的板块。**
 
 请直接输出 HTML 代码，不要包含 Markdown 标记（如 \`\`\`html）。`
 
-export const TOPIC_PLAN_PROMPT = `你是一位专业的编程课程设计师。请根据用户提供的“知识点主题”和“难度等级”，规划出一系列循序渐进的“章节标题”，并为该主题生成一段简短的描述。
+export const TOPIC_PLAN_PROMPT = `你是一位专业的编程课程设计师。请根据用户提供的“知识点主题”和“难度等级”，规划出一系列循序渐进的“章节标题”，并为每个章节生成一份“详细授课内容大纲”。
 
 【输出要求】
 1. 只输出一个 JSON 对象，格式如下：
    {
      "description": "这里是关于该主题的简短描述（50字以内）",
-     "chapters": ["章节1标题", "章节2标题", "章节3标题", ...]
+     "chapters": [
+       {
+         "title": "章节1标题",
+         "content": "这里是该章节的详细授课内容大纲。请详细列出本节课要讲的知识点、关键概念、代码示例思路、教学重点和难点。这将作为生成PPT的直接依据，请尽可能详细（200-300字）。"
+       },
+       {
+         "title": "章节2标题",
+         "content": "..."
+       }
+     ]
    }
 2. 不要包含任何 Markdown 标记（如 \`\`\`json）。
 3. 章节数量控制在 3-6 个之间。
-4. 标题要简洁明了。
+4. 标题要简洁明了，内容大纲要具体且具有指导性。
 
 用户输入的主题是：`
 

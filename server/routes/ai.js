@@ -905,7 +905,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
       model: model || 'o4-mini',
       messages,
       temperature: 0.7,
-      max_tokens: 4000
+      max_tokens: 16000
     }
 
     const resp = await axios.post(apiUrl, payload, {
@@ -928,7 +928,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
 // Generate PPT
 router.post('/generate-ppt', authenticateToken, async (req, res) => {
   try {
-    const { topic, context, level, model } = req.body
+    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let fullTopic = topic
@@ -936,8 +936,33 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
         fullTopic = `${context} - ${topic}`
     }
 
-    const systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
+    let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
     
+    // Inject User Requirements
+    if (requirements && requirements.trim()) {
+        systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
+    }
+
+    // Inject Chapter Content (Lesson Plan)
+    if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
+        systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 8000)}\n`
+    }
+
+    // Inject Chapter Context
+    if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
+        const current = (currentChapterIndex !== undefined && currentChapterIndex >= 0) ? currentChapterIndex + 1 : '?'
+        
+        let contextInfo = `\n\n【重要：课程上下文信息】\n`
+        contextInfo += `本节课是系列课程 "${context}" 中的第 ${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
+        contextInfo += `完整的章节列表如下：\n${chapterList.map((t, i) => `${i+1}. ${t}`).join('\n')}\n`
+        contextInfo += `\n请根据此上下文规划内容：\n`
+        contextInfo += `1. **避免重复**：如果前面的章节已经讲过基础概念（如定义、语法），本节课应快速回顾或直接进入进阶内容。\n`
+        contextInfo += `2. **循序渐进**：确保难度与当前章节的位置相匹配。\n`
+        contextInfo += `3. **聚焦主题**：本节课的核心主题是 "${topic}"，请紧扣此主题展开，不要跑题到其他章节的内容。\n`
+        
+        systemPrompt += contextInfo
+    }
+
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
     
@@ -950,7 +975,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
       model: model || 'o4-mini',
       messages,
       temperature: 0.7,
-      max_tokens: 4000
+      max_tokens: 16000
     }
 
     const resp = await axios.post(apiUrl, payload, {
@@ -976,10 +1001,21 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
 // Generate Topic Plan (Chapters list) or Description
 router.post('/topic-plan', authenticateToken, async (req, res) => {
   try {
-    const { topic, level, model, mode } = req.body
+    const { topic, level, model, mode, existingChapters } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
-    const userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+    let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+
+    // Add existing chapters context if available
+    if (existingChapters && Array.isArray(existingChapters) && existingChapters.length > 0) {
+        userPrompt += `\n\n当前已存在的章节信息如下（请参考这些内容生成更精确的描述，避免重复或矛盾）：\n`
+        existingChapters.forEach((ch, idx) => {
+            userPrompt += `${idx + 1}. ${ch.title}\n`
+            if (ch.contentPreview) {
+                userPrompt += `   摘要: ${ch.contentPreview}\n`
+            }
+        })
+    }
     
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
@@ -1005,7 +1041,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
       model: model || 'gemini-2.5-flash', // Switch default to gemini-2.5-flash
       messages,
       temperature: 0.7,
-      max_tokens: 1000
+      max_tokens: 4000
     }
 
     const resp = await axios.post(apiUrl, payload, {

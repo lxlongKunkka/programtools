@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一维数组 - 声明与初始化</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
+        .ppt-container { width: 100%; height: 100%; position: relative; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        
+        /* --- 导航按钮 --- */
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
+        .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
+        #prevBtn { left: 30px; } #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
+        #slideCounter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+
+        /* --- 内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        
+        /* --- 布局组件 --- */
+        .two-columns { display: flex; flex-wrap: wrap; gap: 30px; width: 100%; margin-top: 2vh; }
+        .column { flex: 1; min-width: 280px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .column h4 { margin-top: 0; font-size: clamp(1.1em, 2.2vw, 1.4em); color: #333; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .flow-step { margin-top: 1.5vh; padding-left: 20px; border-left: 3px solid #007aff; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* --- 代码块 --- */
+        pre { background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 0.9em; line-height: 1.4; }
+        pre code { display: block; }
+        .code-comment { color: #6a9955; }
+        .code-keyword { color: #569cd6; }
+        .code-type { color: #4ec9b0; }
+        .code-string { color: #ce9178; }
+        .code-number { color: #b5cea8; }
+        .code-function { color: #dcdcaa; }
+        .code-variable { color: #9cdcfe; }
+
+        /* --- 动画演示区域 --- */
+        .animation-area { height: 300px; position: relative; border: 2px dashed #ccc; margin-top: 2vh; padding: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: #fdfdfd; border-radius: 8px; }
+        .anim-controls { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
+        .anim-btn { padding: 8px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: background-color 0.3s, transform 0.2s; }
+        .anim-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: scale(1); }
+        .btn-prev { background-color: #6c757d; }
+        .btn-next { background-color: #007aff; }
+        .btn-reset { background-color: #dc3545; }
+        #stepDescription { margin-top: 15px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007aff; border-radius: 4px; min-height: 40px; font-size: 1.1em; color: #333; text-align: center; }
+        
+        /* 数组动画元素 */
+        .array-container { display: flex; gap: 5px; }
+        .array-box { width: 60px; height: 60px; border: 2px solid #007aff; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; background-color: #e0f2ff; position: relative; transition: all 0.3s ease-in-out; }
+        .array-box.highlighted { border-color: #dc3545; background-color: #ffe0e0; transform: scale(1.1); }
+        .array-box-value { font-size: 1.2em; color: #333; }
+        .array-box-index { font-size: 0.8em; color: #666; position: absolute; bottom: -20px; }
+        .array-label { font-size: 1.2em; font-weight: bold; margin-right: 15px; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>一维数组 - 声明与初始化</h1>
+                <h3>C++ 编程基础 | Level 2</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 教学目标 (知识/能力/素养) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎯 教学目标</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📚 知识与技能</h4>
+                        <ul>
+                            <li>理解一维数组的概念和作用。</li>
+                            <li>掌握一维数组的声明和多种初始化方法。</li>
+                            <li>了解数组索引的含义及如何通过索引访问元素。</li>
+                            <li>能够使用数组解决简单的实际问题。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>💡 过程与方法</h4>
+                        <ul>
+                            <li>通过生活类比，将抽象概念具象化。</li>
+                            <li>通过代码示例，培养分析问题和解决问题的能力。</li>
+                            <li>学习调试和验证代码的初步方法。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>❤️ 情感态度与价值观：</strong> 培养逻辑思维和抽象归纳能力；感受编程解决复杂问题的乐趣；认识到数据结构在程序设计中的重要性。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 趣味引入 (真实场景) -->
+        <div class="slide">
+            <div class="slide-header"><h2>❓ 趣味引入：如何存储大量相似数据？</h2></div>
+            <div class="slide-content">
+                <p>想象一下，你是一名班主任，需要记录班级里 <span class="highlight">30名同学的C++考试成绩</span>。你会怎么做？</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>传统方法：单个变量</h4>
+                        <ul>
+                            <li>`int score1;`</li>
+                            <li>`int score2;`</li>
+                            <li>`...`</li>
+                            <li>`int score30;`</li>
+                        </ul>
+                        <p><strong>问题：</strong>变量太多，管理混乱，如果有一百个、一千个同学呢？😱 找平均分、最高分会非常麻烦！</p>
+                    </div>
+                    <div class="column">
+                        <h4>更好的方法：数组登场！</h4>
+                        <p>有没有一种“魔法盒子” ✨，能把所有同学的成绩都整齐地放在一起，并且每个成绩都有一个唯一的“编号”方便我们查找和操作呢？</p>
+                        <p>有的！这就是我们今天要学习的 <span class="highlight">一维数组！</span> 就像一排整齐的储物柜 📦📦📦。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 知识点：什么是数组？ -->
+        <div class="slide">
+            <div class="slide-header"><h2>📚 什么是数组？</h2></div>
+            <div class="slide-content">
+                <p>数组（Array）是一种 <span class="highlight">数据结构</span>，它可以存储 <span class="highlight">相同类型</span> 的多个数据元素。这些元素在内存中是 <span class="highlight">连续存放</span> 的，并且通过一个唯一的 <span class="highlight">索引（下标）</span> 来访问。</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>生活类比：一排储物柜 📦</h4>
+                        <ul>
+                            <li>想象一个酒店走廊上有一排编号从0开始的储物柜。</li>
+                            <li>每个储物柜（数组元素）都存放着 <span class="highlight">相同类型</span> 的物品（数据）。</li>
+                            <li>你可以通过柜子上的 <span class="highlight">编号（索引）</span> 快速找到并存取物品。</li>
+                            <li>一旦柜子数量确定，就不能随意增加或减少了（大小固定）。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>数组的特点</h4>
+                        <ul>
+                            <li><strong>同质性：</strong> 所有元素的数据类型必须相同 (例如，全是 `int`，或全是 `float`)。</li>
+                            <li><strong>有序性：</strong> 元素按顺序排列，有固定的位置。</li>
+                            <li><strong>固定大小：</strong> 一旦声明，数组的大小通常是固定的（在C++中）。</li>
+                            <li><strong>索引访问：</strong> 通过从0开始的整数索引来访问每个元素。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 知识点：一维数组的声明 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 一维数组的声明</h2></div>
+            <div class="slide-content">
+                <p>要使用数组，首先需要告诉计算机你要创建一个什么类型的数组，以及它能存放多少个元素。</p>
+                <div class="flow-step">
+                    <h4>基本语法：</h4>
+                    <pre><code class="code-type">数据类型</code> <code class="code-variable">数组名</code><code class="code-keyword">[</code><code class="code-number">数组大小</code><code class="code-keyword">]</code><code class="code-keyword">;</code></pre>
+                    <ul>
+                        <li><span class="highlight"><code>数据类型</code></span>：数组中每个元素的数据类型，比如 `int`, `float`, `char` 等。</li>
+                        <li><span class="highlight"><code>数组名</code></span>：你给数组起的名字，遵循变量命名规则。</li>
+                        <li><span class="highlight"><code>数组大小</code></span>：一个正整数，表示数组能存放多少个元素。</li>
+                    </ul>
+                </div>
+                <div class="flow-step" style="margin-top: 3vh;">
+                    <h4>示例：</h4>
+                    <pre><code><span class="code-type">int</span> <span class="code-variable">scores</span><span class="code-keyword">[</span><span class="code-number">5</span><span class="code-keyword">]</span><span class="code-keyword">;</span>     <span class="code-comment">// 声明一个可以存放5个整数的数组，名为 scores</span>
+<span class="code-type">float</span> <span class="code-variable">temperatures</span><span class="code-keyword">[</span><span class="code-number">7</span><span class="code-keyword">]</span><span class="code-keyword">;</span> <span class="code-comment">// 声明一个可以存放7个浮点数的数组，名为 temperatures</span>
+<span class="code-type">char</span> <span class="code-variable">word</span><span class="code-keyword">[</span><span class="code-number">10</span><span class="code-keyword">]</span><span class="code-keyword">;</span>      <span class="code-comment">// 声明一个可以存放10个字符的数组，名为 word</span></code></pre>
+                    <p>声明后，数组的内存空间就被分配了，但里面的值可能是随机的（对于局部变量）。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点：一维数组的初始化 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 一维数组的初始化</h2></div>
+            <div class="slide-content">
+                <p>声明数组时，最好同时给它一个“初始值”，这样避免使用到不确定的数据。</p>
+                <div class="flow-step">
+                    <h4>1. 完全初始化：为所有元素指定初始值</h4>
+                    <pre><code><span class="code-type">int</span> <span class="code-variable">scores</span><span class="code-keyword">[</span><span class="code-number">5</span><span class="code-keyword">]</span> <span class="code-keyword">=</span> <span class="code-keyword">{</span><span class="code-number">90</span><span class="code-keyword">,</span> <span class="code-number">85</span><span class="code-keyword">,</span> <span class="code-number">92</span><span class="code-keyword">,</span> <span class="code-number">78</span><span class="code-keyword">,</span> <span class="code-number">95</span><span class="code-keyword">}</span><span class="code-keyword">;</span> <span class="code-comment">// 5个元素都赋了初值</span></code></pre>
+                </div>
+                <div class="flow-step">
+                    <h4>2. 部分初始化：只为前几个元素指定初始值</h4>
+                    <pre><code><span class="code-type">int</span> <span class="code-variable">temperatures</span><span class="code-keyword">[</span><span class="code-number">7</span><span class="code-keyword">]</span> <span class="code-keyword">=</span> <span class="code-keyword">{</span><span class="code-number">25</span><span class="code-keyword">,</span> <span class="code-number">26</span><span class="code-keyword">,</span> <span class="code-number">24</span><span class="code-keyword">}</span><span class="code-keyword">;</span> <span class="code-comment">// 前3个元素赋值，后4个元素自动初始化为0</span></code></pre>
+                </div>
+                <div class="flow-step">
+                    <h4>3. 不指定大小，由初始化列表推断</h4>
+                    <pre><code><span class="code-type">int</span> <span class="code-variable">numbers</span><span class="code-keyword">[]</span> <span class="code-keyword">=</span> <span class="code-keyword">{</span><span class="code-number">1</span><span class="code-keyword">,</span> <span class="code-number">2</span><span class="code-keyword">,</span> <span class="code-number">3</span><span class="code-keyword">,</span> <span class="code-number">4</span><span class="code-keyword">,</span> <span class="code-number">5</span><span class="code-keyword">}</span><span class="code-keyword">;</span> <span class="code-comment">// 数组大小自动推断为5</span></code></pre>
+                </div>
+                <p class="conclusion"><strong>重要提示：</strong>
+                    <ul>
+                        <li><span class="highlight">局部数组</span>（在函数内部声明）如果未初始化，其元素值是随机的“垃圾值”。</li>
+                        <li><span class="highlight">全局数组或静态数组</span>（在函数外部或用 `static` 声明）如果未初始化，其元素会自动初始化为0。</li>
+                    </ul>
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 7: 核心概念演示：数组的声明与初始化 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎬 核心概念演示：数组的声明与初始化</h2></div>
+            <div class="slide-content">
+                <div class="animation-area" id="animArea">
+                    <!-- 动画元素容器 -->
+                    <div class="array-container" id="arrayContainer"></div>
+                </div>
+                <div id="stepDescription">准备就绪，请点击“下一步”开始演示数组的声明与初始化过程。</div>
+                <div class="anim-controls">
+                    <button id="prevStepBtn" class="anim-btn btn-prev">上一步</button>
+                    <button id="nextStepBtn" class="anim-btn btn-next">下一步</button>
+                    <button id="resetBtn" class="anim-btn btn-reset">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 知识点：数组的索引与访问 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🔍 数组的索引与访问</h2></div>
+            <div class="slide-content">
+                <p>数组中的每个元素都有一个唯一的“门牌号” 🏷️，我们称之为 <span class="highlight">索引（Index）</span> 或 <span class="highlight">下标（Subscript）</span>。</p>
+                <div class="flow-step">
+                    <h4>索引的特点：</h4>
+                    <ul>
+                        <li><strong>从0开始：</strong> 第一个元素的索引是 `0`，第二个是 `1`，以此类推。</li>
+                        <li><strong>最大索引：</strong> 如果数组大小是 $N$，那么最后一个元素的索引是 $N-1$。</li>
+                    </ul>
+                </div>
+                <div class="flow-step" style="margin-top: 3vh;">
+                    <h4>访问语法：</h4>
+                    <pre><code class="code-variable">数组名</code><code class="code-keyword">[</code><code class="code-variable">索引</code><code class="code-keyword">]</code></pre>
+                    <ul>
+                        <li>通过这种方式，你可以读取或修改数组中特定位置的元素值。</li>
+                    </ul>
+                </div>
+                <div class="flow-step" style="margin-top: 3vh;">
+                    <h4>示例：</h4>
+                    <pre><code><span class="code-type">int</span> <span class="code-variable">numbers</span><span class="code-keyword">[</span><span class="code-number">3</span><span class="code-keyword">]</span> <span class="code-keyword">=</span> <span class="code-keyword">{</span><span class="code-number">10</span><span class="code-keyword">,</span> <span class="code-number">20</span><span class="code-keyword">,</span> <span class="code-number">30</span><span class="code-keyword">}</span><span class="code-keyword">;</span>
+
+<span class="code-type">int</span> <span class="code-variable">first_element</span> <span class="code-keyword">=</span> <span class="code-variable">numbers</span><span class="code-keyword">[</span><span class="code-number">0</span><span class="code-keyword">]</span><span class="code-keyword">;</span> <span class="code-comment">// first_element 的值是 10</span>
+<span class="code-variable">numbers</span><span class="code-keyword">[</span><span class="code-number">1</span><span class="code-keyword">]</span> <span class="code-keyword">=</span> <span class="code-number">25</span><span class="code-keyword">;</span>              <span class="code-comment">// 将 numbers 数组中索引为 1 的元素改为 25</span>
+<span class="code-type">int</span> <span class="code-variable">last_element</span> <span class="code-keyword">=</span> <span class="code-variable">numbers</span><span class="code-keyword">[</span><span class="code-number">2</span><span class="code-keyword">]</span><span class="code-keyword">;</span>  <span class="code-comment">// last_element 的值是 30</span></code></pre>
+                </div>
+                <p class="conclusion">⚠️ <span class="highlight">数组越界访问：</span> 访问超出 $[0, N-1]$ 范围的索引是非常危险的，可能导致程序崩溃或产生不可预测的结果！</p>
+            </div>
+        </div>
+
+        <!-- Slide 9: 例题 1: 声明并打印班级成绩 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 例题 1: 声明并打印班级成绩</h2></div>
+            <div class="slide-content">
+                <h4>例题描述：</h4>
+                <p>有一个班级，5名同学的C++成绩分别是 <code>90, 85, 92, 78, 95</code>。请声明一个数组来存储这些成绩，并在程序中将它们打印出来。</p>
+
+                <h4>思路分析：</h4>
+                <ol>
+                    <li>需要存储5个整数，所以声明一个 `int` 类型的数组，大小为5。</li>
+                    <li>在声明时，直接使用初始化列表将成绩赋值给数组。</li>
+                    <li>使用循环结构（例如 `for` 循环）遍历数组，通过索引依次访问并打印每个元素。</li>
+                </ol>
+
+                <h4>代码实现：</h4>
+                <pre><code><span class="code-comment">#include &lt;iostream&gt;</span> <span class="code-comment">// 引入输入输出流库</span>
+
+<span class="code-type">int</span> <span class="code-function">main</span><span class="code-keyword">()</span> <span class="code-keyword">{</span>
+    <span class="code-comment">// 1. 声明一个可以存放5个整数的数组，并初始化</span>
+    <span class="code-type">int</span> <span class="code-variable">scores</span><span class="code-keyword">[</span><span class="code-number">5</span><span class="code-keyword">]</span> <span class="code-keyword">=</span> <span class="code-keyword">{</span><span class="code-number">90</span><span class="code-keyword">,</span> <span class="code-number">85</span><span class="code-keyword">,</span> <span class="code-number">92</span><span class="code-keyword">,</span> <span class="code-number">78</span><span class="code-keyword">,</span> <span class="code-number">95</span><span class="code-keyword">}</span><span class="code-keyword">;</span>
+
+    <span class="code-comment">// 2. 打印数组中的所有成绩</span>
+    <span class="code-function">std::cout</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-string">"班级C++成绩："</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::endl</span><span class="code-keyword">;</span>
+    <span class="code-keyword">for</span> <span class="code-keyword">(</span><span class="code-type">int</span> <span class="code-variable">i</span> <span class="code-keyword">=</span> <span class="code-number">0</span><span class="code-keyword">;</span> <span class="code-variable">i</span> <span class="code-keyword">&lt;</span> <span class="code-number">5</span><span class="code-keyword">;</span> <span class="code-variable">i</span><span class="code-keyword">++</span><span class="code-keyword">)</span> <span class="code-keyword">{</span>
+        <span class="code-function">std::cout</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-string">"第"</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-variable">i</span> <span class="code-keyword">+</span> <span class="code-number">1</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-string">"位同学的成绩是: "</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-variable">scores</span><span class="code-keyword">[</span><span class="code-variable">i</span><span class="code-keyword">]</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::endl</span><span class="code-keyword">;</span>
+    <span class="code-keyword">}</span>
+
+    <span class="code-keyword">return</span> <span class="code-number">0</span><span class="code-keyword">;</span>
+<span class="code-keyword">}</span></code></pre>
+            </div>
+        </div>
+
+        <!-- Slide 10: 例题 2: 统计一周的平均气温 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🌡️ 例题 2: 统计一周的平均气温</h2></div>
+            <div class="slide-content">
+                <h4>例题描述：</h4>
+                <p>请编写一个程序，声明一个数组来存储一周7天的气温（浮点数）。从用户输入获取这7天的气温，然后计算并打印出这一周的平均气温。</p>
+
+                <h4>思路分析：</h4>
+                <ol>
+                    <li>需要存储7个浮点数，所以声明一个 `float` 类型的数组，大小为7。</li>
+                    <li>使用 `for` 循环和 `std::cin` 从用户那里逐一获取7天的气温，并存入数组。</li>
+                    <li>再次使用 `for` 循环遍历数组，累加所有气温的总和。</li>
+                    <li>将总和除以7（数组大小）得到平均值，并打印。</li>
+                </ol>
+
+                <h4>代码实现：</h4>
+                <pre><code><span class="code-comment">#include &lt;iostream&gt;</span>
+<span class="code-comment">#include &lt;iomanip&gt;</span> <span class="code-comment">// 用于设置输出精度</span>
+
+<span class="code-type">int</span> <span class="code-function">main</span><span class="code-keyword">()</span> <span class="code-keyword">{</span>
+    <span class="code-comment">// 1. 声明一个可以存放7个浮点数的数组</span>
+    <span class="code-type">float</span> <span class="code-variable">temperatures</span><span class="code-keyword">[</span><span class="code-number">7</span><span class="code-keyword">]</span><span class="code-keyword">;</span>
+    <span class="code-type">float</span> <span class="code-variable">sum</span> <span class="code-keyword">=</span> <span class="code-number">0.0f</span><span class="code-keyword">;</span> <span class="code-comment">// 用于累加气温总和</span>
+
+    <span class="code-comment">// 2. 从用户输入获取7天的气温</span>
+    <span class="code-function">std::cout</span> <span class="code-string">"请输入一周7天的气温（浮点数）："</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::endl</span><span class="code-keyword">;</span>
+    <span class="code-keyword">for</span> <span class="code-keyword">(</span><span class="code-type">int</span> <span class="code-variable">i</span> <span class="code-keyword">=</span> <span class="code-number">0</span><span class="code-keyword">;</span> <span class="code-variable">i</span> <span class="code-keyword">&lt;</span> <span class="code-number">7</span><span class="code-keyword">;</span> <span class="code-variable">i</span><span class="code-keyword">++</span><span class="code-keyword">)</span> <span class="code-keyword">{</span>
+        <span class="code-function">std::cout</span> <span class="code-string">"第"</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-variable">i</span> <span class="code-keyword">+</span> <span class="code-number">1</span> <span class="code-string">"天的气温: "</span><span class="code-keyword">;</span>
+        <span class="code-function">std::cin</span> <span class="code-keyword">&gt;&gt;</span> <span class="code-variable">temperatures</span><span class="code-keyword">[</span><span class="code-variable">i</span><span class="code-keyword">]</span><span class="code-keyword">;</span>
+        <span class="code-variable">sum</span> <span class="code-keyword">+=</span> <span class="code-variable">temperatures</span><span class="code-keyword">[</span><span class="code-variable">i</span><span class="code-keyword">]</span><span class="code-keyword">;</span> <span class="code-comment">// 累加到总和</span>
+    <span class="code-keyword">}</span>
+
+    <span class="code-comment">// 3. 计算并打印平均气温</span>
+    <span class="code-type">float</span> <span class="code-variable">averageTemp</span> <span class="code-keyword">=</span> <span class="code-variable">sum</span> <span class="code-keyword">/</span> <span class="code-number">7</span><span class="code-keyword">;</span>
+    <span class="code-function">std::cout</span> <span class="code-string">"\n一周的平均气温是: "</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::fixed</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::setprecision</span><span class="code-keyword">(</span><span class="code-number">2</span><span class="code-keyword">)</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-variable">averageTemp</span> <span class="code-string">"℃"</span> <span class="code-keyword">&lt;&lt;</span> <span class="code-function">std::endl</span><span class="code-keyword">;</span>
+
+    <span class="code-keyword">return</span> <span class="code-number">0</span><span class="code-keyword">;</span>
+<span class="code-keyword">}</span></code></pre>
+            </div>
+        </div>
+
+        <!-- Slide 11: 课堂互动 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🗣️ 课堂互动</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>思考与提问 🤔</h4>
+                        <ul>
+                            <li>为什么C++数组的索引要从0开始，而不是从1开始呢？（可以从内存地址偏移的角度思考）</li>
+                            <li>如果我们需要存储一个班级（30人）所有同学的语文、数学、英语三门课的成绩，只用一维数组方便吗？有什么更好的方法吗？</li>
+                            <li>使用数组时，最容易犯的错误是什么？如何避免？</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>小组任务 🧑‍🤝‍🧑</h4>
+                        <p><strong>任务：</strong> 假设你需要记录一次运动会中，5名运动员在100米短跑比赛中的用时（精确到小数点后两位）。</p>
+                        <ol>
+                            <li>请小组讨论，如何声明一个合适的数组来存储这些数据。</li>
+                            <li>如果需要在程序中找出跑得最快的运动员（用时最短），你觉得需要哪些步骤？</li>
+                            <li>请在纸上写出简单的伪代码（或C++代码草稿）来描述你的思路。</li>
+                        </ol>
+                        <p class="conclusion">（各小组选派代表分享讨论结果）</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 练习题目 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💪 练习题目</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>🌟 基础巩固</h4>
+                        <ol>
+                            <li><strong>数组声明与访问：</strong>
+                                <p>声明一个名为 `myNumbers` 的整数数组，可以存储10个整数。在声明时将其初始化为 `1, 2, ..., 10`。然后，打印出数组中的第3个元素和第7个元素。</p>
+                            </li>
+                            <li><strong>部分初始化：</strong>
+                                <p>声明一个名为 `colors` 的字符数组，大小为5。将其部分初始化为 `{'R', 'G', 'B'}`。打印出数组中的所有元素，看看未初始化的位置是什么值。</p>
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="column">
+                        <h4>🚀 进阶挑战</h4>
+                        <ol>
+                            <li><strong>查找最大值和最小值：</strong>
+                                <p>编写一个程序，声明一个数组存储5个整数。从用户输入获取这5个整数，然后找出并打印出数组中的最大值和最小值。</p>
+                            </li>
+                            <li><strong>数组元素求和：</strong>
+                                <p>声明一个数组存储10个浮点数（例如：`3.14, 2.71, ...`，自行初始化）。计算并打印出所有元素的总和。</p>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: 总结与作业 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🚀 总结与作业</h2></div>
+            <div class="slide-content">
+                <div class="flow-step">
+                    <h4>课堂回顾：</h4>
+                    <ul>
+                        <li><span class="highlight">什么是数组？</span> 一组相同类型数据的集合，像“储物柜”。</li>
+                        <li><span class="highlight">如何声明？</span> `数据类型 数组名[大小];`</li>
+                        <li><span class="highlight">如何初始化？</span> `{}` 花括号列表，可完全、部分或自动推断大小。</li>
+                        <li><span class="highlight">如何访问？</span> `数组名[索引]`，索引从0开始，$N-1$ 结束。</li>
+                    </ul>
+                </div>
+                <div class="flow-step" style="margin-top: 3vh;">
+                    <h4>课后作业：</h4>
+                    <ol>
+                        <li><strong>编程练习：我的水果清单 🍎🍌🍊</strong>
+                            <p>编写一个C++程序，声明一个字符数组（或 `std::string` 数组，如果已学）来存储你最喜欢的5种水果名称。然后使用循环将这5种水果名称逐一打印出来。</p>
+                        </li>
+                        <li><strong>编程练习：随机数统计 🎲</strong>
+                            <p>编写一个C++程序，声明一个整数数组，大小为10。使用循环从用户输入获取10个整数（假设用户会输入1到100之间的数）。然后统计并打印出这10个整数中偶数的个数。</p>
+                        </li>
+                    </ol>
+                </div>
+                <div class="conclusion">
+                    <strong>💡 教学评价：</strong> 通过课堂互动和练习，检查学生对数组声明、初始化和访问的掌握程度。鼓励学生独立思考和解决问题。
+                </div>
+            </div>
+        </div>
+
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / N</div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const slideCounter = document.getElementById('slideCounter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            currentSlide = index;
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+            slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+            
+            // Re-render KaTeX for the active slide
+            const activeSlide = slides[currentSlide];
+            if (activeSlide) {
+                renderMathInElement(activeSlide, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+
+        prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+        nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) showSlide(currentSlide - 1);
+            }
+            if (e.key === 'ArrowRight') {
+                if (currentSlide < slides.length - 1) showSlide(currentSlide + 1);
+            }
+        });
+        showSlide(0);
+
+        // --- 动画逻辑 for Slide 7 ---
+        const animArea = document.getElementById('animArea');
+        const arrayContainer = document.getElementById('arrayContainer');
+        const stepDesc = document.getElementById('stepDescription');
+        const prevStepBtn = document.getElementById('prevStepBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let currentAnimStep = 0;
+
+        const animSteps = [
+            {
+                desc: "准备就绪，请点击“下一步”开始演示数组的声明与初始化过程。",
+                draw: () => {
+                    arrayContainer.innerHTML = '';
+                }
+            },
+            {
+                desc: "<strong>Step 1: 声明数组 `int scores[5];`</strong><br>我们声明了一个名为 `scores` 的整数数组，它能存储5个 `int` 类型的值。就像5个空的储物柜！",
+                draw: () => {
+                    arrayContainer.innerHTML = '<span class="array-label">scores:</span>';
+                    for (let i = 0; i < 5; i++) {
+                        const box = document.createElement('div');
+                        box.className = 'array-box';
+                        box.innerHTML = `<span class="array-box-value">?</span><span class="array-box-index">[${i}]</span>`;
+                        arrayContainer.appendChild(box);
+                    }
+                }
+            },
+            {
+                desc: "<strong>Step 2: 完全初始化 `int scores[5] = {90, 85, 92, 78, 95};`</strong><br>在声明时，我们直接给每个“储物柜”放进了初始值。现在它们都有数据啦！",
+                draw: () => {
+                    arrayContainer.innerHTML = '<span class="array-label">scores:</span>';
+                    const values = [90, 85, 92, 78, 95];
+                    for (let i = 0; i < 5; i++) {
+                        const box = document.createElement('div');
+                        box.className = 'array-box';
+                        box.innerHTML = `<span class="array-box-value">${values[i]}</span><span class="array-box-index">[${i}]</span>`;
+                        arrayContainer.appendChild(box);
+                    }
+                }
+            },
+            {
+                desc: "<strong>Step 3: 部分初始化 `int temperatures[7] = {25, 26, 24};`</strong><br>如果只初始化一部分，剩下的“储物柜”会自动填充为0（对于数值类型）。",
+                draw: () => {
+                    arrayContainer.innerHTML = '<span class="array-label">temperatures:</span>';
+                    const values = [25, 26, 24, 0, 0, 0, 0];
+                    for (let i = 0; i < 7; i++) {
+                        const box = document.createElement('div');
+                        box.className = 'array-box';
+                        box.innerHTML = `<span class="array-box-value">${values[i]}</span><span class="array-box-index">[${i}]</span>`;
+                        arrayContainer.appendChild(box);
+                    }
+                }
+            },
+            {
+                desc: "<strong>Step 4: 访问数组元素 `scores[2]`</strong><br>通过索引，我们可以精确地找到并访问数组中的某个元素。比如 `scores[2]` 就是第三个元素，它的值是92。",
+                draw: () => {
+                    arrayContainer.innerHTML = '<span class="array-label">scores:</span>';
+                    const values = [90, 85, 92, 78, 95];
+                    for (let i = 0; i < 5; i++) {
+                        const box = document.createElement('div');
+                        box.className = 'array-box';
+                        if (i === 2) {
+                            box.classList.add('highlighted');
+                        }
+                        box.innerHTML = `<span class="array-box-value">${values[i]}</span><span class="array-box-index">[${i}]</span>`;
+                        arrayContainer.appendChild(box);
+                    }
+                }
+            }
+        ];
+        const totalAnimSteps = animSteps.length;
+
+        function renderAnimStep(index) {
+            stepDesc.innerHTML = animSteps[index].desc;
+            animSteps[index].draw();
+            prevStepBtn.disabled = index <= 0;
+            nextStepBtn.disabled = index >= totalAnimSteps - 1;
+            
+            // Re-render KaTeX within the animation description
+            renderMathInElement(stepDesc, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        }
+
+        prevStepBtn.addEventListener('click', () => {
+            if (currentAnimStep > 0) {
+                currentAnimStep--;
+                renderAnimStep(currentAnimStep);
+            }
+        });
+
+        nextStepBtn.addEventListener('click', () => {
+            if (currentAnimStep < totalAnimSteps - 1) {
+                currentAnimStep++;
+                renderAnimStep(currentAnimStep);
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            currentAnimStep = 0;
+            renderAnimStep(currentAnimStep);
+        });
+
+        // Initialize animation when slide 7 is active
+        slides[6].addEventListener('transitionend', () => {
+            if (slides[6].classList.contains('active')) {
+                renderAnimStep(currentAnimStep);
+            }
+        });
+
+        // Ensure initial state for animation is set if slide 7 is the first shown (unlikely)
+        if (currentSlide === 6) {
+             renderAnimStep(currentAnimStep);
+        }
+
+        // Initialize KaTeX for the entire document on load
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+</html>
