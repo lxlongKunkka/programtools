@@ -202,11 +202,7 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group half">
-            <label>所属模块:</label>
-            <input :value="'Level ' + editingLevelForTopic.level" disabled class="form-input disabled">
-          </div>
-          <div class="form-group half">
+          <div class="form-group">
             <label>标题:</label>
             <input v-model="editingTopic.title" class="form-input">
           </div>
@@ -621,7 +617,8 @@ export default {
     async fetchChapterContent(chapterId) {
         try {
             this.editingChapter.content = '加载中...'
-            const fullChapter = await request(`/api/course/chapter/${chapterId}`)
+            const query = this.editingLevelForChapter ? `?levelId=${this.editingLevelForChapter._id}` : ''
+            const fullChapter = await request(`/api/course/chapter/${chapterId}${query}`)
             // Ensure the user hasn't switched to another node while fetching
             // Check both id (string) and _id (mongo) to handle different ID types
             const isSameChapter = this.selectedNode && 
@@ -675,7 +672,7 @@ export default {
         level: nextLevel, 
         title: '新课程模块', 
         description: '',
-        subject: 'C++', // Default
+        subject: group.language || 'C++', // Inherit from group
         group: group.name, // Pre-fill group
         _id: null // Marker for new
       }
@@ -1287,7 +1284,8 @@ export default {
             problemTitle: doc.title,
             chapterId: this.editingChapter.id,
             clientKey: id, // Pass the UI key (usually _id) to server
-            model: this.selectedModel
+            model: this.selectedModel,
+            language: this.editingLevelForChapter.subject || 'C++'
         })
         
         this.aiStatusMap[id] = '正在后台生成题解中...'

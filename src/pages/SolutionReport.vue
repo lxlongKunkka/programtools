@@ -8,6 +8,12 @@
         <select v-model="model">
           <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
         </select>
+
+        <label class="label" style="margin-left: 15px;">语言:</label>
+        <select v-model="language">
+          <option value="C++">C++</option>
+          <option value="Python">Python</option>
+        </select>
       </div>
       <div class="toolbar-right">
         <button @click="generate" :disabled="loading || !problemText.trim()" class="btn-primary">
@@ -75,6 +81,7 @@ export default {
       resultHtml: '',
       loading: false,
       model: 'gemini-2.0-flash',
+      language: 'C++',
       rawModelOptions: []
     }
   },
@@ -133,7 +140,8 @@ export default {
           problem: this.problemText,
           code: this.codeText,
           reference: this.referenceText,
-          model: this.model
+          model: this.model,
+          language: this.language
         })
         
         if (res.html) {

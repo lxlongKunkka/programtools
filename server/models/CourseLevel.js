@@ -28,7 +28,7 @@ const courseLevelSchema = new mongoose.Schema({
   chapters: [chapterSchema] 
 })
 
-// Compound index to ensure level is unique per subject
-courseLevelSchema.index({ level: 1, subject: 1 }, { unique: true })
+// Compound index to ensure level is unique per group
+courseLevelSchema.index({ level: 1, group: 1 }, { unique: true })
 
 export default mongoose.model('CourseLevel', courseLevelSchema)

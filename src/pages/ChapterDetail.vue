@@ -347,9 +347,22 @@ export default {
           request('/api/course/progress')
         ])
         
-        // Find the correct level and chapter
-        // Note: levelsData returns all levels. We filter by level number.
-        this.level = levelsData.find(l => l.level === this.levelId)
+        // 1. Determine the correct Subject Context
+        const selectedSubjectName = localStorage.getItem('selected_subject') || 'C++基础'
+        const subjectConfig = SUBJECTS_CONFIG.find(s => s.name === selectedSubjectName)
+        const realSubject = subjectConfig ? subjectConfig.realSubject : 'C++'
+
+        // 2. Find the correct level object
+        // Priority: Match level number AND subject
+        this.level = levelsData.find(l => 
+            l.level === this.levelId && 
+            (l.subject === realSubject || (!l.subject && realSubject === 'C++'))
+        )
+        
+        // Fallback: If not found (e.g. user switched subject but URL is old), just find by level number
+        if (!this.level) {
+            this.level = levelsData.find(l => l.level === this.levelId)
+        }
         
         if (this.level) {
           // Update selected subject in localStorage based on current level
@@ -371,7 +384,9 @@ export default {
 
         // Fetch specific chapter content (Secure)
         try {
-            const chapterDetail = await request(`/api/course/chapter/${this.chapterId}`)
+            // Pass levelId to disambiguate chapters with same ID (e.g. 1-2-1) across subjects
+            const query = this.level ? `?levelId=${this.level._id}` : ''
+            const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
         } catch (err) {

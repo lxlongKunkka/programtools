@@ -673,7 +673,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
 
-    const { problem, code, reference, model, level } = req.body
+    const { problem, code, reference, model, level, language } = req.body
     if (!problem) return res.status(400).json({ error: '缺少 problem 字段' })
 
     const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）'
@@ -683,7 +683,19 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       userContent += `\n\n参考思路/提示：\n${reference.trim()}`
     }
 
-    if (level && parseInt(level) <= 2) {
+    const targetLang = language || 'C++'
+    let prompt = SOLUTION_REPORT_PROMPT.replace(/{{language}}/g, targetLang)
+
+    // Replace code example based on language
+    let codeExample = ''
+    if (targetLang === 'Python') {
+        codeExample = '<span class="keyword">def</span> <span class="function">solve</span>():\n    <span class="comment"># ...</span>\n\n<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:\n    solve()'
+    } else {
+        codeExample = '<span class="keyword">int</span> <span class="function">main</span>() {\n    <span class="comment">// ...</span>\n}'
+    }
+    prompt = prompt.replace('{{code_example}}', codeExample)
+
+    if (targetLang === 'C++' && level && parseInt(level) <= 2) {
       userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
     }
 
@@ -692,7 +704,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
-      { role: 'system', content: SOLUTION_REPORT_PROMPT },
+      { role: 'system', content: prompt },
       { role: 'user', content: userContent }
     ]
 
@@ -737,7 +749,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 })
 
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey } = req.body;
+  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey, language } = req.body;
   
   if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -756,13 +768,25 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
               userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
           }
 
-          // Add constraint for Level 2 and below
-          if (level && parseInt(level) <= 2) {
+          const targetLang = language || 'C++'
+          let prompt = SOLUTION_REPORT_PROMPT.replace(/{{language}}/g, targetLang)
+
+          // Replace code example based on language
+          let codeExample = ''
+          if (targetLang === 'Python') {
+              codeExample = '<span class="keyword">def</span> <span class="function">solve</span>():\n    <span class="comment"># ...</span>\n\n<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:\n    solve()'
+          } else {
+              codeExample = '<span class="keyword">int</span> <span class="function">main</span>() {\n    <span class="comment">// ...</span>\n}'
+          }
+          prompt = prompt.replace('{{code_example}}', codeExample)
+
+          // Add constraint for Level 2 and below (Only for C++)
+          if (targetLang === 'C++' && level && parseInt(level) <= 2) {
              userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
           }
 
           const messages = [
-              { role: 'system', content: SOLUTION_REPORT_PROMPT },
+              { role: 'system', content: prompt },
               { role: 'user', content: userContent }
           ];
 
@@ -930,8 +954,18 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
     
+    const targetLang = language || 'C++';
+    let codeLang = 'cpp';
+    if (/python/i.test(targetLang) || (context && /python/i.test(context))) {
+        codeLang = 'python';
+    }
+
+    const systemPrompt = LESSON_PLAN_PROMPT
+        .replace('{{language}}', targetLang)
+        .replace('{{code_lang}}', codeLang);
+
     const messages = [
-      { role: 'system', content: LESSON_PLAN_PROMPT.replace('{{language}}', language || 'C++') },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
 
@@ -1236,19 +1270,33 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
           // Save File
           const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
+          
+          // Determine subject folder
+          let subjectFolder = '';
+          if (context && /python/i.test(context)) subjectFolder = 'Python';
+          else if (context && /web/i.test(context)) subjectFolder = 'Web';
+
           const safeLevel = 'level' + sanitize(String(levelNum));
           const safeTopic = sanitize(topicTitle);
           const safeChapter = sanitize(chapterTitle) + '.html';
           
           const baseDir = path.join(__dirname, '../public/courseware');
-          const targetDir = path.join(baseDir, safeLevel, safeTopic);
+          
+          let targetDir, relativePath;
+          
+          if (subjectFolder) {
+              targetDir = path.join(baseDir, subjectFolder, safeLevel, safeTopic);
+              relativePath = `/public/courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
+          } else {
+              targetDir = path.join(baseDir, safeLevel, safeTopic);
+              relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+          }
           
           if (!fs.existsSync(targetDir)) {
               fs.mkdirSync(targetDir, { recursive: true });
           }
           
           const fullPath = path.join(targetDir, safeChapter);
-          const relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
           
           fs.writeFileSync(fullPath, content, 'utf8');
           console.log(`[Background] PPT saved to ${fullPath}`);
@@ -1323,6 +1371,17 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
       try {
           console.log(`[Background] Starting Lesson Plan for chapter ${chapterId}`);
           
+          let targetLang = 'C++';
+          let codeLang = 'cpp';
+          if (context && /python/i.test(context)) {
+            targetLang = 'Python';
+            codeLang = 'python';
+          }
+
+          let systemPrompt = LESSON_PLAN_PROMPT
+            .replace('{{language}}', targetLang)
+            .replace('{{code_lang}}', codeLang);
+          
           let userPrompt = `请为 "${context}" 课程中的 "${topic}" 章节编写一份详细的教案。`
           userPrompt += `\n难度等级：${level}`
           if (requirements) {
@@ -1330,7 +1389,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           }
 
           const messages = [
-            { role: 'system', content: LESSON_PLAN_PROMPT },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ]
 

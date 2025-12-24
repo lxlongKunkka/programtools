@@ -123,6 +123,7 @@ router.post('/groups/:id/move', authenticateToken, requireRole('admin'), async (
 router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
   try {
     const { chapterId } = req.params
+    const { levelId } = req.query
     const userId = req.user.id
 
     // 1. Check if user has unlocked this chapter
@@ -136,21 +137,32 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
     }
 
     // 2. Find the chapter
-    let level = await CourseLevel.findOne({ 
+    const query = { 
         $or: [
             { 'chapters.id': chapterId },
             { 'topics.chapters.id': chapterId }
         ]
-    })
+    }
+    
+    // If levelId is provided (and valid), scope the search to that level
+    if (levelId && mongoose.Types.ObjectId.isValid(levelId)) {
+        query._id = levelId
+    }
+
+    let level = await CourseLevel.findOne(query)
 
     // If not found, and it looks like a MongoID, try finding by _id
     if (!level && mongoose.Types.ObjectId.isValid(chapterId)) {
-        level = await CourseLevel.findOne({ 
+        const idQuery = { 
             $or: [
                 { 'chapters._id': chapterId },
                 { 'topics.chapters._id': chapterId }
             ]
-        })
+        }
+        if (levelId && mongoose.Types.ObjectId.isValid(levelId)) {
+            idQuery._id = levelId
+        }
+        level = await CourseLevel.findOne(idQuery)
     }
 
     let chapter = null

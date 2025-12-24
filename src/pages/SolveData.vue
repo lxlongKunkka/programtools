@@ -19,6 +19,13 @@
           ])" :key="m.id" :value="m.id">{{ m.name }}</option>
         </select>
       </div>
+      <div class="language-selector" style="margin-left: 15px;">
+        <label for="lang-select">语言:</label>
+        <select id="lang-select" v-model="language">
+          <option value="C++">C++</option>
+          <option value="Python">Python</option>
+        </select>
+      </div>
     </div>
   </div>
   
@@ -495,7 +502,8 @@ export default {
         const res = await request.post('/api/solution-report', {
           problem: task.translationText || task.problemText,
           code: pureCode,
-          model: this.selectedModel
+          model: this.selectedModel,
+          language: this.language
         })
         
         if (res.html) {
