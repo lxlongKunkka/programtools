@@ -5,7 +5,7 @@
         <div class="header-left">
           <h1>{{ selectedSubject }} 闯关学习</h1>
           <div class="progress-badge" v-if="userProgress">
-            当前等级: Level {{ getCurrentSubjectLevel() }}
+            当前进度: {{ getLevelTitle(selectedSubject, getCurrentSubjectLevel()) || ('Level ' + getCurrentSubjectLevel()) }}
           </div>
         </div>
         <div class="header-right">
@@ -30,8 +30,7 @@
           <div class="level-info">
             <h2>
               <span class="toggle-icon">{{ isExpanded(level) ? '▼' : '▶' }}</span>
-              Level {{ level.level }}
-              <span class="level-title-text">{{ level.title }}</span>
+              {{ level.title }}
             </h2>
           </div>
           <div class="level-status">
@@ -45,7 +44,7 @@
           <div v-if="level.description" class="level-desc-section">
              <div class="level-desc-header" @click="toggleDesc(level)">
                 <span class="toggle-icon">{{ isDescExpanded(level) ? '▼' : '▶' }}</span>
-                <span class="desc-label">等级简介</span>
+                <span class="desc-label">模块简介</span>
              </div>
              <div v-show="isDescExpanded(level)" class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
           </div>
@@ -171,7 +170,7 @@
           <div v-if="loadingLearnerProgress" class="loading">加载中...</div>
           <div v-else-if="selectedLearnerProgress" class="progress-details">
             <div class="progress-stat-card">
-               <h4>当前等级</h4>
+               <h4>当前进度</h4>
                <div class="levels-list">
                  <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="level-item">
                    <span class="subj-name">{{ subj }}</span>
@@ -219,16 +218,15 @@ export default {
   data() {
     const savedSubject = localStorage.getItem('selected_subject')
     const defaultSubject = 'C++基础'
-    const initialSubject = (savedSubject && SUBJECTS_CONFIG.some(s => s.name === savedSubject)) 
-      ? savedSubject 
-      : defaultSubject
+    // Trust savedSubject even if not in static config (it might be a custom group)
+    const initialSubject = savedSubject || defaultSubject
 
     return {
       levels: [],
       userProgress: null,
       loading: true,
       selectedSubject: initialSubject,
-      availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
+      customGroups: [],
       expandedLevelIds: [],
       expandedDescIds: [],
       expandedTopicIds: [],
@@ -241,6 +239,15 @@ export default {
       selectedLearnerTopic: null, // The topic context for the modal
       loadingLearnerProgress: false,
       isInitialLoad: true
+    }
+  },
+  computed: {
+    availableSubjects() {
+        const defaults = SUBJECTS_CONFIG.map(s => s.name)
+        if (this.customGroups.length > 0) {
+            return Array.from(new Set([...defaults, ...this.customGroups]))
+        }
+        return defaults
     }
   },
   watch: {
@@ -259,11 +266,21 @@ export default {
     async fetchData() {
       this.loading = true
       try {
-        const realSubject = getRealSubject(this.selectedSubject)
+        // Fetch ALL levels to discover custom groups
         const [levelsData, progressData] = await Promise.all([
-          request(`/api/course/levels?subject=${encodeURIComponent(realSubject)}`),
+          request(`/api/course/levels`),
           request('/api/course/progress')
         ])
+        
+        // Extract custom groups
+        const allGroups = new Set(SUBJECTS_CONFIG.map(s => s.name))
+        if (Array.isArray(levelsData)) {
+            levelsData.forEach(l => {
+                if (l.group) allGroups.add(l.group)
+            })
+        }
+        this.customGroups = Array.from(allGroups)
+
         this.levels = filterLevels(levelsData, this.selectedSubject)
         this.userProgress = progressData
         

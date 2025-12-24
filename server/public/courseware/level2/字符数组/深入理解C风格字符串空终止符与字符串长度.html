@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字符数组 - 深入理解C风格字符串</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.cn/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.cn/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.cn/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
+        .ppt-container { width: 100%; height: 100%; position: relative; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        
+        /* --- 导航按钮 --- */
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
+        .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
+        #prevBtn { left: 30px; } #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
+        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+        
+        /* --- Logo --- */
+        .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
+
+        /* --- 内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.2em, 2.5vw, 1.8em); color: #555; text-align: center; margin-top: 20px; }
+        p, li { font-size: clamp(1em, 2vw, 1.2em); line-height: 1.6; color: #444; }
+        .center-content { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; }
+        .icon { font-size: clamp(3em, 6vw, 4.5em); margin-bottom: 20px; }
+        
+        /* --- 布局组件 --- */
+        .two-columns { display: flex; flex-wrap: wrap; gap: 30px; width: 100%; margin-top: 2vh; }
+        .column { flex: 1; min-width: 280px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .column h4 { margin-top: 0; font-size: clamp(1.1em, 2.2vw, 1.4em); color: #333; }
+        .highlight { color: #e63946; font-weight: bold; }
+        .flow-step { margin-top: 1.5vh; padding-left: 20px; border-left: 3px solid #007aff; }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
+        
+        /* --- 代码块 --- */
+        pre { background-color: #ffffff; color: #000000; padding: 15px; border-radius: 6px; border: 1px solid #ddd; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* --- 动画演示区域 --- */
+        .animation-area { height: 300px; position: relative; border: 2px dashed #ccc; margin-top: 2vh; padding: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: #fdfdfd; }
+        .anim-controls { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
+        .anim-btn { padding: 8px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: background-color 0.2s, transform 0.2s; }
+        .anim-btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .anim-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-prev { background-color: #6c757d; }
+        .btn-next { background-color: #007aff; }
+        .btn-reset { background-color: #dc3545; }
+        #stepDescription { margin-top: 15px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007aff; border-radius: 4px; min-height: 40px; font-size: 1.1em; color: #333; }
+
+        /* 动画特定样式 */
+        .char-box-container { display: flex; align-items: flex-end; gap: 5px; margin-top: 20px; }
+        .char-box { width: 50px; height: 50px; border: 1px solid #007aff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2em; background-color: #e6f7ff; position: relative; }
+        .char-box.highlighted { background-color: #ffcc00; border-color: #ff9900; }
+        .char-box.null-terminator { background-color: #dc3545; color: white; border-color: #c82333; }
+        .char-index { position: absolute; top: -20px; font-size: 0.8em; color: #666; }
+        .char-label { position: absolute; bottom: -20px; font-size: 0.8em; color: #666; }
+
+        .code-example pre code {
+            display: block;
+            padding: 1em;
+            background: #f8f8f8;
+            border-radius: 5px;
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            line-height: 1.4;
+            color: #333;
+            overflow-x: auto;
+        }
+        .code-example pre code .keyword { color: #007bff; }
+        .code-example pre code .string { color: #28a745; }
+        .code-example pre code .comment { color: #6c757d; font-style: italic; }
+        .code-example pre code .number { color: #fd7e14; }
+        .code-example pre code .function { color: #6f42c1; }
+        .code-example pre code .operator { color: #dc3545; }
+        .code-example pre code .type { color: #17a2b8; }
+        .code-example pre code .literal { color: #e83e8c; }
+
+        .problem-statement { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .analysis-step { margin-bottom: 10px; }
+        .solution-code { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <img src="https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/qimailogo.png" class="logo" alt="Logo">
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="center-content">
+                <div class="icon">🚀</div>
+                <h1>字符数组 - 深入理解C风格字符串：空终止符与字符串长度</h1>
+                <h3>C++编程进阶 | 少儿编程/信奥</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 教学目标 (知识/能力/素养) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎯 教学目标</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>📚 知识与技能</h4>
+                        <ul>
+                            <li><span class="highlight">理解C风格字符串的本质</span>：是特殊的字符数组，以空终止符 `\0` 结尾。</li>
+                            <li><span class="highlight">掌握空终止符的作用</span>：作为字符串的结束标志。</li>
+                            <li><span class="highlight">区分字符串的两种长度</span>：“实际字符数” (不含 `\0`) 和 “存储空间大小” (含 `\0`)。</li>
+                            <li><span class="highlight">了解 `strlen()` 函数</span>：用途、头文件，计算实际长度。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>💡 过程与方法</h4>
+                        <ul>
+                            <li><span class="highlight">正确声明和初始化C风格字符串</span>，并注意预留 `\0` 空间。</li>
+                            <li><span class="highlight">手动遍历字符串</span>，识别 `\0` 的位置。</li>
+                            <li><span class="highlight">应用 `strlen()` 函数</span>，并区分其与 `sizeof()` 运算符。</li>
+                            <li><span class="highlight">分析字符串存储</span>：理解内存中的存储方式和所占空间。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 20px;">
+                    <strong>❤️ 情感态度与价值观：</strong> 培养严谨的编程习惯，提升问题解决能力，感受计算机处理文字的原理。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 趣味引入 (真实场景) -->
+        <div class="slide">
+            <div class="slide-header"><h2>❓ 趣味引入：计算机的“句号”在哪里？</h2></div>
+            <div class="slide-content">
+                <p>同学们，我们平时聊天、写作文，都是由一个个汉字或字母组成的。在计算机的世界里，这些文字信息就是“字符串”。比如你的名字“小明”，或者一句问候语“Hello World!”，它们都是字符串。 👋</p>
+                <p>我们之前学过数组可以存放一串数字，那如果我们要存放一串字符，也就是字符串，该怎么办呢？我们可以用字符数组！</p>
+                <div class="flow-step">
+                    <p>🤔 **问题来了：** 计算机怎么知道一个字符串在哪里结束了呢？</p>
+                    <p>比如，我有一个 `char` 数组，里面存放了 `'C'`, `'o'`, `'d'`, `'e'`, `'r'` 这几个字符，计算机怎么知道“Coder”就是完整的字符串，而不是后面还有别的垃圾数据呢？</p>
+                </div>
+                <p>就像我们写完一句话会打一个“句号”一样，计算机也需要一个特殊的“句号”来告诉它：“嘿，字符串到这里就结束啦！” 🛑 今天，我们就要来认识这个特殊的“句号”——它就是C风格字符串的秘密武器，叫做“<span class="highlight">空终止符</span>”！让我们一起揭开它的神秘面纱吧！ ✨</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: 核心算法演示 (动画) - 字符串存储与 \0 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎬 核心概念演示：字符串如何被存储？</h2></div>
+            <div class="slide-content">
+                <p style="text-align: center;">让我们通过动画来理解字符串 "Hello" 在内存中是如何存储的，以及空终止符的作用。</p>
+                <div class="animation-area" id="animArea">
+                    <div class="char-box-container" id="charContainer">
+                        <!-- 动画元素将在这里生成 -->
+                    </div>
+                </div>
+                <div id="stepDescription">准备就绪，请点击“下一步”开始演示字符串 "Hello" 的存储过程。</div>
+                <div class="anim-controls">
+                    <button id="prevStepBtn" class="anim-btn btn-prev">上一步</button>
+                    <button id="nextStepBtn" class="anim-btn btn-next">下一步</button>
+                    <button id="resetBtn" class="anim-btn btn-reset">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 知识点讲解 - 什么是C风格字符串？ -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 知识点1：什么是C风格字符串？</h2></div>
+            <div class="slide-content">
+                <p>C风格字符串（C-style String）本质上就是 <span class="highlight">以空终止符 `\0` 结尾的字符数组</span>。它在C语言中被广泛使用，在C++中也兼容。 </p>
+                <ul>
+                    <li><p><strong>字符数组</strong>：它是一个 `char` 类型的数组，每个元素存储一个字符。 📦</p></li>
+                    <li><p><strong>空终止符 `\0`</strong>：这是一个特殊的字符，它的ASCII码值是0。它不代表任何可打印的字符，仅仅用来 <span class="highlight">标记字符串的结束</span>。🏁</p></li>
+                </ul>
+                <p><strong>类比思考：</strong> 想象你有一个盒子（字符数组），里面放着一些字母卡片（字符）。如果没有一个明确的标记，你怎么知道这些卡片组成的单词在哪里结束了呢？空终止符 `\0` 就扮演了这个“结束标记”的角色！就像你写完一句话要打个句号一样。句号本身不是文字，但它很重要！ 📝</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: 知识点讲解 - 空终止符 \0 的作用 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 知识点2：空终止符 `\0` 的作用</h2></div>
+            <div class="slide-content">
+                <p>空终止符 `\0` 是C风格字符串的灵魂！它的作用至关重要：</p>
+                <div class="flow-step">
+                    <h4>1. 标记字符串的结束 🛑</h4>
+                    <p>所有处理C风格字符串的函数（比如打印字符串的 `std::cout << str;`，或者计算长度的 `strlen()`）都会从字符串的开头开始，一直读取到 `\0` 为止，就认为字符串结束了。</p>
+                </div>
+                <div class="flow-step">
+                    <h4>2. 确保程序安全运行 🛡️</h4>
+                    <p>如果字符串没有 `\0` 终止，那么程序在处理这个字符串时就会一直读下去，直到读到内存中的某个 `\0` 或者访问到非法内存区域。这会导致 <span class="highlight">程序出错甚至崩溃！</span> 💥</p>
+                </div>
+                <p><strong>记住：</strong> 没有 `\0` 的字符数组，就不是一个完整的C风格字符串！</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: 知识点讲解 - 声明和初始化 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 知识点3：C风格字符串的声明和初始化</h2></div>
+            <div class="slide-content">
+                <p>有几种常见的方式来创建C风格字符串：</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>方式一：用字符串字面值初始化 （推荐 ✅）</h4>
+                        <p>编译器会自动在末尾添加 `\0`。</p>
+                        <pre><code><span class="keyword">char</span> str1[] = <span class="string">"Hello"</span>; <span class="comment">// 实际分配 6 个 char 空间</span>
+<span class="keyword">char</span> str2[<span class="number">10</span>] = <span class="string">"World"</span>; <span class="comment">// 实际分配 10 个 char 空间，剩余填充 \0</span></code></pre>
+                        <p>👉 注意：`"Hello"` 包含5个字符，加上自动添加的 `\0`，总共需要 <span class="highlight">6个字符空间</span>。</p>
+                    </div>
+                    <div class="column">
+                        <h4>方式二：逐个字符初始化 （需手动添加 `\0` ⚠️）</h4>
+                        <pre><code><span class="keyword">char</span> str3[<span class="number">6</span>] = {<span class="literal">'C'</span>, <span class="literal">'o'</span>, <span class="literal">'d'</span>, <span class="literal">'e'</span>, <span class="literal">'r'</span>, <span class="literal">'\0'</span>}; <span class="comment">// 手动添加 \0</span></code></pre>
+                        <p class="highlight">🚨 错误示范：</p>
+                        <pre><code><span class="keyword">char</span> bad_str[<span class="number">5</span>] = <span class="string">"Hello"</span>; <span class="comment">// 错误！"Hello"需6空间，这里只有5。</span>
+<span class="keyword">char</span> another_bad_str[<span class="number">5</span>] = {<span class="literal">'H'</span>, <span class="literal">'e'</span>, <span class="literal">'l'</span>, <span class="literal">'l'</span>, <span class="literal">'o'</span>}; <span class="comment">// 错误！没有 \0 终止。</span></code></pre>
+                        <p>这些错误可能导致程序行为异常或崩溃！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 知识点讲解 - strlen() 和 sizeof() 的区别 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 知识点4：`strlen()` vs `sizeof()`</h2></div>
+            <div class="slide-content">
+                <p>我们常说的“字符串长度”有两种含义，对应着两个不同的工具：</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>`strlen()` 函数：实际字符数 (Logical Length) 📏</h4>
+                        <ul>
+                            <li><strong>作用</strong>：计算C风格字符串中 <span class="highlight">不包含空终止符 `\0`</span> 的字符个数。</li>
+                            <li><strong>头文件</strong>：`#include <cstring>` (C语言中是 `<string.h>`)</li>
+                            <li><strong>用法</strong>：`size_t len = strlen(myString);`</li>
+                            <li><strong>类比</strong>：你数一个单词里有几个字母。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>`sizeof()` 运算符：存储空间大小 (Physical Length) 📦</h4>
+                        <ul>
+                            <li><strong>作用</strong>：计算 <span class="highlight">变量或类型所占的字节数</span>。对于字符数组，它返回整个数组的字节大小，<span class="highlight">包含空终止符 `\0`</span> 在内。</li>
+                            <li><strong>用法</strong>：`size_t size = sizeof(myArray);`</li>
+                            <li><strong>类比</strong>：你测量一个盒子能装多少个格子，包括那个用来放“句号”的格子。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <p><strong>重要区别：</strong></p>
+                    <ul>
+                        <li>`strlen()` 是一个 <span class="highlight">函数</span>，运行时遍历字符串直到找到 `\0`。</li>
+                        <li>`sizeof()` 是一个 <span class="highlight">运算符</span>，在编译时就确定数组大小，无需运行。</li>
+                    </ul>
+                    <p>例如：`char str[] = "ABC";`</p>
+                    <ul>
+                        <li>`strlen(str)` 的结果是 <span class="highlight">3</span> (字符 'A', 'B', 'C')</li>
+                        <li>`sizeof(str)` 的结果是 <span class="highlight">4</span> (字符 'A', 'B', 'C' 和 `\0`)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 典型例题1：字符串初始化与空终止符 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 典型例题1：字符串初始化与空终止符</h2></div>
+            <div class="slide-content">
+                <div class="problem-statement">
+                    <h4>问题描述：</h4>
+                    <p>声明一个C风格字符串 `name` 为 "Coder"，并手动遍历它，观察每个字符及其ASCII值，直到找到空终止符 `\0`。</p>
+                </div>
+                <div class="flow-step">
+                    <h4>思路分析：</h4>
+                    <ol>
+                        <li>使用字符串字面值初始化 `char name[] = "Coder";`，编译器会自动添加 `\0`。</li>
+                        <li>使用 `for` 循环遍历数组，通过索引 `i` 访问 `name[i]`。</li>
+                        <li>在循环中，检查 `name[i]` 是否为 `\0`。如果是，则输出提示并跳出循环。</li>
+                        <li>打印每个字符及其 `static_cast<int>(name[i])` 得到的ASCII值。</li>
+                    </ol>
+                </div>
+                <div class="solution-code">
+                    <h4>代码实现：</h4>
+                    <pre><code><span class="comment">#include &lt;iostream&gt;</span>
+<span class="comment">#include &lt;cstring&gt;</span> <span class="comment">// 尽管这里不是必须，但通常会包含</span>
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    <span class="keyword">char</span> name[] = <span class="string">"Coder"</span>; <span class="comment">// 5个字符 + 1个\0 = 6个字符空间</span>
+
+    std::cout &lt;&lt; <span class="string">"手动遍历字符串 '"</span> &lt;&lt; name &lt;&lt; <span class="string">"':"</span> &lt;&lt; std::endl;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i) { <span class="comment">// 遍历足够长的空间，或者直到遇到 \0</span>
+        <span class="keyword">if</span> (name[i] == <span class="literal">'\0'</span>) {
+            std::cout &lt;&lt; <span class="string">"在索引 "</span> &lt;&lt; i &lt;&lt; <span class="string">" 处找到了空终止符 \\0"</span> &lt;&lt; std::endl;
+            <span class="keyword">break</span>; <span class="comment">// 找到 \0 就停止</span>
+        }
+        std::cout &lt;&lt; <span class="string">"name["</span> &lt;&lt; i &lt;&lt; <span class="string">"] 的字符是: "</span> &lt;&lt; name[i]
+                  &lt;&lt; <span class="string">" (ASCII值: "</span> &lt;&lt; <span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>&gt;(name[i]) &lt;&lt; <span class="string">")"</span> &lt;&lt; std::endl;
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 典型例题2：strlen() 与 sizeof() 的区别 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 典型例题2：`strlen()` 与 `sizeof()` 的区别</h2></div>
+            <div class="slide-content">
+                <div class="problem-statement">
+                    <h4>问题描述：</h4>
+                    <p>对于字符串 `"Hello World!"` 和 `"Hi"`，分别使用 `strlen()` 和 `sizeof()` 获取其长度和大小，并分析结果。</p>
+                </div>
+                <div class="flow-step">
+                    <h4>思路分析：</h4>
+                    <ol>
+                        <li>声明两个C风格字符串：`greeting` 为 `"Hello World!"`，`short_str` 为 `"Hi"`，但预留更多空间 `char short_str[5] = "Hi";`。</li>
+                        <li>使用 `strlen()` 函数获取它们的“实际字符数”。</li>
+                        <li>使用 `sizeof()` 运算符获取它们在内存中占用的“存储空间大小”。</li>
+                        <li>对比两者的结果，加深对 `\0` 和数组总容量的理解。</li>
+                    </ol>
+                </div>
+                <div class="solution-code">
+                    <h4>代码实现：</h4>
+                    <pre><code><span class="comment">#include &lt;iostream&gt;</span>
+<span class="comment">#include &lt;cstring&gt;</span> <span class="comment">// 用于 strlen 函数</span>
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    <span class="keyword">char</span> greeting[] = <span class="string">"Hello World!"</span>; <span class="comment">// 12个字符 + 1个\0 = 13个字节</span>
+    <span class="keyword">char</span> short_str[<span class="number">5</span>] = <span class="string">"Hi"</span>;         <span class="comment">// 2个字符 + 1个\0 = 3个字节，数组大小为5，剩余空间填充 \0</span>
+
+    std::cout &lt;&lt; <span class="string">"字符串: \""</span> &lt;&lt; greeting &lt;&lt; <span class="string">"\""</span> &lt;&lt; std::endl;
+    std::cout &lt;&lt; <span class="string">" strlen() 实际长度: "</span> &lt;&lt; <span class="function">strlen</span>(greeting) &lt;&lt; std::endl; <span class="comment">// 预期 12</span>
+    std::cout &lt;&lt; <span class="string">" sizeof() 存储大小: "</span> &lt;&lt; <span class="function">sizeof</span>(greeting) &lt;&lt; std::endl; <span class="comment">// 预期 13</span>
+    std::cout &lt;&lt; std::endl;
+
+    std::cout &lt;&lt; <span class="string">"字符串: \""</span> &lt;&lt; short_str &lt;&lt; <span class="string">"\""</span> &lt;&lt; std::endl;
+    std::cout &lt;&lt; <span class="string">" strlen() 实际长度: "</span> &lt;&lt; <span class="function">strlen</span>(short_str) &lt;&lt; std::endl; <span class="comment">// 预期 2</span>
+    std::cout &lt;&lt; <span class="string">" sizeof() 存储大小: "</span> &lt;&lt; <span class="function">sizeof</span>(short_str) &lt;&lt; std::endl; <span class="comment">// 预期 5</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 典型例题3：错误示范 - 忘记 \0 或空间不足 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 典型例题3：错误示范 - 忘记 `\0` 或空间不足 💥</h2></div>
+            <div class="slide-content">
+                <div class="problem-statement">
+                    <h4>问题描述：</h4>
+                    <p>创建一个没有空终止符的字符数组，或者数组空间不足以存放 `\0`，然后尝试打印它或使用 `strlen()`，观察可能发生的错误。</p>
+                </div>
+                <div class="flow-step">
+                    <h4>思路分析：</h4>
+                    <ol>
+                        <li>声明一个 `char` 数组，例如 `char wrong_str[5] = {'A', 'B', 'C', 'D', 'E'};`，故意不添加 `\0`。</li>
+                        <li>尝试使用 `std::cout << wrong_str;` 打印。由于没有 `\0`，`cout` 会一直读取内存直到遇到一个 `\0` 或发生内存访问错误。</li>
+                        <li><span class="highlight">警告：</span> 尝试对这样的数组使用 `strlen()` 函数是 <span class="highlight">非常危险的</span>，因为它会越界访问，可能导致程序崩溃！</li>
+                    </ol>
+                </div>
+                <div class="solution-code">
+                    <h4>代码实现：</h4>
+                    <pre><code><span class="comment">#include &lt;iostream&gt;</span>
+<span class="comment">#include &lt;cstring&gt;</span> <span class="comment">// 包含以备用，但此处演示错误不建议调用strlen</span>
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    <span class="comment">// 错误示范1：没有 \0 终止</span>
+    <span class="keyword">char</span> no_null_str[<span class="number">5</span>] = {<span class="literal">'A'</span>, <span class="literal">'B'</span>, <span class="literal">'C'</span>, <span class="literal">'D'</span>, <span class="literal">'E'</span>};
+    std::cout &lt;&lt; <span class="string">"--- 错误示范1：没有 \\0 终止 ---"</span> &lt;&lt; std::endl;
+    std::cout &lt;&lt; <span class="string">"打印 no_null_str (可能乱码或崩溃): "</span> &lt;&lt; no_null_str &lt;&lt; std::endl;
+    <span class="comment">// std::cout &lt;&lt; "其长度为: " &lt;&lt; strlen(no_null_str) &lt;&lt; std::endl; // ⚠️ 极度危险，不要轻易尝试！</span>
+    std::cout &lt;&lt; <span class="string">" sizeof(no_null_str): "</span> &lt;&lt; <span class="function">sizeof</span>(no_null_str) &lt;&lt; std::endl; <span class="comment">// 预期 5</span>
+    std::cout &lt;&lt; std::endl;
+
+    <span class="comment">// 错误示范2：空间不足以存放 \0</span>
+    <span class="comment">// char insufficient_space[5] = "Hello"; // 编译错误或警告，因为 "Hello" 需要6个空间</span>
+    <span class="comment">// 这种情况下，编译器会阻止你，或者截断字符串，或者干脆不添加 \0。</span>
+    <span class="comment">// 最佳实践是让编译器自动计算大小：char good_str[] = "Hello"; // 自动分配6个空间</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 课堂互动 (提问) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🗣️ 课堂互动：你问我答</h2></div>
+            <div class="slide-content">
+                <h4>思考并回答以下问题：</h4>
+                <div class="flow-step">
+                    <p>1. 如果我有一个字符数组 `char city[5] = {'B', 'e', 'i', 'j', 'i'};`，然后我用 `std::cout << city;` 来打印它，你觉得会发生什么？它会正确地打印出 "Beiji" 吗？为什么？</p>
+                    <p class="highlight">💡 提示：想想 `\0` 的作用。</p>
+                </div>
+                <div class="flow-step">
+                    <p>2. `strlen("Happy")` 的结果是多少？那 `sizeof("Happy")` 的结果又是多少呢？它们为什么不同？</p>
+                    <p class="highlight">💡 提示：一个是“实际长度”，一个是“存储大小”。</p>
+                </div>
+                <div class="flow-step">
+                    <p>3. 我们知道 `\0` 的ASCII值是0。那 `char c = '0';` 这个字符的ASCII值是多少？它和 `\0` 是同一个东西吗？</p>
+                    <p class="highlight">💡 提示：一个是特殊控制字符，一个是可打印字符。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: 课堂互动 (小组任务) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🤝 小组任务：长度猜猜看！</h2></div>
+            <div class="slide-content">
+                <p>请同学们分成小组，对以下C风格字符串声明，预测 `strlen()` 和 `sizeof()` 的结果。讨论并给出你们的理由！</p>
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>任务一：预测结果</h4>
+                        <ol>
+                            <li>`char s1[] = "Programming";`
+                                <ul><li>`strlen(s1)`: ?</li><li>`sizeof(s1)`: ?</li></ul>
+                            </li>
+                            <li>`char s2[10] = "Coding";`
+                                <ul><li>`strlen(s2)`: ?</li><li>`sizeof(s2)`: ?</li></ul>
+                            </li>
+                            <li>`char s3[3] = {'A', 'B', '\0'};`
+                                <ul><li>`strlen(s3)`: ?</li><li>`sizeof(s3)`: ?</li></ul>
+                            </li>
+                            <li>`char s4[] = "";` (这是一个空字符串)
+                                <ul><li>`strlen(s4)`: ?</li><li>`sizeof(s4)`: ?</li></ul>
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="column">
+                        <h4>任务二：进阶挑战 💪</h4>
+                        <p>不用 `strlen()` 函数，你能写一个循环来计算一个C风格字符串的实际长度吗？</p>
+                        <p>（提示：你需要一个计数器和一个循环，直到找到 `\0`。）</p>
+                        <pre><code><span class="keyword">int</span> <span class="function">my_strlen</span>(<span class="keyword">const</span> <span class="keyword">char</span>* str) {
+    <span class="keyword">int</span> count = <span class="number">0</span>;
+    <span class="comment">// TODO: 完善你的代码，用循环实现strlen的功能</span>
+    <span class="keyword">while</span> (str[count] != <span class="literal">'\0'</span>) {
+        count++;
+    }
+    <span class="keyword">return</span> count;
+}</code></pre>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; text-align: center;">小组讨论后，请各小组派代表分享答案和理由！</p>
+            </div>
+        </div>
+
+        <!-- Slide 14: 练习题目 -->
+        <div class="slide">
+            <div class="slide-header"><h2>✍️ 练习题目</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>基础练习 (填空题)</h4>
+                        <ol>
+                            <li>C风格字符串的结束标志是特殊的字符 `____`。</li>
+                            <li>`strlen()` 函数计算的是字符串的 `____` 长度，不包含 `____`。</li>
+                            <li>`sizeof()` 运算符计算的是变量或数组的 `____` 长度。</li>
+                            <li>`char text[] = "Hello C++";` 那么 `strlen(text)` 的结果是 `____`，`sizeof(text)` 的结果是 `____`。</li>
+                            <li>`char data[7] = {'P', 'Y', 'T', 'H', 'O', 'N', '\0'};` 那么 `strlen(data)` 的结果是 `____`，`sizeof(data)` 的结果是 `____`。</li>
+                        </ol>
+                        <h4>基础练习 (判断题)</h4>
+                        <ol>
+                            <li>( ) 所有的 `char` 数组都是C风格字符串。</li>
+                            <li>( ) `strlen()` 函数在计算字符串长度时，会把空终止符 `\0` 也计算在内。</li>
+                            <li>( ) 如果一个 `char` 数组没有以 `\0` 结尾，使用 `std::cout << array_name;` 打印可能会导致程序崩溃。</li>
+                        </ol>
+                    </div>
+                    <div class="column">
+                        <h4>进阶练习</h4>
+                        <p><strong>编程题：</strong></p>
+                        <p>编写一个C++程序，定义一个字符数组 `char message[20];`。然后使用 `std::cin` 读取用户输入的字符串到 `message` 中，并打印出：</p>
+                        <ol>
+                            <li>你输入的字符串内容。</li>
+                            <li>使用 `strlen()` 得到的字符串实际长度。</li>
+                            <li>使用 `sizeof()` 得到的字符数组存储空间大小。</li>
+                            <li>尝试手动遍历并打印出 `message` 数组的每个字符（直到 `\0` 或数组末尾），并显示其索引。</li>
+                        </ol>
+                        <p class="highlight">⚠️ 注意：`std::cin` 读取字符串时，如果遇到空格或回车会停止。如果想读取包含空格的行，可以使用 `std::cin.getline()`。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: 总结与作业 -->
+        <div class="slide">
+            <div class="slide-header"><h2>总结与作业</h2></div>
+            <div class="slide-content">
+                <div class="two-columns">
+                    <div class="column">
+                        <h4>回顾总结 🚀</h4>
+                        <ul>
+                            <li>C风格字符串 = <span class="highlight">以 `\0` 结尾的 `char` 数组</span>。</li>
+                            <li>`\0` 是字符串的 <span class="highlight">“句号”</span>，标记结束，非常重要！</li>
+                            <li>`strlen()` 计算 <span class="highlight">实际字符数</span> (不含 `\0`)。</li>
+                            <li>`sizeof()` 计算 <span class="highlight">数组总大小</span> (含 `\0`)。</li>
+                            <li>务必确保C风格字符串 <span class="highlight">有足够的空间存放 `\0`</span>。</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>家庭作业  होमवर्क 📚</h4>
+                        <ol>
+                            <li>完成课件中的所有 <span class="highlight">练习题目</span>。</li>
+                            <li>尝试编写一个函数，接收一个C风格字符串，并返回它的 <span class="highlight">逆序字符串</span>（例如 "abc" 返回 "cba"）。提示：需要创建一个新的字符数组来存放结果。</li>
+                            <li><span class="highlight">思考题：</span> 为什么在C++中，我们更推荐使用 `std::string` 而不是C风格字符串？（可以尝试查阅资料）</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="conclusion" style="margin-top: 30px;">
+                    <p>今天的课程就到这里，希望同学们对C风格字符串有了更深入的理解！下节课我们将学习字符数组的常见操作。再见！ 👋</p>
+                </div>
+            </div>
+        </div>
+
+        <button id="prevBtn" class="nav-button">‹</button>
+        <button id="nextBtn" class="nav-button">›</button>
+        <div id="slideCounter">1 / N</div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const slideCounter = document.getElementById('slideCounter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            currentSlide = index;
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+            slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+            
+            // 每次切换幻灯片时，重置动画 (如果当前幻灯片是动画幻灯片)
+            if (currentSlide === 3) { // Slide 4 (index 3) is the animation slide
+                resetAnimation();
+            }
+        }
+
+        prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+        nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+        });
+        showSlide(0);
+
+        // --- 动画逻辑 ---
+        const animArea = document.getElementById('animArea');
+        const charContainer = document.getElementById('charContainer');
+        const stepDesc = document.getElementById('stepDescription');
+        const prevStepBtn = document.getElementById('prevStepBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let currentAnimStep = 0;
+        const animString = "Hello";
+        const totalCharBoxes = animString.length + 1; // For '\0'
+
+        const steps = [
+            { desc: "初始状态：一个空的字符数组，准备存储字符串。", draw: () => {
+                charContainer.innerHTML = '';
+                for (let i = 0; i < totalCharBoxes; i++) {
+                    const box = document.createElement('div');
+                    box.className = 'char-box';
+                    box.innerHTML = `<span class="char-index">${i}</span>`;
+                    charContainer.appendChild(box);
+                }
+            }},
+            { desc: `第一步：存储第一个字符 '${animString[0]}'` , draw: () => {
+                const box = charContainer.children[0];
+                box.textContent = animString[0];
+                box.classList.add('highlighted');
+                box.innerHTML += `<span class="char-index">0</span>`;
+            }},
+            { desc: `第二步：存储第二个字符 '${animString[1]}'` , draw: () => {
+                charContainer.children[0].classList.remove('highlighted');
+                const box = charContainer.children[1];
+                box.textContent = animString[1];
+                box.classList.add('highlighted');
+                box.innerHTML += `<span class="char-index">1</span>`;
+            }},
+            { desc: `第三步：存储第三个字符 '${animString[2]}'` , draw: () => {
+                charContainer.children[1].classList.remove('highlighted');
+                const box = charContainer.children[2];
+                box.textContent = animString[2];
+                box.classList.add('highlighted');
+                box.innerHTML += `<span class="char-index">2</span>`;
+            }},
+            { desc: `第四步：存储第四个字符 '${animString[3]}'` , draw: () => {
+                charContainer.children[2].classList.remove('highlighted');
+                const box = charContainer.children[3];
+                box.textContent = animString[3];
+                box.classList.add('highlighted');
+                box.innerHTML += `<span class="char-index">3</span>`;
+            }},
+            { desc: `第五步：存储第五个字符 '${animString[4]}'` , draw: () => {
+                charContainer.children[3].classList.remove('highlighted');
+                const box = charContainer.children[4];
+                box.textContent = animString[4];
+                box.classList.add('highlighted');
+                box.innerHTML += `<span class="char-index">4</span>`;
+            }},
+            { desc: `第六步：存储空终止符 '\\0'。它标记了字符串的结束！` , draw: () => {
+                charContainer.children[4].classList.remove('highlighted');
+                const box = charContainer.children[5];
+                box.textContent = '\\0';
+                box.classList.add('null-terminator');
+                box.innerHTML += `<span class="char-index">5</span>`;
+            }},
+            { desc: `字符串 "Hello" 完整存储完毕。它的实际字符数是 ${animString.length} (不含\\0)。` , draw: () => {
+                charContainer.children[5].classList.remove('highlighted');
+                for(let i=0; i < animString.length; i++) {
+                    charContainer.children[i].classList.add('highlighted');
+                }
+                charContainer.children[animString.length].classList.add('null-terminator');
+                stepDesc.innerHTML += `<br>👉 <span class="highlight">strlen("Hello")</span> 会返回 ${animString.length}。`;
+            }},
+            { desc: `整个字符数组的存储空间大小是 ${totalCharBoxes} (包含\\0)。` , draw: () => {
+                for(let i=0; i < animString.length; i++) {
+                    charContainer.children[i].classList.remove('highlighted');
+                }
+                for(let i=0; i < totalCharBoxes; i++) {
+                    charContainer.children[i].classList.add('highlighted');
+                }
+                stepDesc.innerHTML += `<br>👉 <span class="highlight">sizeof(char array[])</span> 会返回 ${totalCharBoxes}。`;
+            }}
+        ];
+        const totalAnimSteps = steps.length;
+
+        function renderAnimStep(index) {
+            currentAnimStep = index;
+            steps[index].draw();
+            stepDesc.innerHTML = steps[index].desc;
+            updateAnimControls();
+        }
+
+        function updateAnimControls() {
+            prevStepBtn.disabled = currentAnimStep <= 0;
+            nextStepBtn.disabled = currentAnimStep >= totalAnimSteps - 1;
+        }
+
+        function nextAnimStep() {
+            if (currentAnimStep < totalAnimSteps - 1) {
+                currentAnimStep++;
+                renderAnimStep(currentAnimStep);
+            }
+        }
+
+        function prevAnimStep() {
+            if (currentAnimStep > 0) {
+                currentAnimStep--;
+                renderAnimStep(currentAnimStep);
+            }
+        }
+
+        function resetAnimation() {
+            currentAnimStep = 0;
+            renderAnimStep(currentAnimStep);
+        }
+
+        prevStepBtn.addEventListener('click', prevAnimStep);
+        nextStepBtn.addEventListener('click', nextAnimStep);
+        resetBtn.addEventListener('click', resetAnimation);
+
+        // 初始化 KaTeX (需要在DOM加载后执行)
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+            resetAnimation(); // Initial render of animation slide
+        });
+
+        // 动画渲染时也需要重新渲染公式，如果动画步骤描述中包含公式的话
+        // 目前的动画步骤描述没有公式，所以不需要额外的KaTeX渲染调用
+    </script>
+</body>
+</html>

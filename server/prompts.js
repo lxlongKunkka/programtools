@@ -722,6 +722,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
    - 包含 .two-columns, .flow-step, .conclusion 等实用类。
 3. **不要**依赖外部复杂的 CDN 库（如 Reveal.js），使用原生 JS 实现简单的显隐切换。
 4. 代码块样式要使用白色背景，黑色字体，确保投屏清晰可见。
+5. **严禁使用 Markdown 语法**：正文中不要使用 **bold**、*italic*、\`code\` 等 Markdown 标记，必须使用 HTML 标签（如 <strong>, <em>, <code>）。
 
 【HTML 结构模板】
 \`\`\`html
@@ -770,7 +771,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; }
         
         /* --- 代码块 --- */
-        pre { background-color: #ffffff; color: #000000; padding: 15px; border-radius: 6px; border: 1px solid #ddd; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        pre { background-color: #ffffff; color: #000000; padding: 15px; border-radius: 6px; border: 1px solid #ddd; overflow-x: auto; font-family: Consolas, 'Courier New', monospace; font-size: 1.2em; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
         /* --- 动画演示区域 --- */
         .animation-area { height: 300px; position: relative; border: 2px dashed #ccc; margin-top: 2vh; padding: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: #fdfdfd; }

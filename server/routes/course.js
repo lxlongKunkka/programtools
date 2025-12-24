@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
+import CourseGroup from '../models/CourseGroup.js'
 import UserProgress from '../models/UserProgress.js'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
@@ -14,6 +15,102 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const router = express.Router()
+
+// --- Group Routes ---
+
+// Get all groups
+router.get('/groups', async (req, res) => {
+  try {
+    const groups = await CourseGroup.find().sort({ order: 1 })
+    res.json(groups)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Create group
+router.post('/groups', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { name, title } = req.body
+    const count = await CourseGroup.countDocuments()
+    const group = new CourseGroup({
+      name,
+      title: title || name,
+      order: count + 1
+    })
+    await group.save()
+    res.json(group)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Update group (Rename)
+router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { name, title } = req.body
+    const group = await CourseGroup.findById(req.params.id)
+    if (!group) return res.status(404).json({ error: 'Group not found' })
+
+    const oldName = group.name
+    if (name && name !== oldName) {
+      // Update all levels that use this group name
+      await CourseLevel.updateMany({ group: oldName }, { $set: { group: name } })
+      group.name = name
+    }
+    if (title) group.title = title
+    
+    await group.save()
+    res.json(group)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Delete group
+router.delete('/groups/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const group = await CourseGroup.findById(req.params.id)
+    if (!group) return res.status(404).json({ error: 'Group not found' })
+
+    // Check if levels exist
+    const levelCount = await CourseLevel.countDocuments({ group: group.name })
+    if (levelCount > 0) {
+      return res.status(400).json({ error: `Cannot delete group. It contains ${levelCount} levels.` })
+    }
+
+    await CourseGroup.findByIdAndDelete(req.params.id)
+    res.json({ message: 'Group deleted' })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Move group
+router.post('/groups/:id/move', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { direction } = req.body
+    const group = await CourseGroup.findById(req.params.id)
+    if (!group) return res.status(404).json({ error: 'Group not found' })
+
+    const currentOrder = group.order
+    const swapGroup = await CourseGroup.findOne({
+      order: direction === 'up' ? { $lt: currentOrder } : { $gt: currentOrder }
+    }).sort({ order: direction === 'up' ? -1 : 1 })
+
+    if (swapGroup) {
+      const swapOrder = swapGroup.order
+      swapGroup.order = currentOrder
+      group.order = swapOrder
+      await swapGroup.save()
+      await group.save()
+    }
+    res.json({ message: 'Moved successfully' })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 
 // --- Public / User Routes ---
 
@@ -35,21 +132,36 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
     }
 
     // 2. Find the chapter
-    let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
+    let level = await CourseLevel.findOne({ 
+        $or: [
+            { 'chapters.id': chapterId },
+            { 'topics.chapters.id': chapterId }
+        ]
+    })
+
+    // If not found, and it looks like a MongoID, try finding by _id
+    if (!level && mongoose.Types.ObjectId.isValid(chapterId)) {
+        level = await CourseLevel.findOne({ 
+            $or: [
+                { 'chapters._id': chapterId },
+                { 'topics.chapters._id': chapterId }
+            ]
+        })
+    }
+
     let chapter = null
     let isFirstChapter = false
     
     if (level) {
-      const idx = level.chapters.findIndex(c => c.id === chapterId)
+      // Check legacy chapters
+      let idx = level.chapters.findIndex(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
       if (idx !== -1) {
         chapter = level.chapters[idx]
         if (idx === 0) isFirstChapter = true
-      }
-    } else {
-      level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
-      if (level) {
+      } else if (level.topics) {
+        // Check topics
         for (const topic of level.topics) {
-          const idx = topic.chapters.findIndex(c => c.id === chapterId)
+          idx = topic.chapters.findIndex(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
           if (idx !== -1) {
             chapter = topic.chapters[idx]
             if (idx === 0) isFirstChapter = true
@@ -734,8 +846,16 @@ router.get('/submission/best', authenticateToken, async (req, res) => {
 // Create a Level
 router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject } = req.body
-    const newLevel = new CourseLevel({ level, title, description, subject: subject || 'C++', chapters: [] })
+    const { level, title, description, subject, group, label } = req.body
+    const newLevel = new CourseLevel({ 
+        level, 
+        title, 
+        description, 
+        subject: subject || 'C++', 
+        group, 
+        label,
+        chapters: [] 
+    })
     await newLevel.save()
     res.json(newLevel)
   } catch (e) {
@@ -746,10 +866,10 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
 // Update a Level
 router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject } = req.body
+    const { level, title, description, subject, group, label } = req.body
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
       req.params.id, 
-      { level, title, description, subject },
+      { level, title, description, subject, group, label },
       { new: true }
     )
     res.json(updatedLevel)
@@ -762,6 +882,66 @@ router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), 
 router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     await CourseLevel.findByIdAndDelete(req.params.id)
+    res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Move a Level
+router.post('/levels/:id/move', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { direction } = req.body // 'up' or 'down'
+    const currentLevel = await CourseLevel.findById(req.params.id)
+    if (!currentLevel) return res.status(404).json({ error: 'Level not found' })
+
+    // Find all levels in the same group/subject to determine order
+    // We use the same filter logic as the frontend uses to group them
+    const query = {}
+    if (currentLevel.group) {
+        query.group = currentLevel.group
+    } else {
+        query.subject = currentLevel.subject
+        // If no group, we might need to handle the legacy "minLevel/maxLevel" logic?
+        // For simplicity, let's assume if no group, we sort by level within subject.
+        // But to be safe, let's just find ALL levels for this subject and sort them.
+    }
+
+    let levels = await CourseLevel.find(query).sort({ level: 1 })
+    
+    // If using legacy config (e.g. C++ Basic vs Advanced), we might need to filter further?
+    // But "Move" usually implies moving within the visible list.
+    // If the user has defined 'group', it's easy.
+    // If not, we might be moving across "Basic" and "Advanced" boundaries if we are not careful.
+    // However, the user is asking for "free movement", so maybe boundaries shouldn't exist physically in DB?
+    
+    const currentIndex = levels.findIndex(l => l._id.toString() === currentLevel._id.toString())
+    if (currentIndex === -1) return res.status(404).json({ error: 'Level not in list' })
+
+    let swapIndex = -1
+    if (direction === 'up' && currentIndex > 0) {
+        swapIndex = currentIndex - 1
+    } else if (direction === 'down' && currentIndex < levels.length - 1) {
+        swapIndex = currentIndex + 1
+    }
+
+    if (swapIndex !== -1) {
+        const otherLevel = levels[swapIndex]
+        
+        // Swap their 'level' values
+        // We use a temp value to avoid unique index collision if any
+        const tempLevel = -9999
+        const val1 = currentLevel.level
+        const val2 = otherLevel.level
+
+        // Update current to temp
+        await CourseLevel.findByIdAndUpdate(currentLevel._id, { level: tempLevel })
+        // Update other to val1
+        await CourseLevel.findByIdAndUpdate(otherLevel._id, { level: val1 })
+        // Update current (from temp) to val2
+        await CourseLevel.findByIdAndUpdate(currentLevel._id, { level: val2 })
+    }
+
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ error: e.message })

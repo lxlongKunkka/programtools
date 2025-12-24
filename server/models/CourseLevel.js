@@ -17,7 +17,9 @@ const topicSchema = new mongoose.Schema({
 })
 
 const courseLevelSchema = new mongoose.Schema({
-  level: { type: Number, required: true }, // 1 to 6
+  level: { type: Number, required: true }, // Used for sorting
+  group: { type: String }, // e.g. 'C++基础', 'C++进阶' - Explicit grouping
+  label: { type: String }, // Custom label (e.g. "语法思维训练") to override "Level X"
   subject: { type: String, default: 'C++' }, // Course subject (e.g., 'C++', 'Python')
   title: { type: String, required: true },
   description: { type: String },

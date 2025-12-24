@@ -4,66 +4,79 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <h3>课程结构</h3>
-        <div class="subject-selector">
-          <select v-model="selectedSubject" @change="fetchLevels" class="subject-select">
-            <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
-          </select>
-        </div>
-        <button @click="createNewLevel" class="btn-add-level">+ 添加等级 (Level)</button>
+        <button @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
       </div>
 
       <div v-if="loadingCourses" class="loading-text">加载中...</div>
       <div v-else class="tree-container">
-        <div v-for="level in levels" :key="level._id" class="tree-node-level">
-          <!-- Level Node -->
-          <div 
-            :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
-            @click="selectNode('level', level); toggleLevelDesc(level)"
-          >
-            <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
-            <span class="tree-label">Level {{ level.level }}</span>
-            <div class="tree-actions">
-               <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
-            </div>
-          </div>
-
-          <!-- Topics (Children of Level) -->
-          <div v-show="!level.descCollapsed" class="tree-children">
-            <div v-for="topic in level.topics" :key="topic._id" class="tree-node-topic">
-              <!-- Topic Node -->
-              <div 
-                :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
-                @click="selectNode('topic', topic, level); toggleTopicCollapse(topic)"
-              >
-                <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
-                <span class="tree-label">{{ topic.title }}</span>
+        <div v-for="group in displayGroups" :key="group.name" class="tree-node-group">
+            <!-- Group Node -->
+            <div 
+                :class="['tree-item', 'group-item', { active: isSelected('group', group._id || group.name) }]"
+                @click="selectNode('group', group); toggleGroupCollapse(group)"
+            >
+                <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
+                <span class="tree-label">{{ group.title || group.name }}</span>
                 <div class="tree-actions">
-                   <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
+                    <button @click.stop="createNewLevel(group)" class="btn-icon" title="添加模块">+</button>
                 </div>
-              </div>
-
-              <!-- Chapters (Children of Topic) -->
-              <div v-show="!topic.collapsed" class="tree-children">
-                <div 
-                  v-for="chapter in topic.chapters" 
-                  :key="chapter.id" 
-                  :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
-                  @click="selectNode('chapter', chapter, level, topic)"
-                >
-                  <span class="tree-label">{{ chapter.title }}</span>
-                  <div class="tree-meta">
-                    <span class="meta-badge" :class="chapter.contentType === 'html' ? 'badge-html' : 'badge-md'">
-                      {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
-                    </span>
-                    <span v-if="chapter.problemIds && chapter.problemIds.length > 0" class="meta-count" title="题目数量">
-                      {{ chapter.problemIds.length }}题
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
-            <div v-if="!level.topics || level.topics.length === 0" class="empty-node">无 Topic</div>
-          </div>
+
+            <!-- Levels (Children of Group) -->
+            <div v-show="!group.collapsed" class="tree-children">
+                <div v-for="level in getLevelsForGroup(group.name)" :key="level._id" class="tree-node-level">
+                <!-- Level Node -->
+                <div 
+                    :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
+                    @click="selectNode('level', level); toggleLevelDesc(level)"
+                >
+                    <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
+                    <span class="tree-label">{{ level.title }}</span>
+                    <div class="tree-actions">
+                    <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
+                    </div>
+                </div>
+
+                <!-- Topics (Children of Level) -->
+                <div v-show="!level.descCollapsed" class="tree-children">
+                    <div v-for="topic in level.topics" :key="topic._id" class="tree-node-topic">
+                    <!-- Topic Node -->
+                    <div 
+                        :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
+                        @click="selectNode('topic', topic, level); toggleTopicCollapse(topic)"
+                    >
+                        <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
+                        <span class="tree-label">{{ topic.title }}</span>
+                        <div class="tree-actions">
+                        <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Chapters (Children of Topic) -->
+                    <div v-show="!topic.collapsed" class="tree-children">
+                        <div 
+                        v-for="chapter in topic.chapters" 
+                        :key="chapter.id" 
+                        :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
+                        @click="selectNode('chapter', chapter, level, topic)"
+                        >
+                        <span class="tree-label">{{ chapter.title }}</span>
+                        <div class="tree-meta">
+                            <span class="meta-badge" :class="chapter.contentType === 'html' ? 'badge-html' : 'badge-md'">
+                            {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
+                            </span>
+                            <span v-if="chapter.problemIds && chapter.problemIds.length > 0" class="meta-count" title="题目数量">
+                            {{ chapter.problemIds.length }}题
+                            </span>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+                    <div v-if="!level.topics || level.topics.length === 0" class="empty-node">无 Topic</div>
+                </div>
+                </div>
+                <div v-if="getLevelsForGroup(group.name).length === 0" class="empty-node">无模块</div>
+            </div>
         </div>
       </div>
     </div>
@@ -71,29 +84,68 @@
     <!-- Right Panel: Editor -->
     <div class="editor-panel">
       <div v-if="!selectedNode" class="empty-state">
-        <p>请在左侧选择一个节点进行编辑，或点击“添加等级”开始。</p>
+        <p>请在左侧选择一个节点进行编辑，或点击“添加分组”开始。</p>
+      </div>
+
+      <!-- Group Editor -->
+      <div v-else-if="selectedNode.type === 'group'" class="editor-form">
+        <div class="editor-header">
+          <h2>{{ editingGroup._id ? '编辑分组' : '新建分组' }}</h2>
+          <div class="header-actions">
+            <div v-if="editingGroup._id" class="move-actions">
+               <button @click="moveGroup('up')" class="btn-small btn-move">↑ 上移</button>
+               <button @click="moveGroup('down')" class="btn-small btn-move">↓ 下移</button>
+            </div>
+            <button v-if="editingGroup._id" @click="deleteGroup(editingGroup._id)" class="btn-delete">删除分组</button>
+            <button @click="saveGroup" class="btn-save">保存更改</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>分组名称 (ID):</label>
+          <input v-model="editingGroup.name" class="form-input" placeholder="例如: C++基础" :disabled="!!editingGroup._id">
+          <span class="hint" v-if="editingGroup._id">分组ID不可修改，请修改显示标题。</span>
+        </div>
+        <div class="form-group">
+          <label>显示标题:</label>
+          <input v-model="editingGroup.title" class="form-input" placeholder="例如: C++ 基础课程">
+        </div>
       </div>
 
       <!-- Level Editor -->
       <div v-else-if="selectedNode.type === 'level'" class="editor-form">
         <div class="editor-header">
-          <h2>{{ editingLevel._id ? '编辑等级' : '新建等级' }}</h2>
+          <h2>{{ editingLevel._id ? '编辑课程模块' : '新建课程模块' }}</h2>
           <div class="header-actions">
-            <button v-if="editingLevel._id" @click="deleteLevel(editingLevel._id)" class="btn-delete">删除等级</button>
+            <div v-if="editingLevel._id" class="move-actions">
+               <button @click="moveLevel('up')" class="btn-small btn-move">↑ 上移</button>
+               <button @click="moveLevel('down')" class="btn-small btn-move">↓ 下移</button>
+            </div>
+            <button v-if="editingLevel._id" @click="deleteLevel(editingLevel._id)" class="btn-delete">删除模块</button>
             <button @click="saveLevel" class="btn-save">保存更改</button>
           </div>
         </div>
         
         <div class="form-group">
-          <label>Level (数字):</label>
-          <input v-model.number="editingLevel.level" type="number" class="form-input">
-          <p v-if="currentSubjectConfig && currentSubjectConfig.minLevel" class="hint">
-             当前视图范围: {{ currentSubjectConfig.minLevel }} - {{ currentSubjectConfig.maxLevel || '∞' }}
-          </p>
+          <label>所属分组 (Tab):</label>
+          <input v-model="editingLevel.group" class="form-input" disabled>
         </div>
+
+        <!-- Hidden Level Input (Managed by Move Up/Down) -->
+        <!-- <div class="form-group">
+          <label>排序序号 (数字, 越小越靠前):</label>
+          <input v-model.number="editingLevel.level" type="number" class="form-input" step="0.1">
+        </div> -->
+
+        <!-- Hidden Label Input (Not needed per user request) -->
+        <!-- <div class="form-group">
+          <label>显示标签 (Label):</label>
+          <input v-model="editingLevel.label" class="form-input" placeholder="例如: Level 1 或 语法思维训练">
+        </div> -->
+
         <div class="form-group">
-          <label>标题:</label>
-          <input v-model="editingLevel.title" class="form-input">
+          <label>标题 (Title):</label>
+          <input v-model="editingLevel.title" class="form-input" placeholder="例如: 基础语法">
         </div>
         <div class="form-group">
           <label>描述 (Markdown):</label>
@@ -126,7 +178,7 @@
 
         <div class="form-row">
           <div class="form-group half">
-            <label>所属等级:</label>
+            <label>所属模块:</label>
             <input :value="'Level ' + editingLevelForTopic.level" disabled class="form-input disabled">
           </div>
           <div class="form-group half">
@@ -273,14 +325,14 @@ export default {
       socket: null,
       // Data
       levels: [],
+      groups: [], // DB Groups
       loadingCourses: false,
-      selectedSubject: 'C++基础',
-      availableSubjects: SUBJECTS_CONFIG.map(s => s.name),
       
       // Selection State
-      selectedNode: null, // { type: 'level'|'topic'|'chapter', id: string }
+      selectedNode: null, // { type: 'group'|'level'|'topic'|'chapter', id: string }
       
       // Editing Models
+      editingGroup: {},
       editingLevel: {},
       editingTopic: {},
       editingChapter: {},
@@ -304,8 +356,33 @@ export default {
     }
   },
   computed: {
-    currentSubjectConfig() {
-      return SUBJECTS_CONFIG.find(s => s.name === this.selectedSubject)
+    displayGroups() {
+        // 1. Start with DB groups
+        const result = [...this.groups]
+        const dbGroupNames = new Set(this.groups.map(g => g.name))
+        
+        // 2. Find orphaned groups from levels
+        const orphanedNames = new Set()
+        if (this.levels) {
+            this.levels.forEach(l => {
+                if (l.group && !dbGroupNames.has(l.group)) {
+                    orphanedNames.add(l.group)
+                }
+            })
+        }
+        
+        // 3. Add virtual groups for orphans
+        orphanedNames.forEach(name => {
+            result.push({
+                _id: null, // Virtual
+                name: name,
+                title: name,
+                order: 999,
+                collapsed: false // Default expanded?
+            })
+        })
+        
+        return result.sort((a, b) => (a.order || 0) - (b.order || 0))
     },
     user() {
       try {
@@ -352,9 +429,32 @@ export default {
                 
                 if (data.status === 'success') {
                     this.showToastMessage('后台生成任务完成！')
+                    
+                    // Handle Topic Plan Generation (Chapters or Description)
+                    if (data.type === 'topic-chapters' || data.type === 'topic-desc') {
+                        // Refresh the whole tree to show new chapters
+                        this.fetchLevels().then(() => {
+                            // If we are currently editing this topic, refresh the editing form
+                            if (this.selectedNode && this.selectedNode.type === 'topic') {
+                                const currentId = this.selectedNode.id
+                                // data.chapterId holds the topicId in this case
+                                if (currentId === key || currentId === data.chapterId) {
+                                    // Find the updated topic in the fresh levels data
+                                    const updatedTopic = this.findTopicInTree(currentId)
+                                    if (updatedTopic) {
+                                        this.editingTopic = JSON.parse(JSON.stringify(updatedTopic))
+                                        // If chapters were generated, expand the node
+                                        if (data.type === 'topic-chapters') {
+                                            updatedTopic.collapsed = false
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    // Handle Chapter Content Generation (Lesson Plan, PPT, Solution)
                     // If currently viewing this chapter, refresh content
-                    // Check both ID types just in case
-                    if (this.selectedNode && this.selectedNode.type === 'chapter') {
+                    else if (this.selectedNode && this.selectedNode.type === 'chapter') {
                         const currentId = this.selectedNode.id
                         const currentChapterId = this.editingChapter.id
                         
@@ -379,7 +479,8 @@ export default {
         e.preventDefault()
         if (!this.selectedNode) return
         
-        if (this.selectedNode.type === 'level') this.saveLevel()
+        if (this.selectedNode.type === 'group') this.saveGroup()
+        else if (this.selectedNode.type === 'level') this.saveLevel()
         else if (this.selectedNode.type === 'topic') this.saveTopic()
         else if (this.selectedNode.type === 'chapter') this.saveChapter()
       }
@@ -398,7 +499,9 @@ export default {
       this.showPreview = false // Reset preview on switch
 
       // Populate Editor Data
-      if (type === 'level') {
+      if (type === 'group') {
+        this.editingGroup = JSON.parse(JSON.stringify(data))
+      } else if (type === 'level') {
         this.editingLevel = JSON.parse(JSON.stringify(data))
       } else if (type === 'topic') {
         this.editingTopic = JSON.parse(JSON.stringify(data))
@@ -446,6 +549,12 @@ export default {
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
                 if (fullChapter.title) this.editingChapter.title = fullChapter.title
+                
+                // Update tree node
+                this.updateChapterInTree(chapterId, {
+                    contentType: this.editingChapter.contentType,
+                    title: this.editingChapter.title
+                })
             }
         } catch (e) {
             console.error(e)
@@ -459,20 +568,29 @@ export default {
     },
 
     // --- Creation Methods ---
-    createNewLevel() {
+    createNewGroup() {
+        const newGroup = {
+            name: '新分组',
+            title: '新分组',
+            _id: null
+        }
+        this.selectNode('group', newGroup)
+    },
+    createNewLevel(group) {
       let nextLevel = 1
-      const subjectConfig = SUBJECTS_CONFIG.find(s => s.name === this.selectedSubject)
-      if (subjectConfig && subjectConfig.minLevel) nextLevel = subjectConfig.minLevel
-      if (this.levels && this.levels.length > 0) {
-          const maxLevel = Math.max(...this.levels.map(l => l.level || 0))
-          if (maxLevel >= nextLevel) nextLevel = maxLevel + 1
+      // Find max level in this group
+      const groupLevels = this.getLevelsForGroup(group.name)
+      if (groupLevels.length > 0) {
+          const maxLevel = Math.max(...groupLevels.map(l => l.level || 0))
+          nextLevel = maxLevel + 1
       }
 
       const newLevel = { 
         level: nextLevel, 
-        title: '新等级', 
+        title: '新课程模块', 
         description: '',
-        subject: getRealSubject(this.selectedSubject),
+        subject: 'C++', // Default
+        group: group.name, // Pre-fill group
         _id: null // Marker for new
       }
       
@@ -531,51 +649,86 @@ export default {
     },
 
     // --- Data Fetching ---
-    async fetchLevels() {
-      if (!this.levels || this.levels.length === 0) this.loadingCourses = true
-      
-      // Save collapsed state
-      const collapsedState = {}
-      const descCollapsedState = {}
-      if (this.levels) {
-        this.levels.forEach(l => {
-            if (l._id) descCollapsedState[l._id] = l.descCollapsed
-            if (l.topics) l.topics.forEach(t => {
-                if (t._id) collapsedState[t._id] = t.collapsed
+    async fetchData() {
+        this.loadingCourses = true
+        try {
+            const [groups, levels] = await Promise.all([
+                request('/api/course/groups'),
+                request('/api/course/levels')
+            ])
+            
+            this.groups = groups.map(g => ({ ...g, collapsed: false }))
+            this.levels = levels.map(l => ({ ...l, descCollapsed: false }))
+            // Initialize topics collapsed state default false
+            this.levels.forEach(l => {
+                if (l.topics) l.topics.forEach(t => t.collapsed = false)
             })
-        })
-      }
 
-      try {
-        const realSubject = getRealSubject(this.selectedSubject)
-        const rawData = await request(`/api/course/levels?subject=${encodeURIComponent(realSubject)}`)
-        const data = filterLevels(rawData, this.selectedSubject)
-        
-        // Restore state
-        if (Array.isArray(data)) {
-          data.forEach(level => {
-            level.descCollapsed = (level._id && descCollapsedState[level._id] !== undefined) ? descCollapsedState[level._id] : true
-            if (level.topics) {
-              level.topics.forEach(topic => {
-                topic.collapsed = (topic._id && collapsedState[topic._id] !== undefined) ? collapsedState[topic._id] : true
-              })
-            }
-          })
+            this.restoreTreeState()
+        } catch (e) {
+            this.showToastMessage('加载失败: ' + e.message)
+        } finally {
+            this.loadingCourses = false
         }
-        this.levels = data
-      } catch (e) {
-        this.showToastMessage('加载课程失败: ' + e.message)
-      } finally {
-        this.loadingCourses = false
-      }
+    },
+    fetchLevels() { this.fetchData() }, // Alias for compatibility
+
+    getLevelsForGroup(groupName) {
+        if (!this.levels) return []
+        return this.levels.filter(l => l.group === groupName)
     },
 
-    // --- Actions ---
-    toggleLevelDesc(level) { level.descCollapsed = !level.descCollapsed },
-    toggleTopicCollapse(topic) { topic.collapsed = !topic.collapsed },
+    async saveGroup() {
+        try {
+            if (this.editingGroup._id) {
+                await request(`/api/course/groups/${this.editingGroup._id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(this.editingGroup)
+                })
+            } else {
+                await request('/api/course/groups', {
+                    method: 'POST',
+                    body: JSON.stringify(this.editingGroup)
+                })
+            }
+            this.showToastMessage('保存分组成功')
+            this.fetchData()
+        } catch (e) {
+            this.showToastMessage('保存分组失败: ' + e.message)
+        }
+    },
+    async deleteGroup(id) {
+        if (!confirm('确定要删除这个分组吗？')) return
+        try {
+            await request(`/api/course/groups/${id}`, { method: 'DELETE' })
+            this.showToastMessage('删除分组成功')
+            this.fetchData()
+            this.selectedNode = null
+        } catch (e) {
+            this.showToastMessage('删除分组失败: ' + e.message)
+        }
+    },
+    async moveGroup(direction) {
+        if (!this.editingGroup._id) return
+        try {
+            await request(`/api/course/groups/${this.editingGroup._id}/move`, {
+                method: 'POST',
+                body: JSON.stringify({ direction })
+            })
+            this.showToastMessage('移动成功')
+            this.fetchData()
+        } catch (e) {
+            this.showToastMessage('移动失败: ' + e.message)
+        }
+    },
 
     async saveLevel() {
       try {
+        // Ensure group is set
+        if (!this.editingLevel.group) {
+            this.editingLevel.group = this.selectedSubject
+        }
+
         if (this.editingLevel._id) {
           await request(`/api/course/levels/${this.editingLevel._id}`, {
             method: 'PUT',
@@ -588,21 +741,34 @@ export default {
           })
         }
         this.showToastMessage('保存成功')
-        this.fetchLevels()
-        this.selectedNode = null // Clear selection or re-select after fetch?
+        this.fetchData()
+        // this.selectedNode = null // Clear selection or re-select after fetch?
       } catch (e) {
         this.showToastMessage('保存失败: ' + e.message)
       }
     },
     async deleteLevel(id) {
-      if (!confirm('确定要删除这个等级吗？')) return
+      if (!confirm('确定要删除这个课程模块吗？')) return
       try {
         await request(`/api/course/levels/${id}`, { method: 'DELETE' })
         this.showToastMessage('删除成功')
-        this.fetchLevels()
+        this.fetchData()
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除失败: ' + e.message)
+      }
+    },
+    async moveLevel(direction) {
+      if (!this.editingLevel._id) return
+      try {
+        await request(`/api/course/levels/${this.editingLevel._id}/move`, {
+          method: 'POST',
+          body: JSON.stringify({ direction })
+        })
+        this.showToastMessage('移动成功')
+        this.fetchData()
+      } catch (e) {
+        this.showToastMessage('移动失败: ' + e.message)
       }
     },
     async saveTopic() {
@@ -627,7 +793,7 @@ export default {
           }
         }
         this.showToastMessage('保存知识点成功')
-        await this.fetchLevels()
+        await this.fetchData()
         // this.selectedNode = null // Keep selection
       } catch (e) {
         this.showToastMessage('保存知识点失败: ' + e.message)
@@ -638,7 +804,7 @@ export default {
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}`, { method: 'DELETE' })
         this.showToastMessage('删除知识点成功')
-        this.fetchLevels()
+        this.fetchData()
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除知识点失败: ' + e.message)
@@ -653,7 +819,7 @@ export default {
         // Update local state immediately to reflect changes
         this.editingTopic.chapters = []
         
-        await this.fetchLevels()
+        await this.fetchData()
       } catch (e) {
         this.showToastMessage('清空章节失败: ' + e.message)
       }
@@ -668,7 +834,7 @@ export default {
           body: JSON.stringify({ direction })
         })
         this.showToastMessage('移动成功')
-        this.fetchLevels()
+        this.fetchData()
       } catch (e) {
         this.showToastMessage('移动失败: ' + e.message)
       }
@@ -716,7 +882,7 @@ export default {
         }
         
         this.showToastMessage('保存章节成功')
-        await this.fetchLevels()
+        await this.fetchData()
         // this.selectedNode = null // Keep selection
       } catch (e) {
         this.showToastMessage('保存章节失败: ' + e.message)
@@ -727,7 +893,7 @@ export default {
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, { method: 'DELETE' })
         this.showToastMessage('删除章节成功')
-        this.fetchLevels()
+        this.fetchData()
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除章节失败: ' + e.message)
@@ -744,10 +910,106 @@ export default {
           body: JSON.stringify({ direction })
         })
         this.showToastMessage('移动成功')
-        this.fetchLevels()
+        this.fetchData()
         // Note: Selection might be lost or stale after fetch, ideally we re-select
       } catch (e) {
         this.showToastMessage('移动失败: ' + e.message)
+      }
+    },
+
+    // --- Actions ---
+    toggleGroupCollapse(group) { 
+        group.collapsed = !group.collapsed 
+        this.saveTreeState()
+    },
+    toggleLevelDesc(level) { 
+        level.descCollapsed = !level.descCollapsed 
+        this.saveTreeState()
+    },
+    toggleTopicCollapse(topic) { 
+        topic.collapsed = !topic.collapsed 
+        this.saveTreeState()
+    },
+
+    saveTreeState() {
+        const state = {
+            groups: this.groups.filter(g => g.collapsed).map(g => g._id || g.name),
+            levels: this.levels.filter(l => l.descCollapsed).map(l => l._id),
+            topics: []
+        }
+        this.levels.forEach(l => {
+            if (l.topics) {
+                l.topics.forEach(t => {
+                    if (t.collapsed) state.topics.push(t._id)
+                })
+            }
+        })
+        localStorage.setItem('design_tree_collapsed_state', JSON.stringify(state))
+    },
+    restoreTreeState() {
+        try {
+            const raw = localStorage.getItem('design_tree_collapsed_state')
+            if (!raw) return
+            const state = JSON.parse(raw)
+            
+            if (state.groups) {
+                const collapsedGroups = new Set(state.groups)
+                this.groups.forEach(g => {
+                    if (collapsedGroups.has(g._id) || collapsedGroups.has(g.name)) {
+                        g.collapsed = true
+                    }
+                })
+            }
+            
+            if (state.levels) {
+                const collapsedLevels = new Set(state.levels)
+                this.levels.forEach(l => {
+                    if (collapsedLevels.has(l._id)) {
+                        l.descCollapsed = true
+                    }
+                })
+            }
+            
+            if (state.topics) {
+                const collapsedTopics = new Set(state.topics)
+                this.levels.forEach(l => {
+                    if (l.topics) {
+                        l.topics.forEach(t => {
+                            if (collapsedTopics.has(t._id)) {
+                                t.collapsed = true
+                            }
+                        })
+                    }
+                })
+            }
+        } catch (e) {
+            console.error('Failed to restore tree state', e)
+        }
+    },
+
+    async saveLevel() {
+      try {
+        // Ensure group is set
+        if (!this.editingLevel.group) {
+            this.editingLevel.group = this.selectedSubject
+        }
+
+        if (this.editingLevel._id) {
+          await request(`/api/course/levels/${this.editingLevel._id}`, {
+            method: 'PUT',
+            body: JSON.stringify(this.editingLevel)
+          })
+        } else {
+          await request('/api/course/levels', {
+            method: 'POST',
+            body: JSON.stringify(this.editingLevel)
+          })
+        }
+        this.showToastMessage('保存成功')
+        this.fetchLevels()
+        this.selectedNode = null // Clear selection or re-select after fetch?
+      } catch (e) {
+        this.showToastMessage('保存失败: ' + e.message)
       }
     },
     // --- AI Methods ---
@@ -771,6 +1033,7 @@ export default {
       // Immediately switch to Markdown mode and show loading state
       this.editingChapter.contentType = 'markdown'
       this.editingChapter.content = '正在生成教案中，请稍候...'
+      this.updateChapterInTree(chapterId, { contentType: 'markdown' })
       
       try {
         await request('/api/lesson-plan/background', {
@@ -787,7 +1050,7 @@ export default {
         })
         
         this.showToastMessage(`"${chapterTitle}" 教案生成任务已提交后台，完成后会自动保存`)
-        this.aiStatusMap[chapterId] = '正在后台生成中...'
+        this.aiStatusMap[chapterId] = '正在后台生成教案中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
@@ -822,6 +1085,10 @@ export default {
       this.aiLoadingMap[chapterId] = true
       this.aiStatusMap[chapterId] = '正在提交后台任务...'
       
+      // Immediately switch to HTML mode
+      this.editingChapter.contentType = 'html'
+      this.updateChapterInTree(chapterId, { contentType: 'html' })
+
       try {
         await request('/api/generate-ppt/background', {
           method: 'POST',
@@ -843,7 +1110,7 @@ export default {
         })
         
         this.showToastMessage(`"${chapterTitle}" PPT 生成任务已提交后台，完成后会自动保存`)
-        this.aiStatusMap[chapterId] = '正在后台生成中...'
+        this.aiStatusMap[chapterId] = '正在后台生成PPT中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
@@ -863,6 +1130,10 @@ export default {
       this.aiLoadingMap[id] = true
       this.aiStatusMap[id] = '正在获取题目信息...'
       
+      // Immediately switch to HTML mode
+      this.editingChapter.contentType = 'html'
+      this.updateChapterInTree(id, { contentType: 'html' })
+
       try {
         // 1. Fetch problem details
         let docId = firstProblemId
@@ -912,7 +1183,7 @@ export default {
             model: this.selectedModel
         })
         
-        this.aiStatusMap[id] = '正在后台生成中...'
+        this.aiStatusMap[id] = '正在后台生成题解中...'
         this.showToastMessage('后台生成任务已提交！请耐心等待...')
 
       } catch (e) {
@@ -997,6 +1268,46 @@ export default {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[targetTopicId] = false
         this.aiStatusMap[targetTopicId] = ''
+      }
+    },
+
+    findTopicInTree(topicId) {
+      if (this.levels) {
+        for (const level of this.levels) {
+            if (level.topics) {
+                const topic = level.topics.find(t => t._id === topicId || t.id === topicId)
+                if (topic) return topic
+            }
+        }
+      }
+      return null
+    },
+
+    updateChapterInTree(chapterId, updates) {
+      // Try to find in current context first (fastest)
+      if (this.editingTopicForChapter && this.editingTopicForChapter.chapters) {
+          const chapter = this.editingTopicForChapter.chapters.find(c => c.id === chapterId || c._id === chapterId)
+          if (chapter) {
+              Object.assign(chapter, updates)
+              return
+          }
+      }
+      
+      // Fallback: Search entire tree
+      if (this.levels) {
+        for (const level of this.levels) {
+            if (level.topics) {
+                for (const topic of level.topics) {
+                    if (topic.chapters) {
+                        const chapter = topic.chapters.find(c => c.id === chapterId || c._id === chapterId)
+                        if (chapter) {
+                            Object.assign(chapter, updates)
+                            return
+                        }
+                    }
+                }
+            }
+        }
       }
     },
 
@@ -1217,9 +1528,26 @@ export default {
 .chapter-item { padding-left: 48px; font-size: 13px; color: #475569; }
 
 .empty-node {
-  padding-left: 48px;
-  font-size: 12px;
+  padding: 12px;
+  text-align: center;
   color: #94a3b8;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.group-item {
+    font-weight: 700;
+    color: #1e293b;
+    background: #e2e8f0;
+    margin-top: 8px;
+}
+.group-item:hover { background: #cbd5e1; }
+.group-item.active { background: #334155; color: white; }
+.group-item.active .tree-icon { color: white; }
+
+.level-item { font-weight: 600; color: var(--text-main); margin-left: 12px; }
+.topic-item { padding-left: 28px; font-size: 13.5px; color: #334155; margin-left: 12px; }
+.chapter-item { padding-left: 48px; font-size: 13px; color: #475569; margin-left: 12px;
   padding-top: 8px;
   padding-bottom: 8px;
   font-style: italic;

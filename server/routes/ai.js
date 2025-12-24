@@ -1149,7 +1149,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-              systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 8000)}\n`
+              systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 5000)}\n`
           }
 
           if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
@@ -1181,10 +1181,15 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${YUN_API_KEY}`
             },
-            timeout: 120000
+            timeout: 300000 // 5 minutes
           })
 
           let content = resp.data.choices?.[0]?.message?.content || ''
+          const finishReason = resp.data.choices?.[0]?.finish_reason;
+          if (finishReason === 'length') {
+              console.warn(`[Background] PPT generation truncated (length limit). Chapter: ${chapterId}`);
+          }
+          
           content = content.replace(/^```html\s*/, '').replace(/```$/, '')
 
           // Save File
@@ -1436,11 +1441,22 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                           const startIdx = topicObj.chapters.length + 1;
                           const prefix = `${courseLevel.level}-${courseLevel.topics.indexOf(topicObj) + 1}`;
                           
-                          result.chapters.forEach((title, idx) => {
+                          result.chapters.forEach((item, idx) => {
+                              // Handle both string (title only) and object (title + content) formats
+                              let title = '';
+                              let content = '';
+                              
+                              if (typeof item === 'string') {
+                                  title = item;
+                              } else if (typeof item === 'object' && item !== null) {
+                                  title = item.title || '未命名章节';
+                                  content = item.content || '';
+                              }
+
                               topicObj.chapters.push({
                                   id: `${prefix}-${startIdx + idx}`,
                                   title: title,
-                                  content: '',
+                                  content: content,
                                   contentType: 'markdown',
                                   problemIds: []
                               });
