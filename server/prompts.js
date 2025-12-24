@@ -988,6 +988,8 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
 - 内容要与少儿编程/信奥相关，**必须使用 {{language}} 语言**。
 - **幻灯片总页数控制在 10-15 页左右。** 确保有足够的篇幅把知识点讲透，不要匆匆带过。
 - **请严格按照上述 HTML 结构生成，确保包含所有要求的板块。**
+- **严禁在 JavaScript 代码中（即 <script> 标签内）使用 Markdown 代码块标记（如 \`\`\`javascript 或 \`\`\`html）。** 这会导致语法错误。请直接编写合法的 JavaScript 代码。
+- **严禁在 innerHTML 赋值时使用 Markdown 标记。**
 
 请直接输出 HTML 代码，不要包含 Markdown 标记（如 \`\`\`html）。`
 

@@ -1444,7 +1444,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
 // Generate Lesson Plan Background
 router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, requirements, model, chapterId, clientKey } = req.body;
+  const { topic, context, level, requirements, model, chapterId, clientKey, language } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1456,11 +1456,16 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
-          let targetLang = 'C++';
+          let targetLang = language || 'C++';
           let codeLang = 'cpp';
-          if (context && /python/i.test(context)) {
+          
+          // Auto-detect if not provided
+          if (!language && context && /python/i.test(context)) {
             targetLang = 'Python';
-            codeLang = 'python';
+          }
+          
+          if (/python/i.test(targetLang)) {
+              codeLang = 'python';
           }
 
           let systemPrompt = LESSON_PLAN_PROMPT
