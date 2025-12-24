@@ -33,6 +33,7 @@
                 >
                     <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
                     <span class="tree-label">{{ level.title }}</span>
+                    <span v-if="isExplicitLevelEditor(level)" class="permission-icon" title="您拥有此模块的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
                     <div class="tree-actions">
                     <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
                     </div>
@@ -141,13 +142,16 @@
       <div v-else-if="selectedNode.type === 'level'" class="editor-form">
         <div class="editor-header">
           <h2>{{ editingLevel._id ? '编辑课程模块' : '新建课程模块' }}</h2>
-          <div class="header-actions">
+          <div class="header-actions" v-if="canEditLevel(editingLevel)">
             <div v-if="editingLevel._id" class="move-actions">
                <button @click="moveLevel('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveLevel('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
             <button v-if="editingLevel._id" @click="deleteLevel(editingLevel._id)" class="btn-delete">删除模块</button>
             <button @click="saveLevel" class="btn-save">保存更改</button>
+          </div>
+          <div v-else class="header-actions">
+              <span class="badge-readonly">只读模式 (无编辑权限)</span>
           </div>
         </div>
         
@@ -181,6 +185,20 @@
             </div>
           </div>
         </div>
+
+        <div class="form-group" v-if="isAdmin">
+          <label>允许编辑的教师 (仅限此模块):</label>
+          <div class="checkbox-list" v-if="teachers.length > 0">
+             <label v-for="teacher in teachers" :key="teacher._id" class="checkbox-item">
+                <input type="checkbox" :value="teacher._id" v-model="editingLevel.editors">
+                {{ teacher.uname }}
+             </label>
+          </div>
+          <div v-else class="hint">暂无教师账号可选</div>
+          <div class="hint" style="margin-top: 5px; font-size: 12px; color: #888;">
+            注意: 分组管理员默认拥有该分组下所有模块的编辑权限。此处设置的是额外的模块级编辑权限。
+          </div>
+        </div>
       </div>
 
       <!-- Topic Editor -->
@@ -212,7 +230,10 @@
         <div class="ai-assistant-box">
           <div class="ai-header">
             <h3>🤖 AI 章节规划</h3>
-            <span v-if="currentAiLoading" class="ai-status">{{ currentAiStatus }}</span>
+            <div v-if="currentAiLoading" class="status-container">
+                <span class="ai-status">{{ currentAiStatus }}</span>
+                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
+            </div>
           </div>
           <div class="ai-controls" :class="{ disabled: currentAiLoading }">
             <button @click="generateTopicDescription" class="btn-ai" :disabled="currentAiLoading">📝 自动生成描述</button>
@@ -251,7 +272,10 @@
         <div class="ai-assistant-box">
           <div class="ai-header">
             <h3>🤖 AI 备课助手</h3>
-            <span v-if="currentAiLoading" class="ai-status">{{ currentAiStatus }}</span>
+            <div v-if="currentAiLoading" class="status-container">
+                <span class="ai-status">{{ currentAiStatus }}</span>
+                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
+            </div>
           </div>
           <div class="ai-controls" :class="{ disabled: currentAiLoading }">
             <input v-model="aiRequirements" placeholder="输入额外要求 (例如: 多一些生活例子, 侧重C++语法...)" class="form-input ai-input">
@@ -450,6 +474,12 @@ export default {
     const url = import.meta.env.DEV ? 'http://localhost:3000' : '/'
     this.socket = io(url)
     
+    this.socket.on('ai_task_log', (data) => {
+        if (data && data.message) {
+            console.log(data.message)
+        }
+    })
+
     this.socket.on('ai_task_complete', (data) => {
         console.log('AI Task Complete:', data)
         if (data) {
@@ -461,7 +491,8 @@ export default {
                 this.aiStatusMap[key] = ''
                 
                 if (data.status === 'success') {
-                    this.showToastMessage('后台生成任务完成！')
+                    const taskName = data.chapterTitle ? `"${data.chapterTitle}" ` : ''
+                    this.showToastMessage(`${taskName}后台生成任务完成！`)
                     
                     // Handle Topic Plan Generation (Chapters or Description)
                     if (data.type === 'topic-chapters' || data.type === 'topic-desc') {
@@ -562,6 +593,23 @@ export default {
           return id == userId
       })
     },
+    canEditLevel(level) {
+      if (!this.user) return false
+      if (this.isAdmin) return true
+      // Check if editor of the group
+      const group = this.groups.find(g => g.name === level.group)
+      if (group && this.isExplicitEditor(group)) return true
+      // Check if editor of the level
+      return this.isExplicitLevelEditor(level)
+    },
+    isExplicitLevelEditor(level) {
+      if (!this.user || !level.editors) return false
+      const userId = this.user._id || this.user.uid
+      return level.editors.some(e => {
+          const id = typeof e === 'object' ? e._id : e
+          return id == userId
+      })
+    },
     // --- Selection Logic ---
     isSelected(type, id) {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
@@ -583,6 +631,11 @@ export default {
         if (!this.editingGroup.language) this.editingGroup.language = 'C++'
       } else if (type === 'level') {
         this.editingLevel = JSON.parse(JSON.stringify(data))
+        // Ensure editors is an array of IDs
+        if (this.editingLevel.editors && this.editingLevel.editors.length > 0 && typeof this.editingLevel.editors[0] === 'object') {
+            this.editingLevel.editors = this.editingLevel.editors.map(e => e._id)
+        }
+        if (!this.editingLevel.editors) this.editingLevel.editors = []
       } else if (type === 'topic') {
         this.editingTopic = JSON.parse(JSON.stringify(data))
         this.editingLevelForTopic = parentLevel
@@ -1166,6 +1219,7 @@ export default {
       const levelId = this.editingLevelForChapter._id
       const topicId = this.editingTopicForChapter._id
       const levelNum = this.editingLevelForChapter.level
+      const levelTitle = this.editingLevelForChapter.title
       const topicTitle = this.editingTopicForChapter.title
       const chapterTitle = this.editingChapter.title
       const model = this.selectedModel
@@ -1209,6 +1263,7 @@ export default {
             topicTitle: topicTitle,
             chapterTitle: chapterTitle,
             levelNum: levelNum,
+            levelTitle: levelTitle,
             clientKey: chapterId
           })
         })
@@ -1424,6 +1479,14 @@ export default {
             }
         }
       }
+    },
+
+    resetAiStatus() {
+      if (!this.selectedNode) return
+      const id = this.selectedNode.id
+      this.aiLoadingMap[id] = false
+      this.aiStatusMap[id] = ''
+      this.showToastMessage('状态已重置，您可以重新尝试')
     },
 
     getPreviewUrl(url) {
@@ -1797,6 +1860,7 @@ export default {
   font-family: inherit;
   transition: all 0.2s;
   background: #fff;
+  box-sizing: border-box; /* Ensure padding doesn't affect width/height */
 }
 .form-input:focus { 
   border-color: var(--primary-color); 
@@ -1823,6 +1887,8 @@ export default {
   border-right: 1px solid var(--border-color);
   border-radius: 0;
   padding: 16px;
+  padding-bottom: 80px; /* Ensure last line is visible */
+  overflow-y: auto; /* Ensure scrollbar appears */
 }
 .preview-box {
   flex: 1;
@@ -1916,6 +1982,24 @@ export default {
   border-radius: 50%;
   background: #4f46e5;
   animation: pulse-dot 1.5s infinite;
+}
+
+.status-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.btn-reset {
+    font-size: 12px;
+    color: #64748b;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.btn-reset:hover {
+    color: #ef4444;
 }
 
 .ai-controls {

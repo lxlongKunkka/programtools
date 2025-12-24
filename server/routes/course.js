@@ -875,10 +875,18 @@ async function checkGroupPermission(user, groupName) {
   return false
 }
 
+// Helper to check level edit permission
+function checkLevelPermission(user, level) {
+  if (user.role === 'admin' || user.priv === -1) return true
+  if (!level) return false
+  if (level.editors && level.editors.includes(Number(user.id))) return true
+  return false
+}
+
 // Create a Level
 router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject, group, label } = req.body
+    const { level, title, description, subject, group, label, editors } = req.body
     
     if (!(await checkGroupPermission(req.user, group))) {
         return res.status(403).json({ error: 'Access denied: You are not an editor of this group.' })
@@ -891,6 +899,7 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
         subject: subject || 'C++', 
         group, 
         label,
+        editors: editors || [],
         chapters: [] 
     })
     await newLevel.save()
@@ -903,22 +912,27 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
 // Update a Level
 router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject, group, label } = req.body
+    const { level, title, description, subject, group, label, editors } = req.body
     
     // Check permission for the NEW group (if changing)
     if (group && !(await checkGroupPermission(req.user, group))) {
         return res.status(403).json({ error: 'Access denied: You cannot move/edit to this group.' })
     }
 
-    // Check permission for the OLD group
+    // Check permission for the OLD group or Level specific permission
     const existingLevel = await CourseLevel.findById(req.params.id)
-    if (existingLevel && existingLevel.group && !(await checkGroupPermission(req.user, existingLevel.group))) {
-        return res.status(403).json({ error: 'Access denied: You cannot edit levels in the original group.' })
+    if (existingLevel) {
+        const hasGroupPerm = existingLevel.group ? await checkGroupPermission(req.user, existingLevel.group) : true
+        const hasLevelPerm = checkLevelPermission(req.user, existingLevel)
+        
+        if (!hasGroupPerm && !hasLevelPerm) {
+            return res.status(403).json({ error: 'Access denied: You cannot edit this level.' })
+        }
     }
 
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
       req.params.id, 
-      { level, title, description, subject, group, label },
+      { level, title, description, subject, group, label, editors },
       { new: true }
     )
     res.json(updatedLevel)
@@ -931,8 +945,13 @@ router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), 
 router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const level = await CourseLevel.findById(req.params.id)
-    if (level && level.group && !(await checkGroupPermission(req.user, level.group))) {
-        return res.status(403).json({ error: 'Access denied: You cannot delete levels in this group.' })
+    if (level) {
+        const hasGroupPerm = level.group ? await checkGroupPermission(req.user, level.group) : true
+        const hasLevelPerm = checkLevelPermission(req.user, level)
+        
+        if (!hasGroupPerm && !hasLevelPerm) {
+            return res.status(403).json({ error: 'Access denied: You cannot delete this level.' })
+        }
     }
     await CourseLevel.findByIdAndDelete(req.params.id)
     res.json({ success: true })
@@ -948,8 +967,11 @@ router.post('/levels/:id/move', authenticateToken, requireRole(['admin', 'teache
     const currentLevel = await CourseLevel.findById(req.params.id)
     if (!currentLevel) return res.status(404).json({ error: 'Level not found' })
 
-    if (currentLevel.group && !(await checkGroupPermission(req.user, currentLevel.group))) {
-        return res.status(403).json({ error: 'Access denied: You cannot move levels in this group.' })
+    const hasGroupPerm = currentLevel.group ? await checkGroupPermission(req.user, currentLevel.group) : true
+    const hasLevelPerm = checkLevelPermission(req.user, currentLevel)
+    
+    if (!hasGroupPerm && !hasLevelPerm) {
+        return res.status(403).json({ error: 'Access denied: You cannot move this level.' })
     }
 
     // Find all levels in the same group/subject to determine order

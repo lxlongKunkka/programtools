@@ -189,6 +189,9 @@ export default {
 
 <style>
 /* Shared styles for markdown content */
+.markdown-viewer {
+  padding-bottom: 80px; /* Ensure last element is visible */
+}
 .markdown-viewer pre {
   background: #f6f8fa;
   padding: 16px;

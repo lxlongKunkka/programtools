@@ -4,9 +4,10 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
+import COS from 'cos-nodejs-sdk-v5'
 import User from '../models/User.js'
 import CourseLevel from '../models/CourseLevel.js'
-import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG } from '../config.js'
+import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
 import { getIO } from '../socket/index.js'
@@ -28,6 +29,39 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const router = express.Router()
+
+// Initialize COS
+let cos = null
+if (COS_CONFIG.SecretId && COS_CONFIG.SecretKey && COS_CONFIG.Bucket && COS_CONFIG.Region) {
+    cos = new COS({
+        SecretId: COS_CONFIG.SecretId,
+        SecretKey: COS_CONFIG.SecretKey
+    })
+}
+
+async function uploadToCos(key, content) {
+    if (!cos) {
+        throw new Error('COS not configured')
+    }
+    return new Promise((resolve, reject) => {
+        cos.putObject({
+            Bucket: COS_CONFIG.Bucket,
+            Region: COS_CONFIG.Region,
+            Key: key,
+            Body: content,
+            ContentType: 'text/html; charset=utf-8'
+        }, function(err, data) {
+            if (err) return reject(err)
+            
+            // Construct URL
+            let url = `https://${COS_CONFIG.Bucket}.cos.${COS_CONFIG.Region}.myqcloud.com/${key}`
+            if (COS_CONFIG.Domain) {
+                url = `${COS_CONFIG.Domain}/${key}`
+            }
+            resolve(url)
+        })
+    })
+}
 
 function wrapLatexIfNeeded(text) {
   if (!text || typeof text !== 'string') return text
@@ -759,7 +793,9 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
   // Start background process
   (async () => {
       try {
-          console.log(`[Background] Starting solution report for chapter ${chapterId}`);
+          const logMsg = `[Background] Starting solution report for chapter ${chapterId} (${chapterTitle})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
           // 1. Generate HTML
           const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）';
@@ -816,18 +852,35 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           const filenameBase = problemTitle ? sanitize(problemTitle) : sanitize(chapterTitle);
           const safeChapter = filenameBase + '.html';
           
-          const baseDir = path.join(__dirname, '../public/courseware');
-          const targetDir = path.join(baseDir, safeLevel, safeTopic);
-          
-          if (!fs.existsSync(targetDir)) {
-              fs.mkdirSync(targetDir, { recursive: true });
+          let relativePath;
+
+          // Try COS Upload first
+          if (cos) {
+              const cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              try {
+                  const cosUrl = await uploadToCos(cosKey, htmlContent);
+                  console.log(`[Background] Solution Report uploaded to COS: ${cosUrl}`);
+                  relativePath = cosUrl;
+              } catch (cosErr) {
+                  console.error('[Background] COS Upload failed, falling back to local storage:', cosErr);
+              }
           }
-          
-          const fullPath = path.join(targetDir, safeChapter);
-          const relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
-          
-          fs.writeFileSync(fullPath, htmlContent, 'utf8');
-          console.log(`[Background] File saved to ${fullPath}`);
+
+          // Local Storage Fallback
+          if (!relativePath) {
+              const baseDir = path.join(__dirname, '../public/courseware');
+              const targetDir = path.join(baseDir, safeLevel, safeTopic);
+              
+              if (!fs.existsSync(targetDir)) {
+                  fs.mkdirSync(targetDir, { recursive: true });
+              }
+              
+              const fullPath = path.join(targetDir, safeChapter);
+              relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              
+              fs.writeFileSync(fullPath, htmlContent, 'utf8');
+              console.log(`[Background] File saved to ${fullPath}`);
+          }
 
           // 3. Update Database
           let courseLevel = await CourseLevel.findOne({ 
@@ -839,12 +892,14 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
           if (courseLevel) {
               let chapterFound = false;
+              let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
                   const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
                       chapterFound = true;
+                      foundChapterTitle = chapter.title;
                       break;
                   }
               }
@@ -852,7 +907,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                   await courseLevel.save();
                   console.log(`[Background] Database updated for chapter ${chapterId}`);
                   try {
-                      getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'success', type: 'solution-report' });
+                      getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
                   } catch (e) { console.error('Socket emit failed', e); }
               }
           } else {
@@ -866,7 +921,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                        await legacyLevel.save();
                        console.log(`[Background] Database updated for legacy chapter ${chapterId}`);
                        try {
-                           getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'success', type: 'solution-report' });
+                           getIO().emit('ai_task_complete', { chapterId, chapterTitle: chapter.title, clientKey, status: 'success', type: 'solution-report' });
                        } catch (e) { console.error('Socket emit failed', e); }
                    }
                } else {
@@ -880,7 +935,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
       } catch (err) {
           console.error('[Background] Error generating solution report:', err);
           try {
-              getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'error', message: err.message, type: 'solution-report' });
+              getIO().emit('ai_task_complete', { chapterId, chapterTitle: chapterTitle, clientKey, status: 'error', message: err.message, type: 'solution-report' });
           } catch (e) { console.error('Socket emit failed', e); }
       }
   })();
@@ -1165,7 +1220,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, clientKey, language } = req.body;
+  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1173,7 +1228,9 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
   (async () => {
       try {
-          console.log(`[Background] Starting PPT generation for chapter ${chapterId}`);
+          const logMsg = `[Background] Starting PPT generation for chapter ${chapterId} (${topic})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
           let fullTopic = topic
           if (context) {
@@ -1276,30 +1333,52 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           if (context && /python/i.test(context)) subjectFolder = 'Python';
           else if (context && /web/i.test(context)) subjectFolder = 'Web';
 
-          const safeLevel = 'level' + sanitize(String(levelNum));
+          const safeLevel = levelTitle ? sanitize(levelTitle) : ('level' + sanitize(String(levelNum)));
           const safeTopic = sanitize(topicTitle);
           const safeChapter = sanitize(chapterTitle) + '.html';
           
-          const baseDir = path.join(__dirname, '../public/courseware');
+          let relativePath;
           
-          let targetDir, relativePath;
-          
-          if (subjectFolder) {
-              targetDir = path.join(baseDir, subjectFolder, safeLevel, safeTopic);
-              relativePath = `/public/courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
-          } else {
-              targetDir = path.join(baseDir, safeLevel, safeTopic);
-              relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+          // Try COS Upload first
+          if (cos) {
+              let cosKey = '';
+              if (subjectFolder) {
+                  cosKey = `courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              } else {
+                  cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              }
+              
+              try {
+                  const cosUrl = await uploadToCos(cosKey, content);
+                  console.log(`[Background] PPT uploaded to COS: ${cosUrl}`);
+                  relativePath = cosUrl;
+              } catch (cosErr) {
+                  console.error('[Background] COS Upload failed, falling back to local storage:', cosErr);
+                  // Fallback logic below...
+              }
           }
-          
-          if (!fs.existsSync(targetDir)) {
-              fs.mkdirSync(targetDir, { recursive: true });
+
+          // Local Storage Fallback (if COS not configured or failed)
+          if (!relativePath) {
+              const baseDir = path.join(__dirname, '../public/courseware');
+              let targetDir;
+              
+              if (subjectFolder) {
+                  targetDir = path.join(baseDir, subjectFolder, safeLevel, safeTopic);
+                  relativePath = `/public/courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              } else {
+                  targetDir = path.join(baseDir, safeLevel, safeTopic);
+                  relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              }
+              
+              if (!fs.existsSync(targetDir)) {
+                  fs.mkdirSync(targetDir, { recursive: true });
+              }
+              
+              const fullPath = path.join(targetDir, safeChapter);
+              fs.writeFileSync(fullPath, content, 'utf8');
+              console.log(`[Background] PPT saved to ${fullPath}`);
           }
-          
-          const fullPath = path.join(targetDir, safeChapter);
-          
-          fs.writeFileSync(fullPath, content, 'utf8');
-          console.log(`[Background] PPT saved to ${fullPath}`);
 
           // Update Database
           let courseLevel = await CourseLevel.findOne({ 
@@ -1311,12 +1390,14 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
           if (courseLevel) {
               let chapterFound = false;
+              let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
                   const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
                       chapterFound = true;
+                      foundChapterTitle = chapter.title;
                       break;
                   }
               }
@@ -1327,6 +1408,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   // Notify client
                   getIO().emit('ai_task_complete', {
                       chapterId,
+                      chapterTitle: foundChapterTitle,
                       clientKey,
                       type: 'ppt',
                       status: 'success',
@@ -1350,6 +1432,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           // Notify client of error
           getIO().emit('ai_task_complete', {
               chapterId,
+              chapterTitle: chapterTitle, // Use the title from request body
               clientKey,
               type: 'ppt',
               status: 'error',
@@ -1369,7 +1452,9 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
 
   (async () => {
       try {
-          console.log(`[Background] Starting Lesson Plan for chapter ${chapterId}`);
+          const logMsg = `[Background] Starting Lesson Plan for chapter ${chapterId} (${topic})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
           let targetLang = 'C++';
           let codeLang = 'cpp';
@@ -1420,12 +1505,14 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
 
           if (courseLevel) {
               let chapterFound = false;
+              let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
                   const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.content = content;
                       chapter.contentType = 'markdown';
                       chapterFound = true;
+                      foundChapterTitle = chapter.title;
                       break;
                   }
               }
@@ -1436,6 +1523,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                   // Notify client
                   getIO().emit('ai_task_complete', {
                       chapterId,
+                      chapterTitle: foundChapterTitle,
                       clientKey,
                       type: 'lesson-plan',
                       status: 'success',
@@ -1454,6 +1542,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           // Notify client of error
           getIO().emit('ai_task_complete', {
               chapterId,
+              chapterTitle: topic, // In lesson plan route, 'topic' is the chapter title
               clientKey,
               type: 'lesson-plan',
               status: 'error',
@@ -1473,7 +1562,9 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
 
   (async () => {
       try {
-          console.log(`[Background] Starting Topic Plan (${mode}) for topic ${topicId}`);
+          const logMsg = `[Background] Starting Topic Plan (${mode}) for topic ${topicId} (${topic})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
           let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
 
@@ -1570,6 +1661,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                   // Notify client
                   getIO().emit('ai_task_complete', {
                       chapterId: topicId, // Using topicId as chapterId for consistency in frontend map
+                      chapterTitle: topicObj.title,
                       clientKey,
                       type: mode === 'description' ? 'topic-desc' : 'topic-chapters',
                       status: 'success',
@@ -1583,6 +1675,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
           // Notify client of error
           getIO().emit('ai_task_complete', {
               chapterId: topicId,
+              chapterTitle: topic, // Use the topic name from request
               clientKey,
               type: mode === 'description' ? 'topic-desc' : 'topic-chapters',
               status: 'error',

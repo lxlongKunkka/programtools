@@ -1,7 +1,5 @@
 export const SUBJECTS_CONFIG = [
-  { name: 'C++基础', realSubject: 'C++', minLevel: 1, maxLevel: 2.9 },
-  { name: 'C++进阶', realSubject: 'C++' }, // Removed minLevel/maxLevel as it now uses Group matching
-  { name: 'C++提高', realSubject: 'C++', minLevel: 5, maxLevel: 999 },
+  { name: 'C++', realSubject: 'C++' },
   { name: 'Python', realSubject: 'Python' },
   { name: 'Web', realSubject: 'Web' }
 ]

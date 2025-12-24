@@ -390,9 +390,9 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>解题报告</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.css">
+    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.js"></script>
+    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <style>
         /* --- 基础和布局 --- */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
@@ -595,8 +595,14 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
             // ✅ 正确写法: { i:0, p:1, ans:3 }
             // 请务必检查每一个属性赋值！
             
+            // 声明变量，防止 ReferenceError
             let currentStep = 0;
-            let totalSteps = 0; // AI 需修改此值
+            let totalSteps = 0; 
+            let steps = []; // 初始化为空数组
+            
+            // AI 需修改 steps 和 totalSteps
+            // const steps = [...]
+            // totalSteps = steps.length
             
             const animArea = document.getElementById('animArea');
             const stepDesc = document.getElementById('stepDescription');
@@ -694,7 +700,7 @@ export const LESSON_PLAN_PROMPT = `你是一位经验丰富的少儿编程/信�
    - **知识点讲解** (理论到实践，简单到复杂)
    - **代码示例** ({{code_lang}} 语言，关键行注释)
    - **课堂互动** (提问、小组任务)
-   - **练习题目** (分层练习：基础/进阶)
+   - **练习题目** (分层练习：基础/进阶)。**必须包含 3-5 道选择题或填空题。请将题目和答案分开展示（例如先列出所有题目，再在最后附上答案和解析），以便于学生自测。**
    - **教学评价与作业** (过程反馈 + 课后巩固)
 4. 代码块请使用 \`\`\`{{code_lang}} ... \`\`\` 包裹。
 5. 语气亲切、鼓励性强，适合中小学生。
@@ -709,9 +715,13 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
 2. **趣味引入**：强调真实场景和已知引出未知。
 3. **知识点讲解**：强调理论到实践、简单到复杂。**核心要求：深入浅出。对于抽象概念，必须使用生活中的类比（如“变量是盒子”、“循环是跑圈”）进行解释，配合 Emoji 图标辅助理解。必须包含 2-3 个典型例题，通过“例题描述 -> 思路分析 -> 代码实现”的步骤进行讲解，帮助学员巩固知识。**
 4. **课堂互动**：明确包含提问和小组任务。
-5. **练习题目**：要求分层练习（基础/进阶）。
+5. **练习题目**：要求分层练习（基础/进阶）。**必须包含 3-5 道选择题或填空题。**
+   - **展示规则（重要）**：对于每一道客观题，必须使用**两页幻灯片**来展示：
+     - **第一页（提问页）**：只展示题目和选项，**严禁**显示答案。
+     - **第二页（揭晓页）**：展示题目、选项，并**高亮**正确答案（或填入答案），同时显示简短解析。
 6. **教学评价与作业**：包含过程反馈和结果检验。
 7. **语言要求**：**必须且只能使用 {{language}} 语言**进行讲解和代码示例。严禁出现其他语言的代码。
+8. **严禁使用外部图片链接**（如 via.placeholder.com），如果需要示意图，请使用 CSS 绘制色块或使用 Emoji 图标代替。
 
 【技术要求】
 1. 输出一个完整的 HTML5 文件内容，包含 <html>, <head>, <body>。
@@ -723,6 +733,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
 3. **不要**依赖外部复杂的 CDN 库（如 Reveal.js），使用原生 JS 实现简单的显隐切换。
 4. 代码块样式要使用白色背景，黑色字体，确保投屏清晰可见。
 5. **严禁使用 Markdown 语法**：正文中不要使用 **bold**、*italic*、\`code\` 等 Markdown 标记，必须使用 HTML 标签（如 <strong>, <em>, <code>）。
+6. **严禁使用外部图片**：不要使用 <img> 标签引入外部 URL，防止加载失败。
 
 【HTML 结构模板】
 \`\`\`html
@@ -732,9 +743,9 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>课件标题</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net.cn/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.css">
+    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.js"></script>
+    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <style>
         /* --- 基础和布局 --- */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
@@ -843,7 +854,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
 
         <!-- Slide 5+: 知识点讲解 & 典型例题 (例题1, 例题2, 例题3...) -->
         <!-- Slide X: 课堂互动 (提问/小组) -->
-        <!-- Slide Y: 练习题目 (分层) -->
+        <!-- Slide Y: 练习题目 (每题两页：提问 -> 答案) -->
         <!-- Slide Z: 总结与作业 (评价) -->
 
         <button id="prevBtn" class="nav-button">‹</button>
@@ -852,81 +863,120 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
     </div>
 
     <script>
-        const slides = document.querySelectorAll('.slide');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const slideCounter = document.getElementById('slideCounter');
-        let currentSlide = 0;
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. 核心导航逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
 
-        function showSlide(index) {
-            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
-            currentSlide = index;
-            prevBtn.disabled = currentSlide === 0;
-            nextBtn.disabled = currentSlide === slides.length - 1;
-            slideCounter.textContent = \`\${currentSlide + 1} / \${slides.length}\`;
-        }
+            function showSlide(index) {
+                if (!slides.length) return;
+                // 边界检查
+                if (index < 0) index = 0;
+                if (index >= slides.length) index = slides.length - 1;
+                
+                slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+                currentSlide = index;
+                
+                if (prevBtn) prevBtn.disabled = currentSlide === 0;
+                if (nextBtn) nextBtn.disabled = currentSlide === slides.length - 1;
+                if (slideCounter) slideCounter.textContent = \`\${currentSlide + 1} / \${slides.length}\`;
 
-        prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
-        nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
-            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
-        });
-        showSlide(0);
+                // 尝试重置动画
+                if (typeof window.resetAnimation === 'function' && slides[currentSlide].querySelector('#animArea')) {
+                    window.resetAnimation();
+                }
+            }
 
-        // --- 动画逻辑 ---
-        // 请生成 steps 数组和 renderStep 函数
-        // 示例: const steps = [{desc: "初始状态", draw: () => {...}}, ...];
-        let currentStep = 0;
-        // const steps = ... (AI 生成)
-        // const totalSteps = steps.length;
-        
-        const animArea = document.getElementById('animArea');
-        const stepDesc = document.getElementById('stepDescription');
-        const prevStepBtn = document.getElementById('prevStepBtn');
-        const nextStepBtn = document.getElementById('nextStepBtn');
-        const resetBtn = document.getElementById('resetBtn');
-
-        function updateAnimControls() {
-            if (!prevStepBtn || !nextStepBtn) return;
-            // prevStepBtn.disabled = currentStep <= 0;
-            // nextStepBtn.disabled = currentStep >= totalSteps - 1;
-            // renderStep(currentStep);
-        }
-        
-        // 绑定事件...
-        
-        // 初始化 KaTeX
-        document.addEventListener("DOMContentLoaded", function() {
-            renderMathInElement(document.body, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false}
-                ],
-                throwOnError: false
+            // 绑定导航事件
+            if (prevBtn) prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+            if (nextBtn) nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+                if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
             });
-        });
 
-        // 动画渲染时也需要重新渲染公式
-        function renderStep(index) {
-            // ... (AI 生成的渲染逻辑)
+            // --- 2. 动画逻辑 ---
+            const animArea = document.getElementById('animArea');
+            const stepDesc = document.getElementById('stepDescription');
+            const prevStepBtn = document.getElementById('prevStepBtn');
+            const nextStepBtn = document.getElementById('nextStepBtn');
+            const resetBtn = document.getElementById('resetBtn');
             
-            // 渲染完成后，重新渲染公式
-            renderMathInElement(animArea, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false}
-                ],
-                throwOnError: false
-            });
-             renderMathInElement(stepDesc, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false}
-                ],
-                throwOnError: false
-            });
-        }
+            let currentAnimStep = 0;
+            
+            // 辅助函数：安全获取 steps
+            function getSteps() {
+                return (typeof steps !== 'undefined' && Array.isArray(steps)) ? steps : [];
+            }
+
+            function renderStep(index) {
+                const stepsList = getSteps();
+                if (stepsList.length === 0) return;
+
+                // 边界检查
+                if (index < 0) index = 0;
+                if (index >= stepsList.length) index = stepsList.length - 1;
+                currentAnimStep = index;
+
+                if (stepDesc && stepsList[currentAnimStep].desc) stepDesc.innerHTML = stepsList[currentAnimStep].desc;
+                if (stepsList[currentAnimStep].draw) stepsList[currentAnimStep].draw();
+                
+                if (prevStepBtn) prevStepBtn.disabled = currentAnimStep <= 0;
+                if (nextStepBtn) nextStepBtn.disabled = currentAnimStep >= stepsList.length - 1;
+
+                // 渲染公式
+                if (typeof window.renderMathInElement !== 'undefined' && animArea) {
+                    window.renderMathInElement(animArea, {
+                        delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}],
+                        throwOnError: false
+                    });
+                }
+            }
+
+            // 暴露给 showSlide 使用
+            window.resetAnimation = function() { 
+                renderStep(0);
+            };
+
+            function nextAnimStep() {
+                const stepsList = getSteps();
+                if (currentAnimStep < stepsList.length - 1) renderStep(currentAnimStep + 1);
+            }
+
+            function prevAnimStep() {
+                if (currentAnimStep > 0) renderStep(currentAnimStep - 1);
+            }
+
+            // 绑定动画事件
+            if (prevStepBtn) prevStepBtn.addEventListener('click', prevAnimStep);
+            if (nextStepBtn) nextStepBtn.addEventListener('click', nextAnimStep);
+            if (resetBtn) resetBtn.addEventListener('click', window.resetAnimation);
+
+            // --- 3. 初始化 ---
+            // 初始化 KaTeX
+            if (typeof window.renderMathInElement !== 'undefined') {
+                window.renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            // 初始化第一页
+            showSlide(0);
+            // 如果第一页有动画，初始化动画
+            if (slides.length > 0 && slides[0].querySelector('#animArea')) {
+                window.resetAnimation();
+            }
+        });
+        
+        // AI 生成的 steps 数组将位于此处或上方
+        // const steps = [ ... ];
     </script>
 </body>
 </html>

@@ -1,182 +1,209 @@
 <template>
   <div class="learning-map-container">
-    <div class="header-banner">
-      <div class="header-content">
-        <div class="header-left">
-          <h1>{{ selectedSubject }} 闯关学习</h1>
-          <div class="progress-badge" v-if="userProgress">
-            当前进度: {{ getLevelTitle(selectedSubject, getCurrentSubjectLevel()) || ('Level ' + getCurrentSubjectLevel()) }}
-          </div>
+    <div class="course-layout">
+      <!-- Left Sidebar: Tree Navigation -->
+      <div class="course-sidebar">
+        <div class="sidebar-header">
+          <h3>课程目录</h3>
         </div>
-        <div class="header-right">
-          <div class="subject-selector">
-            <button 
-              v-for="sub in availableSubjects" 
-              :key="sub"
-              :class="['btn-subject', { active: selectedSubject === sub }]"
-              @click="selectedSubject = sub; fetchData()"
+        <div v-if="loading" class="loading-text">加载中...</div>
+        <div v-else class="tree-nav">
+          <div v-for="group in treeData" :key="group.name" class="tree-group">
+            <!-- Group Node -->
+            <div 
+              class="tree-item group-item" 
+              :class="{ active: selectedNode && selectedNode.type === 'group' && selectedNode.id === group.name }"
+              @click="handleGroupClick(group)"
             >
-              {{ sub }}
-            </button>
+              <span class="tree-icon" @click.stop="toggleGroup(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
+              <span class="tree-label">{{ group.title || group.name }}</span>
+            </div>
+
+            <!-- Levels -->
+            <div v-show="!group.collapsed" class="tree-children">
+              <div v-for="level in group.levels" :key="level._id" class="tree-level">
+                <div 
+                  class="tree-item level-item"
+                  :class="{ active: selectedNode && selectedNode.type === 'level' && selectedNode.id === level._id }"
+                  @click="handleLevelClick(level)"
+                >
+                  <span class="tree-icon" @click.stop="toggleLevel(level)">{{ level.collapsed ? '▶' : '▼' }}</span>
+                  <span class="tree-label">{{ level.title }}</span>
+                  <span v-if="isLevelCompleted(level)" class="status-dot completed" title="已完成">●</span>
+                  <span v-else-if="isLevelUnlocked(level)" class="status-dot unlocked" title="进行中">●</span>
+                  <span v-else class="status-dot locked" title="未解锁">●</span>
+                </div>
+
+                <!-- Topics -->
+                <div v-show="!level.collapsed" class="tree-children">
+                  <div v-for="topic in level.topics" :key="topic._id" class="tree-topic">
+                    <div 
+                      class="tree-item topic-item"
+                      :class="{ active: selectedNode && selectedNode.type === 'topic' && selectedNode.id === topic._id }"
+                      @click="selectNode('topic', topic, level)"
+                    >
+                      <span class="tree-label">{{ topic.title }}</span>
+                    </div>
+                  </div>
+                  <div v-if="!level.topics || level.topics.length === 0" class="empty-node">暂无内容</div>
+                </div>
+              </div>
+              <div v-if="!group.levels || group.levels.length === 0" class="empty-node">暂无课程</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="loading" class="loading">加载中...</div>
-    <div v-else class="levels-container">
-      <div v-for="level in levels" :key="level._id" class="level-card">
-        <div class="level-header" @click="toggleLevel(level)">
-          <div class="level-info">
-            <h2>
-              <span class="toggle-icon">{{ isExpanded(level) ? '▼' : '▶' }}</span>
-              {{ level.title }}
-            </h2>
-          </div>
-          <div class="level-status">
-            <span v-if="isLevelCompleted(level)" class="badge completed">已完成</span>
-            <span v-else-if="isLevelUnlocked(level)" class="badge unlocked">进行中</span>
-            <span v-else class="badge locked">未解锁</span>
-          </div>
-        </div>
+      <!-- Right Content Area -->
+      <div class="course-content">
+        <div v-if="loading" class="loading">加载中...</div>
         
-        <div v-show="isExpanded(level)" class="level-content">
-          <div v-if="level.description" class="level-desc-section">
-             <div class="level-desc-header" @click="toggleDesc(level)">
-                <span class="toggle-icon">{{ isDescExpanded(level) ? '▼' : '▶' }}</span>
-                <span class="desc-label">模块简介</span>
-             </div>
-             <div v-show="isDescExpanded(level)" class="level-description markdown-content" v-html="renderMarkdown(level.description)"></div>
+        <!-- Group View -->
+        <div v-else-if="selectedNode && selectedNode.type === 'group'" class="content-view group-view">
+          <div class="view-header">
+            <h1>{{ selectedData.title || selectedData.name }}</h1>
+            <div class="progress-badge" v-if="userProgress">
+              当前进度: {{ getLevelTitle(selectedData.name, getCurrentSubjectLevel(selectedData.name)) || ('Level ' + getCurrentSubjectLevel(selectedData.name)) }}
+            </div>
           </div>
-
-          <!-- Topics Rendering -->
-          <div v-if="level.topics && level.topics.length > 0" class="topics-container">
-            <div v-for="topic in level.topics" :key="topic._id" class="topic-section">
-              <div class="topic-header" @click="toggleTopic(topic)">
-                <span class="toggle-icon">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
-                <h3>
-                  {{ topic.title }}
-                  <span class="topic-stats" v-if="getTopicTotalProblems(topic) > 0">({{ getTopicTotalProblems(topic) }} 题)</span>
-                </h3>
+          <div class="levels-grid">
+            <div v-for="level in selectedData.levels" :key="level._id" class="level-card-mini" @click="selectNode('level', level)">
+              <div class="level-mini-header">
+                <h3>{{ level.title }}</h3>
+                <span v-if="isLevelCompleted(level)" class="badge completed">已完成</span>
+                <span v-else-if="isLevelUnlocked(level)" class="badge unlocked">进行中</span>
+                <span v-else class="badge locked">未解锁</span>
               </div>
-              
-              <div v-show="isTopicExpanded(topic)" class="topic-content">
-                <div v-if="topic.description" class="topic-desc markdown-content" v-html="renderMarkdown(topic.description)"></div>
-                
-                <div class="chapters-grid">
-                  <div 
-                    v-for="chapter in topic.chapters" 
-                    :key="chapter.id" 
-                    class="chapter-card"
-                    :class="getChapterStatusClass(level, chapter)"
-                    @click="goToChapter(level, chapter)"
-                  >
-                    <div class="chapter-icon">
-                      <span v-if="isChapterCompleted(level, chapter)">✅</span>
-                      <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
-                      <span v-else-if="isTeacherOrAdmin()">🔓</span>
-                      <span v-else>🔒</span>
-                    </div>
-                    <div class="chapter-info">
-                      <h4>
-                        {{ chapter.title }}
-                        <span v-if="chapter.optional" class="tag-optional">选做</span>
-                        <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
-                        <span v-else class="tag-type markdown">MD</span>
-                      </h4>
-                      <p class="chapter-id">
-                        Chapter {{ chapter.id }}
-                        <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Learners Section -->
-                <div class="learners-section">
-                  <div class="learners-header" @click="toggleLearners(topic)">
-                    <span class="toggle-icon">{{ isLearnersExpanded(topic) ? '▼' : '▶' }}</span>
-                    <span class="learners-label">正在学习本课程的同学</span>
-                  </div>
-                  <div v-show="isLearnersExpanded(topic)" class="learners-content">
-                    <div v-if="loadingLearners[topic._id]" class="loading-small">加载中...</div>
-                    <div v-else-if="topicLearners[topic._id] && topicLearners[topic._id].length > 0" class="learners-grid">
-                      <div 
-                        v-for="user in topicLearners[topic._id]" 
-                        :key="user._id" 
-                        class="learner-tag" 
-                        @click.stop="viewLearnerProgress(user, topic)"
-                        title="点击查看进度"
-                      >
-                        {{ user.uname }}
-                      </div>
-                    </div>
-                    <div v-else class="no-learners">
-                      暂无同学正在学习
-                    </div>
-                  </div>
-                </div>
-
+              <p class="level-mini-desc" v-if="level.description">{{ stripMarkdown(level.description) }}</p>
+              <div class="level-mini-stats">
+                {{ level.topics ? level.topics.length : 0 }} 个知识点
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Legacy Chapters Fallback -->
-          <div v-else-if="level.chapters && level.chapters.length > 0" class="chapters-grid">
+        <!-- Level View -->
+        <div v-else-if="selectedNode && selectedNode.type === 'level'" class="content-view level-view">
+          <div class="view-header">
+            <div class="breadcrumb">
+              <span @click="selectNode('group', findGroup(selectedData.group))">{{ selectedData.group }}</span> / {{ selectedData.title }}
+            </div>
+            <h1>{{ selectedData.title }}</h1>
+            <div class="level-status">
+              <span v-if="isLevelCompleted(selectedData)" class="badge completed">已完成</span>
+              <span v-else-if="isLevelUnlocked(selectedData)" class="badge unlocked">进行中</span>
+              <span v-else class="badge locked">未解锁</span>
+            </div>
+          </div>
+          
+          <div v-if="selectedData.description" class="description-box markdown-content" v-html="renderMarkdown(selectedData.description)"></div>
+
+          <div class="topics-list">
+            <div v-for="topic in selectedData.topics" :key="topic._id" class="topic-card" @click="selectNode('topic', topic, selectedData)">
+              <div class="topic-card-header">
+                <h3>{{ topic.title }}</h3>
+                <div class="topic-stats-group">
+                    <span class="topic-count" title="已完成章节 / 总章节">{{ getTopicProgress(userProgress, topic) }} / {{ (topic.chapters || []).length }} 章节</span>
+                    <span class="topic-count" title="题目总数">{{ getTopicTotalProblems(topic) }} 题</span>
+                </div>
+              </div>
+              <div class="topic-card-desc" v-if="topic.description">{{ stripMarkdown(topic.description) }}</div>
+              <div class="topic-chapters-preview">
+                <span v-for="chapter in (topic.chapters || []).slice(0, 3)" :key="chapter.id" class="chapter-dot" :class="getChapterStatusClass(selectedData, chapter)"></span>
+                <span v-if="(topic.chapters || []).length > 3" class="more-dots">...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Topic View -->
+        <div v-else-if="selectedNode && selectedNode.type === 'topic'" class="content-view topic-view">
+          <div class="view-header">
+            <div class="breadcrumb">
+              <span @click="selectNode('group', findGroup(selectedLevel.group))">{{ selectedLevel.group }}</span> / 
+              <span @click="selectNode('level', selectedLevel)">{{ selectedLevel.title }}</span> / 
+              {{ selectedData.title }}
+            </div>
+            <h1>{{ selectedData.title }}</h1>
+          </div>
+
+          <div v-if="selectedData.description" class="description-box markdown-content" v-html="renderMarkdown(selectedData.description)"></div>
+
+          <div class="chapters-grid">
             <div 
-              v-for="chapter in level.chapters" 
+              v-for="chapter in selectedData.chapters" 
               :key="chapter.id" 
               class="chapter-card"
-              :class="getChapterStatusClass(level, chapter)"
-              @click="goToChapter(level, chapter)"
+              :class="getChapterStatusClass(selectedLevel, chapter)"
+              @click="goToChapter(selectedLevel, chapter)"
             >
               <div class="chapter-icon">
-                <span v-if="isChapterCompleted(level, chapter)">✅</span>
-                <span v-else-if="isChapterUnlocked(level, chapter)">🔓</span>
+                <span v-if="isChapterCompleted(selectedLevel, chapter)">✅</span>
+                <span v-else-if="isChapterUnlocked(selectedLevel, chapter)">🔓</span>
                 <span v-else-if="isTeacherOrAdmin()">🔓</span>
                 <span v-else>🔒</span>
               </div>
               <div class="chapter-info">
-                <h3>
-                  Chapter {{ chapter.id }}
+                <h4>
+                  {{ chapter.title }}
                   <span v-if="chapter.optional" class="tag-optional">选做</span>
                   <span v-if="chapter.contentType === 'html'" class="tag-type html">HTML</span>
                   <span v-else class="tag-type markdown">MD</span>
-                </h3>
-                <p>
-                  {{ chapter.title }}
+                </h4>
+                <p class="chapter-id">
+                  Chapter {{ chapter.id }}
                   <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
                 </p>
               </div>
             </div>
           </div>
-          
-          <div v-else class="no-content">
-            暂无内容
+
+          <!-- Learners Section -->
+          <div class="learners-section">
+            <div class="learners-header" @click="toggleLearners(selectedData)">
+              <span class="toggle-icon">{{ isLearnersExpanded(selectedData) ? '▼' : '▶' }}</span>
+              <span class="learners-label">正在学习本课程的同学</span>
+            </div>
+            <div v-show="isLearnersExpanded(selectedData)" class="learners-content">
+              <div v-if="loadingLearners[selectedData._id]" class="loading-small">加载中...</div>
+              <div v-else-if="topicLearners[selectedData._id] && topicLearners[selectedData._id].length > 0" class="learners-grid">
+                <span 
+                  v-for="learner in topicLearners[selectedData._id]" 
+                  :key="learner._id" 
+                  class="learner-tag"
+                  @click.stop="viewLearnerProgress(learner, selectedData)"
+                >
+                  {{ learner.uname }}
+                </span>
+              </div>
+              <div v-else class="no-learners">暂无同学记录</div>
+            </div>
           </div>
+        </div>
+
+        <div v-else class="empty-state">
+          请在左侧选择课程
         </div>
       </div>
     </div>
-  </div>
 
     <!-- Learner Progress Modal -->
-    <div v-if="showLearnerModal" class="modal-overlay" @click="closeLearnerModal">
-      <div class="modal-content" @click.stop>
+    <div v-if="showLearnerModal" class="modal-overlay" @click.self="closeLearnerModal">
+      <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ selectedLearner ? selectedLearner.uname : '学员' }} 的学习进度</h3>
+          <h3>{{ selectedLearner ? selectedLearner.uname : '' }} 的学习进度</h3>
           <button class="btn-close" @click="closeLearnerModal">×</button>
         </div>
         <div class="modal-body">
           <div v-if="loadingLearnerProgress" class="loading">加载中...</div>
           <div v-else-if="selectedLearnerProgress" class="progress-details">
             <div class="progress-stat-card">
-               <h4>当前进度</h4>
+               <h4>当前等级</h4>
                <div class="levels-list">
                  <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="level-item">
                    <span class="subj-name">{{ subj }}</span>
-                   <span class="lvl-val">
-                     Level {{ lvl }}
-                     <span v-if="getLevelTitle(subj, lvl)" class="lvl-title-small"> {{ getLevelTitle(subj, lvl) }}</span>
+                   <span class="lvl-val">Level {{ lvl }}
+                     <span class="lvl-title-small">{{ getLevelTitle(subj, lvl) }}</span>
                    </span>
                  </div>
                </div>
@@ -207,187 +234,181 @@
         </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script>
 import request from '../utils/request'
 import { marked } from 'marked'
-import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
+import { SUBJECTS_CONFIG, getRealSubject } from '../utils/courseConfig'
 
 export default {
   data() {
-    const savedSubject = localStorage.getItem('selected_subject')
-    const defaultSubject = 'C++基础'
-    // Trust savedSubject even if not in static config (it might be a custom group)
-    const initialSubject = savedSubject || defaultSubject
-
     return {
-      levels: [],
+      treeData: [], // Groups -> Levels -> Topics
       userProgress: null,
       loading: true,
-      selectedSubject: initialSubject,
-      customGroups: [],
+      selectedNode: null, // { type: 'group'|'level'|'topic', id: ... }
+      selectedData: null, // The actual data object
+      selectedLevel: null, // Context for topic view
+      
+      // Expansion states
+      expandedGroupIds: [],
       expandedLevelIds: [],
-      expandedDescIds: [],
-      expandedTopicIds: [],
       expandedLearnerIds: [],
-      topicLearners: {}, // topicId -> user array
-      loadingLearners: {}, // topicId -> boolean
+      
+      topicLearners: {},
+      loadingLearners: {},
       showLearnerModal: false,
       selectedLearner: null,
       selectedLearnerProgress: null,
-      selectedLearnerTopic: null, // The topic context for the modal
+      selectedLearnerTopic: null,
       loadingLearnerProgress: false,
       isInitialLoad: true
     }
   },
-  computed: {
-    availableSubjects() {
-        const defaults = SUBJECTS_CONFIG.map(s => s.name)
-        if (this.customGroups.length > 0) {
-            return Array.from(new Set([...defaults, ...this.customGroups]))
-        }
-        return defaults
-    }
-  },
   watch: {
-    selectedSubject(newVal) {
-      localStorage.setItem('selected_subject', newVal)
+    selectedNode(newVal) {
+      if (newVal) {
+        localStorage.setItem('learning_map_last_node', JSON.stringify(newVal))
+      }
     }
   },
   mounted() {
     this.fetchData()
   },
-  beforeRouteLeave(to, from, next) {
-    localStorage.setItem('learning_map_scroll_position', window.scrollY)
-    next()
-  },
   methods: {
     async fetchData() {
       this.loading = true
       try {
-        // Fetch ALL levels to discover custom groups
-        const [levelsData, progressData] = await Promise.all([
-          request(`/api/course/levels`),
+        const [groupsData, levelsData, progressData] = await Promise.all([
+          request('/api/course/groups'),
+          request('/api/course/levels'),
           request('/api/course/progress')
         ])
         
-        // Extract custom groups
-        const allGroups = new Set(SUBJECTS_CONFIG.map(s => s.name))
-        if (Array.isArray(levelsData)) {
-            levelsData.forEach(l => {
-                if (l.group) allGroups.add(l.group)
-            })
-        }
-        this.customGroups = Array.from(allGroups)
-
-        this.levels = filterLevels(levelsData, this.selectedSubject)
         this.userProgress = progressData
+        this.buildTree(groupsData, levelsData)
         
-        // Initialize topics as collapsed by default (commented out expansion logic)
-        /*
-        if (this.levels) {
-          this.levels.forEach(l => {
-            if (l.topics) {
-              l.topics.forEach(t => {
-                this.expandedTopicIds.push(t._id)
-              })
-            }
-          })
-        }
-        */
-
-        this.initExpandedLevels()
+        // Restore selection or default
+        this.restoreSelection()
+        
       } catch (e) {
         console.error('Failed to fetch course data', e)
       } finally {
         this.loading = false
-        if (this.isInitialLoad) {
-          this.$nextTick(() => {
-            this.restoreScrollPosition()
-            this.isInitialLoad = false
-          })
+      }
+    },
+    buildTree(groups, levels) {
+      // 1. Map groups
+      const groupMap = {}
+      groups.forEach(g => {
+        groupMap[g.name] = { ...g, levels: [], collapsed: true }
+      })
+      
+      // 2. Handle levels
+      const orphanedLevels = []
+      levels.forEach(l => {
+        const levelData = { ...l, collapsed: true } // Default collapsed
+        if (l.group && groupMap[l.group]) {
+          groupMap[l.group].levels.push(levelData)
+        } else {
+          // Try to find group by name if not in DB groups (legacy/virtual)
+          if (l.group) {
+             if (!groupMap[l.group]) {
+                 groupMap[l.group] = { name: l.group, title: l.group, levels: [], collapsed: true, order: 999 }
+             }
+             groupMap[l.group].levels.push(levelData)
+          } else {
+             // Default to C++基础 if no group
+             const defaultGroup = 'C++基础'
+             if (!groupMap[defaultGroup]) {
+                 groupMap[defaultGroup] = { name: defaultGroup, title: defaultGroup, levels: [], collapsed: true, order: 0 }
+             }
+             groupMap[defaultGroup].levels.push(levelData)
+          }
         }
-      }
+      })
+      
+      // 3. Sort
+      this.treeData = Object.values(groupMap).sort((a, b) => (a.order || 0) - (b.order || 0))
+      this.treeData.forEach(g => {
+        g.levels.sort((a, b) => a.level - b.level)
+      })
     },
-    restoreScrollPosition() {
-      const savedScroll = localStorage.getItem('learning_map_scroll_position')
-      if (savedScroll) {
-        window.scrollTo(0, parseInt(savedScroll))
-      }
-    },
-    initExpandedLevels() {
-      const savedState = localStorage.getItem('learning_map_expanded_state')
-      if (savedState) {
+    restoreSelection() {
+      const saved = localStorage.getItem('learning_map_last_node')
+      if (saved) {
         try {
-          const state = JSON.parse(savedState)
-          this.expandedLevelIds = state.expandedLevelIds || []
-          this.expandedDescIds = state.expandedDescIds || []
-          this.expandedTopicIds = state.expandedTopicIds || []
-          this.expandedLearnerIds = state.expandedLearnerIds || []
-          return
-        } catch (e) {
-          console.error('Failed to parse saved expanded state', e)
-        }
+          const node = JSON.parse(saved)
+          if (node.type === 'group') {
+             const group = this.treeData.find(g => g.name === node.id)
+             if (group) this.selectNode('group', group)
+          } else if (node.type === 'level') {
+             for (const g of this.treeData) {
+                const l = g.levels.find(lvl => lvl._id === node.id)
+                if (l) {
+                    g.collapsed = false // Ensure parent expanded
+                    this.selectNode('level', l)
+                    break
+                }
+             }
+          } else if (node.type === 'topic') {
+             for (const g of this.treeData) {
+                for (const l of g.levels) {
+                   const t = l.topics.find(top => top._id === node.id)
+                   if (t) {
+                       g.collapsed = false
+                       l.collapsed = false
+                       this.selectNode('topic', t, l)
+                       break
+                   }
+                }
+             }
+          }
+        } catch (e) {}
       }
-
-      // Default to all collapsed as per user request
-      this.expandedLevelIds = []
+      
+      // Default: Select first group if nothing selected
+      if (!this.selectedNode && this.treeData.length > 0) {
+        this.selectNode('group', this.treeData[0])
+      }
     },
-    saveExpandedState() {
-      const state = {
-        expandedLevelIds: this.expandedLevelIds,
-        expandedDescIds: this.expandedDescIds,
-        expandedTopicIds: this.expandedTopicIds,
-        expandedLearnerIds: this.expandedLearnerIds
+    selectNode(type, data, parentLevel = null, preventExpand = false) {
+      this.selectedNode = { type, id: data._id || data.name }
+      this.selectedData = data
+      if (type === 'topic') {
+        this.selectedLevel = parentLevel
       }
-      localStorage.setItem('learning_map_expanded_state', JSON.stringify(state))
+      
+      // Auto expand tree to show selection
+      if (type === 'group' && !preventExpand) {
+          data.collapsed = false
+      }
+    },
+    handleGroupClick(group) {
+        group.collapsed = !group.collapsed
+        this.selectNode('group', group, null, true)
+    },
+    handleLevelClick(level) {
+        level.collapsed = !level.collapsed
+        this.selectNode('level', level)
+    },
+    toggleGroup(group) {
+      group.collapsed = !group.collapsed
     },
     toggleLevel(level) {
-      const id = level._id
-      const index = this.expandedLevelIds.indexOf(id)
-      if (index > -1) {
-        this.expandedLevelIds.splice(index, 1)
-      } else {
-        this.expandedLevelIds.push(id)
-        // Auto-expand description when opening level
-        /*
-        if (!this.expandedDescIds.includes(id)) {
-            this.expandedDescIds.push(id)
-        }
-        */
-      }
-      this.saveExpandedState()
+      level.collapsed = !level.collapsed
     },
-    toggleDesc(level) {
-      const id = level._id
-      const index = this.expandedDescIds.indexOf(id)
-      if (index > -1) {
-        this.expandedDescIds.splice(index, 1)
-      } else {
-        this.expandedDescIds.push(id)
-      }
-      this.saveExpandedState()
+    findGroup(groupName) {
+        return this.treeData.find(g => g.name === groupName)
     },
-    isExpanded(level) {
-      return this.expandedLevelIds.includes(level._id)
+    stripMarkdown(text) {
+        if (!text) return ''
+        return text.replace(/[#*`]/g, '').slice(0, 100) + (text.length > 100 ? '...' : '')
     },
-    isDescExpanded(level) {
-      return this.expandedDescIds.includes(level._id)
-    },
-    toggleTopic(topic) {
-      const id = topic._id
-      const index = this.expandedTopicIds.indexOf(id)
-      if (index > -1) {
-        this.expandedTopicIds.splice(index, 1)
-      } else {
-        this.expandedTopicIds.push(id)
-      }
-      this.saveExpandedState()
-    },
-    isTopicExpanded(topic) {
-      return this.expandedTopicIds.includes(topic._id)
-    },
+    
+    // ... Keep existing helper methods ...
     toggleLearners(topic) {
       const id = topic._id
       const index = this.expandedLearnerIds.indexOf(id)
@@ -395,12 +416,10 @@ export default {
         this.expandedLearnerIds.splice(index, 1)
       } else {
         this.expandedLearnerIds.push(id)
-        // Fetch data if not already loaded
         if (!this.topicLearners[id]) {
           this.fetchTopicLearners(id)
         }
       }
-      this.saveExpandedState()
     },
     isLearnersExpanded(topic) {
       return this.expandedLearnerIds.includes(topic._id)
@@ -417,17 +436,13 @@ export default {
       }
     },
     async viewLearnerProgress(user, topic) {
-      console.log('View progress for user:', user, 'in topic:', topic)
       this.selectedLearner = user
       this.selectedLearnerTopic = topic
       this.showLearnerModal = true
       this.loadingLearnerProgress = true
       this.selectedLearnerProgress = null
-      
       try {
-        console.log(`Fetching progress from /api/course/progress/${user._id}`)
         const progress = await request(`/api/course/progress/${user._id}`)
-        console.log('Received progress:', progress)
         this.selectedLearnerProgress = progress
       } catch (e) {
         console.error('Failed to fetch learner progress', e)
@@ -443,31 +458,25 @@ export default {
     },
     getTopicProgress(progress, topic) {
       if (!progress || !topic || !topic.chapters) return 0
-      
       let completedCount = 0
       const completedIds = progress.completedChapters || []
       const completedUids = progress.completedChapterUids || []
-      
       topic.chapters.forEach(chapter => {
         let isCompleted = false
-        // Check UID
-        if (chapter._id && completedUids.includes(chapter._id)) {
-          isCompleted = true
-        }
-        // Check ID (Legacy)
-        else if (completedIds.includes(chapter.id)) {
-          isCompleted = true
-        }
-        
+        if (chapter._id && completedUids.includes(chapter._id)) isCompleted = true
+        else if (completedIds.includes(chapter.id)) isCompleted = true
         if (isCompleted) completedCount++
       })
-      
       return completedCount
     },
     getLevelTitle(subject, levelNum) {
-      if (subject !== this.selectedSubject) return ''
-      const level = this.levels.find(l => l.level === levelNum)
-      return level ? level.title : ''
+      // Find in tree
+      const group = this.treeData.find(g => g.name === subject)
+      if (group) {
+          const level = group.levels.find(l => l.level === levelNum)
+          return level ? level.title : ''
+      }
+      return ''
     },
     getChapterProblemCount(chapter) {
       return chapter.problemIds ? chapter.problemIds.length : 0
@@ -478,7 +487,6 @@ export default {
     },
     getLearnerTopicSolvedCount(progress, topic) {
       if (!progress || !progress.chapterProgress || !topic || !topic.chapters) return 0
-      
       let solvedCount = 0
       topic.chapters.forEach(ch => {
         const chProgress = progress.chapterProgress[ch.id]
@@ -488,13 +496,12 @@ export default {
       })
       return solvedCount
     },
-    getCurrentSubjectLevel() {
+    getCurrentSubjectLevel(subjectName) {
       if (!this.userProgress) return 1
-      const realSubject = getRealSubject(this.selectedSubject)
+      const realSubject = getRealSubject(subjectName)
       if (this.userProgress.subjectLevels && this.userProgress.subjectLevels[realSubject]) {
         return this.userProgress.subjectLevels[realSubject]
       }
-      // Fallback for legacy or default
       if (realSubject === 'C++') {
         return this.userProgress.currentLevel || 1
       }
@@ -503,12 +510,10 @@ export default {
     isLevelUnlocked(level) {
       if (!this.userProgress) return false
       const lvl = level.level || level.levelId
-      return lvl <= this.getCurrentSubjectLevel()
+      return lvl <= this.getCurrentSubjectLevel(level.group)
     },
     isLevelCompleted(level) {
       if (!this.userProgress) return false
-      
-      // Check actual chapter completion
       let chapters = []
       if (level.topics && level.topics.length > 0) {
         level.topics.forEach(t => {
@@ -517,90 +522,54 @@ export default {
       } else if (level.chapters) {
         chapters = level.chapters
       }
-
       if (chapters.length > 0) {
         const requiredChapters = chapters.filter(c => !c.optional)
         if (requiredChapters.length > 0) {
           return requiredChapters.every(c => this.isChapterCompleted(level, c))
         }
       }
-
       const lvl = level.level || level.levelId
-      return lvl < this.getCurrentSubjectLevel()
+      return lvl < this.getCurrentSubjectLevel(level.group)
     },
     isChapterUnlocked(level, chapter) {
       if (!this.userProgress) return false
       const lvl = level.level || level.levelId
-      const currentLvl = this.getCurrentSubjectLevel()
-      
-      // If level is lower than current, it's all unlocked (history)
+      const currentLvl = this.getCurrentSubjectLevel(level.group)
       if (lvl < currentLvl) return true
-      
-      // For current OR future levels (插班生/跳级):
-      // Always unlock the first chapter of any topic
       if (level.topics) {
         for (const topic of level.topics) {
           if (topic.chapters && topic.chapters.length > 0) {
             const firstChap = topic.chapters[0]
-            // Check by reference or ID
             if (firstChap === chapter || firstChap.id === chapter.id) return true
             if (firstChap._id && chapter._id && firstChap._id === chapter._id) return true
           }
         }
       }
-      // Always unlock the first chapter of the level (Legacy)
-      if (level.chapters && level.chapters.length > 0) {
-         const firstChap = level.chapters[0]
-         if (firstChap === chapter || firstChap.id === chapter.id) return true
-         if (firstChap._id && chapter._id && firstChap._id === chapter._id) return true
-      }
-      
-      // If level is higher than current, and not the first chapter, it's locked by default
-      // UNLESS explicitly unlocked in userProgress (e.g. manual unlock by admin)
-      if (lvl > currentLvl) {
-         // Check explicit unlocks below
-      }
-      
-      // Check by UID first (Robust)
-      // If user has UIDs recorded, we trust UIDs exclusively for chapters that have UIDs
       if (this.userProgress.unlockedChapterUids && this.userProgress.unlockedChapterUids.length > 0 && chapter._id) {
         return this.userProgress.unlockedChapterUids.includes(chapter._id)
       }
-      
-      // Fallback to String ID (Legacy)
       return this.userProgress.unlockedChapters.includes(chapter.id)
     },
     isChapterCompleted(level, chapter) {
       if (!this.userProgress) return false
-      
-      // Check by UID first (Robust)
-      // If user has UIDs recorded, we trust UIDs exclusively for chapters that have UIDs
       if (this.userProgress.completedChapterUids && this.userProgress.completedChapterUids.length > 0 && chapter._id) {
         return this.userProgress.completedChapterUids.includes(chapter._id)
       }
-
-      // Fallback to String ID (Legacy)
       return this.userProgress.completedChapters.includes(chapter.id)
     },
     getChapterStatusClass(level, chapter) {
       if (this.isChapterCompleted(level, chapter)) return 'status-completed'
       if (this.isChapterUnlocked(level, chapter)) return 'status-unlocked'
-      
-      // Check if user is teacher/admin to show unlocked style visually (optional, but good UX)
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
       if (userInfo.role === 'teacher' || userInfo.role === 'admin') return 'status-unlocked'
-
       return 'status-locked'
     },
     goToChapter(level, chapter) {
-      // Allow teachers/admins to access any chapter
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
       const isTeacherOrAdmin = userInfo.role === 'teacher' || userInfo.role === 'admin'
-
       if (!isTeacherOrAdmin && !this.isChapterUnlocked(level, chapter) && !this.isChapterCompleted(level, chapter)) {
-        return // Locked
+        return
       }
-      // Use level.level instead of level.levelId if levelId is not present
       const lvl = level.level || level.levelId
       this.$router.push(`/course/${lvl}/${chapter.id}`)
     },
@@ -618,186 +587,257 @@ export default {
 
 <style scoped>
 .learning-map-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-.header-banner {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
-  padding: 30px 40px;
-  border-radius: 16px;
-  margin-bottom: 40px;
-  box-shadow: 0 10px 20px rgba(52, 152, 219, 0.2);
+  height: calc(100vh - 60px); /* Adjust based on navbar height */
+  overflow: hidden;
+  background: #f5f7fa;
 }
 
-.header-content {
+.course-layout {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  height: 100%;
 }
 
-.header-left h1 {
-  color: white;
-  margin: 0 0 10px 0;
-  font-size: 32px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.progress-badge {
-  display: inline-block;
-  background: rgba(255,255,255,0.2);
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-size: 14px;
-  backdrop-filter: blur(5px);
-  font-weight: 500;
-}
-
-.subject-selector {
-  display: flex;
-  gap: 10px;
-  background: rgba(255,255,255,0.15);
-  padding: 6px;
-  border-radius: 30px;
-  flex-wrap: wrap;
-}
-
-.btn-subject {
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.9);
-  padding: 8px 20px;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.btn-subject.active {
+/* Sidebar */
+.course-sidebar {
+  width: 300px;
   background: white;
-  color: #3498db;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.btn-subject:hover:not(.active) {
-  background: rgba(255,255,255,0.2);
-  color: white;
-}
-
-.levels-container {
+  border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  flex-shrink: 0;
 }
 
-.level-card {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  border: 1px solid #eee;
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
 }
-
-.level-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-  cursor: pointer;
-  user-select: none;
-}
-.toggle-icon {
-  display: inline-block;
-  width: 24px;
-  text-align: center;
-  margin-right: 5px;
+.sidebar-header h3 {
+  margin: 0;
   font-size: 18px;
-  color: #7f8c8d;
-}
-.level-info h2 {
-  font-size: 24px;
-  color: #34495e;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-.level-title-text {
-  margin-left: 15px;
-  font-size: 24px;
-  color: #34495e;
-  font-weight: normal;
-}
-.level-info p {
-  font-size: 16px;
-  color: #7f8c8d;
-  margin: 0;
+  color: #2c3e50;
 }
 
-.badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-.badge.completed { background-color: #2ecc71; color: white; }
-.badge.unlocked { background-color: #3498db; color: white; }
-.badge.locked { background-color: #95a5a6; color: white; }
-
-.level-description {
-  color: #555;
-  margin-bottom: 25px;
-  line-height: 1.5;
+.tree-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
 }
 
-.level-desc-section {
-  margin-bottom: 20px;
-  background: #fcfcfc;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.level-desc-header {
+.tree-item {
   padding: 10px 15px;
-  background: #f8f9fa;
   cursor: pointer;
   display: flex;
   align-items: center;
-  font-weight: 600;
-  color: #555;
-  user-select: none;
-  border-bottom: 1px solid transparent;
   transition: background 0.2s;
+  font-size: 14px;
+  color: #34495e;
+  position: relative;
 }
-.level-desc-header:hover {
-  background: #f0f0f0;
+.tree-item:hover {
+  background: #f8f9fa;
 }
-.level-desc-header .toggle-icon {
-  margin-right: 8px;
+.tree-item.active {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-weight: 500;
+}
+.tree-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #1976d2;
+}
+
+.group-item {
+  font-weight: 600;
+  font-size: 15px;
+}
+.level-item {
+  padding-left: 30px;
+}
+.topic-item {
+  padding-left: 50px;
+  font-size: 13px;
+  color: #555;
+}
+
+.tree-icon {
   width: 20px;
   text-align: center;
+  margin-right: 5px;
   font-size: 12px;
-}
-.level-description {
-  padding: 20px;
-  border-top: 1px solid #eee;
-  background: #fff;
-  margin-bottom: 0; /* Override previous margin */
+  color: #95a5a6;
 }
 
-.chapters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.status-dot {
+  margin-left: auto;
+  font-size: 10px;
+}
+.status-dot.completed { color: #2ecc71; }
+.status-dot.unlocked { color: #3498db; }
+.status-dot.locked { color: #bdc3c7; }
+
+/* Content Area */
+.course-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px 40px;
+  background: #f5f7fa;
+}
+
+.view-header {
+  margin-bottom: 30px;
+}
+.breadcrumb {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin-bottom: 10px;
+}
+.breadcrumb span {
+  cursor: pointer;
+  color: #3498db;
+}
+.breadcrumb span:hover {
+  text-decoration: underline;
+}
+
+.view-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 28px;
+  color: #2c3e50;
+}
+
+.description-box {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom: 30px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Grid Layouts */
+.levels-grid {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
+.level-card-mini {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+}
+.level-card-mini:hover {
+  transform: translateY(-2px);
+  border-color: #3498db;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.level-mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.level-mini-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+.level-mini-desc {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+.level-mini-stats {
+  font-size: 13px;
+  color: #95a5a6;
+  text-align: right;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.topic-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 4px solid #3498db;
+}
+.topic-card:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+.topic-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.topic-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+.topic-stats-group {
+  display: flex;
+  gap: 8px;
+}
+.topic-count {
+  font-size: 13px;
+  color: #7f8c8d;
+  background: #f0f2f5;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.topic-card-desc {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
+}
+.topic-chapters-preview {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.chapter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #eee;
+}
+.chapter-dot.status-completed { background: #2ecc71; }
+.chapter-dot.status-unlocked { background: #3498db; }
+.chapter-dot.status-locked { background: #e0e0e0; }
+.more-dots { font-size: 12px; color: #999; }
+
+/* Reused Chapter Card Styles */
+.chapters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
 .chapter-card {
-  background: #f8f9fa;
-  border: 2px solid transparent;
+  background: white;
+  border: 1px solid #eee;
   border-radius: 8px;
   padding: 20px;
   cursor: pointer;
@@ -811,286 +851,71 @@ export default {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
+.chapter-card.status-completed { border-top: 3px solid #2ecc71; }
+.chapter-card.status-unlocked { border-top: 3px solid #3498db; }
+.chapter-card.status-locked { border-top: 3px solid #bdc3c7; opacity: 0.7; }
 
-.chapter-card.status-completed {
-  border-color: #2ecc71;
-  background-color: #eafaf1;
+.chapter-icon { font-size: 24px; margin-bottom: 10px; }
+.chapter-info h4 { margin: 0 0 5px 0; font-size: 15px; color: #2c3e50; }
+.chapter-id { font-size: 12px; color: #95a5a6; }
+
+/* Badges */
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
 }
-.chapter-card.status-unlocked {
-  border-color: #3498db;
-  background-color: #ebf5fb;
-}
-.chapter-card.status-locked {
-  border-color: #e0e0e0;
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-.chapter-card.status-locked:hover {
-  transform: none;
-  box-shadow: none;
+.badge.completed { background-color: #eafaf1; color: #2ecc71; }
+.badge.unlocked { background-color: #ebf5fb; color: #3498db; }
+.badge.locked { background-color: #f5f5f5; color: #95a5a6; }
+
+.progress-badge {
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.chapter-icon {
-  font-size: 24px;
-  margin-bottom: 10px;
-}
-.chapter-info h3 {
-  font-size: 16px;
-  margin: 0 0 5px 0;
-  color: #2c3e50;
+/* Learners */
+.learners-section { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+.learners-header { cursor: pointer; color: #7f8c8d; font-size: 14px; display: flex; align-items: center; }
+.learners-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.learner-tag { background: #f0f2f5; padding: 4px 10px; border-radius: 15px; font-size: 12px; cursor: pointer; }
+.learner-tag:hover { background: #3498db; color: white; }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: white; width: 400px; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.modal-body { padding: 20px; }
+.btn-close { background: none; border: none; font-size: 20px; cursor: pointer; }
+
+.empty-state {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 6px;
-}
-.tag-optional {
-  font-size: 10px;
-  background-color: #9b59b6;
-  color: white;
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-weight: normal;
-}
-.chapter-info p {
-  font-size: 14px;
-  color: #7f8c8d;
-  margin: 0;
-}
-
-/* Topic Styles */
-.topics-container {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-.topic-section {
-  background: #fff;
-  padding-top: 10px;
-}
-.topic-header {
-  margin-bottom: 15px;
-  border-left: 4px solid #3498db;
-  padding-left: 15px;
-  cursor: pointer;
-  display: flex;
   align-items: center;
-  user-select: none;
-}
-.topic-header:hover {
-  opacity: 0.8;
-}
-.topic-header .toggle-icon {
-  margin-right: 8px;
-  width: 20px;
-  text-align: center;
-  font-size: 14px;
-  color: #3498db;
-}
-
-/* Learners Section Styles */
-.learners-section {
-  margin-top: 25px;
-  border-top: 1px dashed #eee;
-  padding-top: 15px;
-}
-.learners-header {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  color: #7f8c8d;
-  font-size: 14px;
-  user-select: none;
-  margin-bottom: 10px;
-}
-.learners-header:hover {
-  color: #3498db;
-}
-.learners-header .toggle-icon {
-  margin-right: 5px;
-  width: 16px;
-  text-align: center;
-}
-.learners-content {
-  padding-left: 20px;
-  animation: slideDown 0.3s ease-out;
-}
-.loading-small {
-  font-size: 12px;
+  height: 100%;
   color: #95a5a6;
-  padding: 10px 0;
+  font-size: 16px;
 }
-.learners-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 0;
-}
-.learner-tag {
-  background-color: #f0f2f5;
-  color: #555;
-  padding: 5px 12px;
-  border-radius: 15px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid #e0e0e0;
-  user-select: none;
-}
-.learner-tag:hover {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-  transform: translateY(-1px);
-}
-.no-learners {
-  font-size: 12px;
+
+.empty-node {
+  padding: 8px 15px;
   color: #bdc3c7;
-  padding: 10px 0;
+  font-size: 13px;
   font-style: italic;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999; /* Ensure it's on top */
-  backdrop-filter: blur(2px); /* Optional: adds a nice blur effect */
-}
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  overflow: hidden;
-  animation: slideUp 0.3s ease-out;
-  position: relative;
-  z-index: 10000;
-}
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8f9fa;
-}
-.modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #2c3e50;
-}
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #95a5a6;
-  cursor: pointer;
-  line-height: 1;
-}
-.btn-close:hover {
-  color: #e74c3c;
-}
-.modal-body {
-  padding: 20px;
-}
-.progress-details {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-.progress-stat-card {
-  background: #fcfcfc;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 15px;
-}
-.progress-stat-card h4 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #7f8c8d;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.levels-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.level-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 15px;
-  color: #2c3e50;
-  border-bottom: 1px dashed #eee;
-  padding-bottom: 5px;
-}
-.level-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.stat-row {
-  display: flex;
-  gap: 20px;
-}
-.stat-item {
-  flex: 1;
-}
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #3498db;
-}
-.stat-label {
-  font-size: 14px;
-  font-weight: normal;
-  color: #95a5a6;
-  margin-left: 5px;
+.tree-children > .empty-node {
+    padding-left: 45px;
 }
 
-.topic-stats {
-  font-size: 14px;
-  color: #7f8c8d;
-  font-weight: normal;
-  margin-left: 8px;
-}
-
-.markdown-content :deep(ul), .markdown-content :deep(ol) {
-  padding-left: 20px;
-}
-
-.tag-type {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  vertical-align: middle;
-  font-weight: bold;
-  border: 1px solid;
-}
-.tag-type.html {
-  color: #e67e22;
-  border-color: #e67e22;
-  background: #fff5eb;
-}
-.tag-type.markdown {
-  color: #3498db;
-  border-color: #3498db;
-  background: #ebf5fb;
-}
-
-.lvl-title-small {
-  font-size: 13px;
-  color: #7f8c8d;
-  font-weight: normal;
-  margin-left: 5px;
+.tree-children .tree-children > .empty-node {
+    padding-left: 65px;
 }
 </style>

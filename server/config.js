@@ -33,3 +33,11 @@ export const DIRS = {
   models: path.join(__dirname, 'models.json'),
   cyaronDocs: path.join(__dirname, '../cyaron-docs')
 }
+
+export const COS_CONFIG = {
+  SecretId: process.env.COS_SECRET_ID,
+  SecretKey: process.env.COS_SECRET_KEY,
+  Bucket: process.env.COS_BUCKET,
+  Region: process.env.COS_REGION,
+  Domain: process.env.COS_DOMAIN // Optional: Custom domain or CDN domain
+}
