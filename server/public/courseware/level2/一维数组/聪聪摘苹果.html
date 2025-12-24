@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解题报告</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* --- 基础和布局 --- */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
+        .ppt-container { width: 100%; height: 100%; position: relative; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        
+        /* --- 导航按钮 --- */
+        .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.8); color: white; border: none; border-radius: 30px; padding: 10px 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .nav-button:hover { background-color: #007aff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .nav-button:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        #prevBtn { left: 30px; } #nextBtn { right: 30px; }
+        #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); }
+
+        /* --- Logo --- */
+        .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
+
+        /* --- 内容样式 --- */
+        .slide-header { flex-shrink: 0; }
+        .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: clamp(2.5em, 5vw, 4em); color: #333; margin: 0; text-align: center; }
+        h2 { font-size: clamp(2em, 4vw, 2.8em); color: #007aff; border-bottom: 3px solid #f0f2f5; padding-bottom: 15px; margin-top: 0; margin-bottom: 2vh; }
+        h3 { font-size: clamp(1.5em, 3vw, 2em); color: #007aff; margin-top: 20px; margin-bottom: 10px; }
+        h4 { font-size: clamp(1.3em, 2.8vw, 1.8em); color: #333; margin-top: 15px; margin-bottom: 8px; }
+        p, li { font-size: clamp(1.2em, 2.5vw, 1.5em); line-height: 1.6; color: #444; }
+        .problem-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; font-size: clamp(1.1em, 2.2vw, 1.4em); }
+        .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; font-size: clamp(1.1em, 2.2vw, 1.4em); }
+        
+        /* --- 代码块样式 --- */
+        .code-block { background-color: #ffffff; color: #333333; padding: 20px; border-radius: 8px; border: 1px solid #ddd; font-family: "Courier New", Courier, monospace; white-space: pre-wrap; margin-top: 2vh; font-size: clamp(1em, 2vw, 1.2em); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .code-block .comment { color: #008000; font-style: italic; }
+        .code-block .keyword { color: #0000ff; font-weight: bold; }
+        .code-block .type { color: #2b91af; }
+        .code-block .number { color: #a31515; }
+        .code-block .string { color: #a31515; }
+        .code-block .preprocessor { color: #808080; }
+
+        /* --- 动画演示区域 (根据题目自定义) --- */
+        .animation-area { 
+            min-height: 400px; 
+            position: relative; 
+            border: 2px dashed #ccc; 
+            margin-top: 2vh; 
+            padding: 10px; 
+            overflow: auto; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 10px;
+        }
+        .array-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping for many elements */
+            gap: 5px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+        .array-cell {
+            width: 50px; /* At least 40x40 */
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #007aff;
+            background-color: #e6f7ff;
+            font-size: 18px; /* At least 18px */
+            font-weight: bold;
+            color: #333;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .array-cell.current {
+            background-color: #ffeb3b; /* Yellow for current */
+            border-color: #fbc02d;
+            box-shadow: 0 0 8px rgba(255, 235, 59, 0.7);
+        }
+        .array-cell.picked {
+            background-color: #4caf50; /* Green for picked */
+            border-color: #388e3c;
+            color: white;
+        }
+        .info-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .info-display span {
+            color: #007aff;
+        }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <img src="https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/qimailogo.png" class="logo" alt="Logo">
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="slide-content" style="align-items: center; text-align: center;">
+                <div style="font-size: 5em; margin-bottom: 20px;">🏆</div>
+                <h1>聪聪摘苹果</h1>
+                <h3>—— 模拟与条件判断</h3>
+            </div>
+        </div>
+
+        <!-- Slide 2: 题目 -->
+        <div class="slide">
+            <div class="slide-header"><h2>📝 题目解析</h2></div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="problem-box">
+                    <p><strong>题目核心：</strong>给定 $10$ 个苹果的高度以及聪聪能达到的最大高度，计算她能摘到多少个苹果。</p>
+                    <p><strong>输入格式：</strong></p>
+                    <ul>
+                        <li>第一行：$10$ 个整数，表示 $10$ 个苹果到地面的高度 $h_1, h_2, \dots, h_{10}$。</li>
+                        <li>第二行：一个整数，表示聪聪把手伸直能够达到的最大高度 $H_{hand}$。</li>
+                    </ul>
+                    <p><strong>输出格式：</strong></p>
+                    <ul>
+                        <li>一行，一个整数，表示聪聪能够摘到的苹果的数目。</li>
+                    </ul>
+                    <p><strong>数据范围：</strong></p>
+                    <ul>
+                        <li>苹果高度 $h_i$ 满足 $100 \le h_i \le 200$ 厘米。</li>
+                        <li>聪聪把手伸直能够达到的最大高度 $H_{hand}$ 满足 $100 \le H_{hand} \le 120$ 厘米。</li>
+                        <li>板凳高度 $H_{stool} = 30$ 厘米。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 思路 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🤔 思路探讨</h2></div>
+            <div class="slide-content" style="justify-content: flex-start; overflow-y: auto;">
+                <div class="content-body">
+                    <p>这道题目是一个典型的模拟问题，我们需要根据题目描述的规则，一步步地模拟聪聪摘苹果的过程，并统计最终摘到的苹果数量。</p>
+
+                    <h3>1. 理解聪聪能达到的最大高度</h3>
+                    <p>聪聪有两种方式摘苹果：</p>
+                    <ul>
+                        <li><strong>直接伸手：</strong> 她能达到的最大高度是题目给定的 $H_{hand}$。</li>
+                        <li><strong>踩板凳伸手：</strong> 她能达到的最大高度是 $H_{hand} + H_{stool}$。题目中明确说明，当不能直接摘到时，会踩板凳。这意味着聪聪总是会利用板凳来达到更高的位置。因此，她能摘到苹果的<strong>总最大高度</strong>是她伸手高度加上板凳高度。</p>
+                    </ul>
+                    <p>所以，我们首先需要计算出聪聪能够达到的总最大高度 $H_{total} = H_{hand} + H_{stool}$。</p>
+
+                    <h3>2. 遍历并判断每个苹果</h3>
+                    <p>题目给出了 $10$ 个苹果的高度。我们需要对这 $10$ 个苹果逐一进行检查：</p>
+                    <ul>
+                        <li>对于每一个苹果，假设其高度为 $h_i$。</li>
+                        <li>我们判断这个苹果的高度是否小于或等于聪聪能达到的总最大高度 $H_{total}$。即判断条件是 $h_i \le H_{total}$。</li>
+                        <li>如果条件成立，说明这个苹果聪聪可以摘到，我们将摘到的苹果数量计数器加 $1$。</li>
+                    </ul>
+
+                    <h3>3. 统计结果</h3>
+                    <p>在检查完所有 $10$ 个苹果后，计数器中保存的数值就是聪聪能够摘到的苹果的总数目，将其输出即可。</p>
+
+                    <h3>总结步骤：</h3>
+                    <ol>
+                        <li>读取聪聪把手伸直能够达到的最大高度 $H_{hand}$。</li>
+                        <li>计算聪聪加上板凳后能达到的总最大高度 $H_{total} = H_{hand} + 30$。</li>
+                        <li>初始化一个变量 $count = 0$，用于记录摘到的苹果数量。</li>
+                        <li>循环 $10$ 次，每次读取一个苹果的高度 $h_i$。</li>
+                        <li>在循环中，如果 $h_i \le H_{total}$，则将 $count$ 加 $1$。</li>
+                        <li>循环结束后，输出 $count$ 的值。</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 演示 (请根据题目生成具体的 HTML/JS 动画) -->
+        <div class="slide">
+            <div class="slide-header"><h2>🎬 算法演示</h2></div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="animation-area" id="animArea">
+                    <!-- 在这里插入可视化元素 -->
+                    <div class="info-display">聪聪伸手高度 $H_{hand}$: <span id="handHeightDisplay"></span> cm</div>
+                    <div class="info-display">板凳高度 $H_{stool}$: <span id="stoolHeightDisplay"></span> cm</div>
+                    <div class="info-display">聪聪总可达高度 $H_{total}$: <span id="totalReachDisplay"></span> cm</div>
+                    <div class="info-display">已摘苹果数: <span id="pickedCountDisplay">0</span></div>
+                    <h4 style="margin-top: 20px;">苹果高度列表:</h4>
+                    <div class="array-container" id="appleArrayContainer"></div>
+                </div>
+                <div id="stepDescription" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007aff; border-radius: 4px; min-height: 60px; font-size: 1.1em; color: #333;">
+                    准备就绪，请点击“下一步”开始演示
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
+                    <button id="prevStepBtn" style="padding: 8px 20px; font-size: 16px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 4px;">上一步</button>
+                    <button id="nextStepBtn" style="padding: 8px 20px; font-size: 16px; cursor: pointer; background-color: #007aff; color: white; border: none; border-radius: 4px;">下一步</button>
+                    <button id="resetBtn" style="padding: 8px 20px; font-size: 16px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 4px;">重置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 代码 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💻 代码实现</h2></div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div class="code-block">
+<pre>
+<span class="preprocessor">#include &lt;iostream&gt;</span> <span class="comment">// 引入输入输出流库</span>
+<span class="preprocessor">#include &lt;vector&gt;</span>   <span class="comment">// 引入vector容器库，虽然本题固定10个苹果，但使用vector更通用</span>
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    <span class="comment">// 优化输入输出速度，在算法竞赛中常用</span>
+    <span class="type">std::ios_base::sync_with_stdio</span>(<span class="keyword">false</span>);
+    <span class="type">std::cin.tie</span>(<span class="keyword">NULL</span>);
+
+    <span class="comment">// 定义存储苹果高度的数组，共10个苹果</span>
+    <span class="type">std::vector</span>&lt;<span class="keyword">int</span>&gt; <span class="variable">apple_heights</span>(<span class="number">10</span>); 
+    <span class="comment">// 循环读取10个苹果的高度</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> <span class="variable">i</span> = <span class="number">0</span>; <span class="variable">i</span> &lt; <span class="number">10</span>; ++<span class="variable">i</span>) {
+        <span class="type">std::cin</span> >> <span class="variable">apple_heights</span>[<span class="variable">i</span>];
+    }
+
+    <span class="comment">// 定义聪聪把手伸直能够达到的最大高度</span>
+    <span class="keyword">int</span> <span class="variable">hand_reach</span>;
+    <span class="type">std::cin</span> >> <span class="variable">hand_reach</span>;
+
+    <span class="comment">// 板凳的高度是固定的30厘米</span>
+    <span class="keyword">const</span> <span class="keyword">int</span> <span class="variable">stool_height</span> = <span class="number">30</span>;
+    <span class="comment">// 计算聪聪能够达到的总最大高度（伸手高度 + 板凳高度）</span>
+    <span class="keyword">int</span> <span class="variable">total_reach</span> = <span class="variable">hand_reach</span> + <span class="variable">stool_height</span>;
+
+    <span class="comment">// 初始化计数器，用于记录能够摘到的苹果数量</span>
+    <span class="keyword">int</span> <span class="variable">picked_apples_count</span> = <span class="number">0</span>;
+
+    <span class="comment">// 遍历所有苹果，判断是否能够摘到</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> <span class="variable">i</span> = <span class="number">0</span>; <span class="variable">i</span> &lt; <span class="number">10</span>; ++<span class="variable">i</span>) {
+        <span class="comment">// 如果当前苹果的高度小于或等于聪聪能够达到的总最大高度</span>
+        <span class="keyword">if</span> (<span class="variable">apple_heights</span>[<span class="variable">i</span>] &lt;= <span class="variable">total_reach</span>) {
+            <span class="comment">// 计数器加1</span>
+            <span class="variable">picked_apples_count</span>++;
+        }
+    }
+
+    <span class="comment">// 输出最终摘到的苹果数量</span>
+    <span class="type">std::cout</span> << <span class="variable">picked_apples_count</span> << <span class="type">std::endl</span>;
+
+    <span class="keyword">return</span> <span class="number">0</span>; <span class="comment">// 程序正常结束</span>
+}
+</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 总结 -->
+        <div class="slide">
+            <div class="slide-header"><h2>🧠 知识点总结</h2></div>
+            <div class="slide-content">
+                <div class="conclusion">
+                    <p><strong>时间复杂度：</strong>$O(N)$，其中 $N$ 是苹果的数量。由于 $N=10$ 是一个常数，因此可以认为是 $O(1)$。</p>
+                    <p><strong>空间复杂度：</strong>$O(N)$，其中 $N$ 是苹果的数量。用于存储苹果高度的数组。由于 $N=10$ 是一个常数，因此可以认为是 $O(1)$。</p>
+                    <p><strong>核心算法：</strong></p>
+                    <ul>
+                        <li><strong>模拟 (Simulation)：</strong> 按照题目描述的规则，一步步执行操作。</li>
+                        <li><strong>条件判断 (Conditional Statements)：</strong> 使用 `if` 语句判断苹果是否可摘。</li>
+                        <li><strong>循环结构 (Looping Structures)：</strong> 使用 `for` 循环遍历所有苹果。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 反思与扩展 -->
+        <div class="slide">
+            <div class="slide-header"><h2>💡 反思与扩展</h2></div>
+            <div class="slide-content" style="justify-content: flex-start;">
+                <div style="font-size: 1.1em; line-height: 1.6;">
+                    <p><strong>⚠️ 易错点：</strong></p>
+                    <ul>
+                        <li><strong>板凳高度遗漏：</strong> 容易忘记将聪聪的伸手高度与板凳高度相加，导致计算出的可达高度偏低。</li>
+                        <li><strong>条件判断边界：</strong> 判断条件是 $h_i \le H_{total}$，而不是 $h_i < H_{total}$。如果苹果高度恰好等于聪聪能达到的最大高度，也应该算作能摘到。</li>
+                    </ul>
+                    <p><strong>🔄 变式思考：</strong></p>
+                    <ul>
+                        <li><strong>多个板凳：</strong> 如果聪聪有多个不同高度的板凳，她会选择哪个板凳来摘苹果？（她会选择能让她摘到最多苹果的板凳，或者能让她达到最高高度的板凳）</li>
+                        <li><strong>动态苹果：</strong> 如果苹果的高度是动态变化的，或者每隔一段时间会掉落一些，如何设计算法来最大化摘取数量？（可能需要引入时间维度或更复杂的策略）</li>
+                        <li><strong>体力限制：</strong> 如果聪聪摘每个苹果都需要消耗体力，并且体力有限，她应该如何选择摘哪些苹果来最大化收益？（可能变成背包问题或贪心问题）</li>
+                    </ul>
+                    <p><strong>📚 推荐题目：</strong></p>
+                    <ul>
+                        <li><strong>P1046 陶陶摘苹果</strong> (来源: 洛谷) - 核心逻辑与本题几乎完全一致，都是循环遍历物品并根据条件判断是否可取。</li>
+                        <li><strong>P1421 小玉买文具</strong> (来源: 洛谷) - 涉及简单的数学计算和条件判断，考察基本的编程逻辑和浮点数处理（虽然本题是整数）。</li>
+                        <li><strong>2652. 倍数求和</strong> (来源: LeetCode) - 遍历一个范围内的数字，并根据多个条件（是否是某个数的倍数）进行累加，是循环和条件判断的典型应用。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <button id="prevBtn" class="nav-button">‹ 上一页</button>
+        <button id="nextBtn" class="nav-button">下一页 ›</button>
+        <div id="slideCounter">1 / 7</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 先初始化翻页逻辑（核心功能，必须先执行）
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const slideCounter = document.getElementById('slideCounter');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+                currentSlide = index;
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === totalSlides - 1;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+
+            if(prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', () => currentSlide > 0 && showSlide(currentSlide - 1));
+                nextBtn.addEventListener('click', () => currentSlide < totalSlides - 1 && showSlide(currentSlide + 1));
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') prevBtn.click();
+                    else if (e.key === 'ArrowRight') nextBtn.click();
+                });
+                showSlide(0);
+            }
+
+            // 2. 再尝试渲染公式（加上 try-catch 和 typeof 检查）
+            try {
+                if (typeof renderMathInElement !== 'undefined') {
+                    renderMathInElement(document.body, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                } else {
+                    console.warn('KaTeX 资源加载失败，公式将显示为源码，但不影响翻页。');
+                }
+            } catch (e) {
+                console.error('公式渲染出错:', e);
+            }
+
+            // --- 动画逻辑 (请AI根据题目生成) ---
+            // 必须实现: steps 数组 (包含状态数据和描述), renderStep 函数
+            
+            // 🛑 CRITICAL SYNTAX WARNING / 语法警告 🛑
+            // 在生成 steps 数组时，对象属性赋值必须使用冒号 (:), 绝对不能使用等号 (=)!
+            // ❌ 错误写法: { i=0, p=1, ans=3 }  <-- 会导致脚本崩溃！
+            // ✅ 正确写法: { i:0, p:1, ans:3 }
+            // 请务必检查每一个属性赋值！
+            
+            let currentStep = 0;
+            let totalSteps = 0; // AI 需修改此值
+            
+            const animArea = document.getElementById('animArea');
+            const stepDesc = document.getElementById('stepDescription');
+            const prevStepBtn = document.getElementById('prevStepBtn');
+            const nextStepBtn = document.getElementById('nextStepBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Animation specific elements
+            const handHeightDisplay = document.getElementById('handHeightDisplay');
+            const stoolHeightDisplay = document.getElementById('stoolHeightDisplay');
+            const totalReachDisplay = document.getElementById('totalReachDisplay');
+            const pickedCountDisplay = document.getElementById('pickedCountDisplay');
+            const appleArrayContainer = document.getElementById('appleArrayContainer');
+
+            const steps = [
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 0,
+                    currentIndex: -1,
+                    pickedCount: 0,
+                    pickedApplesIndices: [],
+                    desc: "初始化：聪聪的伸手高度为 $110$ 厘米，板凳高度为 $30$ 厘米。苹果高度列表已给出。开始计算聪聪的总可达高度。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140, // 110 + 30
+                    currentIndex: -1,
+                    pickedCount: 0,
+                    pickedApplesIndices: [],
+                    desc: "计算聪聪总可达高度：$H_{total} = H_{hand} + H_{stool} = 110 + 30 = 140$ 厘米。接下来，我们将遍历每个苹果。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 0,
+                    pickedCount: 0,
+                    pickedApplesIndices: [],
+                    desc: "检查第 $0$ 个苹果，高度为 $100$。判断 $100 \\le 140$？条件成立，可以摘到！"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 0,
+                    pickedCount: 1,
+                    pickedApplesIndices: [0],
+                    desc: "摘到第 $0$ 个苹果。当前已摘苹果数：$1$。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 1,
+                    pickedCount: 1,
+                    pickedApplesIndices: [0],
+                    desc: "检查第 $1$ 个苹果，高度为 $200$。判断 $200 \\le 140$？条件不成立，无法摘到。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 2,
+                    pickedCount: 1,
+                    pickedApplesIndices: [0],
+                    desc: "检查第 $2$ 个苹果，高度为 $150$。判断 $150 \\le 140$？条件不成立，无法摘到。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 3,
+                    pickedCount: 1,
+                    pickedApplesIndices: [0],
+                    desc: "检查第 $3$ 个苹果，高度为 $140$。判断 $140 \\le 140$？条件成立，可以摘到！"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 3,
+                    pickedCount: 2,
+                    pickedApplesIndices: [0, 3],
+                    desc: "摘到第 $3$ 个苹果。当前已摘苹果数：$2$。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 4,
+                    pickedCount: 2,
+                    pickedApplesIndices: [0, 3],
+                    desc: "检查第 $4$ 个苹果，高度为 $129$。判断 $129 \\le 140$？条件成立，可以摘到！"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 4,
+                    pickedCount: 3,
+                    pickedApplesIndices: [0, 3, 4],
+                    desc: "摘到第 $4$ 个苹果。当前已摘苹果数：$3$。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 5,
+                    pickedCount: 3,
+                    pickedApplesIndices: [0, 3, 4],
+                    desc: "检查第 $5$ 个苹果，高度为 $134$。判断 $134 \\le 140$？条件成立，可以摘到！"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 5,
+                    pickedCount: 4,
+                    pickedApplesIndices: [0, 3, 4, 5],
+                    desc: "摘到第 $5$ 个苹果。当前已摘苹果数：$4$。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 6,
+                    pickedCount: 4,
+                    pickedApplesIndices: [0, 3, 4, 5],
+                    desc: "检查第 $6$ 个苹果，高度为 $167$。判断 $167 \\le 140$？条件不成立，无法摘到。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 7,
+                    pickedCount: 4,
+                    pickedApplesIndices: [0, 3, 4, 5],
+                    desc: "检查第 $7$ 个苹果，高度为 $198$。判断 $198 \\le 140$？条件不成立，无法摘到。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 8,
+                    pickedCount: 4,
+                    pickedApplesIndices: [0, 3, 4, 5],
+                    desc: "检查第 $8$ 个苹果，高度为 $200$。判断 $200 \\le 140$？条件不成立，无法摘到。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 9,
+                    pickedCount: 4,
+                    pickedApplesIndices: [0, 3, 4, 5],
+                    desc: "检查第 $9$ 个苹果，高度为 $111$。判断 $111 \\le 140$？条件成立，可以摘到！"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: 9,
+                    pickedCount: 5,
+                    pickedApplesIndices: [0, 3, 4, 5, 9],
+                    desc: "摘到第 $9$ 个苹果。当前已摘苹果数：$5$。"
+                },
+                {
+                    appleHeights: [100, 200, 150, 140, 129, 134, 167, 198, 200, 111],
+                    handHeight: 110,
+                    stoolHeight: 30,
+                    totalReach: 140,
+                    currentIndex: -1, // Reset current index after loop
+                    pickedCount: 5,
+                    pickedApplesIndices: [0, 3, 4, 5, 9],
+                    desc: "所有苹果检查完毕。聪聪一共摘到了 $5$ 个苹果。演示结束。"
+                }
+            ];
+
+            totalSteps = steps.length;
+
+            function renderStep(stepIndex) {
+                const step = steps[stepIndex];
+                if (!step) return;
+
+                handHeightDisplay.textContent = step.handHeight;
+                stoolHeightDisplay.textContent = step.stoolHeight;
+                totalReachDisplay.textContent = step.totalReach;
+                pickedCountDisplay.textContent = step.pickedCount;
+                stepDesc.innerHTML = step.desc;
+
+                appleArrayContainer.innerHTML = '';
+                step.appleHeights.forEach((height, index) => {
+                    const cell = document.createElement('div');
+                    cell.classList.add('array-cell');
+                    cell.textContent = height;
+                    if (index === step.currentIndex) {
+                        cell.classList.add('current');
+                    }
+                    if (step.pickedApplesIndices.includes(index)) {
+                        cell.classList.add('picked');
+                    }
+                    appleArrayContainer.appendChild(cell);
+                });
+
+                // Render KaTeX for dynamic content
+                try {
+                    if (typeof renderMathInElement !== 'undefined') {
+                        const mathOptions = {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '$', right: '$', display: false}
+                            ],
+                            throwOnError: false
+                        };
+                        if(animArea) renderMathInElement(animArea, mathOptions);
+                        if(stepDesc) renderMathInElement(stepDesc, mathOptions);
+                    }
+                } catch (e) {
+                    console.error('Formula rendering error in renderStep:', e);
+                }
+            }
+
+            // Initialize animation controls
+            if (prevStepBtn && nextStepBtn && resetBtn) {
+                prevStepBtn.addEventListener('click', () => {
+                    if (currentStep > 0) {
+                        currentStep--;
+                        renderStep(currentStep);
+                        updateControls(); // Update button states
+                    }
+                });
+
+                nextStepBtn.addEventListener('click', () => {
+                    if (currentStep < totalSteps - 1) {
+                        currentStep++;
+                        renderStep(currentStep);
+                        updateControls(); // Update button states
+                    }
+                });
+
+                resetBtn.addEventListener('click', () => {
+                    currentStep = 0;
+                    renderStep(currentStep);
+                    updateControls(); // Update button states
+                });
+            }
+
+            // Initial render for the animation slide
+            renderStep(currentStep);
+            updateControls(); // Call updateControls to set initial button states and render first step
+        });
+    </script>
+</body>
+</html>
