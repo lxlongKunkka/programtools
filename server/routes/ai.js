@@ -1268,7 +1268,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           const payload = {
             model: model || 'o4-mini',
             messages,
-            temperature: 0.7,
+            temperature: 0.3,
             max_tokens: 16000
           }
 
