@@ -806,11 +806,17 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           console.log(`[Background] File saved to ${fullPath}`);
 
           // 3. Update Database
-          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          let courseLevel = await CourseLevel.findOne({ 
+            $or: [
+                { 'topics.chapters.id': chapterId },
+                { 'topics.chapters._id': chapterId }
+            ]
+          });
+
           if (courseLevel) {
               let chapterFound = false;
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
@@ -839,6 +845,11 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                            getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'success', type: 'solution-report' });
                        } catch (e) { console.error('Socket emit failed', e); }
                    }
+               } else {
+                   console.error(`[Background] CourseLevel not found for chapter ${chapterId} (Solution Report)`);
+                   try {
+                       getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'error', message: '数据库记录未找到', type: 'solution-report' });
+                   } catch (e) { console.error('Socket emit failed', e); }
                }
           }
 
@@ -1196,11 +1207,17 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           console.log(`[Background] PPT saved to ${fullPath}`);
 
           // Update Database
-          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          let courseLevel = await CourseLevel.findOne({ 
+            $or: [
+                { 'topics.chapters.id': chapterId },
+                { 'topics.chapters._id': chapterId }
+            ]
+          });
+
           if (courseLevel) {
               let chapterFound = false;
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
@@ -1221,6 +1238,16 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                       message: 'PPT 生成完成'
                   });
               }
+          } else {
+              console.error(`[Background] CourseLevel not found for chapter ${chapterId} (PPT)`);
+              // Notify client of error
+              getIO().emit('ai_task_complete', {
+                  chapterId,
+                  clientKey,
+                  type: 'ppt',
+                  status: 'error',
+                  message: 'PPT 生成失败: 数据库记录未找到'
+              });
           }
 
       } catch (err) {
@@ -1278,11 +1305,17 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           const content = resp.data.choices?.[0]?.message?.content || ''
 
           // Update Database
-          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          let courseLevel = await CourseLevel.findOne({ 
+            $or: [
+                { 'topics.chapters.id': chapterId },
+                { 'topics.chapters._id': chapterId }
+            ]
+          });
+
           if (courseLevel) {
               let chapterFound = false;
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
                   if (chapter) {
                       chapter.content = content;
                       chapter.contentType = 'markdown';
@@ -1302,7 +1335,12 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                       status: 'success',
                       message: '教案生成完成'
                   });
+              } else {
+                  console.warn(`[Background] Chapter ${chapterId} found in DB query but not in iteration (Lesson Plan)`);
               }
+          } else {
+              console.error(`[Background] CourseLevel not found for chapter ${chapterId} (Lesson Plan)`);
+              throw new Error('Database record not found for this chapter');
           }
 
       } catch (err) {

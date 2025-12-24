@@ -436,7 +436,12 @@ export default {
             this.editingChapter.content = '加载中...'
             const fullChapter = await request(`/api/course/chapter/${chapterId}`)
             // Ensure the user hasn't switched to another node while fetching
-            if (this.selectedNode && this.selectedNode.type === 'chapter' && this.editingChapter.id === chapterId) {
+            // Check both id (string) and _id (mongo) to handle different ID types
+            const isSameChapter = this.selectedNode && 
+                                  this.selectedNode.type === 'chapter' && 
+                                  (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+            
+            if (isSameChapter) {
                 this.editingChapter.content = fullChapter.content || ''
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
@@ -444,7 +449,10 @@ export default {
             }
         } catch (e) {
             console.error(e)
-            if (this.selectedNode && this.selectedNode.type === 'chapter' && this.editingChapter.id === chapterId) {
+            const isSameChapter = this.selectedNode && 
+                                  this.selectedNode.type === 'chapter' && 
+                                  (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+            if (isSameChapter) {
                 this.editingChapter.content = '加载失败: ' + e.message
             }
         }
@@ -760,6 +768,10 @@ export default {
       this.aiLoadingMap[chapterId] = true
       this.aiStatusMap[chapterId] = '正在提交后台任务...'
       
+      // Immediately switch to Markdown mode and show loading state
+      this.editingChapter.contentType = 'markdown'
+      this.editingChapter.content = '正在生成教案中，请稍候...'
+      
       try {
         await request('/api/lesson-plan/background', {
           method: 'POST',
@@ -780,6 +792,7 @@ export default {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
+        this.editingChapter.content = '生成失败，请重试'
       }
     },
 
