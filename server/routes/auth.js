@@ -5,8 +5,8 @@ import crypto from 'crypto'
 import User from '../models/User.js'
 import { JWT_SECRET } from '../config.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
-import { isPremium } from '../utils/premium.js'
-import { isTeacher } from '../utils/teacher.js'
+// import { isPremium } from '../utils/premium.js'
+// import { isTeacher } from '../utils/teacher.js'
 
 const router = express.Router()
 
@@ -38,10 +38,11 @@ router.post('/login', async (req, res) => {
 
     if (!validPassword) return res.status(400).json({ error: 'Invalid password' })
 
-    let role = 'user'
+    // Determine role from DB
+    let role = user.role || 'user'
+    
+    // Legacy/Safety check: Admin is always admin
     if (user.priv === -1 || user.uname === 'admin') role = 'admin'
-    else if (await isTeacher(user._id)) role = 'teacher'
-    else if (await isPremium(user._id)) role = 'premium'
 
     const token = jwt.sign({ 
       id: user._id, 

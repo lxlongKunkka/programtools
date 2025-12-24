@@ -4,7 +4,7 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <h3>课程结构</h3>
-        <button @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
+        <button v-if="isAdmin" @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
       </div>
 
       <div v-if="loadingCourses" class="loading-text">加载中...</div>
@@ -17,6 +17,7 @@
             >
                 <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
                 <span class="tree-label">{{ group.title || group.name }}</span>
+                <span v-if="isExplicitEditor(group)" class="permission-icon" title="您拥有此分组的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
                 <div class="tree-actions">
                     <button @click.stop="createNewLevel(group)" class="btn-icon" title="添加模块">+</button>
                 </div>
@@ -84,14 +85,14 @@
     <!-- Right Panel: Editor -->
     <div class="editor-panel">
       <div v-if="!selectedNode" class="empty-state">
-        <p>请在左侧选择一个节点进行编辑，或点击“添加分组”开始。</p>
+        <p>请在左侧选择一个节点进行编辑<span v-if="isAdmin">，或点击“添加分组”开始</span>。</p>
       </div>
 
       <!-- Group Editor -->
       <div v-else-if="selectedNode.type === 'group'" class="editor-form">
         <div class="editor-header">
           <h2>{{ editingGroup._id ? '编辑分组' : '新建分组' }}</h2>
-          <div class="header-actions">
+          <div class="header-actions" v-if="canEditGroup(editingGroup)">
             <div v-if="editingGroup._id" class="move-actions">
                <button @click="moveGroup('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveGroup('down')" class="btn-small btn-move">↓ 下移</button>
@@ -99,16 +100,40 @@
             <button v-if="editingGroup._id" @click="deleteGroup(editingGroup._id)" class="btn-delete">删除分组</button>
             <button @click="saveGroup" class="btn-save">保存更改</button>
           </div>
+          <div v-else class="header-actions">
+              <span class="badge-readonly">只读模式 (无编辑权限)</span>
+          </div>
         </div>
         
         <div class="form-group">
           <label>分组名称 (ID):</label>
-          <input v-model="editingGroup.name" class="form-input" placeholder="例如: C++基础" :disabled="!!editingGroup._id">
+          <input v-model="editingGroup.name" class="form-input" placeholder="例如: C++基础" :disabled="!!editingGroup._id || !canEditGroup(editingGroup)">
           <span class="hint" v-if="editingGroup._id">分组ID不可修改，请修改显示标题。</span>
         </div>
         <div class="form-group">
           <label>显示标题:</label>
-          <input v-model="editingGroup.title" class="form-input" placeholder="例如: C++ 基础课程">
+          <input v-model="editingGroup.title" class="form-input" placeholder="例如: C++ 基础课程" :disabled="!canEditGroup(editingGroup)">
+        </div>
+
+        <div class="form-group">
+          <label>编程语言:</label>
+          <select v-model="editingGroup.language" class="form-input" :disabled="!canEditGroup(editingGroup)">
+            <option v-for="lang in languageOptions" :key="lang" :value="lang">{{ lang }}</option>
+          </select>
+        </div>
+        
+        <div class="form-group" v-if="isAdmin">
+          <label>允许编辑的教师:</label>
+          <div class="checkbox-list" v-if="teachers.length > 0">
+             <label v-for="teacher in teachers" :key="teacher._id" class="checkbox-item">
+                <input type="checkbox" :value="teacher._id" v-model="editingGroup.editors">
+                {{ teacher.uname }}
+             </label>
+          </div>
+          <div v-else class="hint">暂无教师账号可选</div>
+          <div class="hint" style="margin-top: 5px; font-size: 12px; color: #888;">
+            注意: 列表仅显示角色为"教师"的用户。如果某用户既是高级用户又是教师, 请在后台将其角色设置为"教师" (教师默认拥有高级用户权限)。
+          </div>
         </div>
       </div>
 
@@ -321,9 +346,16 @@ export default {
   components: { MarkdownViewer },
   inject: ['showToastMessage'],
   data() {
+    let currentUser = null
+    try {
+      currentUser = JSON.parse(localStorage.getItem('user_info'))
+    } catch (e) {}
+
     return {
       socket: null,
+      user: currentUser,
       // Data
+      teachers: [],
       levels: [],
       groups: [], // DB Groups
       loadingCourses: false,
@@ -332,7 +364,7 @@ export default {
       selectedNode: null, // { type: 'group'|'level'|'topic'|'chapter', id: string }
       
       // Editing Models
-      editingGroup: {},
+      editingGroup: { name: '', title: '', editors: [] },
       editingLevel: {},
       editingTopic: {},
       editingChapter: {},
@@ -352,7 +384,11 @@ export default {
       
       // Models
       selectedModel: 'gemini-2.5-flash',
-      rawModelOptions: []
+      rawModelOptions: [],
+      
+      // Language
+      selectedLanguage: 'C++',
+      languageOptions: ['C++', 'Python']
     }
   },
   computed: {
@@ -384,13 +420,12 @@ export default {
         
         return result.sort((a, b) => (a.order || 0) - (b.order || 0))
     },
-    user() {
-      try {
-        return JSON.parse(localStorage.getItem('user_info'))
-      } catch (e) { return null }
-    },
+    // user() computed property removed, now a data property
     isPremium() {
-      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher' || this.user.priv === -1)
+      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher')
+    },
+    isAdmin() {
+      return this.user && (this.user.role === 'admin')
     },
     modelOptions() {
       const all = this.rawModelOptions || []
@@ -409,8 +444,10 @@ export default {
     }
   },
   mounted() {
+    this.checkUserUpdate()
     this.fetchLevels()
     this.fetchModels()
+    this.fetchTeachers()
     window.addEventListener('keydown', this.handleGlobalKeydown)
 
     // Initialize Socket
@@ -469,11 +506,38 @@ export default {
         }
     })
   },
+  activated() {
+    this.checkUserUpdate()
+  },
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleGlobalKeydown)
     if (this.socket) this.socket.disconnect()
   },
   methods: {
+    checkUserUpdate() {
+        let newUser = null
+        try {
+            newUser = JSON.parse(localStorage.getItem('user_info'))
+        } catch(e) {}
+        
+        // Always update if current user is null but new user exists
+        if (!this.user && newUser) {
+             this.user = newUser
+             this.fetchLevels()
+             this.fetchTeachers()
+             return
+        }
+
+        const oldId = this.user ? (this.user._id || this.user.uid) : null
+        const newId = newUser ? (newUser._id || newUser.uid) : null
+        
+        if (oldId != newId) {
+            this.user = newUser
+            this.fetchLevels()
+            this.fetchTeachers()
+            this.selectedNode = null
+        }
+    },
     handleGlobalKeydown(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
@@ -488,6 +552,20 @@ export default {
     async fetchModels() {
         this.rawModelOptions = await getModels()
     },
+    canEditGroup(group) {
+      if (!this.user) return false
+      if (this.isAdmin) return true
+      return this.isExplicitEditor(group)
+    },
+    isExplicitEditor(group) {
+      if (!this.user || !group.editors) return false
+      const userId = this.user._id || this.user.uid
+      return group.editors.some(e => {
+          const id = typeof e === 'object' ? e._id : e
+          // Use loose equality to handle string/number mismatch
+          return id == userId
+      })
+    },
     // --- Selection Logic ---
     isSelected(type, id) {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
@@ -501,6 +579,12 @@ export default {
       // Populate Editor Data
       if (type === 'group') {
         this.editingGroup = JSON.parse(JSON.stringify(data))
+        // Ensure editors is an array of IDs
+        if (this.editingGroup.editors && this.editingGroup.editors.length > 0 && typeof this.editingGroup.editors[0] === 'object') {
+            this.editingGroup.editors = this.editingGroup.editors.map(e => e._id)
+        }
+        if (!this.editingGroup.editors) this.editingGroup.editors = []
+        if (!this.editingGroup.language) this.editingGroup.language = 'C++'
       } else if (type === 'level') {
         this.editingLevel = JSON.parse(JSON.stringify(data))
       } else if (type === 'topic') {
@@ -572,6 +656,8 @@ export default {
         const newGroup = {
             name: '新分组',
             title: '新分组',
+            language: 'C++',
+            editors: [],
             _id: null
         }
         this.selectNode('group', newGroup)
@@ -669,6 +755,16 @@ export default {
             this.showToastMessage('加载失败: ' + e.message)
         } finally {
             this.loadingCourses = false
+        }
+    },
+    async fetchTeachers() {
+        if (!this.isAdmin) return
+        try {
+            // Fetch all users who are teachers (role=teacher)
+            const res = await request('/api/admin/users?role=teacher&limit=1000')
+            this.teachers = res.users || []
+        } catch (e) {
+            console.error('Failed to fetch teachers', e)
         }
     },
     fetchLevels() { this.fetchData() }, // Alias for compatibility
@@ -1026,6 +1122,10 @@ export default {
       const chapterTitle = this.editingChapter.title
       const requirements = this.aiRequirements
       const model = this.selectedModel
+      
+      const groupName = this.editingLevelForChapter.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
 
       this.aiLoadingMap[chapterId] = true
       this.aiStatusMap[chapterId] = '正在提交后台任务...'
@@ -1044,6 +1144,7 @@ export default {
             level: `Level ${levelNum}`,
             requirements: requirements,
             model: model,
+            language: language,
             chapterId: chapterId,
             clientKey: chapterId
           })
@@ -1071,6 +1172,11 @@ export default {
       const topicTitle = this.editingTopicForChapter.title
       const chapterTitle = this.editingChapter.title
       const model = this.selectedModel
+      
+      const groupName = this.editingLevelForChapter.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+
       const chapterContent = this.editingChapter.content
       const requirements = this.aiRequirements
 
@@ -1097,6 +1203,7 @@ export default {
             context: topicTitle,
             level: `Level ${levelNum}`,
             model: model,
+            language: language,
             chapterList: chapterList,
             currentChapterIndex: currentChapterIndex,
             chapterContent: chapterContent,
@@ -1210,6 +1317,10 @@ export default {
             contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
         }))
 
+        const groupName = this.editingLevelForTopic.group
+        const groupObj = this.groups.find(g => g.name === groupName)
+        const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+
         await request('/api/topic-plan/background', {
           method: 'POST',
           body: JSON.stringify({
@@ -1218,6 +1329,7 @@ export default {
             existingChapters: existingChapters,
             mode: 'description',
             model: this.selectedModel,
+            language: language,
             topicId: targetTopicId,
             levelId: levelId,
             clientKey: targetTopicId
@@ -1248,6 +1360,10 @@ export default {
             contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
         }))
 
+        const groupName = this.editingLevelForTopic.group
+        const groupObj = this.groups.find(g => g.name === groupName)
+        const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+
         await request('/api/topic-plan/background', {
           method: 'POST',
           body: JSON.stringify({
@@ -1256,6 +1372,7 @@ export default {
             existingChapters: existingChapters,
             mode: 'chapters',
             model: this.selectedModel,
+            language: language,
             topicId: targetTopicId,
             levelId: levelId,
             clientKey: targetTopicId
@@ -1894,5 +2011,40 @@ export default {
   background: #f1f5f9;
   padding: 2px 5px;
   border-radius: 10px;
+}
+.checkbox-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  user-select: none;
+}
+.checkbox-item:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+.badge-readonly {
+  background-color: #fef2f2;
+  color: #ef4444;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid #fecaca;
 }
 </style>

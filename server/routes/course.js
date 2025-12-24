@@ -21,7 +21,7 @@ const router = express.Router()
 // Get all groups
 router.get('/groups', async (req, res) => {
   try {
-    const groups = await CourseGroup.find().sort({ order: 1 })
+    const groups = await CourseGroup.find().sort({ order: 1 }).populate('editors', 'uname _id')
     res.json(groups)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -31,12 +31,14 @@ router.get('/groups', async (req, res) => {
 // Create group
 router.post('/groups', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const { name, title } = req.body
+    const { name, title, editors, language } = req.body
     const count = await CourseGroup.countDocuments()
     const group = new CourseGroup({
       name,
       title: title || name,
-      order: count + 1
+      language: language || 'C++',
+      order: count + 1,
+      editors: editors || []
     })
     await group.save()
     res.json(group)
@@ -45,10 +47,10 @@ router.post('/groups', authenticateToken, requireRole('admin'), async (req, res)
   }
 })
 
-// Update group (Rename)
+// Update group (Rename & Editors)
 router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const { name, title } = req.body
+    const { name, title, editors, language } = req.body
     const group = await CourseGroup.findById(req.params.id)
     if (!group) return res.status(404).json({ error: 'Group not found' })
 
@@ -59,6 +61,8 @@ router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, r
       group.name = name
     }
     if (title) group.title = title
+    if (editors) group.editors = editors
+    if (language) group.language = language
     
     await group.save()
     res.json(group)
@@ -843,10 +847,31 @@ router.get('/submission/best', authenticateToken, async (req, res) => {
 
 // --- Admin Routes ---
 
+// Helper to check group edit permission
+async function checkGroupPermission(user, groupName) {
+  if (user.role === 'admin' || user.priv === -1) return true
+  if (!groupName) return true 
+  
+  const group = await CourseGroup.findOne({ name: groupName })
+  if (!group) return true // Group doesn't exist in DB, allow edit (legacy behavior)
+  
+  // Check if user is in editors list
+  // user.id is from JWT payload, which is user._id (Number)
+  // group.editors is array of Numbers
+  if (group.editors && group.editors.includes(Number(user.id))) return true
+  
+  return false
+}
+
 // Create a Level
 router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { level, title, description, subject, group, label } = req.body
+    
+    if (!(await checkGroupPermission(req.user, group))) {
+        return res.status(403).json({ error: 'Access denied: You are not an editor of this group.' })
+    }
+
     const newLevel = new CourseLevel({ 
         level, 
         title, 
@@ -867,6 +892,18 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
 router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { level, title, description, subject, group, label } = req.body
+    
+    // Check permission for the NEW group (if changing)
+    if (group && !(await checkGroupPermission(req.user, group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot move/edit to this group.' })
+    }
+
+    // Check permission for the OLD group
+    const existingLevel = await CourseLevel.findById(req.params.id)
+    if (existingLevel && existingLevel.group && !(await checkGroupPermission(req.user, existingLevel.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot edit levels in the original group.' })
+    }
+
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
       req.params.id, 
       { level, title, description, subject, group, label },
@@ -881,6 +918,10 @@ router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), 
 // Delete a Level
 router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
+    const level = await CourseLevel.findById(req.params.id)
+    if (level && level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot delete levels in this group.' })
+    }
     await CourseLevel.findByIdAndDelete(req.params.id)
     res.json({ success: true })
   } catch (e) {
@@ -894,6 +935,10 @@ router.post('/levels/:id/move', authenticateToken, requireRole(['admin', 'teache
     const { direction } = req.body // 'up' or 'down'
     const currentLevel = await CourseLevel.findById(req.params.id)
     if (!currentLevel) return res.status(404).json({ error: 'Level not found' })
+
+    if (currentLevel.group && !(await checkGroupPermission(req.user, currentLevel.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot move levels in this group.' })
+    }
 
     // Find all levels in the same group/subject to determine order
     // We use the same filter logic as the frontend uses to group them
@@ -957,6 +1002,10 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot add topics to this group.' })
+    }
+    
     const newTopic = { title, description, chapters: [] }
 
     if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.topics.length) {
@@ -979,6 +1028,10 @@ router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot edit topics in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
@@ -997,6 +1050,10 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot delete topics in this group.' })
+    }
+
     level.topics.pull(req.params.topicId)
     await level.save()
     res.json(level)
@@ -1006,12 +1063,16 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
 })
 
 // Move a Topic
-router.put('/levels/:id/topics/:topicId/move', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { direction } = req.body // 'up' or 'down'
+    const { direction } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot move topics in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
@@ -1076,6 +1137,10 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot add chapters to this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
@@ -1129,6 +1194,10 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot edit chapters in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
@@ -1167,6 +1236,10 @@ router.delete('/levels/:id/topics/:topicId/chapters', authenticateToken, require
         return res.status(404).json({ error: 'Level not found' })
     }
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) {
         console.log('[DELETE ALL CHAPTERS] Topic not found');
@@ -1191,6 +1264,10 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
@@ -1229,6 +1306,10 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateT
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
+    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+        return res.status(403).json({ error: 'Access denied: You cannot move chapters in this group.' })
+    }
+
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 

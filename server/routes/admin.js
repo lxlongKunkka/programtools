@@ -7,8 +7,8 @@ import { MAIL_CONFIG, DIRS } from '../config.js'
 import { debugLog, ensureLogsDir } from '../utils/logger.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
-import { getPremiumList, addPremium, removePremium } from '../utils/premium.js'
-import { getTeacherList, addTeacher, removeTeacher } from '../utils/teacher.js'
+// import { getPremiumList, addPremium, removePremium } from '../utils/premium.js'
+// import { getTeacherList, addTeacher, removeTeacher } from '../utils/teacher.js'
 
 const router = express.Router()
 
@@ -38,36 +38,13 @@ router.get('/users', async (req, res) => {
       }
     }
 
-    const premiumIds = await getPremiumList()
-    const teacherIds = await getTeacherList()
-
-    if (role === 'premium') {
-      // Filter by premium IDs
-      if (query._id) {
-        // If already searching by ID, check if it is in premium list
-        if (!premiumIds.includes(query._id)) {
-          return res.json({ users: [], total: 0, page: pageNum, totalPages: 0 })
-        }
+    if (role) {
+      if (role === 'user') {
+        // Users who are not admin, teacher, or premium
+        query.role = { $in: ['user', null, undefined] }
+        query.priv = { $ne: -1 }
       } else {
-        query._id = { $in: premiumIds }
-      }
-    } else if (role === 'teacher') {
-      if (query._id) {
-        if (!teacherIds.includes(query._id)) {
-          return res.json({ users: [], total: 0, page: pageNum, totalPages: 0 })
-        }
-      } else {
-        query._id = { $in: teacherIds }
-      }
-    } else if (role === 'user') {
-      // Filter out premium IDs and teacher IDs
-      const excludedIds = [...premiumIds, ...teacherIds]
-      if (query._id) {
-        if (excludedIds.includes(query._id)) {
-          return res.json({ users: [], total: 0, page: pageNum, totalPages: 0 })
-        }
-      } else {
-        query._id = { $nin: excludedIds }
+        query.role = role
       }
     }
 
@@ -79,14 +56,13 @@ router.get('/users', async (req, res) => {
       .lean()
 
     const usersWithRoles = users.map(u => {
-      const isTeacher = teacherIds.includes(u._id)
-      const isPremium = premiumIds.includes(u._id)
-      const isAdmin = u.priv === -1 || u.uname === 'admin'
-
-      let r = 'user'
+      const isAdmin = u.priv === -1 || u.uname === 'admin' || u.role === 'admin'
+      const isTeacher = u.role === 'teacher'
+      const isPremium = u.role === 'premium'
+      
+      // Normalize role for frontend
+      let r = u.role || 'user'
       if (isAdmin) r = 'admin'
-      else if (isTeacher) r = 'teacher'
-      else if (isPremium) r = 'premium'
       
       return { ...u, role: r, isTeacher, isPremium, isAdmin }
     })
@@ -112,32 +88,22 @@ router.post('/users/:id/role', async (req, res) => {
     
     debugLog(`Updating user ${user.uname} (${user._id}) role: ${role}, enable: ${enable}`)
     
-    // Ensure DB role is clean (we don't use it anymore for these roles)
-    if (user.role === 'teacher' || user.role === 'premium') {
-      user.role = undefined
-      await user.save()
-    }
-
-    if (role === 'teacher') {
-      if (enable === false) {
-        await removeTeacher(user._id)
-      } else {
-        await addTeacher(user._id)
-      }
-    } else if (role === 'premium') {
-      if (enable === false) {
-        await removePremium(user._id)
-      } else {
-        await addPremium(user._id)
-      }
-    } else if (role === 'user') {
-      // Reset all
-      await removePremium(user._id)
-      await removeTeacher(user._id)
-      user.role = undefined
-      await user.save()
+    if (enable === false) {
+        // If disabling a role, revert to 'user'
+        // But only if the current role matches the one being disabled
+        if (user.role === role) {
+            user.role = 'user'
+        }
+    } else {
+        // Enabling a role
+        if (role === 'teacher' || role === 'premium' || role === 'admin') {
+            user.role = role
+        } else if (role === 'user') {
+            user.role = 'user'
+        }
     }
     
+    await user.save()
     res.json({ message: 'Role updated' })
   } catch (e) {
     console.error('Update role error:', e)

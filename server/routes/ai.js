@@ -919,7 +919,7 @@ router.post('/send-package', authenticateToken, async (req, res) => {
 // Generate Lesson Plan
 router.post('/lesson-plan', authenticateToken, async (req, res) => {
   try {
-    const { topic, context, level, requirements, model } = req.body
+    const { topic, context, level, requirements, model, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}\n额外要求：${requirements || '无'}`
@@ -931,7 +931,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
     const apiKey = YUN_API_KEY
     
     const messages = [
-      { role: 'system', content: LESSON_PLAN_PROMPT },
+      { role: 'system', content: LESSON_PLAN_PROMPT.replace('{{language}}', language || 'C++') },
       { role: 'user', content: userPrompt }
     ]
 
@@ -962,7 +962,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
 // Generate PPT
 router.post('/generate-ppt', authenticateToken, async (req, res) => {
   try {
-    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements } = req.body
+    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let fullTopic = topic
@@ -970,7 +970,8 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
         fullTopic = `${context} - ${topic}`
     }
 
-    let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
+    const targetLang = language || 'C++'
+    let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1').replace('{{language}}', targetLang)
     
     // Inject User Requirements
     if (requirements && requirements.trim()) {
@@ -1002,7 +1003,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     
     const messages = [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。` }
+      { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。请务必使用 ${targetLang} 语言进行讲解和代码演示。` }
     ]
 
     const payload = {
@@ -1035,7 +1036,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
 // Generate Topic Plan (Chapters list) or Description
 router.post('/topic-plan', authenticateToken, async (req, res) => {
   try {
-    const { topic, level, model, mode, existingChapters } = req.body
+    const { topic, level, model, mode, existingChapters, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
@@ -1063,6 +1064,9 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
         console.error('System prompt is missing for mode:', mode)
         return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
+
+    // Replace language placeholder
+    systemPrompt = systemPrompt.replace('{{language}}', language || 'C++')
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -1127,7 +1131,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, clientKey } = req.body;
+  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, clientKey, language } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1142,7 +1146,8 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               fullTopic = `${context} - ${topic}`
           }
 
-          let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
+          const targetLang = language || 'C++'
+          let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1').replace('{{language}}', targetLang)
           
           if (requirements && requirements.trim()) {
               systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
@@ -1166,7 +1171,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
           const messages = [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。` }
+            { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。请务必使用 ${targetLang} 语言进行讲解和代码演示。` }
           ]
 
           const payload = {
@@ -1184,10 +1189,47 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
             timeout: 300000 // 5 minutes
           })
 
-          let content = resp.data.choices?.[0]?.message?.content || ''
-          const finishReason = resp.data.choices?.[0]?.finish_reason;
+          let currentChunk = resp.data.choices?.[0]?.message?.content || ''
+          let content = currentChunk
+          let finishReason = resp.data.choices?.[0]?.finish_reason
+          
+          let loopCount = 0
+          const MAX_LOOPS = 3
+          
+          while (finishReason === 'length' && loopCount < MAX_LOOPS) {
+              console.log(`[Background] PPT truncated (length), attempting to continue... Loop: ${loopCount + 1}`)
+              loopCount++
+              
+              messages.push({ role: 'assistant', content: currentChunk })
+              messages.push({ role: 'user', content: 'Continue generating the rest. Do not repeat content.' })
+              
+              try {
+                  const continueResp = await axios.post(YUN_API_URL, {
+                      model: model || 'o4-mini',
+                      messages,
+                      temperature: 0.7,
+                      max_tokens: 16000
+                  }, {
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${YUN_API_KEY}`
+                    },
+                    timeout: 300000
+                  })
+                  
+                  currentChunk = continueResp.data.choices?.[0]?.message?.content || ''
+                  if (!currentChunk) break
+                  
+                  finishReason = continueResp.data.choices?.[0]?.finish_reason
+                  content += currentChunk
+              } catch (err) {
+                  console.error('[Background] Error continuing generation:', err.message)
+                  break
+              }
+          }
+
           if (finishReason === 'length') {
-              console.warn(`[Background] PPT generation truncated (length limit). Chapter: ${chapterId}`);
+              console.warn(`[Background] PPT generation still truncated after ${loopCount} loops. Chapter: ${chapterId}`)
           }
           
           content = content.replace(/^```html\s*/, '').replace(/```$/, '')

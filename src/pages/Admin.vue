@@ -48,20 +48,26 @@
               <td>{{ u.mail }}</td>
               <td>
                 <div class="role-badges">
-                  <span v-if="u.isAdmin" class="role-badge admin">ADMIN</span>
-                  <span v-if="u.isTeacher" class="role-badge teacher">TEACHER</span>
-                  <span v-if="u.isPremium" class="role-badge premium">PREMIUM</span>
-                  <span v-if="!u.isAdmin && !u.isTeacher && !u.isPremium" class="role-badge user">USER</span>
+                  <span v-if="u.role === 'admin'" class="role-badge admin">ADMIN</span>
+                  <span v-if="u.role === 'teacher'" class="role-badge teacher">TEACHER</span>
+                  <span v-if="u.role === 'premium'" class="role-badge premium">PREMIUM</span>
+                  <span v-if="u.role === 'user' || !u.role" class="role-badge user">USER</span>
                 </div>
               </td>
               <td>{{ u.priv }}</td>
               <td>
                 <div class="actions">
-                  <button v-if="!u.isPremium && !u.isAdmin" @click="toggleRole(u, 'premium', true)" class="btn-small btn-premium">设为高级用户</button>
-                  <button v-if="u.isPremium && !u.isAdmin" @click="toggleRole(u, 'premium', false)" class="btn-small btn-user">取消高级用户</button>
-                  
-                  <button v-if="!u.isTeacher && !u.isAdmin" @click="toggleRole(u, 'teacher', true)" class="btn-small btn-teacher">设为教师</button>
-                  <button v-if="u.isTeacher && !u.isAdmin" @click="toggleRole(u, 'teacher', false)" class="btn-small btn-user">取消教师</button>
+                  <select 
+                    v-if="u.role !== 'admin'" 
+                    :value="getDisplayRole(u)" 
+                    @change="handleRoleChange(u, $event.target.value)"
+                    class="role-select"
+                  >
+                    <option value="user">普通用户</option>
+                    <option value="premium">高级用户</option>
+                    <option value="teacher">教师</option>
+                  </select>
+                  <span v-else class="admin-label">管理员</span>
                 </div>
               </td>
             </tr>
@@ -192,37 +198,29 @@ export default {
         }
       }
     },
-    async toggleRole(user, role, enable) {
-      try {
-        await request(`/api/admin/users/${user._id}/role`, {
-          method: 'POST',
-          body: JSON.stringify({ role, enable })
-        })
-        const actionText = enable ? '设置' : '取消'
-        const roleText = role === 'premium' ? '高级用户' : '教师'
-        this.showToastMessage(`已${actionText}用户 ${user.uname} 为 ${roleText}`)
-        
-        // Update local state
-        if (role === 'premium') user.isPremium = enable
-        if (role === 'teacher') user.isTeacher = enable
-        
-        // Refresh list to be safe or just update local
-        // this.fetchUsers() 
-      } catch (e) {
-        this.showToastMessage('设置失败: ' + e.message)
-      }
+    getDisplayRole(user) {
+      return user.role || 'user'
     },
-    // Deprecated but kept for reference if needed, replaced by toggleRole
-    async setRole(user, role) {
+    getRoleName(role) {
+      const map = {
+        'user': '普通用户',
+        'premium': '高级用户',
+        'teacher': '教师',
+        'admin': '管理员'
+      }
+      return map[role] || role
+    },
+    async handleRoleChange(user, newRole) {
       try {
         await request(`/api/admin/users/${user._id}/role`, {
           method: 'POST',
-          body: JSON.stringify({ role })
+          body: JSON.stringify({ role: newRole })
         })
-        this.showToastMessage(`已将用户 ${user.uname} 设置为 ${role}`)
-        user.role = role
+        this.showToastMessage(`已将用户 ${user.uname} 设置为 ${this.getRoleName(newRole)}`)
+        user.role = newRole
       } catch (e) {
         this.showToastMessage('设置失败: ' + e.message)
+        this.fetchUsers()
       }
     },
     async sendTestEmail() {

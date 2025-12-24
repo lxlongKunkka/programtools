@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   salt: { type: String }, // 盐
   hashType: { type: String }, // 哈希类型，如 'hydro'
   priv: { type: Number, default: 0 }, // 权限字段
+  role: { type: String, default: 'user' }, // user, premium, teacher, admin
   
   // 其他字段作为非必须字段保留，以便读取
   avatar: String,
