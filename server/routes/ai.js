@@ -2,12 +2,14 @@ import express from 'express'
 import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
 import User from '../models/User.js'
 import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
+import { getIO } from '../socket/index.js'
 import { 
   TRANSLATE_PROMPT, 
   SOLUTION_PROMPT, 
@@ -21,6 +23,9 @@ import {
   TOPIC_PLAN_PROMPT,
   TOPIC_DESC_PROMPT
 } from '../prompts.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
@@ -728,7 +733,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 })
 
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId } = req.body;
+  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey } = req.body;
   
   if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -778,7 +783,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           const filenameBase = problemTitle ? sanitize(problemTitle) : sanitize(chapterTitle);
           const safeChapter = filenameBase + '.html';
           
-          const baseDir = path.join(process.cwd(), 'server', 'public', 'courseware');
+          const baseDir = path.join(__dirname, '../public/courseware');
           const targetDir = path.join(baseDir, safeLevel, safeTopic);
           
           if (!fs.existsSync(targetDir)) {
@@ -807,6 +812,9 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
               if (chapterFound) {
                   await courseLevel.save();
                   console.log(`[Background] Database updated for chapter ${chapterId}`);
+                  try {
+                      getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'success', type: 'solution-report' });
+                  } catch (e) { console.error('Socket emit failed', e); }
               }
           } else {
                // Try legacy 'chapters'
@@ -818,12 +826,18 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                        chapter.contentType = 'html';
                        await legacyLevel.save();
                        console.log(`[Background] Database updated for legacy chapter ${chapterId}`);
+                       try {
+                           getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'success', type: 'solution-report' });
+                       } catch (e) { console.error('Socket emit failed', e); }
                    }
                }
           }
 
       } catch (err) {
           console.error('[Background] Error generating solution report:', err);
+          try {
+              getIO().emit('ai_task_complete', { chapterId, clientKey, status: 'error', message: err.message, type: 'solution-report' });
+          } catch (e) { console.error('Socket emit failed', e); }
       }
   })();
 });
@@ -1090,5 +1104,277 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
     res.status(500).json({ error: e.message })
   }
 })
+
+// Generate PPT Background
+router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
+  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum } = req.body;
+  
+  if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+
+  res.json({ status: 'processing', message: 'PPT generation started in background' });
+
+  (async () => {
+      try {
+          console.log(`[Background] Starting PPT generation for chapter ${chapterId}`);
+          
+          let fullTopic = topic
+          if (context) {
+              fullTopic = `${context} - ${topic}`
+          }
+
+          let systemPrompt = PPT_PROMPT.replace('{{topic}}', fullTopic).replace('{{level}}', level || 'Level 1')
+          
+          if (requirements && requirements.trim()) {
+              systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
+          }
+
+          if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
+              systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 8000)}\n`
+          }
+
+          if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
+              const current = (currentChapterIndex !== undefined && currentChapterIndex >= 0) ? currentChapterIndex + 1 : '?'
+              let contextInfo = `\n\n【重要：课程上下文信息】\n`
+              contextInfo += `本节课是系列课程 "${context}" 中的第 ${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
+              contextInfo += `完整的章节列表如下：\n${chapterList.map((t, i) => `${i+1}. ${t}`).join('\n')}\n`
+              contextInfo += `\n请根据此上下文规划内容：\n`
+              contextInfo += `1. **避免重复**：如果前面的章节已经讲过基础概念（如定义、语法），本节课应快速回顾或直接进入进阶内容。\n`
+              contextInfo += `2. **循序渐进**：确保难度与当前章节的位置相匹配。\n`
+              contextInfo += `3. **聚焦主题**：本节课的核心主题是 "${topic}"，请紧扣此主题展开，不要跑题到其他章节的内容。\n`
+              systemPrompt += contextInfo
+          }
+
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。` }
+          ]
+
+          const payload = {
+            model: model || 'o4-mini',
+            messages,
+            temperature: 0.7,
+            max_tokens: 16000
+          }
+
+          const resp = await axios.post(YUN_API_URL, payload, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${YUN_API_KEY}`
+            },
+            timeout: 120000
+          })
+
+          let content = resp.data.choices?.[0]?.message?.content || ''
+          content = content.replace(/^```html\s*/, '').replace(/```$/, '')
+
+          // Save File
+          const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
+          const safeLevel = 'level' + sanitize(String(levelNum));
+          const safeTopic = sanitize(topicTitle);
+          const safeChapter = sanitize(chapterTitle) + '.html';
+          
+          const baseDir = path.join(__dirname, '../public/courseware');
+          const targetDir = path.join(baseDir, safeLevel, safeTopic);
+          
+          if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
+          }
+          
+          const fullPath = path.join(targetDir, safeChapter);
+          const relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+          
+          fs.writeFileSync(fullPath, content, 'utf8');
+          console.log(`[Background] PPT saved to ${fullPath}`);
+
+          // Update Database
+          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          if (courseLevel) {
+              let chapterFound = false;
+              for (const topic of courseLevel.topics) {
+                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  if (chapter) {
+                      chapter.resourceUrl = relativePath;
+                      chapter.contentType = 'html';
+                      chapterFound = true;
+                      break;
+                  }
+              }
+              if (chapterFound) {
+                  await courseLevel.save();
+                  console.log(`[Background] Database updated for chapter ${chapterId}`);
+              }
+          }
+
+      } catch (err) {
+          console.error('[Background] Error generating PPT:', err);
+      }
+  })();
+});
+
+// Generate Lesson Plan Background
+router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
+  const { topic, context, level, requirements, model, chapterId } = req.body;
+  
+  if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+
+  res.json({ status: 'processing', message: 'Lesson plan generation started in background' });
+
+  (async () => {
+      try {
+          console.log(`[Background] Starting Lesson Plan for chapter ${chapterId}`);
+          
+          let userPrompt = `请为 "${context}" 课程中的 "${topic}" 章节编写一份详细的教案。`
+          userPrompt += `\n难度等级：${level}`
+          if (requirements) {
+              userPrompt += `\n额外要求：${requirements}`
+          }
+
+          const messages = [
+            { role: 'system', content: LESSON_PLAN_PROMPT },
+            { role: 'user', content: userPrompt }
+          ]
+
+          const payload = {
+            model: model || 'o4-mini',
+            messages,
+            temperature: 0.7,
+            max_tokens: 16000
+          }
+
+          const resp = await axios.post(YUN_API_URL, payload, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${YUN_API_KEY}`
+            },
+            timeout: 120000
+          })
+
+          const content = resp.data.choices?.[0]?.message?.content || ''
+
+          // Update Database
+          const courseLevel = await CourseLevel.findOne({ 'topics.chapters.id': chapterId });
+          if (courseLevel) {
+              let chapterFound = false;
+              for (const topic of courseLevel.topics) {
+                  const chapter = topic.chapters.find(c => c.id === chapterId);
+                  if (chapter) {
+                      chapter.content = content;
+                      chapter.contentType = 'markdown';
+                      chapterFound = true;
+                      break;
+                  }
+              }
+              if (chapterFound) {
+                  await courseLevel.save();
+                  console.log(`[Background] Database updated for chapter ${chapterId} (Lesson Plan)`);
+              }
+          }
+
+      } catch (err) {
+          console.error('[Background] Error generating Lesson Plan:', err);
+      }
+  })();
+});
+
+// Generate Topic Plan Background
+router.post('/topic-plan/background', authenticateToken, async (req, res) => {
+  const { topic, level, model, mode, existingChapters, topicId, levelId } = req.body;
+  
+  if (!topic || !topicId) return res.status(400).json({ error: 'Missing required fields' });
+
+  res.json({ status: 'processing', message: 'Topic plan generation started in background' });
+
+  (async () => {
+      try {
+          console.log(`[Background] Starting Topic Plan (${mode}) for topic ${topicId}`);
+          
+          let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+
+          if (existingChapters && Array.isArray(existingChapters) && existingChapters.length > 0) {
+              userPrompt += `\n\n当前已存在的章节信息如下（请参考这些内容生成更精确的描述，避免重复或矛盾）：\n`
+              existingChapters.forEach((ch, idx) => {
+                  userPrompt += `${idx + 1}. ${ch.title}\n`
+                  if (ch.contentPreview) {
+                      userPrompt += `   摘要: ${ch.contentPreview}\n`
+                  }
+              })
+          }
+          
+          let systemPrompt = TOPIC_PLAN_PROMPT
+          if (mode === 'description') {
+              systemPrompt = TOPIC_DESC_PROMPT
+          }
+
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ]
+
+          const payload = {
+            model: model || 'gemini-2.5-flash',
+            messages,
+            temperature: 0.7,
+            max_tokens: 4000
+          }
+
+          const resp = await axios.post(YUN_API_URL, payload, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${YUN_API_KEY}`
+            },
+            timeout: 60000
+          })
+
+          let content = resp.data.choices?.[0]?.message?.content || ''
+          
+          // Update Database
+          const courseLevel = await CourseLevel.findById(levelId);
+          if (courseLevel) {
+              const topicObj = courseLevel.topics.id(topicId);
+              if (topicObj) {
+                  if (mode === 'description') {
+                      topicObj.description = content;
+                  } else {
+                      // Chapters mode
+                      content = content.replace(/```json\s*/g, '').replace(/```/g, '').trim()
+                      let result = {}
+                      try {
+                        const parsed = JSON.parse(content)
+                        if (Array.isArray(parsed)) {
+                            result = { chapters: parsed }
+                        } else {
+                            result = parsed
+                        }
+                      } catch (e) {
+                        const list = content.split('\n').filter(line => line.trim().length > 0).map(l => l.replace(/^\d+\.\s*/, ''))
+                        result = { chapters: list }
+                      }
+
+                      if (result.chapters && Array.isArray(result.chapters)) {
+                          // Append new chapters
+                          const startIdx = topicObj.chapters.length + 1;
+                          const prefix = `${courseLevel.level}-${courseLevel.topics.indexOf(topicObj) + 1}`;
+                          
+                          result.chapters.forEach((title, idx) => {
+                              topicObj.chapters.push({
+                                  id: `${prefix}-${startIdx + idx}`,
+                                  title: title,
+                                  content: '',
+                                  contentType: 'markdown',
+                                  problemIds: []
+                              });
+                          });
+                      }
+                  }
+                  await courseLevel.save();
+                  console.log(`[Background] Database updated for topic ${topicId}`);
+              }
+          }
+
+      } catch (err) {
+          console.error('[Background] Error generating Topic Plan:', err);
+      }
+  })();
+});
 
 export default router

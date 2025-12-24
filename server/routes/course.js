@@ -2,12 +2,16 @@ import express from 'express'
 import mongoose from 'mongoose'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
 import UserProgress from '../models/UserProgress.js'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
 import Submission from '../models/Submission.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
@@ -959,6 +963,34 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
   }
 })
 
+// Delete ALL Chapters from a Topic
+router.delete('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  console.log(`[DELETE ALL CHAPTERS] Request received for Level: ${req.params.id}, Topic: ${req.params.topicId}`);
+  try {
+    const level = await CourseLevel.findById(req.params.id)
+    if (!level) {
+        console.log('[DELETE ALL CHAPTERS] Level not found');
+        return res.status(404).json({ error: 'Level not found' })
+    }
+    
+    const topic = level.topics.id(req.params.topicId)
+    if (!topic) {
+        console.log('[DELETE ALL CHAPTERS] Topic not found');
+        return res.status(404).json({ error: 'Topic not found' })
+    }
+    
+    console.log(`[DELETE ALL CHAPTERS] Clearing ${topic.chapters.length} chapters`);
+    topic.chapters = [] // Clear all chapters
+
+    await level.save()
+    console.log('[DELETE ALL CHAPTERS] Success');
+    res.json(level)
+  } catch (e) {
+    console.error('[DELETE ALL CHAPTERS] Error:', e);
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Delete a Chapter from a Topic
 router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
@@ -1143,7 +1175,7 @@ router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teac
         const safeTopic = sanitize(topicTitle)
         const safeChapter = sanitize(chapterTitle) + '.html'
         
-        const baseDir = path.join(process.cwd(), 'server', 'public', 'courseware')
+        const baseDir = path.join(__dirname, '../public/courseware')
         const targetDir = path.join(baseDir, safeLevel, safeTopic)
         
         if (!fs.existsSync(targetDir)) {
@@ -1155,7 +1187,7 @@ router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teac
     } else {
         // Fallback to old behavior
         const safeFilename = (filename ? sanitize(filename) : 'generated') + '_' + Date.now() + '.html'
-        const publicDir = path.join(process.cwd(), 'server', 'public', 'courseware', 'generated')
+        const publicDir = path.join(__dirname, '../public/courseware/generated')
         
         if (!fs.existsSync(publicDir)) {
           fs.mkdirSync(publicDir, { recursive: true })

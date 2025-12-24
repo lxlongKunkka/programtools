@@ -114,8 +114,24 @@
             <select v-model="selectedModel" class="model-select" title="选择 AI 模型">
                 <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
             </select>
+            <div v-if="editingTopic._id" class="move-actions">
+               <button @click="moveTopic('up')" class="btn-small btn-move">↑ 上移</button>
+               <button @click="moveTopic('down')" class="btn-small btn-move">↓ 下移</button>
+            </div>
+            <button v-if="editingTopic._id" @click="deleteAllChapters(editingLevelForTopic._id, editingTopic._id)" class="btn-delete" style="background-color: #f59e0b; margin-right: 8px;">清空章节</button>
             <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="btn-delete">删除知识点</button>
             <button @click="saveTopic" class="btn-save">保存更改</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group half">
+            <label>所属等级:</label>
+            <input :value="'Level ' + editingLevelForTopic.level" disabled class="form-input disabled">
+          </div>
+          <div class="form-group half">
+            <label>标题:</label>
+            <input v-model="editingTopic.title" class="form-input">
           </div>
         </div>
 
@@ -129,15 +145,6 @@
             <button @click="generateTopicDescription" class="btn-ai" :disabled="currentAiLoading">📝 自动生成描述</button>
             <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
           </div>
-        </div>
-
-        <div class="form-group">
-          <label>所属等级:</label>
-          <input :value="'Level ' + editingLevelForTopic.level" disabled class="form-input disabled">
-        </div>
-        <div class="form-group">
-          <label>标题:</label>
-          <input v-model="editingTopic.title" class="form-input">
         </div>
         <div class="form-group">
           <label>描述 (Markdown):</label>
@@ -211,7 +218,7 @@
           </div>
 
           <!-- Markdown Mode: Split View -->
-          <div v-if="editingChapter.contentType === 'markdown' || editingChapter.content" class="split-view" style="height: 700px;">
+          <div v-if="editingChapter.contentType === 'markdown'" class="split-view" style="height: 700px;">
             <textarea v-model="editingChapter.content" class="form-input code-font" style="height: 100%;" placeholder="在此输入教案/大纲内容..."></textarea>
             <div class="preview-box" style="height: 100%;">
               <MarkdownViewer :content="editingChapter.content" />
@@ -250,11 +257,12 @@
 </template>
 
 <script>
-import request from '../utils/request'
+import { request } from '../utils/request.js'
 import { marked } from 'marked'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
 import { getModels } from '../utils/models'
+import { io } from 'socket.io-client'
 
 export default {
   name: 'Design',
@@ -262,6 +270,7 @@ export default {
   inject: ['showToastMessage'],
   data() {
     return {
+      socket: null,
       // Data
       levels: [],
       loadingCourses: false,
@@ -325,8 +334,56 @@ export default {
   mounted() {
     this.fetchLevels()
     this.fetchModels()
+    window.addEventListener('keydown', this.handleGlobalKeydown)
+
+    // Initialize Socket
+    const url = import.meta.env.DEV ? 'http://localhost:3000' : '/'
+    this.socket = io(url)
+    
+    this.socket.on('ai_task_complete', (data) => {
+        console.log('AI Task Complete:', data)
+        if (data) {
+            // Use clientKey if available (preferred), otherwise fallback to chapterId
+            const key = data.clientKey || data.chapterId
+            
+            if (key && this.aiLoadingMap[key]) {
+                this.aiLoadingMap[key] = false
+                this.aiStatusMap[key] = ''
+                
+                if (data.status === 'success') {
+                    this.showToastMessage('后台生成任务完成！')
+                    // If currently viewing this chapter, refresh content
+                    // Check both ID types just in case
+                    if (this.selectedNode && this.selectedNode.type === 'chapter') {
+                        const currentId = this.selectedNode.id
+                        const currentChapterId = this.editingChapter.id
+                        
+                        if (currentId === key || currentChapterId === data.chapterId) {
+                             this.fetchChapterContent(data.chapterId)
+                        }
+                    }
+                } else {
+                    this.showToastMessage('生成失败: ' + (data.message || '未知错误'))
+                }
+            }
+        }
+    })
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleGlobalKeydown)
+    if (this.socket) this.socket.disconnect()
   },
   methods: {
+    handleGlobalKeydown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (!this.selectedNode) return
+        
+        if (this.selectedNode.type === 'level') this.saveLevel()
+        else if (this.selectedNode.type === 'topic') this.saveTopic()
+        else if (this.selectedNode.type === 'chapter') this.saveChapter()
+      }
+    },
     async fetchModels() {
         this.rawModelOptions = await getModels()
     },
@@ -576,6 +633,35 @@ export default {
         this.showToastMessage('删除知识点失败: ' + e.message)
       }
     },
+    async deleteAllChapters(levelId, topicId) {
+      if (!confirm('确定要清空该知识点下的所有章节吗？此操作不可恢复！')) return
+      try {
+        await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters`, { method: 'DELETE' })
+        this.showToastMessage('已清空所有章节')
+        
+        // Update local state immediately to reflect changes
+        this.editingTopic.chapters = []
+        
+        await this.fetchLevels()
+      } catch (e) {
+        this.showToastMessage('清空章节失败: ' + e.message)
+      }
+    },
+    async moveTopic(direction) {
+      const levelId = this.editingLevelForTopic._id
+      const topicId = this.editingTopic._id
+      
+      try {
+        await request(`/api/course/levels/${levelId}/topics/${topicId}/move`, {
+          method: 'PUT',
+          body: JSON.stringify({ direction })
+        })
+        this.showToastMessage('移动成功')
+        this.fetchLevels()
+      } catch (e) {
+        this.showToastMessage('移动失败: ' + e.message)
+      }
+    },
     async saveChapter() {
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
@@ -656,6 +742,7 @@ export default {
     // --- AI Methods ---
     async generateLessonPlan() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      if (!confirm('确定要生成教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Capture context
       const chapterId = this.editingChapter._id || this.editingChapter.id
@@ -668,72 +755,24 @@ export default {
       const model = this.selectedModel
 
       this.aiLoadingMap[chapterId] = true
-      this.aiStatusMap[chapterId] = '正在生成教案...'
+      this.aiStatusMap[chapterId] = '正在提交后台任务...'
       
       try {
-        const res = await request('/api/lesson-plan', {
+        await request('/api/lesson-plan/background', {
           method: 'POST',
           body: JSON.stringify({
             topic: chapterTitle,
             context: topicTitle,
             level: `Level ${levelNum}`,
             requirements: requirements,
-            model: model
+            model: model,
+            chapterId: chapterId
           })
         })
         
-        const newContent = res.content;
-
-        // Auto-save to Backend
-        let chapterToSave = null;
-        const levelObj = this.levels.find(l => l._id === levelId);
-        if (levelObj && levelObj.topics) {
-            const topicObj = levelObj.topics.find(t => t._id === topicId);
-            if (topicObj && topicObj.chapters) {
-                chapterToSave = topicObj.chapters.find(c => (c.id === chapterId || c._id === chapterId));
-            }
-        }
-
-        if (chapterToSave) {
-            // Update local source of truth
-            chapterToSave.content = newContent;
-            chapterToSave.contentType = 'markdown';
-
-            // Prepare payload
-            const payload = {
-                id: chapterToSave.id,
-                title: chapterToSave.title,
-                content: newContent,
-                contentType: 'markdown',
-                resourceUrl: chapterToSave.resourceUrl,
-                optional: chapterToSave.optional,
-                problemIds: []
-            };
-
-            if (chapterToSave.problemIds && Array.isArray(chapterToSave.problemIds)) {
-                payload.problemIds = chapterToSave.problemIds.map(p => {
-                    if (typeof p === 'object' && p) {
-                        return (p.domainId && p.domainId !== 'system') ? `${p.domainId}:${p.docId}` : p.docId;
-                    }
-                    return p;
-                });
-            }
-
-            await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, {
-                method: 'PUT',
-                body: JSON.stringify(payload)
-            });
-        }
-
-        // Update View if still selected
-        if (this.editingChapter && (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId)) {
-            this.editingChapter.content = newContent;
-            this.editingChapter.contentType = 'markdown';
-        }
-
-        this.showToastMessage(`"${chapterTitle}" 教案生成并自动保存成功`)
+        this.showToastMessage(`"${chapterTitle}" 教案生成任务已提交后台，完成后会自动保存`)
       } catch (e) {
-        this.showToastMessage('生成失败: ' + e.message)
+        this.showToastMessage('提交失败: ' + e.message)
       } finally {
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
@@ -742,6 +781,7 @@ export default {
 
     async generatePPT() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      if (!confirm('确定要生成 PPT 吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Capture context to handle navigation during generation
       const chapterId = this.editingChapter._id || this.editingChapter.id
@@ -763,11 +803,10 @@ export default {
       }
 
       this.aiLoadingMap[chapterId] = true
-      this.aiStatusMap[chapterId] = '正在生成 PPT...'
+      this.aiStatusMap[chapterId] = '正在提交后台任务...'
       
       try {
-        // 1. Generate HTML
-        const res = await request('/api/generate-ppt', {
+        await request('/api/generate-ppt/background', {
           method: 'POST',
           body: JSON.stringify({
             topic: chapterTitle,
@@ -777,77 +816,17 @@ export default {
             chapterList: chapterList,
             currentChapterIndex: currentChapterIndex,
             chapterContent: chapterContent,
-            requirements: requirements
+            requirements: requirements,
+            chapterId: chapterId,
+            topicTitle: topicTitle,
+            chapterTitle: chapterTitle,
+            levelNum: levelNum
           })
         })
         
-        // 2. Upload HTML
-        this.aiStatusMap[chapterId] = '正在保存课件...'
-        const uploadRes = await request('/api/course/upload-courseware', {
-          method: 'POST',
-          body: JSON.stringify({
-            htmlContent: res.content,
-            level: levelNum,
-            topicTitle: topicTitle,
-            chapterTitle: chapterTitle,
-            filename: `ppt_${chapterTitle}`
-          })
-        })
-
-        // 3. Auto-save to Backend (Update Chapter)
-        // Find the chapter in the local tree to get its current state (problemIds, etc.)
-        let chapterToSave = null;
-        const levelObj = this.levels.find(l => l._id === levelId);
-        if (levelObj && levelObj.topics) {
-            const topicObj = levelObj.topics.find(t => t._id === topicId);
-            if (topicObj && topicObj.chapters) {
-                chapterToSave = topicObj.chapters.find(c => (c.id === chapterId || c._id === chapterId));
-            }
-        }
-
-        if (chapterToSave) {
-            // Update local source of truth
-            chapterToSave.resourceUrl = uploadRes.url;
-            chapterToSave.contentType = 'html';
-            // Important: Update content from the editor state, not the stale tree state
-            chapterToSave.content = this.editingChapter.content;
-
-            // Prepare payload for API
-            const payload = {
-                id: chapterToSave.id,
-                title: chapterToSave.title,
-                content: this.editingChapter.content, // Use current editor content
-                contentType: 'html',
-                resourceUrl: uploadRes.url,
-                optional: chapterToSave.optional,
-                problemIds: []
-            };
-
-            // Handle problemIds formatting
-            if (chapterToSave.problemIds && Array.isArray(chapterToSave.problemIds)) {
-                payload.problemIds = chapterToSave.problemIds.map(p => {
-                    if (typeof p === 'object' && p) {
-                        return (p.domainId && p.domainId !== 'system') ? `${p.domainId}:${p.docId}` : p.docId;
-                    }
-                    return p;
-                });
-            }
-
-            await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, {
-                method: 'PUT',
-                body: JSON.stringify(payload)
-            });
-        }
-
-        // 4. Update View if user is still on the same chapter
-        if (this.editingChapter && (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId)) {
-            this.editingChapter.resourceUrl = uploadRes.url;
-            this.editingChapter.contentType = 'html';
-        }
-
-        this.showToastMessage(`"${chapterTitle}" PPT 生成并自动保存成功`)
+        this.showToastMessage(`"${chapterTitle}" PPT 生成任务已提交后台，完成后会自动保存`)
       } catch (e) {
-        this.showToastMessage('生成失败: ' + e.message)
+        this.showToastMessage('提交失败: ' + e.message)
       } finally {
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
@@ -856,6 +835,7 @@ export default {
 
     async generateSolutionReport() {
       if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      if (!confirm('确定要生成题解报告吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Get the first problem ID
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
@@ -867,51 +847,24 @@ export default {
       
       try {
         // 1. Fetch problem details
-        // We need to resolve the ID first. The backend helper `resolveProblemIds` does this, 
-        // but here we are on frontend. We can try to fetch the document directly if we have an API.
-        // Or we can use a new endpoint to get problem text by ID string.
-        // Let's assume we can use the existing /api/data/documents endpoint with a query if we are admin,
-        // but that might be complex.
-        // Simpler way: Let's assume the user inputs a docId (number) or domain:docId.
-        
         let docId = firstProblemId
         let domainId = 'system'
         if (firstProblemId.includes(':')) {
             [domainId, docId] = firstProblemId.split(':')
         }
         
-        // We need an endpoint to get problem content by docId/domainId.
-        // Currently /api/data/documents filters by domainId but returns a list.
-        // Let's try to find it in the list (might be slow if many docs).
-        // Better: Use the `check-problem` logic or similar? No.
-        // Let's use the `problemIds` array if it's already resolved in `editingChapter`?
-        // `editingChapter.problemIds` contains ObjectIds.
-        // We need the TEXT content of the problem.
-        
-        // Let's fetch the problem content using a search or specific endpoint.
-        // Since we don't have a direct "get problem by display ID" endpoint exposed easily here,
-        // we will try to use the `problemIds` (ObjectIds) if available.
-        
-        let problemText = ''
-        
-        // If we have resolved ObjectIds in the original chapter data
-        if (this.editingChapter.problemIds && this.editingChapter.problemIds.length > 0) {
-             // But `editingChapter` here is the form data, `problemIds` might be stale or just strings if we didn't reload.
-             // The `problemIdsStr` is what the user edited.
-        }
-        
-        // Let's call a new helper endpoint or just search.
-        // For now, let's try to fetch all docs in that domain and find it (inefficient but works for now)
-        // OR, add a specific endpoint.
-        // Let's try to use the existing `request` to get the problem content.
-        // We will assume the user has access to `/api/problems/:id` if it existed.
-        // Actually, `Solution.vue` uses `/api/documents?domainId=...`
-        
         const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`) // Potential perf issue
         const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
         
         if (!doc) throw new Error('未找到该题目')
-        problemText = doc.content
+
+        // Auto-update chapter title to problem title
+        if (doc.title && this.editingChapter.title !== doc.title) {
+            this.editingChapter.title = doc.title
+            await this.saveChapter()
+        }
+
+        let problemText = doc.content
         
         // 1.5 Fetch User's Best Submission
         let userCode = ''
@@ -937,40 +890,15 @@ export default {
             chapterTitle: this.editingChapter.title,
             problemTitle: doc.title,
             chapterId: this.editingChapter.id,
+            clientKey: id, // Pass the UI key (usually _id) to server
             model: this.selectedModel
         })
         
-        this.aiStatusMap[id] = ''
-        this.showToastMessage('后台生成任务已提交！您可以关闭页面，稍后刷新查看结果。')
-        
-        /* Legacy Synchronous Mode
-        const res = await request.post('/api/solution-report', {
-            problem: problemText,
-            code: userCode, // Use user code if available
-            reference: ''
-        })
-        
-        // 3. Upload HTML
-        this.aiStatus = '正在保存课件...'
-        const uploadRes = await request('/api/course/upload-courseware', {
-          method: 'POST',
-          body: JSON.stringify({
-            htmlContent: res.html,
-            level: this.editingLevelForChapter.level,
-            topicTitle: this.editingTopicForChapter.title,
-            chapterTitle: this.editingChapter.title,
-            filename: `solution_${docId}`
-          })
-        })
-
-        this.editingChapter.resourceUrl = uploadRes.url
-        this.editingChapter.contentType = 'html'
-        this.showToastMessage('解题报告生成成功')
-        */
+        this.aiStatusMap[id] = '正在后台生成中...'
+        this.showToastMessage('后台生成任务已提交！请耐心等待...')
 
       } catch (e) {
         this.showToastMessage('生成失败: ' + e.message)
-      } finally {
         this.aiLoadingMap[id] = false
         this.aiStatusMap[id] = ''
       }
@@ -978,13 +906,14 @@ export default {
 
     async generateTopicDescription() {
       if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
+      if (!confirm('确定要生成描述吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Capture the ID and Title of the topic being generated to handle context switching
       const targetTopicId = this.editingTopic._id || this.editingTopic.id;
-      const targetTopicTitle = this.editingTopic.title;
+      const levelId = this.editingLevelForTopic._id;
 
       this.aiLoadingMap[targetTopicId] = true
-      this.aiStatusMap[targetTopicId] = '正在生成描述...'
+      this.aiStatusMap[targetTopicId] = '正在提交后台任务...'
       try {
         // Prepare existing chapters info
         const existingChapters = (this.editingTopic.chapters || []).map(c => ({
@@ -992,55 +921,22 @@ export default {
             contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
         }))
 
-        const res = await request('/api/topic-plan', {
+        await request('/api/topic-plan/background', {
           method: 'POST',
           body: JSON.stringify({
             topic: this.editingTopic.title,
             level: `Level ${this.editingLevelForTopic.level}`,
             existingChapters: existingChapters,
             mode: 'description',
-            model: this.selectedModel
+            model: this.selectedModel,
+            topicId: targetTopicId,
+            levelId: levelId
           })
         })
         
-        const description = res.description || ''
-        if (!description) {
-            this.showToastMessage('AI 未生成有效描述')
-            return
-        }
-
-        // 1. Update the source of truth (this.levels)
-        // Find the topic in the levels tree
-        let topicFound = false;
-        for (const level of this.levels) {
-            if (level.topics) {
-                const topic = level.topics.find(t => (t._id === targetTopicId || t.id === targetTopicId));
-                if (topic) {
-                    topic.description = description;
-                    topicFound = true;
-                    break;
-                }
-            }
-        }
-
-        // 2. Check context to decide how to update view and notify user
-        const isSameNode = this.selectedNode && this.selectedNode.type === 'topic' && 
-           (this.editingTopic._id === targetTopicId || this.editingTopic.id === targetTopicId);
-        const isOnDesignPage = this.$route.path === '/design';
-
-        if (isSameNode) {
-            this.editingTopic.description = description;
-        }
-
-        if (isSameNode && isOnDesignPage) {
-            this.showToastMessage('描述生成成功，请点击保存');
-        } else {
-            // If user navigated away (different node OR different page), notify them
-            this.showToastMessage(`"${targetTopicTitle}" 的描述已生成 (后台更新)`);
-        }
-        
+        this.showToastMessage('描述生成任务已提交后台，完成后会自动保存')
       } catch (e) {
-        this.showToastMessage('生成失败: ' + e.message)
+        this.showToastMessage('提交失败: ' + e.message)
       } finally {
         this.aiLoadingMap[targetTopicId] = false
         this.aiStatusMap[targetTopicId] = ''
@@ -1049,70 +945,38 @@ export default {
 
     async generateTopicChapters() {
       if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
-      const id = this.editingTopic._id || this.editingTopic.id
-      this.aiLoadingMap[id] = true
-      this.aiStatusMap[id] = '正在规划章节...'
+      if (!confirm('确定要生成章节列表吗？生成过程将在后台进行，您可以关闭此页面。')) return
+
+      const targetTopicId = this.editingTopic._id || this.editingTopic.id;
+      const levelId = this.editingLevelForTopic._id;
+
+      this.aiLoadingMap[targetTopicId] = true
+      this.aiStatusMap[targetTopicId] = '正在提交后台任务...'
       try {
-        const res = await request('/api/topic-plan', {
+        const existingChapters = (this.editingTopic.chapters || []).map(c => ({
+            title: c.title,
+            contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
+        }))
+
+        await request('/api/topic-plan/background', {
           method: 'POST',
           body: JSON.stringify({
             topic: this.editingTopic.title,
             level: `Level ${this.editingLevelForTopic.level}`,
-            mode: 'chapters', // Default mode, but explicit
-            model: this.selectedModel
+            existingChapters: existingChapters,
+            mode: 'chapters',
+            model: this.selectedModel,
+            topicId: targetTopicId,
+            levelId: levelId
           })
         })
         
-        const newChapters = res.chapters || []
-        // Note: We ignore description here as user requested separate buttons
-        // const description = res.description || ''
-
-        if (newChapters.length === 0) {
-            this.showToastMessage('AI 未生成有效章节')
-            return
-        }
-
-        // Add chapters to the topic
-        if (!this.editingTopic.chapters) this.editingTopic.chapters = []
-        
-        // We need to save these chapters one by one or update the topic.
-        // Since we don't have a batch update for chapters, we will iterate and call create API.
-        // But wait, `saveTopic` updates the topic object which contains chapters?
-        // Let's check `server/routes/course.js` -> `PUT /levels/:id/topics/:topicId`
-        // It only updates title and description. It does NOT update chapters array.
-        
-        // So we must call POST /chapters for each new chapter.
-        
-        this.aiStatusMap[id] = `正在创建 ${newChapters.length} 个章节...`
-        
-        for (let i = 0; i < newChapters.length; i++) {
-            const chapterItem = newChapters[i]
-            const title = typeof chapterItem === 'string' ? chapterItem : chapterItem.title
-            const content = (typeof chapterItem === 'object' && chapterItem.content) ? chapterItem.content : ''
-
-            const chapterData = {
-                id: `${this.editingLevelForTopic.level}-${Date.now()}-${i}`, // Temp ID, server will renumber
-                title: title,
-                content: content,
-                contentType: 'markdown',
-                optional: false,
-                problemIds: []
-            }
-            
-            await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}/chapters`, {
-                method: 'POST',
-                body: JSON.stringify(chapterData)
-            })
-        }
-        
-        this.showToastMessage(`成功生成 ${newChapters.length} 个章节`)
-        this.fetchLevels() // Refresh tree
-        
+        this.showToastMessage('章节列表生成任务已提交后台，完成后会自动保存')
       } catch (e) {
-        this.showToastMessage('规划失败: ' + e.message)
+        this.showToastMessage('提交失败: ' + e.message)
       } finally {
-        this.aiLoadingMap[id] = false
-        this.aiStatusMap[id] = ''
+        this.aiLoadingMap[targetTopicId] = false
+        this.aiStatusMap[targetTopicId] = ''
       }
     },
 
@@ -1379,6 +1243,11 @@ export default {
   margin-bottom: 32px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  padding-top: 10px;
 }
 .editor-header h2 { 
   margin: 0; 

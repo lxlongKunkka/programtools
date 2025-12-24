@@ -1,7 +1,9 @@
 import { Server } from 'socket.io'
 
+let io;
+
 export function setupSocket(httpServer) {
-  const io = new Server(httpServer, {
+  io = new Server(httpServer, {
     cors: {
       origin: "*", // Allow all for now, or configure based on env
       methods: ["GET", "POST"]
@@ -98,6 +100,13 @@ export function setupSocket(httpServer) {
   })
 
   return io
+}
+
+export function getIO() {
+  if (!io) {
+    throw new Error("Socket.io not initialized!");
+  }
+  return io;
 }
 
 function generateTypingText() {

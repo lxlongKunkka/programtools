@@ -377,7 +377,11 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
        - **严禁编造题目**，必须是真实存在的经典题目。
 
 ### 必须包含的 CSS 和 JS 模板
-请严格基于以下代码结构生成 HTML（你可以修改内容，但保留核心样式和脚本逻辑）：
+请严格基于以下代码结构生成 HTML（你可以修改内容，但保留核心样式和脚本逻辑）。
+**特别注意**：
+1. 必须严格保留 \`<head>\` 中的 KaTeX 引用，不要修改版本号，不要删除 \`katex.min.js\`。
+2. 不要使用 \`polyfill.io\`，因为它已不再安全。
+3. 保持 CSS 样式一致。
 
 \`\`\`html
 <!DOCTYPE html>
@@ -386,7 +390,6 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>解题报告</title>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -394,7 +397,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         /* --- 基础和布局 --- */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
         .ppt-container { width: 100%; height: 100%; position: relative; }
-        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
         
         /* --- 导航按钮 --- */
@@ -403,7 +406,10 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         .nav-button:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         #prevBtn { left: 30px; } #nextBtn { right: 30px; }
         #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
-        #slideCounter { position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); }
+        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); }
+
+        /* --- Logo --- */
+        .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
 
         /* --- 内容样式 --- */
         .slide-header { flex-shrink: 0; }
@@ -432,6 +438,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
 </head>
 <body>
     <div class="ppt-container">
+        <img src="https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/qimailogo.png" class="logo" alt="Logo">
         <!-- Slide 1: 封面 -->
         <div class="slide active">
             <div class="slide-content" style="align-items: center; text-align: center;">
@@ -731,7 +738,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         /* --- 基础和布局 --- */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
         .ppt-container { width: 100%; height: 100%; position: relative; }
-        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
         
         /* --- 导航按钮 --- */
@@ -739,7 +746,10 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         .nav-button:hover { background-color: #007aff; transform: scale(1.1); }
         #prevBtn { left: 30px; } #nextBtn { right: 30px; }
         #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
-        #slideCounter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; }
+        
+        /* --- Logo --- */
+        .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
 
         /* --- 内容样式 --- */
         .slide-header { flex-shrink: 0; }
@@ -775,6 +785,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
 </head>
 <body>
     <div class="ppt-container">
+        <img src="https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/qimailogo.png" class="logo" alt="Logo">
         <!-- Slide 1: 封面 -->
         <div class="slide active">
             <div class="center-content">
