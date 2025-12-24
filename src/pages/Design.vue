@@ -438,6 +438,9 @@ export default {
             // Ensure the user hasn't switched to another node while fetching
             if (this.selectedNode && this.selectedNode.type === 'chapter' && this.editingChapter.id === chapterId) {
                 this.editingChapter.content = fullChapter.content || ''
+                this.editingChapter.contentType = fullChapter.contentType || 'markdown'
+                this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
+                if (fullChapter.title) this.editingChapter.title = fullChapter.title
             }
         } catch (e) {
             console.error(e)
@@ -766,14 +769,15 @@ export default {
             level: `Level ${levelNum}`,
             requirements: requirements,
             model: model,
-            chapterId: chapterId
+            chapterId: chapterId,
+            clientKey: chapterId
           })
         })
         
         this.showToastMessage(`"${chapterTitle}" 教案生成任务已提交后台，完成后会自动保存`)
+        this.aiStatusMap[chapterId] = '正在后台生成中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
-      } finally {
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
       }
@@ -820,14 +824,15 @@ export default {
             chapterId: chapterId,
             topicTitle: topicTitle,
             chapterTitle: chapterTitle,
-            levelNum: levelNum
+            levelNum: levelNum,
+            clientKey: chapterId
           })
         })
         
         this.showToastMessage(`"${chapterTitle}" PPT 生成任务已提交后台，完成后会自动保存`)
+        this.aiStatusMap[chapterId] = '正在后台生成中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
-      } finally {
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
       }
@@ -930,14 +935,15 @@ export default {
             mode: 'description',
             model: this.selectedModel,
             topicId: targetTopicId,
-            levelId: levelId
+            levelId: levelId,
+            clientKey: targetTopicId
           })
         })
         
         this.showToastMessage('描述生成任务已提交后台，完成后会自动保存')
+        this.aiStatusMap[targetTopicId] = '正在后台生成中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
-      } finally {
         this.aiLoadingMap[targetTopicId] = false
         this.aiStatusMap[targetTopicId] = ''
       }
@@ -967,14 +973,15 @@ export default {
             mode: 'chapters',
             model: this.selectedModel,
             topicId: targetTopicId,
-            levelId: levelId
+            levelId: levelId,
+            clientKey: targetTopicId
           })
         })
         
         this.showToastMessage('章节列表生成任务已提交后台，完成后会自动保存')
+        this.aiStatusMap[targetTopicId] = '正在后台生成中...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
-      } finally {
         this.aiLoadingMap[targetTopicId] = false
         this.aiStatusMap[targetTopicId] = ''
       }

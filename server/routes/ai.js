@@ -673,7 +673,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
 
-    const { problem, code, reference, model } = req.body
+    const { problem, code, reference, model, level } = req.body
     if (!problem) return res.status(400).json({ error: '缺少 problem 字段' })
 
     const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）'
@@ -681,6 +681,10 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`
     if (reference && reference.trim()) {
       userContent += `\n\n参考思路/提示：\n${reference.trim()}`
+    }
+
+    if (level && parseInt(level) <= 2) {
+      userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
     }
 
     const apiUrl = YUN_API_URL
@@ -750,6 +754,11 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
           if (reference && reference.trim()) {
               userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+          }
+
+          // Add constraint for Level 2 and below
+          if (level && parseInt(level) <= 2) {
+             userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
           }
 
           const messages = [
@@ -1107,7 +1116,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum } = req.body;
+  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, clientKey } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1202,18 +1211,35 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               if (chapterFound) {
                   await courseLevel.save();
                   console.log(`[Background] Database updated for chapter ${chapterId}`);
+                  
+                  // Notify client
+                  getIO().emit('ai_task_complete', {
+                      chapterId,
+                      clientKey,
+                      type: 'ppt',
+                      status: 'success',
+                      message: 'PPT 生成完成'
+                  });
               }
           }
 
       } catch (err) {
           console.error('[Background] Error generating PPT:', err);
+          // Notify client of error
+          getIO().emit('ai_task_complete', {
+              chapterId,
+              clientKey,
+              type: 'ppt',
+              status: 'error',
+              message: 'PPT 生成失败: ' + err.message
+          });
       }
   })();
 });
 
 // Generate Lesson Plan Background
 router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, requirements, model, chapterId } = req.body;
+  const { topic, context, level, requirements, model, chapterId, clientKey } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1267,18 +1293,35 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
               if (chapterFound) {
                   await courseLevel.save();
                   console.log(`[Background] Database updated for chapter ${chapterId} (Lesson Plan)`);
+                  
+                  // Notify client
+                  getIO().emit('ai_task_complete', {
+                      chapterId,
+                      clientKey,
+                      type: 'lesson-plan',
+                      status: 'success',
+                      message: '教案生成完成'
+                  });
               }
           }
 
       } catch (err) {
           console.error('[Background] Error generating Lesson Plan:', err);
+          // Notify client of error
+          getIO().emit('ai_task_complete', {
+              chapterId,
+              clientKey,
+              type: 'lesson-plan',
+              status: 'error',
+              message: '教案生成失败: ' + err.message
+          });
       }
   })();
 });
 
 // Generate Topic Plan Background
 router.post('/topic-plan/background', authenticateToken, async (req, res) => {
-  const { topic, level, model, mode, existingChapters, topicId, levelId } = req.body;
+  const { topic, level, model, mode, existingChapters, topicId, levelId, clientKey } = req.body;
   
   if (!topic || !topicId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1368,11 +1411,28 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                   }
                   await courseLevel.save();
                   console.log(`[Background] Database updated for topic ${topicId}`);
+                  
+                  // Notify client
+                  getIO().emit('ai_task_complete', {
+                      chapterId: topicId, // Using topicId as chapterId for consistency in frontend map
+                      clientKey,
+                      type: mode === 'description' ? 'topic-desc' : 'topic-chapters',
+                      status: 'success',
+                      message: mode === 'description' ? '知识点描述生成完成' : '章节列表生成完成'
+                  });
               }
           }
 
       } catch (err) {
           console.error('[Background] Error generating Topic Plan:', err);
+          // Notify client of error
+          getIO().emit('ai_task_complete', {
+              chapterId: topicId,
+              clientKey,
+              type: mode === 'description' ? 'topic-desc' : 'topic-chapters',
+              status: 'error',
+              message: '生成失败: ' + err.message
+          });
       }
   })();
 });
