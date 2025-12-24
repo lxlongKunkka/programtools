@@ -37,15 +37,24 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
     // 2. Find the chapter
     let level = await CourseLevel.findOne({ 'chapters.id': chapterId })
     let chapter = null
+    let isFirstChapter = false
     
     if (level) {
-      chapter = level.chapters.find(c => c.id === chapterId)
+      const idx = level.chapters.findIndex(c => c.id === chapterId)
+      if (idx !== -1) {
+        chapter = level.chapters[idx]
+        if (idx === 0) isFirstChapter = true
+      }
     } else {
       level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId })
       if (level) {
         for (const topic of level.topics) {
-          chapter = topic.chapters.find(c => c.id === chapterId)
-          if (chapter) break
+          const idx = topic.chapters.findIndex(c => c.id === chapterId)
+          if (idx !== -1) {
+            chapter = topic.chapters[idx]
+            if (idx === 0) isFirstChapter = true
+            break
+          }
         }
       }
     }
@@ -60,6 +69,11 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
         let isUnlocked = isUnlockedId
         if (!isUnlocked && chapter._id && progress.unlockedChapterUids) {
             isUnlocked = progress.unlockedChapterUids.some(id => id.toString() === chapter._id.toString())
+        }
+        
+        // Always allow access to the first chapter of any topic
+        if (!isUnlocked && isFirstChapter) {
+            isUnlocked = true
         }
         
         if (!isUnlocked) {
