@@ -275,4 +275,75 @@ try {
   debugLog('cron init failed', e)
 }
 
+// --- Prompts Management ---
+
+// Get list of prompt files
+router.get('/prompts/list', async (req, res) => {
+  try {
+    const promptsDir = path.resolve(process.cwd(), 'server/prompts')
+    if (!fs.existsSync(promptsDir)) {
+      return res.json({ files: [] })
+    }
+    const files = await fs.promises.readdir(promptsDir)
+    // Filter only .js files
+    const jsFiles = files.filter(f => f.endsWith('.js'))
+    res.json({ files: jsFiles })
+  } catch (err) {
+    console.error('List prompts error:', err)
+    res.status(500).json({ error: 'Failed to list prompt files' })
+  }
+})
+
+// Get specific prompt file content
+router.get('/prompts', async (req, res) => {
+  try {
+    const { filename } = req.query
+    let promptsPath
+    
+    if (filename) {
+      // Security check: prevent directory traversal
+      const safeFilename = path.basename(filename)
+      promptsPath = path.resolve(process.cwd(), 'server/prompts', safeFilename)
+    } else {
+      // Fallback to old behavior or default file? 
+      // Let's default to translate.js if no filename provided, or error.
+      // But for backward compatibility with my previous edit, let's handle the case where frontend might not send filename yet.
+      // Actually, I will update frontend too.
+      return res.status(400).json({ error: 'Filename is required' })
+    }
+    
+    if (!fs.existsSync(promptsPath)) {
+        return res.status(404).json({ error: 'Prompts file not found' })
+    }
+
+    const content = await fs.promises.readFile(promptsPath, 'utf-8')
+    res.json({ content })
+  } catch (err) {
+    console.error('Read prompts error:', err)
+    res.status(500).json({ error: 'Failed to read prompts file' })
+  }
+})
+
+// Update prompts file content
+router.post('/prompts', async (req, res) => {
+  try {
+    const { content, filename } = req.body
+    if (!content) return res.status(400).json({ error: 'Content is required' })
+    if (!filename) return res.status(400).json({ error: 'Filename is required' })
+    
+    const safeFilename = path.basename(filename)
+    const promptsPath = path.resolve(process.cwd(), 'server/prompts', safeFilename)
+    
+    // Create a backup
+    const backupPath = promptsPath + '.bak-' + Date.now()
+    await fs.promises.copyFile(promptsPath, backupPath)
+    
+    await fs.promises.writeFile(promptsPath, content, 'utf-8')
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Save prompts error:', err)
+    res.status(500).json({ error: 'Failed to save prompts file' })
+  }
+})
+
 export default router
