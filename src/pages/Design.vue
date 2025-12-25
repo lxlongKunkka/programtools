@@ -178,6 +178,22 @@
           <label>标题 (Title):</label>
           <input v-model="editingLevel.title" class="form-input" placeholder="例如: 基础语法">
         </div>
+
+        <!-- AI Assistant Section for Level -->
+        <div class="ai-assistant-box">
+          <div class="ai-header">
+            <h3>🤖 AI 模块规划</h3>
+            <div v-if="currentAiLoading" class="status-container">
+                <span class="ai-status">{{ currentAiStatus }}</span>
+                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
+            </div>
+          </div>
+          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
+            <button @click="batchGenerateLevelLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
+            <button @click="batchGenerateLevelPPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
+            <button @click="batchGenerateLevelSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解</button>
+          </div>
+        </div>
         <div class="form-group">
           <label>描述 (Markdown):</label>
           <div class="split-view">
@@ -809,10 +825,60 @@ export default {
             })
 
             this.restoreTreeState()
+            
+            // Re-bind selection to new objects to avoid stale references
+            if (this.selectedNode) {
+                this.rebindSelection()
+            }
         } catch (e) {
             this.showToastMessage('加载失败: ' + e.message)
         } finally {
             this.loadingCourses = false
+        }
+    },
+    rebindSelection() {
+        if (!this.selectedNode) return
+        const { type, id } = this.selectedNode
+        
+        if (type === 'group') {
+            const group = this.groups.find(g => (g._id && g._id === id) || g.name === id)
+            if (group) this.selectNode('group', group)
+        } else if (type === 'level') {
+            const level = this.levels.find(l => l._id === id)
+            if (level) this.selectNode('level', level)
+        } else if (type === 'topic') {
+            for (const l of this.levels) {
+                if (l.topics) {
+                    const topic = l.topics.find(t => t._id === id)
+                    if (topic) {
+                        this.selectNode('topic', topic, l)
+                        return
+                    }
+                }
+            }
+        } else if (type === 'chapter') {
+            for (const l of this.levels) {
+                // Check legacy chapters
+                if (l.chapters) {
+                    const chapter = l.chapters.find(c => c.id === id || (c._id && c._id === id))
+                    if (chapter) {
+                        this.selectNode('chapter', chapter, l, null)
+                        return
+                    }
+                }
+                // Check topics
+                if (l.topics) {
+                    for (const t of l.topics) {
+                        if (t.chapters) {
+                            const chapter = t.chapters.find(c => c.id === id || (c._id && c._id === id))
+                            if (chapter) {
+                                this.selectNode('chapter', chapter, l, t)
+                                return
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     async fetchTeachers() {
@@ -1817,20 +1883,23 @@ export default {
                 if (subRes && subRes.code) userCode = subRes.code
             } catch (e) {}
 
-            await request.post('/api/solution-report/background', {
-                problem: problemText,
-                code: userCode,
-                reference: '',
-                level: levelNum,
-                topicTitle: topicTitle,
-                chapterTitle: chapterTitle,
-                problemTitle: doc.title,
-                chapterId: chapterId,
-                topicId: topicId,
-                clientKey: chapterId,
-                model: model,
-                language: language,
-                group: groupName
+            await request('/api/solution-report/background', {
+                method: 'POST',
+                body: JSON.stringify({
+                    problem: problemText,
+                    code: userCode,
+                    reference: '',
+                    level: levelNum,
+                    topicTitle: topicTitle,
+                    chapterTitle: chapterTitle,
+                    problemTitle: doc.title,
+                    chapterId: chapterId,
+                    topicId: topicId,
+                    clientKey: chapterId,
+                    model: model,
+                    language: language,
+                    group: groupName
+                })
             })
             
             this.aiStatusMap[chapterId] = '正在后台生成题解...'
@@ -1845,6 +1914,226 @@ export default {
 
       this.aiLoadingMap[topicId] = false
       this.aiStatusMap[topicId] = ''
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
+    },
+
+    async batchGenerateLevelLessonPlans() {
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
+      if (!confirm(`确定要为本模块下的所有章节生成教案吗？这将覆盖已有内容。`)) return
+
+      const levelNum = this.editingLevel.level
+      const groupName = this.editingLevel.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+
+      const levelId = this.selectedNode.id
+      this.aiLoadingMap[levelId] = true
+      let successCount = 0
+
+      for (const topic of this.editingLevel.topics) {
+          if (!topic.chapters) continue
+          const topicTitle = topic.title
+          const topicId = topic._id || topic.id
+
+          for (let i = 0; i < topic.chapters.length; i++) {
+            const chapter = topic.chapters[i]
+            const chapterId = chapter._id || chapter.id
+            const chapterTitle = chapter.title
+
+            this.aiStatusMap[levelId] = `正在提交教案任务: ${topicTitle} - ${chapterTitle}`
+            
+            try {
+                this.aiLoadingMap[chapterId] = true
+                this.aiStatusMap[chapterId] = '正在后台生成教案...'
+
+                await request('/api/lesson-plan/background', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        topic: chapterTitle,
+                        context: topicTitle,
+                        topicId: topicId,
+                        level: `Level ${levelNum}`,
+                        requirements: '', 
+                        model: model,
+                        language: language,
+                        chapterId: chapterId,
+                        clientKey: chapterId
+                    })
+                })
+                successCount++
+            } catch (e) {
+                console.error(`Failed to submit lesson plan for ${chapterTitle}`, e)
+                this.aiLoadingMap[chapterId] = false
+                this.aiStatusMap[chapterId] = '提交失败'
+            }
+            await new Promise(r => setTimeout(r, 500))
+          }
+      }
+
+      this.aiLoadingMap[levelId] = false
+      this.aiStatusMap[levelId] = ''
+      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+    },
+
+    async batchGenerateLevelPPTs() {
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
+      if (!confirm(`确定要为本模块下的所有章节生成 PPT 吗？`)) return
+
+      const levelNum = this.editingLevel.level
+      const levelTitle = this.editingLevel.title
+      const groupName = this.editingLevel.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+      
+      const levelId = this.selectedNode.id
+      this.aiLoadingMap[levelId] = true
+      let successCount = 0
+
+      for (const topic of this.editingLevel.topics) {
+          if (!topic.chapters) continue
+          const topicTitle = topic.title
+          const topicId = topic._id || topic.id
+          const chapterList = topic.chapters.map(c => c.title)
+
+          for (let i = 0; i < topic.chapters.length; i++) {
+            const chapter = topic.chapters[i]
+            const chapterId = chapter._id || chapter.id
+            const chapterTitle = chapter.title
+            
+            this.aiStatusMap[levelId] = `正在提交 PPT 任务: ${topicTitle} - ${chapterTitle}`
+
+            try {
+                this.aiLoadingMap[chapterId] = true
+                this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
+                
+                await request('/api/generate-ppt/background', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    topic: chapterTitle,
+                    context: topicTitle,
+                    level: `Level ${levelNum}`,
+                    model: model,
+                    language: language,
+                    chapterList: chapterList,
+                    currentChapterIndex: i,
+                    chapterContent: '', 
+                    requirements: '',
+                    chapterId: chapterId,
+                    topicId: topicId,
+                    topicTitle: topicTitle,
+                    chapterTitle: chapterTitle,
+                    levelNum: levelNum,
+                    levelTitle: levelTitle,
+                    clientKey: chapterId,
+                    group: groupName
+                  })
+                })
+                successCount++
+            } catch (e) {
+                console.error(`Failed to submit PPT for ${chapterTitle}`, e)
+                this.aiLoadingMap[chapterId] = false
+                this.aiStatusMap[chapterId] = '提交失败'
+            }
+            await new Promise(r => setTimeout(r, 500))
+          }
+      }
+
+      this.aiLoadingMap[levelId] = false
+      this.aiStatusMap[levelId] = ''
+      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+    },
+
+    async batchGenerateLevelSolutionReports() {
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
+      if (!confirm(`确定要为本模块下的所有章节生成题解报告吗？只有关联了题目的章节才会生成。`)) return
+
+      const levelNum = this.editingLevel.level
+      const groupName = this.editingLevel.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+
+      const levelId = this.selectedNode.id
+      this.aiLoadingMap[levelId] = true
+      let successCount = 0
+      let skippedCount = 0
+
+      for (const topic of this.editingLevel.topics) {
+          if (!topic.chapters) continue
+          const topicTitle = topic.title
+          const topicId = topic._id || topic.id
+
+          for (let i = 0; i < topic.chapters.length; i++) {
+            const chapter = topic.chapters[i]
+            const chapterId = chapter._id || chapter.id
+            const chapterTitle = chapter.title
+            
+            if (!chapter.problemIds || chapter.problemIds.length === 0) {
+                skippedCount++
+                continue
+            }
+
+            this.aiStatusMap[levelId] = `正在提交题解任务: ${topicTitle} - ${chapterTitle}`
+
+            try {
+                this.aiLoadingMap[chapterId] = true
+                this.aiStatusMap[chapterId] = '正在获取题目信息...'
+
+                let firstProblemId = chapter.problemIds[0]
+                if (typeof firstProblemId === 'object') firstProblemId = firstProblemId.docId || firstProblemId.id
+                
+                let docId = firstProblemId
+                let domainId = 'system'
+                if (String(firstProblemId).includes(':')) {
+                    [domainId, docId] = String(firstProblemId).split(':')
+                }
+
+                const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
+                const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
+                if (!doc) throw new Error('未找到题目')
+                
+                let problemText = doc.content
+                let userCode = ''
+                
+                try {
+                    const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
+                    if (subRes && subRes.code) userCode = subRes.code
+                } catch (e) {}
+
+                await request('/api/solution-report/background', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        problem: problemText,
+                        code: userCode,
+                        reference: '',
+                        level: levelNum,
+                        topicTitle: topicTitle,
+                        chapterTitle: chapterTitle,
+                        problemTitle: doc.title,
+                        chapterId: chapterId,
+                        topicId: topicId,
+                        clientKey: chapterId,
+                        model: model,
+                        language: language,
+                        group: groupName
+                    })
+                })
+                
+                this.aiStatusMap[chapterId] = '正在后台生成题解...'
+                successCount++
+            } catch (e) {
+                console.error(`Failed to submit solution report for ${chapterTitle}`, e)
+                this.aiLoadingMap[chapterId] = false
+                this.aiStatusMap[chapterId] = '提交失败'
+            }
+            await new Promise(r => setTimeout(r, 500))
+          }
+      }
+
+      this.aiLoadingMap[levelId] = false
+      this.aiStatusMap[levelId] = ''
       this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
     },
 
