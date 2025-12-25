@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import User from './server/models/User.js';
-import { isTeacher } from './server/utils/teacher.js';
 import { DIRS } from './server/config.js';
 
 mongoose.connect('mongodb://localhost:27017/programtools').then(async () => {
@@ -43,7 +42,7 @@ mongoose.connect('mongodb://localhost:27017/programtools').then(async () => {
 
   
   for(const u of users) {
-    const isT = await isTeacher(u._id);
+    const isT = u.role === 'teacher';
     const isAdmin = u.priv === -1 || u.uname === 'admin';
     
     if (isT) console.log(`Teacher: ${u.uname} (${u._id})`);

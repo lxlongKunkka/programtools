@@ -570,12 +570,29 @@ export default {
       if (!isTeacherOrAdmin && !this.isChapterUnlocked(level, chapter) && !this.isChapterCompleted(level, chapter)) {
         return
       }
-      const lvl = level.level || level.levelId
-      this.$router.push(`/course/${lvl}/${chapter.id}`)
+
+      // Update selected subject context to ensure ChapterDetail finds the correct level
+      if (level.group) {
+        localStorage.setItem('selected_subject', level.group)
+      }
+
+      this.$router.push({
+        path: `/course/${chapter.id}`,
+        query: { lid: level._id }
+      })
     },
     renderMarkdown(text) {
       if (!text) return ''
-      return marked.parse(text, { breaks: true, mangle: false, headerIds: false })
+      try {
+        return marked.parse(text, { 
+          breaks: true,
+          mangle: false,
+          headerIds: false
+        })
+      } catch (e) {
+        console.error('Markdown render error:', e)
+        return text
+      }
     },
     isTeacherOrAdmin() {
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')

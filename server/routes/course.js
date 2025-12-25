@@ -216,14 +216,14 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
     // Re-find the chapter after populate to get populated fields
     if (level.topics && level.topics.length > 0) {
          for (const topic of level.topics) {
-             const found = topic.chapters.find(c => c.id === chapterId)
+             const found = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
              if (found) {
                  chapter = found
                  break
              }
          }
     } else {
-         chapter = level.chapters.find(c => c.id === chapterId)
+         chapter = level.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
     }
 
     res.json(chapter)

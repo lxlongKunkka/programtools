@@ -2,7 +2,7 @@
   <div class="chapter-detail-container">
     <div class="header-nav">
       <button @click="$router.push('/course')" class="btn-back">← 返回学习地图</button>
-      <span v-if="level">Level {{ level.level }} - Chapter {{ chapterId }}</span>
+      <span v-if="level && chapter">{{ level.title }} - {{ chapter.title }}</span>
     </div>
 
     <div v-if="loading" class="loading">加载中...</div>
@@ -141,6 +141,9 @@
 <script>
 import request from '../utils/request'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import renderMathInElement from 'katex/contrib/auto-render'
+import 'katex/dist/katex.min.css'
 import { SUBJECTS_CONFIG } from '../utils/courseConfig'
 
 export default {
@@ -170,9 +173,6 @@ export default {
     }
   },
   computed: {
-    levelId() {
-      return parseInt(this.$route.params.levelId)
-    },
     chapterId() {
       return this.$route.params.chapterId // String ID
     },
@@ -191,7 +191,22 @@ export default {
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
       // Split content by "===NEXT===" (case insensitive, allowing whitespace)
-      const steps = this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => marked.parse(part, { breaks: true, mangle: false, headerIds: false }))
+      const steps = this.chapter.content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => {
+        try {
+           const html = marked.parse(part, { 
+             breaks: true,
+             mangle: false,
+             headerIds: false
+           })
+           return DOMPurify.sanitize(html, {
+             ADD_TAGS: ['iframe'],
+             ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+           })
+        } catch (e) {
+           console.error('Markdown parse error:', e)
+           return part
+        }
+      })
 
       // Inject Token
       const token = localStorage.getItem('auth_token')
@@ -266,11 +281,27 @@ export default {
   },
   mounted() {
     this.fetchData()
+    this.renderMath()
   },
   updated() {
     this.secureContent()
+    this.renderMath()
   },
   methods: {
+    renderMath() {
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.markdown-scroll-wrapper')
+        if (container) {
+          renderMathInElement(container, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+          })
+        }
+      })
+    },
     secureContent() {
       this.$nextTick(() => {
         const container = this.$el.querySelector('.tutorial-section')
@@ -353,15 +384,32 @@ export default {
         const realSubject = subjectConfig ? subjectConfig.realSubject : 'C++'
 
         // 2. Find the correct level object
-        // Priority: Match level number AND subject
-        this.level = levelsData.find(l => 
-            l.level === this.levelId && 
-            (l.subject === realSubject || (!l.subject && realSubject === 'C++'))
-        )
-        
-        // Fallback: If not found (e.g. user switched subject but URL is old), just find by level number
+        // Priority 1: Match by explicit Mongo ID from query (Most robust)
+        if (this.$route.query.lid) {
+             this.level = levelsData.find(l => l._id === this.$route.query.lid)
+        }
+
+        // Priority 2: Find level by chapterId (Fallback if no lid)
         if (!this.level) {
-            this.level = levelsData.find(l => l.level === this.levelId)
+             // Helper to check if a level contains the chapter
+             const hasChapter = (lvl, chId) => {
+                 if (lvl.chapters && lvl.chapters.some(c => c.id === chId)) return true;
+                 if (lvl.topics) {
+                     return lvl.topics.some(t => t.chapters && t.chapters.some(c => c.id === chId));
+                 }
+                 return false;
+             };
+
+             // Filter levels by subject first
+             const subjectLevels = levelsData.filter(l => l.subject === realSubject || (!l.subject && realSubject === 'C++'))
+             
+             // Try to find in subject levels first
+             this.level = subjectLevels.find(l => hasChapter(l, this.chapterId))
+             
+             // If not found, try all levels
+             if (!this.level) {
+                 this.level = levelsData.find(l => hasChapter(l, this.chapterId))
+             }
         }
         
         if (this.level) {
@@ -561,7 +609,10 @@ export default {
       }
       
       if (nextChapter) {
-        this.$router.push(`/course/${this.level.level}/${nextChapter.id}`)
+        this.$router.push({
+            path: `/course/${nextChapter.id}`,
+            query: { lid: this.level._id }
+        })
       }
     },
     adjustFontSize(delta) {

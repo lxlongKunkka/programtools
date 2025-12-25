@@ -5,8 +5,6 @@ import crypto from 'crypto'
 import User from '../models/User.js'
 import { JWT_SECRET } from '../config.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
-// import { isPremium } from '../utils/premium.js'
-// import { isTeacher } from '../utils/teacher.js'
 
 const router = express.Router()
 

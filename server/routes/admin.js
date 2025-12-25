@@ -7,8 +7,6 @@ import { MAIL_CONFIG, DIRS } from '../config.js'
 import { debugLog, ensureLogsDir } from '../utils/logger.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
-// import { getPremiumList, addPremium, removePremium } from '../utils/premium.js'
-// import { getTeacherList, addTeacher, removeTeacher } from '../utils/teacher.js'
 
 const router = express.Router()
 

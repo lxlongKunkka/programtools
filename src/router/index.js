@@ -31,7 +31,7 @@ const routes = [
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
-  { path: '/course/:levelId/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
+  { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } }
 ]
 
