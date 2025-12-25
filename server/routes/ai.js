@@ -708,14 +708,18 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
 
-    const { problem, code, reference, model, level, language } = req.body
-    if (!problem) return res.status(400).json({ error: '缺少 problem 字段' })
+    const { problem, code, reference, solutionPlan, model, level, language } = req.body
+    if ((!problem && !solutionPlan)) return res.status(400).json({ error: '缺少 problem 或 solutionPlan 字段' })
 
-    const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）'
-    
-    let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`
-    if (reference && reference.trim()) {
-      userContent += `\n\n参考思路/提示：\n${reference.trim()}`
+    let userContent = '';
+    if (solutionPlan) {
+        userContent = `解题教案：\n${solutionPlan}`;
+    } else {
+        const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）';
+        userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
+        if (reference && reference.trim()) {
+            userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+        }
     }
 
     const targetLang = language || 'C++'
@@ -783,12 +787,142 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
   }
 })
 
+// Generate Solution Plan (Direct)
+router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
+  try {
+    const { problem, code, model } = req.body;
+    if (!problem) return res.status(400).json({ error: 'Missing problem field' });
+
+    const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+
+    const messages = [
+        { role: 'system', content: SOLUTION_PROMPT },
+        { role: 'user', content: userContent }
+    ];
+
+    const payload = {
+        model: model || 'o4-mini',
+        messages,
+        temperature: 0.5,
+        max_tokens: 16000
+    };
+
+    const resp = await axios.post(YUN_API_URL, payload, {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${YUN_API_KEY}`
+        },
+        timeout: 300000
+    });
+
+    const content = resp.data.choices?.[0]?.message?.content || '';
+    res.json({ content });
+
+  } catch (err) {
+    console.error('Solution plan error:', err);
+    const message = err?.response?.data ? JSON.stringify(err.response.data) : (err.message || 'unknown error');
+    res.status(500).json({ error: 'Generation failed', detail: message });
+  }
+});
+
+// Generate Solution Plan Background
+router.post('/solution-plan/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
+  const { problem, code, chapterId, topicId, clientKey, model } = req.body;
+
+  if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+
+  res.json({ status: 'processing', message: 'Solution plan generation started in background' });
+
+  (async () => {
+      try {
+          const logMsg = `[Background] Starting Solution Plan for chapter ${chapterId}`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
+
+          const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+
+          const messages = [
+              { role: 'system', content: SOLUTION_PROMPT },
+              { role: 'user', content: userContent }
+          ];
+
+          const payload = {
+              model: model || 'o4-mini',
+              messages,
+              temperature: 0.5,
+              max_tokens: 16000
+          };
+
+          const resp = await axios.post(YUN_API_URL, payload, {
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${YUN_API_KEY}`
+              },
+              timeout: 300000
+          });
+
+          const content = resp.data.choices?.[0]?.message?.content || '';
+
+          // Update Database
+          let query = {};
+          if (topicId) {
+              query = { 'topics._id': topicId };
+          } else {
+              query = {
+                  $or: [
+                      { 'topics.chapters.id': chapterId },
+                      { 'topics.chapters._id': chapterId }
+                  ]
+              };
+          }
+
+          let courseLevel = await CourseLevel.findOne(query);
+
+          if (courseLevel) {
+              let chapterFound = false;
+              for (const topic of courseLevel.topics) {
+                  if (topicId && topic._id && topic._id.toString() !== topicId) continue;
+
+                  let chapter;
+                  if (mongoose.Types.ObjectId.isValid(chapterId)) {
+                      chapter = topic.chapters.find(c => c._id && c._id.toString() === chapterId);
+                  }
+                  if (!chapter) {
+                      chapter = topic.chapters.find(c => c.id === chapterId);
+                  }
+
+                  if (chapter) {
+                      chapter.content = content;
+                      chapter.contentType = 'markdown';
+                      chapterFound = true;
+                      break;
+                  }
+              }
+
+              if (chapterFound) {
+                  await courseLevel.save();
+                  console.log(`[Background] Solution Plan saved for chapter ${chapterId}`);
+                  try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+              } else {
+                  console.error(`[Background] Chapter ${chapterId} not found for saving solution plan`);
+              }
+          } else {
+              console.error(`[Background] CourseLevel not found for chapter ${chapterId}`);
+          }
+
+      } catch (err) {
+          console.error('Solution plan generation error:', err);
+          try { getIO().emit('ai_task_error', { clientKey, message: err.message }); } catch (e) {}
+      }
+  })();
+});
+
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  let { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, topicId, clientKey, language, group } = req.body;
+  let { problem, code, reference, solutionPlan, model, level, topicTitle, chapterTitle, problemTitle, chapterId, topicId, clientKey, language, group } = req.body;
   
   console.log(`[Solution Report Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
 
-  if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+  if ((!problem && !solutionPlan) || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
   // Respond immediately
   res.json({ status: 'processing', message: 'Task started in background' });
@@ -830,10 +964,15 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
           // 1. Generate HTML
-          const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）';
-          let userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
-          if (reference && reference.trim()) {
-              userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+          let userContent = '';
+          if (solutionPlan) {
+              userContent = `解题教案：\n${solutionPlan}`;
+          } else {
+              const codeContent = code || '（用户未提供代码，请自行分析题目并生成代码）';
+              userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
+              if (reference && reference.trim()) {
+                  userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+              }
           }
 
           const targetLang = language || 'C++'

@@ -16,6 +16,9 @@
         </select>
       </div>
       <div class="toolbar-right">
+        <button @click="generatePlan" :disabled="loading || !problemText.trim()" class="btn-secondary" style="background-color: #e6f7ff; color: #1890ff; border: 1px solid #1890ff;">
+          {{ loadingPlan ? '⏳ 生成教案中...' : '📘 生成教案' }}
+        </button>
         <button @click="generate" :disabled="loading || !problemText.trim()" class="btn-primary">
           {{ loading ? '⏳ 生成中...' : '🚀 生成报告' }}
         </button>
@@ -35,10 +38,16 @@
           ></textarea>
         </div>
         <div class="input-section" style="flex: 1">
-          <label class="section-label">💡 参考思路 (可选)</label>
+          <div class="section-header-row">
+            <label class="section-label">💡 参考思路 / 教案 (可选)</label>
+            <div class="mini-actions" v-if="referenceText">
+              <span @click="copyPlan" class="action-link" title="复制内容">📋 复制</span>
+              <span @click="downloadPlan" class="action-link" title="下载 Markdown">💾 下载</span>
+            </div>
+          </div>
           <textarea 
             v-model="referenceText" 
-            placeholder="输入解题思路或提示..."
+            placeholder="输入解题思路、提示，或者生成的教案..."
             :disabled="loading"
           ></textarea>
         </div>
@@ -80,6 +89,7 @@ export default {
       referenceText: '',
       resultHtml: '',
       loading: false,
+      loadingPlan: false,
       model: 'gemini-2.0-flash',
       language: 'C++',
       rawModelOptions: []
@@ -129,6 +139,28 @@ export default {
     }
   },
   methods: {
+    async generatePlan() {
+      if (!this.problemText.trim()) return this.showToastMessage('请先输入题目描述')
+      
+      this.loadingPlan = true
+      try {
+        const res = await request.post('/api/solution-plan', {
+          problem: this.problemText,
+          code: this.codeText,
+          model: this.model
+        })
+        
+        if (res.content) {
+          this.referenceText = res.content
+          this.showToastMessage('教案生成成功！已自动填入“参考思路/教案”框')
+        }
+      } catch (e) {
+        console.error(e)
+        this.showToastMessage('生成教案失败: ' + (e.response?.data?.error || e.message))
+      } finally {
+        this.loadingPlan = false
+      }
+    },
     async generate() {
       if (!this.problemText.trim()) return
       
@@ -136,10 +168,18 @@ export default {
       this.resultHtml = ''
       
       try {
+        // Check if referenceText looks like a generated plan
+        let solutionPlan = ''
+        if (this.referenceText && this.referenceText.includes('#') && this.referenceText.length > 100) {
+             // Simple heuristic: if it has markdown headers and is long enough, treat as plan
+             solutionPlan = this.referenceText
+        }
+
         const res = await request.post('/api/solution-report', {
           problem: this.problemText,
           code: this.codeText,
-          reference: this.referenceText,
+          reference: this.referenceText, // Still send as reference for backward compatibility or if not a plan
+          solutionPlan: solutionPlan,    // Send as explicit plan if detected
           model: this.model,
           language: this.language
         })
@@ -182,6 +222,26 @@ export default {
       const a = document.createElement('a')
       a.href = url
       a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
+    copyPlan() {
+      if (!this.referenceText) return
+      navigator.clipboard.writeText(this.referenceText).then(() => {
+        this.showToastMessage('已复制到剪贴板')
+      }).catch(err => {
+        this.showToastMessage('复制失败: ' + err)
+      })
+    },
+    downloadPlan() {
+      if (!this.referenceText) return
+      const blob = new Blob([this.referenceText], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'solution_plan.md'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -250,6 +310,33 @@ h2 {
   font-weight: bold;
   margin-bottom: 10px;
   display: block;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.section-header-row .section-label {
+  margin-bottom: 0;
+}
+
+.mini-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-link {
+  font-size: 12px;
+  color: #409eff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.action-link:hover {
+  text-decoration: underline;
 }
 
 textarea {

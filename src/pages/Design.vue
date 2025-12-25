@@ -305,7 +305,8 @@
             <div class="ai-buttons">
               <button @click="generateLessonPlan" class="btn-ai" :disabled="currentAiLoading">📝 生成教案</button>
               <button @click="generatePPT" class="btn-ai" :disabled="currentAiLoading">📊 生成 PPT</button>
-              <button @click="generateSolutionReport" class="btn-ai" :disabled="currentAiLoading">💡 生成题解</button>
+              <button @click="generateSolutionPlan" class="btn-ai btn-ai-blue" :disabled="currentAiLoading">📘 生成题解教案</button>
+              <button @click="generateSolutionReport" class="btn-ai" :disabled="currentAiLoading">💡 生成题解PPT</button>
             </div>
           </div>
         </div>
@@ -1545,10 +1546,88 @@ export default {
       }
     },
 
+    async generateSolutionPlan() {
+      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      if (!confirm('确定要生成解题教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
+      
+      const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
+      if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
+
+      const id = this.editingChapter._id || this.editingChapter.id
+      this.aiLoadingMap[id] = true
+      this.aiStatusMap[id] = '正在获取题目信息...'
+      
+      // Switch to Markdown mode
+      this.editingChapter.contentType = 'markdown'
+      this.editingChapter.content = '正在生成解题教案中，请稍候...'
+      this.updateChapterInTree(id, { contentType: 'markdown' })
+
+      try {
+        // 1. Fetch problem details
+        let docId = firstProblemId
+        let domainId = 'system'
+        if (firstProblemId.includes(':')) {
+            [domainId, docId] = firstProblemId.split(':')
+        }
+        
+        const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
+        const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
+        
+        if (!doc) throw new Error('未找到该题目')
+
+        // Auto-update chapter title
+        if (doc.title && this.editingChapter.title !== doc.title) {
+            this.editingChapter.title = doc.title
+            await this.saveChapter()
+        }
+
+        // 1.5 Fetch User's Best Submission
+        let userCode = ''
+        try {
+            const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
+            if (subRes && subRes.code) {
+                userCode = subRes.code
+                this.showToastMessage('已找到您的 AC 代码，将基于此生成教案')
+            }
+        } catch (e) {
+            console.warn('Failed to fetch submission', e)
+        }
+
+        // 2. Generate Plan (Background Mode)
+        this.aiStatusMap[id] = '正在提交后台生成任务...'
+        
+        await request.post('/api/solution-plan/background', {
+            problem: doc.content,
+            code: userCode,
+            chapterId: this.editingChapter.id,
+            topicId: this.editingTopicForChapter._id,
+            clientKey: id,
+            model: this.selectedModel
+        })
+        
+        this.aiStatusMap[id] = '正在后台生成教案中...'
+        this.showToastMessage('后台生成任务已提交！请耐心等待...')
+
+      } catch (e) {
+        this.showToastMessage('生成失败: ' + e.message)
+        this.aiLoadingMap[id] = false
+        this.aiStatusMap[id] = ''
+        this.editingChapter.content = '生成失败，请重试'
+      }
+    },
+
     async generateSolutionReport() {
       if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
       if (!confirm('确定要生成题解报告吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
+      // Check if we have a generated solution plan
+      let solutionPlan = ''
+      if (this.editingChapter.contentType === 'markdown' && this.editingChapter.content && this.editingChapter.content.length > 100) {
+          if (confirm('检测到当前章节已有 Markdown 内容（可能是解题教案）。是否基于该教案生成 PPT？\n点击“确定”基于教案生成（推荐），点击“取消”基于原始题目生成。')) {
+              solutionPlan = this.editingChapter.content
+          }
+      }
+
       // Get the first problem ID
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
@@ -1601,6 +1680,7 @@ export default {
             problem: problemText,
             code: userCode,
             reference: '',
+            solutionPlan: solutionPlan,
             level: this.editingLevelForChapter.level,
             topicTitle: this.editingTopicForChapter.title,
             chapterTitle: this.editingChapter.title,
