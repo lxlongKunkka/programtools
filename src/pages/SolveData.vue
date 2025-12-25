@@ -116,7 +116,7 @@
             </div>
             <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
             <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
-            <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
+            <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning || isGenerating === 'all' || isGeneratingReport" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">{{ isGeneratingReport ? '生成中...' : '生成解题报告' }}</button>
             <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
             <button @click="clearAll" :disabled="isBatchRunning" class="btn-clear">清空</button>
           </div>
@@ -153,9 +153,35 @@
       </div>
       
       <!-- 生成进度状态显示 -->
-      <div v-if="generationStatus" class="generation-status-bar" style="background:#e6f7ff; border:1px solid #91d5ff; padding:8px 12px; margin-bottom:8px; border-radius:4px; color:#0050b3; font-size:14px; display:flex; align-items:center;">
-        <span class="loading-spinner" v-if="isGenerating || isTranslating || isGeneratingReport || isGeneratingTitle" style="margin-right:8px;">⏳</span>
-        {{ generationStatus }}
+      <div v-if="generationStatus || showStepIndicators" class="generation-status-bar" style="background:#e6f7ff; border:1px solid #91d5ff; padding:8px 12px; margin-bottom:8px; border-radius:4px; color:#0050b3; font-size:14px; display:flex; flex-direction:column; gap:8px;">
+        <div v-if="generationStatus" style="display:flex; align-items:center;">
+            <span class="loading-spinner" v-if="isGenerating || isTranslating || isGeneratingReport || isGeneratingTitle" style="margin-right:8px;">⏳</span>
+            {{ generationStatus }}
+        </div>
+        
+        <!-- 5步进度指示器 -->
+        <div v-if="showStepIndicators" class="generation-steps">
+           <div class="step-item" :class="generationSteps.translate">
+              <div class="step-dot"></div>
+              <span>翻译</span>
+           </div>
+           <div class="step-item" :class="generationSteps.solution">
+              <div class="step-dot"></div>
+              <span>题解</span>
+           </div>
+           <div class="step-item" :class="generationSteps.report">
+              <div class="step-dot"></div>
+              <span>报告</span>
+           </div>
+           <div class="step-item" :class="generationSteps.data">
+              <div class="step-dot"></div>
+              <span>数据</span>
+           </div>
+           <div class="step-item" :class="generationSteps.meta">
+              <div class="step-dot"></div>
+              <span>元数据</span>
+           </div>
+        </div>
       </div>
 
       <div class="output-tabs">
@@ -214,7 +240,7 @@
             <button @click="downloadReport" :disabled="!reportHtml" class="btn-small" style="float:right; margin-right:8px;">💾 下载</button>
           </div>
           <div v-if="reportHtml" class="report-preview" style="height: 100%; width: 100%;">
-            <iframe :srcdoc="reportHtml" style="width:100%; height:100%; border:none;"></iframe>
+            <iframe :srcdoc="reportHtml" style="width:100%; height:100%; border:none;" :style="{ 'pointer-events': isDragging ? 'none' : 'auto' }"></iframe>
           </div>
           <div v-else class="translation-preview-empty">暂无解题报告，请点击右上角生成</div>
         </div>
@@ -254,6 +280,7 @@ export default {
       referenceText: '',
       isTranslating: false,
       translationText: '',
+      isTranslationStale: false, // 标记翻译是否过期
       problemMeta: null,
       reportHtml: '',
       
@@ -264,6 +291,17 @@ export default {
       showBatchImport: false,
       batchImportText: '',
       currentTaskIndex: 0,
+      
+      // 进度条状态
+      showStepIndicators: false,
+      generationSteps: {
+        translate: 'pending', // pending, processing, success, failed
+        solution: 'pending',
+        report: 'pending',
+        data: 'pending',
+        meta: 'pending'
+      },
+      
       tasks: [
         {
           id: Date.now(),
@@ -300,6 +338,10 @@ export default {
       this.updateCurrentTask('problemText', val)
       if (!val || !val.trim()) {
         this.problemMeta = null
+      } else {
+        // 如果题目内容发生变化，标记翻译为过期
+        // 这样下次点击"一键生成"时，会重新触发翻译
+        this.isTranslationStale = true
       }
     },
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
@@ -321,16 +363,23 @@ export default {
   },
   computed: {
     displayCode() {
+      if (this.codeOutput && this.codeOutput.trim()) {
+        // 移除 <!-- AC_CODE --> 标记，避免在界面上显示
+        return this.codeOutput.replace(/<!--\s*AC_CODE\s*-->/g, '')
+      }
       if (this.manualCode && this.manualCode.trim()) {
         return '```\n' + this.manualCode + '\n```'
       }
-      return this.codeOutput
+      return ''
     },
     pureAcCode() {
+      if (this.codeOutput && this.codeOutput.trim()) {
+        return this.extractPureCode(this.codeOutput)
+      }
       if (this.manualCode && this.manualCode.trim()) {
         return this.manualCode.trim()
       }
-      return this.extractPureCode(this.codeOutput)
+      return ''
     },
     formattedPureCode() {
       const lang = this.language === 'C++' ? 'cpp' : 'python'
@@ -370,6 +419,8 @@ export default {
     extractPureCode(content) {
       if (!content) return ''
       
+      let code = ''
+      
       // 顶级优先：寻找 <!-- AC_CODE --> 标记
       const markerIndex = content.indexOf('<!-- AC_CODE -->')
       if (markerIndex !== -1) {
@@ -383,58 +434,257 @@ export default {
          for (const pattern of codePatterns) {
             const match = afterMarker.match(pattern)
             if (match && match[1]) {
-                let code = match[1].trim()
-                return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                code = match[1].trim()
+                break
             }
          }
       }
 
-      // 其次：优先寻找 "代码实现" 部分后的代码块
-      const codeSectionIndex = content.indexOf('## 代码实现')
-      if (codeSectionIndex !== -1) {
-         const afterSection = content.substring(codeSectionIndex)
-         const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-            /```(?:python|py)\s*\n([\s\S]*?)```/i,
-            /```java\s*\n([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
-         ]
-         for (const pattern of codePatterns) {
-            const match = afterSection.match(pattern)
-            if (match && match[1]) {
-                let code = match[1].trim()
-                return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-            }
-         }
+      if (!code) {
+          // 其次：优先寻找 "代码实现" 部分后的代码块
+          const codeSectionIndex = content.indexOf('## 代码实现')
+          if (codeSectionIndex !== -1) {
+             const afterSection = content.substring(codeSectionIndex)
+             const codePatterns = [
+                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                /```java\s*\n([\s\S]*?)```/i,
+                /```\s*\n([\s\S]*?)```/
+             ]
+             for (const pattern of codePatterns) {
+                const match = afterSection.match(pattern)
+                if (match && match[1]) {
+                    code = match[1].trim()
+                    break
+                }
+             }
+          }
       }
       
-      // 兜底：通用匹配
-      const codePatterns = [
-        /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-        /```cpp([\s\S]*?)```/i,
-        /```c\+\+([\s\S]*?)```/i,
-        /```(?:python|py)\s*\n([\s\S]*?)```/i,
-        /```python([\s\S]*?)```/i,
-        /```py([\s\S]*?)```/i,
-        /```java\s*\n([\s\S]*?)```/i,
-        /```java([\s\S]*?)```/i,
-        /```\s*\n([\s\S]*?)```/
-      ]
-      
-      for (const pattern of codePatterns) {
-        const match = content.match(pattern)
-        if (match && match[1]) {
-          let code = match[1].trim()
-          return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-        }
+      if (!code) {
+          // 兜底：通用匹配
+          const codePatterns = [
+            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+            /```cpp([\s\S]*?)```/i,
+            /```c\+\+([\s\S]*?)```/i,
+            /```(?:python|py)\s*\n([\s\S]*?)```/i,
+            /```python([\s\S]*?)```/i,
+            /```py([\s\S]*?)```/i,
+            /```java\s*\n([\s\S]*?)```/i,
+            /```java([\s\S]*?)```/i,
+            /```\s*\n([\s\S]*?)```/
+          ]
+          
+          for (const pattern of codePatterns) {
+            const match = content.match(pattern)
+            if (match && match[1]) {
+              code = match[1].trim()
+              break
+            }
+          }
       }
       
       // 如果没有 Markdown 标记且不为空，视为纯代码
-      if (content.trim() && !content.includes('```')) {
-         return content.trim()
+      if (!code && content.trim() && !content.includes('```')) {
+         code = content.trim()
+      }
+      
+      // 统一清理逻辑
+      if (code) {
+          // 移除 <!-- AC_CODE -->
+          code = code.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
+          // 移除开头的语言标识 (如果提取时没处理干净)
+          code = code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+          return code
       }
       
       return ''
+    },
+
+    cleanDataOutput(content) {
+        if (!content) return ''
+        // 移除 <!-- AC_CODE -->
+        let cleaned = content.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
+        
+        // 检查是否是 Markdown 代码块
+        if (cleaned.startsWith('```')) {
+            const firstLineEnd = cleaned.indexOf('\n');
+            if (firstLineEnd !== -1) {
+                const firstLine = cleaned.substring(0, firstLineEnd).trim(); // e.g. ```python
+                let rest = cleaned.substring(firstLineEnd + 1);
+                
+                // 检查代码块内容的第一行是否是多余的语言标识
+                // 匹配: 可能的空白 + python/py + 换行
+                if (/^\s*(python|py)\s*\n/i.test(rest)) {
+                    rest = rest.replace(/^\s*(python|py)\s*\n/i, '');
+                    return firstLine + '\n' + rest;
+                }
+            }
+        } else {
+            // 纯文本情况，或者前面有多余的文本
+            if (/^\s*(python|py)\s*\n/i.test(cleaned)) {
+                cleaned = cleaned.replace(/^\s*(python|py)\s*\n/i, '');
+            }
+        }
+        
+        return cleaned
+    },
+
+    // --- 统一的辅助函数 ---
+
+    // 智能获取标题
+    getSmartTitle(meta, text, id) {
+      let title = `task_${id}`
+      if (meta && meta.title && meta.title !== '题目标题') {
+        title = meta.title
+      } else {
+        const src = (text || '').trim()
+        const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
+        const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍|题目标题)/
+        const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
+        
+        for (let j = 0; j < lines.length; j++) {
+          const m = lines[j].match(/^#{1,3}\s*(.+)$/)
+          if (m) {
+            const t = stripMd(m[1]).trim()
+            if (t && !badKeywords.test(t)) { title = t; break; }
+          }
+        }
+        if (title === `task_${id}`) {
+            for (let j = 0; j < lines.length; j++) {
+              const t = stripMd(lines[j]).trim()
+              if (!t) continue
+              if (/^(输入|输出|数据范围|样例|说明)/.test(t)) continue
+              if (badKeywords.test(t)) continue
+              const cleaned = t.replace(/^[-*\s]+/, '')
+              if (cleaned) { title = cleaned; break; }
+            }
+        }
+      }
+      return title.replace(/[\\/:*?"<>|]/g, '_').trim() || `task_${id}`
+    },
+
+    // 获取最佳代码内容 (整合了 manualCode 的启发式检测)
+    getBestCodeContent(codeOutput, manualCode) {
+      // 1. 优先使用 codeOutput
+      if (codeOutput && codeOutput.trim()) {
+        // 尝试提取纯代码
+        const extracted = this.extractPureCode(codeOutput)
+        if (extracted) return extracted
+        // 如果提取失败但有内容，可能就是纯代码
+        return codeOutput
+      }
+
+      // 2. 使用 manualCode
+      if (manualCode && manualCode.trim()) {
+        const manualContent = manualCode.trim()
+        
+        // 如果包含 markdown，尝试提取
+        if (manualContent.includes('```')) {
+           const extracted = this.extractPureCode(manualContent)
+           if (extracted) return extracted
+        }
+
+        // 启发式检测是否为纯代码
+        const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
+        const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答']
+        const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
+        
+        let looksLikeCode = false
+        if (hasTextKeywords) {
+            looksLikeCode = false
+        } else if (strongCodeStart.test(manualContent)) {
+            looksLikeCode = true
+        } else {
+            const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
+            const lineCount = manualContent.split('\n').length
+            if (symbolCount / lineCount > 0.8) {
+               looksLikeCode = true
+            }
+        }
+        
+        if (looksLikeCode) {
+           return manualContent
+        }
+        
+        // 最后的尝试：如果 manualCode 不像代码，但也没有其他选择，还是尝试提取一下
+        const extracted = this.extractPureCode(manualContent)
+        if (extracted) return extracted
+      }
+      
+      return ''
+    },
+
+    // 处理数据生成脚本
+    processDataScript(scriptContent, language) {
+      if (!scriptContent) return ''
+      
+      let script = ''
+      // 提取脚本
+      const scriptPatterns = [
+        /```python\s*\n([\s\S]*?)```/i,
+        /```python([\s\S]*?)```/i,
+        /```py\s*\n([\s\S]*?)```/i,
+        /```py([\s\S]*?)```/i,
+        /```\s*\n([\s\S]*?)```/
+      ]
+      
+      for (const pattern of scriptPatterns) {
+        const match = scriptContent.match(pattern)
+        if (match && match[1]) {
+          script = match[1].trim()
+          script = script.replace(/^(?:python|py)\s+/i, '')
+          script = script.replace(/^#!\/usr\/bin\/env python[0-9]?\s*\n/, '')
+          break
+        }
+      }
+      
+      // 如果没匹配到 markdown，假设整体就是脚本
+      if (!script && scriptContent.trim()) {
+         script = scriptContent.trim()
+      }
+
+      // 清理 Markdown 说明
+      if (script) {
+        const lines = script.split('\n')
+        let cleanedLines = []
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('#') && !trimmed.startsWith('"""') && !trimmed.startsWith("'''")) {
+            if (/^##\s+/.test(trimmed) || /^\*\*说明[：:]\*\*/.test(trimmed)) {
+              break
+            }
+          }
+          cleanedLines.push(line)
+        }
+        script = cleanedLines.join('\n').trim()
+      }
+      
+      // 替换路径和命令
+      let modifiedScript = script.replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
+      
+      if (language === 'C++') {
+        modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('std.exe')`)
+      } else if (language === 'Python') {
+        modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('python std.py')`)
+      } else if (language === 'Java') {
+        modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('java Main')`)
+      }
+      
+      return modifiedScript
+    },
+
+    // 检测语言
+    detectLanguage(codeOutput) {
+        if (!codeOutput) return { ext: 'cpp', lang: 'C++' }
+        if (codeOutput.includes('```python') || codeOutput.includes('```py')) {
+            return { ext: 'py', lang: 'Python' }
+        }
+        if (codeOutput.includes('```java')) {
+            return { ext: 'java', lang: 'Java' }
+        }
+        return { ext: 'cpp', lang: 'C++' }
     },
 
     // --- 批量模式方法 ---
@@ -576,13 +826,9 @@ export default {
              await this.generateReportForBatch(i)
           } else {
              // 标准模式：生成代码、数据、翻译
+             // generateAll 内部会根据 batchMode 决定是否生成报告，所以这里不需要再次调用
              const success = await this.generateAll()
              if (!success) throw new Error('Generation failed')
-             
-             // 如果选择了包含报告
-             if (this.batchMode === 'code_data_report') {
-                await this.generateReportForBatch(i)
-             }
           }
           
           this.tasks[i].status = 'completed'
@@ -656,249 +902,26 @@ export default {
         for (let i = 0; i < completedTasks.length; i++) {
           const task = completedTasks[i]
           // 智能提取标题
-          let title = `task_${task.id}`
-          if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') {
-            title = task.problemMeta.title
-          } else {
-            // 尝试从文本中提取标题 (类似 generateProblemYaml 的逻辑)
-            const src = (task.translationText || task.problemText || '').trim()
-            const lines = src.split('\n').map(s => s.trim()).filter(Boolean)
-            const badKeywords = /(题目背景|题面背景|题目描述|题面描述|背景|说明|介绍|题目标题)/
-            const stripMd = (s) => s.replace(/^#{1,6}\s*/, '')
-            
-            for (let j = 0; j < lines.length; j++) {
-              const m = lines[j].match(/^#{1,3}\s*(.+)$/)
-              if (m) {
-                const t = stripMd(m[1]).trim()
-                if (t && !badKeywords.test(t)) { title = t; break; }
-              }
-            }
-            if (title === `task_${task.id}`) {
-                for (let j = 0; j < lines.length; j++) {
-                  const t = stripMd(lines[j]).trim()
-                  if (!t) continue
-                  if (/^(输入|输出|数据范围|样例|说明)/.test(t)) continue
-                  if (badKeywords.test(t)) continue
-                  const cleaned = t.replace(/^[-*\s]+/, '')
-                  if (cleaned) { title = cleaned; break; }
-                }
-            }
-          }
+          const title = this.getSmartTitle(task.problemMeta, task.translationText || task.problemText, task.id)
           
-          const safeTitle = title.replace(/[\\/:*?"<>|]/g, '_').trim() || `task_${task.id}`
           // 添加序号前缀 (01, 02, ...)
           const prefix = String(i + 1).padStart(2, '0')
-          const folderName = `${prefix}_${safeTitle}`
+          const folderName = `${prefix}_${title}`
           const folder = masterZip.folder(folderName)
           
-          // 1. 添加代码
-          let ext = 'cpp' // 默认
-          let lang = 'C++'
+          // 1. 提取代码
+          // 简单的语言检测 (优先检查 codeOutput 中的标记)
+          const { ext, lang } = this.detectLanguage(task.codeOutput)
           
-          // 简单的语言检测
-          if (task.codeOutput && (task.codeOutput.includes('```python') || task.codeOutput.includes('```py'))) {
-             ext = 'py'; lang = 'Python';
-          } else if (task.codeOutput && task.codeOutput.includes('```java')) {
-             ext = 'java'; lang = 'Java';
-          }
-          
-          // 提取纯代码
-          // 逻辑修正：优先使用 codeOutput (AI生成或已确认的手动代码)
-          // 只有当 codeOutput 为空时，才尝试检测 manualCode 是否为纯代码
-          
-          let contentToSave = ''
-          let sourceForCode = ''
-          let isRawManualCode = false
-          
-          if (task.codeOutput && task.codeOutput.trim()) {
-             sourceForCode = task.codeOutput
-          } else if (task.manualCode && task.manualCode.trim()) {
-             // 再次检测 manualCode 是否为代码 (复用 generateAll 的启发式逻辑)
-             const manualContent = task.manualCode.trim()
-             let looksLikeCode = false
-             
-             const hasMarkdown = manualContent.includes('```')
-             const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
-             // 增加日语关键词支持
-             const textKeywords = ['思路', '解法', '复杂度', '算法', 'Solution', 'Approach', 'Complexity', '首先', '然后', '考え方', '説明', 'コード', '回答']
-             const hasTextKeywords = textKeywords.some(k => manualContent.includes(k))
-             
-             if (hasMarkdown) {
-                 // 包含 Markdown，作为源文本尝试提取
-                 sourceForCode = manualContent
-             } else {
-                 // 不含 Markdown，检查是否为纯代码
-                 if (hasTextKeywords) {
-                     looksLikeCode = false
-                 } else if (strongCodeStart.test(manualContent)) {
-                     looksLikeCode = true
-                 } else {
-                     const symbolCount = (manualContent.match(/[;{}=\[\]]/g) || []).length
-                     const lineCount = manualContent.split('\n').length
-                     if (symbolCount / lineCount > 0.8) {
-                        looksLikeCode = true
-                     }
-                 }
-                 
-                 if (looksLikeCode) {
-                    sourceForCode = manualContent
-                    isRawManualCode = true
-                 }
-             }
-          }
-          
-          // 尝试提取代码块
-          let extractedCode = ''
-          
-          // 顶级优先：寻找 <!-- AC_CODE --> 标记
-          const markerIndex = sourceForCode.indexOf('<!-- AC_CODE -->')
-          if (markerIndex !== -1) {
-             const afterMarker = sourceForCode.substring(markerIndex)
-             const codePatterns = [
-                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                /```java\s*\n([\s\S]*?)```/i,
-                /```\s*\n([\s\S]*?)```/
-             ]
-             for (const pattern of codePatterns) {
-                const match = afterMarker.match(pattern)
-                if (match && match[1]) {
-                    extractedCode = match[1].trim()
-                    extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                    break
-                }
-             }
-          }
-
-          // 其次：优先寻找 "代码实现" 部分后的代码块 (针对完整题解 Markdown)
-          if (!extractedCode) {
-            const codeSectionIndex = sourceForCode.indexOf('## 代码实现')
-            if (codeSectionIndex !== -1) {
-               const afterSection = sourceForCode.substring(codeSectionIndex)
-               const codePatterns = [
-                  /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                  /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                  /```java\s*\n([\s\S]*?)```/i,
-                  /```\s*\n([\s\S]*?)```/
-               ]
-               for (const pattern of codePatterns) {
-                  const match = afterSection.match(pattern)
-                  if (match && match[1]) {
-                      extractedCode = match[1].trim()
-                      extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                      break
-                  }
-               }
-            }
-          }
-          
-          if (!extractedCode) {
-              const codePatterns = [
-                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                /```cpp([\s\S]*?)```/i,
-                /```c\+\+([\s\S]*?)```/i,
-                /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                /```python([\s\S]*?)```/i,
-                /```py([\s\S]*?)```/i,
-                /```java\s*\n([\s\S]*?)```/i,
-                /```java([\s\S]*?)```/i,
-                /```\s*\n([\s\S]*?)```/
-              ]
-                 
-              for (const pattern of codePatterns) {
-                const match = sourceForCode.match(pattern)
-                if (match && match[1]) {
-                    extractedCode = match[1].trim()
-                    // 移除可能残留的语言标识符
-                    extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                    break
-                }
-              }
-          }
-             
-          if (extractedCode) {
-            contentToSave = extractedCode
-          } else {
-            // 如果没提取到代码块，且被判定为纯代码
-            if (isRawManualCode) {
-                contentToSave = sourceForCode
-            } else {
-                // 兜底1：尝试通用匹配
-                const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
-                const matches = [...sourceForCode.matchAll(codeBlockRegex)]
-                if (matches.length > 0) {
-                    contentToSave = matches[0][1].trim()
-                } else {
-                    // 兜底2：如果 sourceForCode 不为空，且包含明显的代码特征，直接保存
-                    // 这可以处理 AI 生成了代码但忘记加 Markdown 标记的情况
-                    const strongCodeStart = /^\s*(#include|package|import|using|public\s+class|class\s+\w+|def\s+\w+)/m
-                    if (sourceForCode && strongCodeStart.test(sourceForCode)) {
-                        contentToSave = sourceForCode.trim()
-                    }
-                }
-            }
-          }
+          const contentToSave = this.getBestCodeContent(task.codeOutput, task.manualCode)
           
           const stdFileName = lang === 'Java' ? 'Main.java' : `std.${ext}`
           folder.file(stdFileName, contentToSave, zipOptions)
           
           // 2. 添加数据生成脚本
-          let script = task.dataOutput || ''
-          
-          // 使用与 runAndDownload 相同的健壮提取逻辑
-          const scriptPatterns = [
-            /```python\s*\n([\s\S]*?)```/i,
-            /```python([\s\S]*?)```/i,
-            /```py\s*\n([\s\S]*?)```/i,
-            /```py([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
-          ]
-          
-          let extractedScript = ''
-          for (const pattern of scriptPatterns) {
-            const match = script.match(pattern)
-            if (match && match[1]) {
-              extractedScript = match[1].trim()
-              extractedScript = extractedScript.replace(/^(?:python|py)\s+/i, '')
-              extractedScript = extractedScript.replace(/^#!\/usr\/bin\/env python[0-9]?\s*\n/, '')
-              break
-            }
-          }
-          
-          if (extractedScript) {
-             script = extractedScript
-          }
-          
-          // 额外清理 Markdown 伪代码
+          const script = this.processDataScript(task.dataOutput, lang)
           if (script) {
-            const lines = script.split('\n')
-            let cleanedLines = []
-            for (let i = 0; i < lines.length; i++) {
-              const line = lines[i]
-              const trimmed = line.trim()
-              if (!trimmed.startsWith('#') && !trimmed.startsWith('"""') && !trimmed.startsWith("'''")) {
-                if (/^##\s+/.test(trimmed) || /^\*\*说明[：:]\*\*/.test(trimmed)) {
-                  break
-                }
-              }
-              cleanedLines.push(line)
-            }
-            script = cleanedLines.join('\n').trim()
-          }
-          
-          // 修改脚本中的 file_prefix 和 output_gen
-          let modifiedScript = script.replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
-          
-          if (lang === 'C++') {
-            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('std.exe')`)
-          } else if (lang === 'Python') {
-            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('python std.py')`)
-          } else if (lang === 'Java') {
-            modifiedScript = modifiedScript.replace(/output_gen\s*\(\s*['"].*?['"]\s*\)/g, `output_gen('java Main')`)
-          }
-          
-          if (modifiedScript && modifiedScript.trim()) {
-            folder.file('data_generator.py', modifiedScript, zipOptions)
+            folder.file('data_generator.py', script, zipOptions)
           }
           
           // 3. 添加题目描述
@@ -907,7 +930,7 @@ export default {
           
           // 4. 添加解题报告
           if (task.reportHtml) {
-            const reportName = `${safeTitle}.html`
+            const reportName = `${title}.html`
             folder.file(reportName, task.reportHtml, zipOptions)
           }
           
@@ -1057,7 +1080,8 @@ pause
       }
     },
 
-    startResize() {
+    startResize(e) {
+      if (e) e.preventDefault()
       this.isDragging = true
       document.addEventListener('mousemove', this.onMouseMove)
       document.addEventListener('mouseup', this.stopResize)
@@ -1067,9 +1091,31 @@ pause
       if (!this.isDragging) return
       const container = this.$el.querySelector('.main-layout')
       if (!container) return
+      
+      // 获取容器的样式以计算 padding
+      const style = window.getComputedStyle(container)
+      const paddingLeft = parseFloat(style.paddingLeft) || 0
+      const paddingRight = parseFloat(style.paddingRight) || 0
+      
       const rect = container.getBoundingClientRect()
-      const newWidth = ((e.clientX - rect.left) / rect.width) * 100
-      if (newWidth > 20 && newWidth < 80) {
+      const contentWidth = rect.width - paddingLeft - paddingRight
+      
+      let sidebarWidth = 0
+      if (this.isBatchMode) {
+        const sidebar = this.$el.querySelector('.batch-sidebar')
+        if (sidebar) sidebarWidth = sidebar.offsetWidth
+      }
+      
+      // 计算相对于内容区域的鼠标位置
+      const mouseX = e.clientX - rect.left - paddingLeft
+      
+      // 计算新的百分比宽度
+      const newWidth = ((mouseX - sidebarWidth) / contentWidth) * 100
+      
+      // 动态计算最大宽度，保留右侧至少 200px 或 15%
+      // 这里的 newWidth 是 input-panel 的宽度百分比
+      
+      if (newWidth > 15 && newWidth < 85) {
         this.leftWidth = newWidth
       }
     },
@@ -1122,6 +1168,9 @@ pause
                 this.generationStatus = '✅ 翻译完成'
                 setTimeout(() => { if(this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
             }
+            
+            // 翻译成功，标记为不过期
+            this.isTranslationStale = false
           } catch (e) {
             this.translationText = '请求错误: ' + e.message;
             this.generationStatus = '❌ 翻译失败: ' + e.message
@@ -1178,7 +1227,7 @@ pause
         
         // 如果 manualCode 存在，将其作为参考代码加入 Prompt
         if (this.manualCode && this.manualCode.trim()) {
-             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${this.manualCode.trim()}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。`
+             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${this.manualCode.trim()}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。请注意：\n1. 即使提供了参考代码，也请你重新生成一份风格优良、注释详细的标准 AC 代码，不要直接复制参考代码。\n2. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等）。\n3. 请优化代码风格，确保变量命名规范、逻辑清晰。`
         }
         
         // 如果 referenceText 存在，则将其加入 Prompt
@@ -1241,6 +1290,18 @@ pause
       this.isGenerating = 'all'
       this.generationStatus = '正在初始化生成任务...'
       this.dataOutput = ''
+      this.reportHtml = '' // 清空旧的解题报告
+      this.showStepIndicators = true
+      
+      // 重置所有步骤状态
+      this.generationSteps = {
+        translate: 'pending',
+        solution: 'pending',
+        report: 'pending',
+        data: 'pending',
+        meta: 'pending'
+      }
+      
       // 注意：这里不清空 translationText，因为如果已经有了就不需要重新生成
       // this.translationText = '' 
       
@@ -1251,43 +1312,86 @@ pause
       this.activeTab = 'code'
       
       try {
-        // 1. 如果没有翻译，先执行翻译
-        if (!(this.translationText && this.translationText.trim())) {
-          this.generationStatus = '正在自动翻译题目描述...'
-          await this.autoTranslate()
+        // 1. 准备翻译任务 (如果需要，并行执行)
+        let translationPromise = Promise.resolve()
+        if (!(this.translationText && this.translationText.trim()) || this.isTranslationStale) {
+          this.generationSteps.translate = 'processing'
+          translationPromise = this.autoTranslate().then(() => {
+            this.generationSteps.translate = 'success'
+          }).catch(() => {
+            this.generationSteps.translate = 'failed'
+          })
+        } else {
+          this.generationSteps.translate = 'success' // 已经有翻译了
         }
         
-        // 2. 先生成题解 (串行，为了拿到代码)
-        this.generationStatus = '正在生成题解代码...'
+        // 2. 并行生成题解 (不依赖翻译结果，使用原始内容)
+        this.generationStatus = '正在并行生成：翻译 + 题解代码...'
+        this.generationSteps.solution = 'processing'
+        
         let promptText = this.problemText
         
         if (manualContent) {
-             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。`
+             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。请注意：\n1. 即使提供了参考代码，也请你重新生成一份风格优良、注释详细的标准 AC 代码，不要直接复制参考代码。\n2. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等）。\n3. 请优化代码风格，确保变量命名规范、逻辑清晰。`
         }
         
         if (this.referenceText && this.referenceText.trim()) {
           promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写详细的解题教案。`
         }
         
-        const solutionRes = await request('/api/solution', {
+        const solutionPromise = request('/api/solution', {
             method: 'POST',
             body: JSON.stringify({
               text: promptText,
               model: this.selectedModel,
               language: this.language
             })
+        }).then(res => {
+            this.generationSteps.solution = 'success'
+            return res
+        }).catch(err => {
+            this.generationSteps.solution = 'failed'
+            throw err
         })
+        
+        // 等待题解完成 (这是后续步骤的核心依赖)
+        const solutionRes = await solutionPromise
         
         // 处理题解结果
         if (solutionRes && solutionRes.result) {
             this.codeOutput = solutionRes.result
-            // 自动生成报告预览
-            this.generateReportInline()
+            
+            // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
+            if (this.isTranslating) {
+                this.generationStatus = '题解就绪，正在等待翻译完成...'
+                await translationPromise
+            }
+        } else {
+            // 如果题解失败，也要确保翻译完成，以免状态错乱
+            if (this.isTranslating) await translationPromise
         }
         
-        // 3. 准备并行请求：数据生成 + 元数据生成
-        this.generationStatus = '题解生成完毕，正在并行生成数据脚本和元数据...'
+        // 3. 准备并行请求：报告 + 数据生成 + 元数据生成
+        this.generationStatus = '正在并行生成：解题报告 + 数据脚本 + 元数据...'
         let parallelRequests = []
+
+        // 3a. 解题报告
+        // 如果不是批量模式，或者批量模式下选择了包含报告，且有代码输出，则生成
+        const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && this.codeOutput
+        
+        if (shouldGenerateReport) {
+            this.generationSteps.report = 'processing'
+            // 并行执行报告生成
+            parallelRequests.push(
+                this.generateReportInline().then(() => {
+                    this.generationSteps.report = 'success'
+                }).catch(() => {
+                    this.generationSteps.report = 'failed'
+                })
+            )
+        } else {
+            this.generationSteps.report = 'success' // 不需要生成，视为成功
+        }
         
         // 3a. 数据生成 (使用提取的代码)
         let codeForData = ''
@@ -1297,6 +1401,7 @@ pause
             codeForData = this.extractPureCode(this.codeOutput)
         }
         
+        this.generationSteps.data = 'processing'
         parallelRequests.push(
           request('/api/generate-data', {
             method: 'POST',
@@ -1305,52 +1410,94 @@ pause
               model: this.selectedModel,
               code: codeForData
             })
-          }).then(res => ({ type: 'data', data: res }))
+          }).then(res => {
+              this.generationSteps.data = 'success'
+              // 立即更新数据脚本显示
+              if (res && res.result) {
+                  this.dataOutput = this.cleanDataOutput(res.result)
+              }
+              return { type: 'data', data: res }
+          }).catch(() => {
+              this.generationSteps.data = 'failed'
+              return { type: 'data', error: true }
+          })
         )
         
         // 3b. 元数据生成
-        if (!this.problemMeta || !this.problemMeta.title) {
-           parallelRequests.push(
-            request('/api/generate-problem-meta', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
-                model: this.selectedModel
+        // 只有当 problemMeta 为空，或者 title 为空时才生成
+        const shouldGenerateMeta = !this.problemMeta || !this.problemMeta.title || this.problemMeta.title === '题目标题'
+        if (shouldGenerateMeta) {
+            this.generationSteps.meta = 'processing'
+            parallelRequests.push(
+              request('/api/generate-problem-meta', {
+                method: 'POST',
+                body: JSON.stringify({
+                  text: this.translationText || this.problemText, // 优先使用翻译后的文本
+                  solution: this.codeOutput,
+                  model: this.selectedModel
+                })
+              }).then(res => {
+                  this.generationSteps.meta = 'success'
+                  // 立即更新元数据
+                  if (res) {
+                      try {
+                          const meta = res
+                          if (!this.problemMeta.title || this.problemMeta.title === '题目标题') {
+                              this.problemMeta = { ...this.problemMeta, ...meta }
+                          } else {
+                              const { title, ...rest } = meta
+                              this.problemMeta = { ...this.problemMeta, ...rest }
+                          }
+                      } catch (e) { console.error('Meta update error', e) }
+                  }
+                  return { type: 'meta', data: res }
+              }).catch(() => {
+                  this.generationSteps.meta = 'failed'
+                  return { type: 'meta', error: true }
               })
-            }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
-           )
+            )
+        } else {
+            this.generationSteps.meta = 'success' // 不需要生成
         }
         
-        // 执行并行请求
+        // 等待所有并行任务完成
         const results = await Promise.all(parallelRequests)
+        console.log('Parallel generation results:', results)
         
         // 处理结果
-        results.forEach(result => {
-            if (result.type === 'data') {
-                if (result.data && result.data.result) {
-                    this.dataOutput = result.data.result
+        for (const res of results) {
+            if (!res) continue // 报告生成没有返回值，已经在内部处理了
+            if (typeof res !== 'object') continue
+            
+            if (res.type === 'data') {
+                if (res.data && res.data.result) {
+                    this.dataOutput = this.cleanDataOutput(res.data.result)
                 }
-            } else if (result.type === 'meta') {
-                if (result.data) {
-                    this.problemMeta = result.data
+            } else if (res.type === 'meta') {
+                // 修正：generate-problem-meta 直接返回对象 { title: "...", tags: [...] }
+                // 不需要 JSON.parse(res.data.result)
+                if (res.data) {
+                    try {
+                        const meta = res.data
+                        // 只有当现有标题为空或默认值时才覆盖
+                        if (!this.problemMeta.title || this.problemMeta.title === '题目标题') {
+                            this.problemMeta = { ...this.problemMeta, ...meta }
+                        } else {
+                            // 否则只合并其他字段
+                            const { title, ...rest } = meta
+                            this.problemMeta = { ...this.problemMeta, ...rest }
+                        }
+                    } catch (e) {
+                        console.error('解析元数据失败', e)
+                    }
                 }
             }
-        })
-        
-        // 检查是否有生成成功的内容
-        let hasContent = !!(this.codeOutput || this.dataOutput || this.translationText)
-        
-        if (hasContent) {
-          this.generationStatus = '✅ 全部生成完成！'
-          this.showToastMessage('✅ 全部生成完成！')
-          setTimeout(() => { if(this.generationStatus === '✅ 全部生成完成！') this.generationStatus = '' }, 5000)
-          return true
-        } else {
-          this.generationStatus = '❌ 生成失败'
-          this.showToastMessage('生成失败，请检查网络连接和后端服务')
-          return false
         }
-
+        
+        this.generationStatus = '全部生成完成！'
+        this.showToastMessage('一键生成全部完成')
+        return true
+        
       } catch (error) {
         console.error('Generate all failed:', error)
         this.generationStatus = '❌ 生成出错: ' + error.message
@@ -1414,6 +1561,7 @@ pause
               method: 'POST',
               body: JSON.stringify({
                 text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
+                solution: this.codeOutput,
                 model: this.selectedModel
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
@@ -1425,7 +1573,7 @@ pause
         for (const res of responses) {
            if (!res || !res.data) continue
            if (res.type === 'data' && res.data.result) {
-              this.dataOutput = res.data.result
+              this.dataOutput = this.cleanDataOutput(res.data.result)
            } else if (res.type === 'meta') {
               this.problemMeta = res.data
               console.log('题目元数据:', this.problemMeta)
@@ -1459,6 +1607,7 @@ pause
           method: 'POST',
           body: JSON.stringify({
             text: textToUse,
+            solution: this.codeOutput,
             model: this.selectedModel
           })
         })
@@ -1478,7 +1627,8 @@ pause
     },
     
     copyCode() {
-      const textToCopy = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
+      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
+      const textToCopy = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
       navigator.clipboard.writeText(textToCopy).then(() => {
         this.showToastMessage('✅ 已复制全部内容到剪贴板')
       })
@@ -1486,7 +1636,8 @@ pause
     
     copyPureCode() {
       // 提取纯代码，去除 Markdown 格式和文字说明
-      const content = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
+      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
+      const content = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
       if (!content) return
       
       // 匹配所有代码块，支持多种格式
@@ -1551,7 +1702,8 @@ pause
     
     saveCode() {
       const extension = this.language === 'C++' ? 'cpp' : this.language === 'Python' ? 'py' : 'java'
-      const contentToSave = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
+      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
+      const contentToSave = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
       const blob = new Blob([contentToSave], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1579,6 +1731,7 @@ pause
       this.referenceText = ''
       this.problemMeta = null
       this.translationText = ''
+      this.isTranslationStale = false
       this.reportHtml = ''
     },
 
@@ -1593,8 +1746,8 @@ pause
       this.activeTab = 'report'
       
       try {
-        // 优先使用 manualCode，否则使用 codeOutput
-        let codeContent = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput;
+        // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
+        let codeContent = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode;
         
         // 如果没有代码内容，先自动生成题解
         if (!codeContent) {
@@ -1717,10 +1870,16 @@ pause
         }
       } catch (e) {
         console.error('Generate report error:', e)
-        this.showToastMessage('生成报告失败: ' + e.message)
         this.generationStatus = '❌ 生成报告失败: ' + e.message
+        this.showToastMessage('生成报告失败: ' + e.message)
       } finally {
         this.isGeneratingReport = false
+        // 如果没有其他生成任务在运行，清除状态
+        if (!this.isGenerating && !this.isTranslating && !this.isGeneratingTitle) {
+             setTimeout(() => { 
+                 if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' 
+             }, 3000)
+        }
       }
     },
 
@@ -1758,8 +1917,8 @@ pause
     },
     
     async runAndDownload() {
-      // 优先使用 manualCode，否则使用 codeOutput
-      const hasCode = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput
+      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
+      const hasCode = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
       
       if (!hasCode || !this.dataOutput) {
         this.showToastMessage('请先生成代码和数据脚本')
@@ -1769,168 +1928,30 @@ pause
       this.isGenerating = 'run'
       
       try {
-        let stdCode = ''
-        let dataScript = ''
-        
         console.log('=== 开始提取代码 ===')
-        console.log('手动模式:', (this.manualCode && this.manualCode.trim()) ? 'true' : 'false')
-        console.log('manualCode 长度:', this.manualCode ? this.manualCode.length : 0)
-        console.log('codeOutput 长度:', this.codeOutput ? this.codeOutput.length : 0)
-        console.log('dataOutput 长度:', this.dataOutput.length)
-        console.log('dataOutput 前200字符:', this.dataOutput.substring(0, 200))
         
-        // 提取标准程序代码
-        // 优先使用 manualCode，否则使用 codeOutput
-        const useManualCode = this.manualCode && this.manualCode.trim() !== ''
+        // 1. 提取标准程序代码
+        const bestCodeContent = this.getBestCodeContent(this.codeOutput, this.manualCode)
         
-        if (useManualCode) {
-          // 手动输入模式：直接使用手动输入的代码
-          stdCode = this.manualCode.trim()
-          console.log('使用手动输入代码，长度:', stdCode.length)
-        } else {
-          // 自动生成模式：从 Markdown 中提取代码块
-          const sourceContent = this.codeOutput || ''
-          
-          // 顶级优先：寻找 <!-- AC_CODE --> 标记
-          const markerIndex = sourceContent.indexOf('<!-- AC_CODE -->')
-          if (markerIndex !== -1) {
-             const afterMarker = sourceContent.substring(markerIndex)
-             const codePatterns = [
-                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                /```java\s*\n([\s\S]*?)```/i,
-                /```\s*\n([\s\S]*?)```/
-             ]
-             for (const pattern of codePatterns) {
-                const match = afterMarker.match(pattern)
-                if (match && match[1]) {
-                    stdCode = match[1].trim()
-                    stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                    break
-                }
-             }
-          }
-
-          // 其次：优先寻找 "代码实现" 部分后的代码块 (针对完整题解 Markdown)
-          if (!stdCode) {
-            const codeSectionIndex = sourceContent.indexOf('## 代码实现')
-            if (codeSectionIndex !== -1) {
-               const afterSection = sourceContent.substring(codeSectionIndex)
-               const codePatterns = [
-                  /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                  /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                  /```java\s*\n([\s\S]*?)```/i,
-                  /```\s*\n([\s\S]*?)```/
-               ]
-               for (const pattern of codePatterns) {
-                  const match = afterSection.match(pattern)
-                  if (match && match[1]) {
-                      stdCode = match[1].trim()
-                      stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                      break
-                  }
-               }
-            }
-          }
-          
-          if (!stdCode) {
-              const codePatterns = [
-                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                /```cpp([\s\S]*?)```/i,
-                /```c\+\+([\s\S]*?)```/i,
-                /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                /```python([\s\S]*?)```/i,
-                /```py([\s\S]*?)```/i,
-                /```java\s*\n([\s\S]*?)```/i,
-                /```java([\s\S]*?)```/i,
-                /```\s*\n([\s\S]*?)```/
-              ]
-              
-              for (const pattern of codePatterns) {
-                const match = sourceContent.match(pattern)
-                if (match && match[1]) {
-                  stdCode = match[1].trim()
-                  stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                  break
-                }
-              }
-          }
-          
-          // 兜底逻辑：如果未提取到代码块，但内容不为空且不含 Markdown 标记，视为纯代码
-          if (!stdCode && sourceContent.trim() && !sourceContent.includes('```')) {
-             stdCode = sourceContent.trim()
-          }
-        }
+        // 尝试提取纯代码
+        let stdCode = this.extractPureCode(bestCodeContent)
+        if (!stdCode && bestCodeContent) stdCode = bestCodeContent
         
-        const scriptPatterns = [
-          /```python\s*\n([\s\S]*?)```/i,
-          /```python([\s\S]*?)```/i,
-          /```py\s*\n([\s\S]*?)```/i,
-          /```py([\s\S]*?)```/i,
-          /```\s*\n([\s\S]*?)```/
-        ]
-        
-        for (const pattern of scriptPatterns) {
-          const match = this.dataOutput.match(pattern)
-          if (match && match[1]) {
-            dataScript = match[1].trim()
-            console.log('匹配到脚本，长度:', dataScript.length)
-            console.log('脚本前100字符:', dataScript.substring(0, 100))
-            // 移除可能残留的 "python " 标识符
-            dataScript = dataScript.replace(/^(?:python|py)\s+/i, '')
-            // 移除 shebang 行
-            dataScript = dataScript.replace(/^#!\/usr\/bin\/env python[0-9]?\s*\n/, '')
-            console.log('清理后脚本前100字符:', dataScript.substring(0, 100))
-            break
-          }
-        }
-        
-        console.log('提取完成，脚本长度:', dataScript.length)
-        
-        // 额外清理：如果提取的脚本中包含 Markdown 说明文本，尝试智能清理
-        // 检查是否在代码中间出现了 Markdown 格式（通常在注释外）
-        if (dataScript) {
-          // 如果在字符串或注释外发现 Markdown 标记，说明可能混入了文档
-          const lines = dataScript.split('\n')
-          let cleanedLines = []
-          let inString = false
-          
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i]
-            const trimmed = line.trim()
-            
-            // 检测是否是明显的 Markdown 内容（不在注释或字符串中）
-            if (!trimmed.startsWith('#') && 
-                !trimmed.startsWith('"""') && 
-                !trimmed.startsWith("'''")) {
-              // 如果发现独立的 Markdown 标题或说明（## 或 **说明：**），停止收集
-              if (/^##\s+/.test(trimmed) || /^\*\*说明[：:]\*\*/.test(trimmed)) {
-                break
-              }
-            }
-            
-            cleanedLines.push(line)
-          }
-          
-          dataScript = cleanedLines.join('\n').trim()
-        }
+        // 2. 提取并处理数据脚本
+        // 使用当前选择的语言作为目标语言
+        const lang = this.language === 'C++' ? 'C++' : (this.language === 'Python' ? 'Python' : 'Java')
+        const dataScript = this.processDataScript(this.dataOutput, lang)
         
         if (!stdCode || !dataScript) {
           let errorMsg = '无法提取代码或脚本：\n'
-          if (!stdCode) errorMsg += useManualCode
-            ? '- 手动输入的代码为空\n' 
-            : '- 未找到有效的 AC 代码块\n'
+          if (!stdCode) errorMsg += '- 未找到有效的 AC 代码块\n'
           if (!dataScript) errorMsg += '- 未找到有效的 Python 脚本块\n'
           console.error('提取失败:', errorMsg)
-          console.log('stdCode:', stdCode)
-          console.log('dataScript 长度:', dataScript ? dataScript.length : 0)
           this.showToastMessage(errorMsg)
           return
         }
         
         console.log('✓ 代码提取成功')
-        console.log('stdCode 长度:', stdCode.length)
-        console.log('dataScript 长度:', dataScript.length)
         
         const JSZip = (await import('jszip')).default
         const zip = new JSZip()
@@ -1944,38 +1965,12 @@ pause
         const stdFileName = this.language === 'Java' ? 'Main.java' : `std.${extension}`
         zip.file(stdFileName, stdCode, zipOptions)
         
-        let modifiedScript = dataScript
-          .replace(/file_prefix\s*=\s*['"].*?['"]/g, `file_prefix='./testdata/data'`)
+        zip.file('data_generator.py', dataScript, zipOptions)
         
-        if (this.language === 'C++') {
-          modifiedScript = modifiedScript.replace(
-            /output_gen\s*\(\s*['"].*?['"]\s*\)/g,
-            `output_gen('std.exe')`
-          )
-        } else if (this.language === 'Python') {
-          modifiedScript = modifiedScript.replace(
-            /output_gen\s*\(\s*['"].*?['"]\s*\)/g,
-            `output_gen('python std.py')`
-          )
-        } else if (this.language === 'Java') {
-          modifiedScript = modifiedScript.replace(
-            /output_gen\s*\(\s*['"].*?['"]\s*\)/g,
-            `output_gen('java Main')`
-          )
-        }
-        
-        console.log('=== 修改后的脚本 ===')
-        console.log(modifiedScript)
-        console.log('脚本总长度:', modifiedScript.length)
-        console.log('脚本行数:', modifiedScript.split('\n').length)
-        
-        zip.file('data_generator.py', modifiedScript, zipOptions)
-        // 将 codeOutput 一并打包：作为 Markdown 保存，并尝试提取纯源码写入合适扩展名
+        // 将 codeOutput 一并打包：作为 Markdown 保存
         try {
           if (this.codeOutput && this.codeOutput.toString().trim()) {
-            // 写入原始 codeOutput Markdown（如果是 Markdown 则保留）
             zip.file('solution.md', this.codeOutput, zipOptions)
-
           }
         } catch (e) {
           console.warn('打包 codeOutput 时出错:', e)
@@ -1992,72 +1987,72 @@ pause
         const batScript = this.generateBatScript(this.language)
         zip.file('run.bat', batScript, zipOptions)
         
-        // 生成 problem.yaml 文件（始终生成，即使没有元数据也使用默认值）
+        // 生成 problem.yaml 文件
         console.log('当前 problemMeta:', this.problemMeta)
         const yamlContent = this.generateProblemYaml()
         zip.file('problem.yaml', yamlContent, zipOptions)
 
-                // 如果有翻译内容则一并打包
-                if (this.translationText && this.translationText.trim()) {
-                  zip.file('problem_zh.md', this.translationText, zipOptions)
-                } else if (this.problemText && this.problemText.trim()) {
-                  zip.file('problem_zh.md', this.problemText, zipOptions)
-                }
+        // 如果有翻译内容则一并打包
+        if (this.translationText && this.translationText.trim()) {
+          zip.file('problem_zh.md', this.translationText, zipOptions)
+        } else if (this.problemText && this.problemText.trim()) {
+          zip.file('problem_zh.md', this.problemText, zipOptions)
+        }
 
-                const blob = await zip.generateAsync({ type: 'blob' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                // 使用 problem.yaml 的标题作为下载名
-                const problemTitle = (() => {
-                  try {
-                    if (this.problemMeta && this.problemMeta.title) return this.problemMeta.title
-                    const src = (this.translationText || this.problemText || '').trim()
-                    const firstLine = src.split('\n')[0].trim()
-                    return firstLine || 'problem'
-                  } catch { return 'problem' }
-                })()
-                const zipName = `${problemTitle.replace(/[\\/:*?"<>|]/g, '_')}.zip`
-                a.download = zipName
-                a.click()
-                URL.revokeObjectURL(url)
+        // 智能获取标题
+        const problemTitle = this.getSmartTitle(this.problemMeta, this.translationText || this.problemText, 'problem')
 
-                // 静默发送邮件：将 zip 转为 base64 并调用后端
-                try {
-                  const base64 = await (async () => {
-                    const reader = new FileReader()
-                    const p = new Promise((resolve, reject) => {
-                      reader.onload = () => resolve(reader.result)
-                      reader.onerror = reject
-                    })
-                    reader.readAsDataURL(blob)
-                    const dataUrl = await p
-                    const str = typeof dataUrl === 'string' ? dataUrl : ''
-                    const commaIdx = str.indexOf(',')
-                    return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
-                  })()
+        // 如果有解题报告，打包进去
+        if (this.reportHtml) {
+            zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
+        }
 
-                  const filename = zipName
-                  const subject = `SolveData 项目包: ${problemTitle}`
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        
+        const zipName = `${problemTitle}.zip`
+        a.download = zipName
+        a.click()
+        URL.revokeObjectURL(url)
 
-                  fetch('/api/send-package', {
-                    method: 'POST',
-                    headers: { 
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-                    },
-                    body: JSON.stringify({ filename, contentBase64: base64, subject })
-                  })
-                  .then(async res => {
-                    if (!res.ok) {
-                      const err = await res.json();
-                      console.warn('邮件发送失败:', err);
-                    }
-                  })
-                  .catch(e => console.error('邮件请求错误:', e))
-                } catch (e) {
-                  console.error('邮件准备失败:', e);
-                }
+        // 静默发送邮件
+        try {
+          const base64 = await (async () => {
+            const reader = new FileReader()
+            const p = new Promise((resolve, reject) => {
+              reader.onload = () => resolve(reader.result)
+              reader.onerror = reject
+            })
+            reader.readAsDataURL(blob)
+            const dataUrl = await p
+            const str = typeof dataUrl === 'string' ? dataUrl : ''
+            const commaIdx = str.indexOf(',')
+            return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
+          })()
+
+          const filename = zipName
+          const subject = `SolveData 项目包: ${problemTitle}`
+
+          fetch('/api/send-package', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+            },
+            body: JSON.stringify({ filename, contentBase64: base64, subject })
+          })
+          .then(async res => {
+            if (!res.ok) {
+              const err = await res.json();
+              console.warn('邮件发送失败:', err);
+            }
+          })
+          .catch(e => console.error('邮件请求错误:', e))
+        } catch (e) {
+          console.error('邮件准备失败:', e);
+        }
         
         this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';
         this.showToast = true;
@@ -2317,6 +2312,48 @@ def main():
                 if os.path.exists('problem_zh.md'):
                     zipf.write('problem_zh.md', 'problem_zh.md')
                     print("  + problem_zh.md")
+
+                # 打包 additional_file 文件夹 (包含 solution.md, std.cpp, data_generator.py, ppt)
+                # 1. 如果当前目录下已经存在 additional_file 文件夹，直接打包其内容
+                if os.path.exists('additional_file') and os.path.isdir('additional_file'):
+                    for root, dirs, files in os.walk('additional_file'):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            # 保持 additional_file/xxx 的结构
+                            arcname = os.path.relpath(file_path, '.')
+                            zipf.write(file_path, arcname)
+                            print(f"  + {arcname}")
+                
+                # 2. 同时也扫描当前目录下的关键文件，补充进去 (如果 additional_file 中没有的话)
+                # 这样既支持批量下载时预生成的 additional_file，也支持手动运行时的文件收集
+                
+                candidates = ['solution.md', 'data_generator.py', 'std.cpp', 'std.py', 'Main.java']
+                
+                # 自动查找 PPT 相关文件
+                for f in os.listdir('.'):
+                    if os.path.isfile(f):
+                        lower_f = f.lower()
+                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md'] or f in candidates:
+                            continue
+                        if 'ppt' in lower_f or lower_f.endswith('.html') or lower_f.endswith('.pptx') or lower_f.endswith('.pdf'):
+                            candidates.append(f)
+
+                for f in candidates:
+                    if os.path.exists(f):
+                        # 检查是否已经在 zip 中 (通过 additional_file 文件夹打包进去了)
+                        # 简单起见，我们总是尝试写入，zipfile 允许重复路径但会增大体积，或者我们可以先检查
+                        # 这里我们假设如果 additional_file 存在，里面应该已经有了这些文件
+                        # 但为了保险，如果 additional_file 文件夹不存在，或者文件不在其中，我们再打包一次
+                        
+                        target_path = f"additional_file/{f}"
+                        # 只有当 additional_file 目录不存在，或者该文件不在 additional_file 目录中时才添加
+                        # 由于 zipf.namelist() 在写入过程中可能不实时更新，我们简化逻辑：
+                        # 如果存在 additional_file 目录，我们假设它已经包含了所需内容 (因为批量下载时是这样生成的)
+                        # 如果不存在 additional_file 目录 (比如手动创建的项目)，则执行自动收集逻辑
+                        
+                        if not os.path.exists(os.path.join('additional_file', f)):
+                             zipf.write(f, target_path)
+                             print(f"  + {target_path}")
             
             print("\\n" + "=" * 50)
             print(f"  打包完成！")
@@ -2531,6 +2568,75 @@ python data_generator.py
 </script>
 
 <style scoped>
+/* 进度条样式 */
+.generation-steps {
+  display: flex;
+  gap: 15px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(145, 213, 255, 0.3);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  opacity: 0.7;
+  transition: all 0.3s;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #d9d9d9; /* 默认灰色/未开始 */
+  transition: all 0.3s;
+}
+
+/* 状态颜色 */
+.step-item.pending .step-dot {
+  background-color: #d9d9d9; /* 灰色：未开始 */
+  box-shadow: none;
+}
+
+.step-item.processing {
+  opacity: 1;
+  font-weight: bold;
+  color: #faad14;
+}
+
+.step-item.processing .step-dot {
+  background-color: #faad14; /* 黄色：进行中 */
+  box-shadow: 0 0 6px rgba(250, 173, 20, 0.6);
+  animation: pulse 1.5s infinite;
+}
+
+.step-item.success {
+  opacity: 1;
+  color: #52c41a;
+}
+
+.step-item.success .step-dot {
+  background-color: #52c41a; /* 绿色：成功 */
+}
+
+.step-item.failed {
+  opacity: 1;
+  color: #ff4d4f;
+}
+
+.step-item.failed .step-dot {
+  background-color: #ff4d4f; /* 红色：失败 */
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* 生成翻译按钮美化及禁用彩色样式 */
 .btn-translate {
   background: linear-gradient(90deg,#4f8cff,#6edfff);
@@ -2660,7 +2766,7 @@ python data_generator.py
     padding: 20px 14px 14px 14px;
   }
 }
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
   .main-layout {
     display: flex;
     flex-direction: column;
@@ -2724,11 +2830,41 @@ python data_generator.py
   padding: 10px;
   border-radius: 6px;
   font-size: 15px;
-  white-space: pre-wrap;
   margin: 0;
   overflow-y: auto;
   flex: 1;
 }
+
+/* 紧凑模式样式 */
+.translation-content :deep(p) {
+  margin: 0.5em 0;
+  line-height: 1.5;
+}
+.translation-content :deep(h1),
+.translation-content :deep(h2),
+.translation-content :deep(h3),
+.translation-content :deep(h4) {
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+  line-height: 1.3;
+}
+.translation-content :deep(ul),
+.translation-content :deep(ol) {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.translation-content :deep(li) {
+  margin: 0.2em 0;
+}
+.translation-content :deep(pre) {
+  margin: 0.5em 0;
+  padding: 0.5em;
+}
+.translation-content :deep(blockquote) {
+  margin: 0.5em 0;
+  padding-left: 1em;
+}
+
 .translation-preview-empty {
   color: #bbb;
   font-size: 14px;
@@ -3041,8 +3177,8 @@ python data_generator.py
 
 /* 调整原有布局以适应 flex */
 .input-panel {
-  width: var(--left-width, 40%); /* Use width instead of grid column */
-  flex-shrink: 0;
+  width: var(--left-width, 40%); 
+  flex: 0 0 auto; /* 明确禁止 flex-grow/shrink 干扰 width */
 }
 
 .resizer {
@@ -3055,19 +3191,23 @@ python data_generator.py
 }
 
 .resizer {
-  width: 12px;
+  width: 16px; /* 增加宽度以便更容易点击 */
+  margin: 0 -2px; /* 负 margin 保持视觉平衡 */
   cursor: col-resize;
-  background: rgba(255, 255, 255, 0.2);
-  border-left: 1px solid rgba(255, 255, 255, 0.3);
-  border-right: 1px solid rgba(255, 255, 255, 0.3);
-  transition: background 0.2s;
+  background: rgba(255, 255, 255, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 100; /* 确保在最上层 */
+  position: relative;
 }
 
 .resizer:hover, .resizer:active {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 .resizer::after {
@@ -3079,7 +3219,7 @@ python data_generator.py
 }
 
 .input-panel, .output-panel {
-  flex: 1;
+  /* flex: 1; Removed to avoid conflict with specific width settings */
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);

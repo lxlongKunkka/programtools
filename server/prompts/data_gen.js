@@ -1,7 +1,12 @@
-export const getDataGenPrompt = (extraConstraintPrompt, cyaronDocs, code) => `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
+export const getDataGenPrompt = (extraConstraintPrompt, cyaronDocs, code) => `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本。
+
+【重要要求】
+1. **只输出 Python 代码块**，不要输出任何额外的文字说明、Markdown 标题或解题思路。
+2. 如果需要说明数据生成的逻辑，请直接写在 Python 代码的注释中。
+3. 最终输出应只包含一个 \`\`\`python ... \`\`\` 代码块。
 
 【语言要求：必须使用简体中文输出】
-- 所有的思路说明、代码注释必须使用简体中文。
+- 代码注释必须使用简体中文。
 
 【目标】
 - 生成速度极快，支持 n=1e5~2e5；避免任何低效写, 根据题意生成多组测试数据的数据生成脚本。
@@ -14,17 +19,13 @@ ${code ? `\n\n【参考 AC 代码】\n请参考以下标准代码的逻辑（如
 
 ${cyaronDocs}
 
-请按照以下格式输出：
-
-## Cyaron 脚本
-\`\`\`python
-[完整 Python 脚本]
-\`\`\`
+请遵循以下规范编写脚本：
 
 1. **导入库的正确方式（重要！）**：
    - 先导入 \`from cyaron import *\`
    - 再导入 \`import random as py_random\`
    - 如需要数学函数，导入 \`import math\`
+   - **如果使用了 numpy 相关函数（如 np.base_repr），必须导入 \`import numpy as np\`**
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
    - 生成随机整数需要使用 CYaRon 提供的随机数生成函数 randint
@@ -38,7 +39,5 @@ ${cyaronDocs}
 8. 生成 20 组数据
 9. 考虑特殊情况：边界值、极端情况、随机数据
 10. 代码要包含注释，说明每组数据的特点
-11. **所有数学表达式用美元符号包裹**，例如 $n$、$10^5$
-12. 代码块必须在 \`\`\` 后换行
-13. **严格要求**：必须使用美元符号包裹所有数学内容
+11. 代码块必须在 \`\`\` 后换行
 `

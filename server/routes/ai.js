@@ -148,8 +148,93 @@ router.post('/translate', checkModelPermission, async (req, res) => {
       content = JSON.stringify(data)
     }
 
+    let resultText = ''
+    let meta = { title: '', tags: [] }
+    let isJson = false
+
+    // 尝试解析 JSON
     try {
-      let fixed = wrapLatexIfNeeded(content)
+        let jsonStr = content.trim()
+        
+        // 1. 尝试提取 Markdown 代码块中的 JSON
+        const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/i)
+        if (jsonBlockMatch) {
+            jsonStr = jsonBlockMatch[1].trim()
+        } else {
+            // 2. 如果没有代码块，尝试寻找最外层的 {}
+            const firstBrace = content.indexOf('{')
+            const lastBrace = content.lastIndexOf('}')
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                jsonStr = content.substring(firstBrace, lastBrace + 1)
+            }
+        }
+
+        // 尝试解析
+        const jsonObj = JSON.parse(jsonStr)
+        
+        if (jsonObj.translation) {
+            resultText = jsonObj.translation
+            if (jsonObj.title) meta.title = jsonObj.title
+            if (jsonObj.tags && Array.isArray(jsonObj.tags)) meta.tags = jsonObj.tags
+            isJson = true
+        } else {
+            resultText = content
+        }
+    } catch (e) {
+        // JSON 解析失败，尝试正则提取作为兜底
+        let recovered = false
+        try {
+            const translationMatch = content.match(/"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
+            if (translationMatch) {
+                try {
+                    resultText = JSON.parse(`"${translationMatch[1]}"`)
+                } catch (e2) {
+                    // 手动解码
+                    resultText = translationMatch[1]
+                        .replace(/\\n/g, '\n')
+                        .replace(/\\"/g, '"')
+                        .replace(/\\\\/g, '\\')
+                        .replace(/\\t/g, '\t')
+                }
+                isJson = true
+                recovered = true
+
+                // 尝试提取 meta
+                const titleMatch = content.match(/"title"\s*:\s*"([^"]*?)"/)
+                if (titleMatch) meta.title = titleMatch[1]
+
+                const tagsMatch = content.match(/"tags"\s*:\s*\[([\s\S]*?)\]/)
+                if (tagsMatch) {
+                    try {
+                        meta.tags = JSON.parse(`[${tagsMatch[1]}]`)
+                    } catch (e3) {
+                        meta.tags = tagsMatch[1].split(',').map(t => t.trim().replace(/^"|"$/g, ''))
+                    }
+                }
+                console.log('Recovered from JSON error using regex extraction')
+            }
+        } catch (regexErr) {
+            console.warn('Regex recovery failed:', regexErr)
+        }
+
+        if (!recovered) {
+            // 彻底失败，回退到纯文本处理
+            console.warn('JSON parse failed in translate:', e.message)
+            // 如果包含 json 代码块标记但解析失败，去除标记直接显示内容，方便用户查看
+            resultText = content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '')
+        }
+    }
+
+    try {
+      // 如果是 JSON 模式且成功提取了 translation，我们信任 AI 的 Markdown 格式，
+      // 不再进行 wrapLatexIfNeeded 等可能破坏格式的处理，
+      // 仅做必要的清理（如 input/output 块的合并）
+      let fixed = resultText
+
+      if (!isJson) {
+          fixed = wrapLatexIfNeeded(fixed)
+      }
+
       fixed = fixed.replace(/(```input\d+)([\s\S]*?)(```)(?=```input\d+)/g, (m, start, body) => {
         return ''
       })
@@ -178,49 +263,54 @@ router.post('/translate', checkModelPermission, async (req, res) => {
       fixed = fixed.replace(/(```)\s*(#+\s+)/g, '$1\n\n$2')
       fixed = fixed.replace(/([^\n])\s*(##+\s+)/g, '$1\n\n$2')
 
-      // Extract meta (title and tags) from the translated content
-      let meta = { title: '', tags: [] }
-      try {
-        // Extract title: First line starting with #
-        const titleMatch = fixed.match(/^#\s+(.+)$/m)
-        if (titleMatch) {
-          let extractedTitle = titleMatch[1].trim()
-          
-          // Fix: If title is literally "题目标题", look for the next non-empty line
-          if (extractedTitle === '题目标题' || extractedTitle === 'Title') {
-             const matchIndex = titleMatch.index + titleMatch[0].length
-             const remainingText = fixed.substring(matchIndex)
-             // Find first non-empty line that doesn't start with #
-             const nextLineMatch = remainingText.match(/^\s*([^#\s].*)$/m)
-             if (nextLineMatch) {
-                extractedTitle = nextLineMatch[1].trim()
-             } else {
-                // If still not found, clear it to avoid showing "题目标题"
-                extractedTitle = ''
-             }
-          }
-          
-          // Fix: If title is like "题目标题：Real Title"
-          if (/^题目标题[:：]/.test(extractedTitle)) {
-             extractedTitle = extractedTitle.replace(/^题目标题[:：]\s*/, '')
-          }
-          
-          if (extractedTitle === '题目标题') extractedTitle = ''
-          
-          meta.title = extractedTitle
-        }
+      // 如果没有从 JSON 中提取到元数据，尝试从文本中提取
+      if (!isJson || (!meta.title && meta.tags.length === 0)) {
+        try {
+            // Extract title: First line starting with #
+            const titleMatch = fixed.match(/^#\s+(.+)$/m)
+            if (titleMatch) {
+            let extractedTitle = titleMatch[1].trim()
+            
+            // Fix: If title is literally "题目标题", look for the next non-empty line
+            if (extractedTitle === '题目标题' || extractedTitle === 'Title') {
+                const matchIndex = titleMatch.index + titleMatch[0].length
+                const remainingText = fixed.substring(matchIndex)
+                // Find first non-empty line that doesn't start with #
+                const nextLineMatch = remainingText.match(/^\s*([^#\s].*)$/m)
+                if (nextLineMatch) {
+                    extractedTitle = nextLineMatch[1].trim()
+                } else {
+                    // If still not found, clear it to avoid showing "题目标题"
+                    extractedTitle = ''
+                }
+            }
+            
+            // Fix: If title is like "题目标题：Real Title"
+            if (/^题目标题[:：]/.test(extractedTitle)) {
+                extractedTitle = extractedTitle.replace(/^题目标题[:：]\s*/, '')
+            }
+            
+            if (extractedTitle === '题目标题') extractedTitle = ''
+            
+            meta.title = extractedTitle
+            }
 
-        // Extract tags: Content after ### 算法标签
-        const tagsMatch = fixed.match(/###\s*算法标签\s*\n+([\s\S]*?)(?:\n#|$)/)
-        if (tagsMatch) {
-          const tagsText = tagsMatch[1].trim()
-          // Split by common separators and clean up
-          meta.tags = tagsText.split(/[,，、\n]+/)
-            .map(t => t.trim())
-            .filter(t => t && !t.startsWith('Level') && !t.startsWith('**')) // Filter out level headers if present
+            // Extract tags: Content after ### 算法标签
+            // 兼容多种格式：
+            // 1. ### 算法标签 \n Level1 数学1
+            // 2. **算法标签** \n Level1 数学1
+            // 3. 算法标签 \n Level1 数学1
+            const tagsMatch = fixed.match(/(?:###|\*\*|)\s*算法标签(?:\*\*|)\s*\n+([\s\S]*?)(?:\n#|\n\n|$)/)
+            if (tagsMatch) {
+            const tagsText = tagsMatch[1].trim()
+            // Split by common separators (space, comma, newline) and clean up
+            meta.tags = tagsText.split(/[\s,，、]+/)
+                .map(t => t.trim())
+                .filter(t => t && !t.startsWith('**') && t !== '无') 
+            }
+        } catch (e) {
+            console.warn('Failed to extract meta from translation:', e)
         }
-      } catch (e) {
-        console.warn('Failed to extract meta from translation:', e)
       }
 
       return res.json({ result: fixed, meta })
@@ -640,16 +730,21 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
 
 router.post('/generate-problem-meta', checkModelPermission, async (req, res) => {
   try {
-    const { text, model } = req.body
+    const { text, model, solution } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
+    let contentInput = text
+    if (solution) {
+      contentInput += `\n\n【参考题解/分析】\n${solution}\n\n请结合题目描述和参考题解，更准确地总结题目名称和算法标签。`
+    }
+
     const messages = [
       { role: 'system', content: META_PROMPT },
-      { role: 'user', content: text }
+      { role: 'user', content: contentInput }
     ]
 
     const payload = {

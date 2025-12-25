@@ -10,7 +10,7 @@
 </select>
 </div>
 <div class="toolbar-right">
-<button @click="generate" :disabled="loading || !inputText.trim()" class="btn-primary">
+<button @click="generate" :disabled="loading || !codeText.trim()" class="btn-primary" :title="!codeText.trim() ? '请先粘贴 AC 代码' : ''">
 {{ loading ? '⏳ 整理中...' : '🚀 开始整理' }}
 </button>
 <button @click="clear" class="btn-secondary">🧹 清空</button>
@@ -110,8 +110,24 @@ combined += 'AC代码：\n' + this.codeText.trim()
 return combined
 }
 },
+watch: {
+    problemText(val) { this.saveState() },
+    codeText(val) { this.saveState() },
+    result(val) { this.saveState() },
+    model(val) { this.saveState() }
+},
 async mounted() {
 try {
+    // Restore state
+    const saved = localStorage.getItem('solution_storage')
+    if (saved) {
+        const data = JSON.parse(saved)
+        if (data.problemText) this.problemText = data.problemText
+        if (data.codeText) this.codeText = data.codeText
+        if (data.result) this.result = data.result
+        if (data.model) this.model = data.model
+    }
+
 const list = await getModels()
 if (Array.isArray(list)) this.rawModelOptions = list
       
@@ -126,6 +142,14 @@ console.warn('failed to load models', e)
 }
 },
 methods: {
+    saveState() {
+        localStorage.setItem('solution_storage', JSON.stringify({
+            problemText: this.problemText,
+            codeText: this.codeText,
+            result: this.result,
+            model: this.model
+        }))
+    },
     startResize() {
       this.isDragging = true
       document.addEventListener('mousemove', this.onMouseMove)
@@ -151,6 +175,10 @@ methods: {
       document.body.style.cursor = ''
     },
 async generate() {
+if (!this.codeText.trim()) {
+  this.showToastMessage('请先提供 AC 代码，不能不劳而获哦~')
+  return
+}
 const text = this.inputText.trim()
 if (!text) return
 

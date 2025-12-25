@@ -104,12 +104,27 @@ computed: {
       return all.filter(m => m.id === 'gemini-2.5-flash')
     }
 },
+watch: {
+    prompt(val) { this.saveState() },
+    result(val) { this.saveState() },
+    model(val) { this.saveState() }
+},
 async mounted() {
 try {
+    // Restore state
+    const saved = localStorage.getItem('translate_storage')
+    if (saved) {
+        const data = JSON.parse(saved)
+        if (data.prompt) this.prompt = data.prompt
+        if (data.result) this.result = data.result
+        if (data.model) this.model = data.model
+    }
+
 const list = await getModels()
 if (Array.isArray(list)) this.rawModelOptions = list
       
       if (this.modelOptions.length > 0) {
+        // If saved model is not in list (and not premium), fallback
         const current = this.modelOptions.find(m => m.id === this.model)
         if (!current) {
           this.model = this.modelOptions[0].id
@@ -120,6 +135,13 @@ console.warn('failed to load models', e)
 }
 },
 methods: {
+    saveState() {
+        localStorage.setItem('translate_storage', JSON.stringify({
+            prompt: this.prompt,
+            result: this.result,
+            model: this.model
+        }))
+    },
     startResize() {
       this.isDragging = true
       document.addEventListener('mousemove', this.onMouseMove)
@@ -159,7 +181,54 @@ model: this.model
 })
 })
 
-this.result = data.result || data.rawText || ''
+let finalResult = data.result || data.rawText || ''
+
+// 尝试解析可能存在的 JSON 格式（兜底后端解析失败的情况）
+try {
+    let jsonStr = finalResult.trim()
+    // 1. 尝试提取 Markdown 代码块中的 JSON
+    const jsonBlockMatch = jsonStr.match(/```json\s*([\s\S]*?)\s*```/i)
+    if (jsonBlockMatch) {
+        jsonStr = jsonBlockMatch[1].trim()
+    }
+    
+    // 2. 尝试寻找最外层的 {}
+    const firstBrace = jsonStr.indexOf('{')
+    const lastBrace = jsonStr.lastIndexOf('}')
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const potentialJson = jsonStr.substring(firstBrace, lastBrace + 1)
+            
+            try {
+                const jsonObj = JSON.parse(potentialJson)
+                if (jsonObj.translation) {
+                    finalResult = jsonObj.translation
+                }
+            } catch (parseErr) {
+                // JSON.parse 失败，尝试使用正则提取 translation 字段
+                // 匹配 "translation": "..." 结构，支持转义字符
+                // 使用 [\s\S]*? 非贪婪匹配直到遇到引号后跟逗号或大括号
+                const regex = /"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/
+                const match = potentialJson.match(regex)
+                if (match) {
+                    try {
+                        // 尝试用 JSON.parse 解码字符串值
+                        finalResult = JSON.parse(`"${match[1]}"`)
+                    } catch (e) {
+                        // 如果解码失败，手动处理常见的转义符
+                        finalResult = match[1]
+                            .replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\\/g, '\\')
+                            .replace(/\\t/g, '\t')
+                    }
+                }
+            }
+    }
+} catch (e) {
+    // ignore
+}
+
+this.result = finalResult
 
 } catch (e) {
 console.error('Translate error:', e)
@@ -443,6 +512,7 @@ textarea:focus {
   background: #f8f9fa;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 13px;
+  line-height: 1.35;
   color: #333;
   resize: none;
   padding: 0;
