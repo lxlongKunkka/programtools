@@ -2,6 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import fs from 'fs'
 import path from 'path'
+import axios from 'axios'
 import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
 import CourseGroup from '../models/CourseGroup.js'
@@ -1512,6 +1513,43 @@ router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teac
   } catch (e) {
     console.error('Upload Courseware Error:', e)
     res.status(500).json({ error: e.message })
+  }
+})
+
+// Proxy endpoint for downloading external resources (CORS bypass)
+router.get('/proxy', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { url } = req.query
+    if (!url) {
+      return res.status(400).json({ error: 'Missing url parameter' })
+    }
+
+    // Basic validation
+    if (!url.startsWith('http')) {
+      return res.status(400).json({ error: 'Invalid URL' })
+    }
+
+    console.log(`[Proxy] Fetching: ${url}`)
+    
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'arraybuffer'
+    })
+
+    // Forward headers
+    const contentType = response.headers['content-type']
+    if (contentType) res.setHeader('Content-Type', contentType)
+    
+    res.send(response.data)
+
+  } catch (e) {
+    console.error('Proxy Error:', e.message)
+    if (e.response) {
+        res.status(e.response.status).send(e.response.statusText)
+    } else {
+        res.status(500).json({ error: e.message })
+    }
   }
 })
 

@@ -98,6 +98,7 @@
                <button @click="moveGroup('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveGroup('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
+            <button v-if="editingGroup._id && isAdmin" @click="downloadGroupMaterials" class="btn-small btn-download-md">⬇️ 下载资料包</button>
             <button v-if="editingGroup._id" @click="deleteGroup(editingGroup._id)" class="btn-delete">删除分组</button>
             <button @click="saveGroup" class="btn-save">保存更改</button>
           </div>
@@ -147,6 +148,7 @@
                <button @click="moveLevel('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveLevel('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
+            <button v-if="editingLevel._id && isAdmin" @click="downloadLevelMaterials" class="btn-small btn-download-md">⬇️ 下载资料包</button>
             <button v-if="editingLevel._id" @click="deleteLevel(editingLevel._id)" class="btn-delete">删除模块</button>
             <button @click="saveLevel" class="btn-save">保存更改</button>
           </div>
@@ -213,6 +215,7 @@
                <button @click="moveTopic('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveTopic('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
+            <button v-if="editingTopic._id && isAdmin" @click="downloadTopicMaterials" class="btn-small btn-download-md">⬇️ 下载资料包</button>
             <button v-if="editingTopic._id" @click="deleteAllChapters(editingLevelForTopic._id, editingTopic._id)" class="btn-delete" style="background-color: #f59e0b; margin-right: 8px;">清空章节</button>
             <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="btn-delete">删除知识点</button>
             <button @click="saveTopic" class="btn-save">保存更改</button>
@@ -238,6 +241,9 @@
           <div class="ai-controls" :class="{ disabled: currentAiLoading }">
             <button @click="generateTopicDescription" class="btn-ai" :disabled="currentAiLoading">📝 自动生成描述</button>
             <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
+            <button @click="batchGenerateLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
+            <button @click="batchGeneratePPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
+            <button @click="batchGenerateSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解</button>
           </div>
         </div>
         <div class="form-group">
@@ -263,6 +269,7 @@
                <button @click="moveChapter('up')" class="btn-small btn-move">↑ 上移</button>
                <button @click="moveChapter('down')" class="btn-small btn-move">↓ 下移</button>
             </div>
+            <button v-if="isAdmin && !editingChapter.isNew" @click="downloadChapter" class="btn-small btn-download-md">⬇️ 下载 {{ editingChapter.contentType === 'html' ? 'PPT' : 'MD' }}</button>
             <button v-if="!editingChapter.isNew" @click="deleteChapter(editingLevelForChapter._id, editingTopicForChapter._id, editingChapter._id || editingChapter.id)" class="btn-delete">删除章节</button>
             <button @click="saveChapter" class="btn-save">保存更改</button>
           </div>
@@ -360,6 +367,7 @@ import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
 import { getModels } from '../utils/models'
 import { io } from 'socket.io-client'
+import JSZip from 'jszip'
 
 export default {
   name: 'Design',
@@ -985,6 +993,197 @@ export default {
         this.showToastMessage('移动失败: ' + e.message)
       }
     },
+    sanitizeFileName(str) {
+      return (str || '').replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '_')
+    },
+
+    triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
+
+    async addChapterToZip(zip, folderPath, chapter) {
+      const safeTitle = this.sanitizeFileName(chapter.title)
+      
+      // 1. Always try to get Markdown content (Text Lesson Plan)
+      let content = chapter.content
+      if (!content) {
+          try {
+              const chId = chapter.id || chapter._id
+              if (chId) {
+                  const res = await request(`/api/course/chapter/${chId}`)
+                  if (res && res.content) {
+                      content = res.content
+                      chapter.content = content // Cache it
+                  }
+              }
+          } catch (e) {
+              console.error(`Failed to fetch content for ${chapter.title}`, e)
+          }
+      }
+
+      if (content) {
+        zip.file(`${folderPath}/${safeTitle}.md`, content)
+      }
+
+      // 2. If it has a resource URL (usually contentType='html'), download that too
+      if (chapter.contentType === 'html' && chapter.resourceUrl) {
+          try {
+            let fetchUrl = chapter.resourceUrl
+            const headers = {}
+            const token = localStorage.getItem('auth_token')
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`
+            }
+
+            if (fetchUrl.startsWith('http')) {
+                fetchUrl = `/api/course/proxy?url=${encodeURIComponent(fetchUrl)}`
+            } else if (fetchUrl.indexOf('public/courseware') !== -1) {
+              if (fetchUrl.startsWith('/public/')) fetchUrl = '/api' + fetchUrl
+              else if (fetchUrl.startsWith('public/')) fetchUrl = '/api/' + fetchUrl
+              if (token) {
+                const separator = fetchUrl.includes('?') ? '&' : '?'
+                fetchUrl = `${fetchUrl}${separator}token=${token}`
+              }
+            }
+
+            const response = await fetch(fetchUrl, { headers })
+            if (response.ok) {
+              const blob = await response.blob()
+              let extension = 'html'
+              const lowerUrl = chapter.resourceUrl.toLowerCase()
+              if (lowerUrl.endsWith('.ppt')) extension = 'ppt'
+              else if (lowerUrl.endsWith('.pptx')) extension = 'pptx'
+              else if (lowerUrl.endsWith('.pdf')) extension = 'pdf'
+              else if (lowerUrl.endsWith('.doc')) extension = 'doc'
+              else if (lowerUrl.endsWith('.docx')) extension = 'docx'
+              
+              zip.file(`${folderPath}/${safeTitle}.${extension}`, blob)
+            }
+          } catch (e) {
+            console.error(`Failed to download HTML for ${chapter.title}`, e)
+          }
+      }
+    },
+
+    async downloadTopicMaterials() {
+      if (!this.isAdmin) return this.showToastMessage('无权操作')
+      if (!this.editingTopic || !this.editingTopic.chapters) return
+      const zip = new JSZip()
+      const topicTitle = this.sanitizeFileName(this.editingTopic.title)
+      this.showToastMessage('正在打包下载...')
+      
+      for (const chapter of this.editingTopic.chapters) {
+        await this.addChapterToZip(zip, topicTitle, chapter)
+      }
+      
+      const content = await zip.generateAsync({ type: 'blob' })
+      this.triggerDownload(content, `${topicTitle}.zip`)
+    },
+
+    async downloadLevelMaterials() {
+      if (!this.isAdmin) return this.showToastMessage('无权操作')
+      if (!this.editingLevel || !this.editingLevel.topics) return
+      const zip = new JSZip()
+      const levelTitle = this.sanitizeFileName(this.editingLevel.title)
+      this.showToastMessage('正在打包下载...')
+      
+      for (const topic of this.editingLevel.topics) {
+        const topicTitle = this.sanitizeFileName(topic.title)
+        if (topic.chapters) {
+          for (const chapter of topic.chapters) {
+            await this.addChapterToZip(zip, `${levelTitle}/${topicTitle}`, chapter)
+          }
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: 'blob' })
+      this.triggerDownload(content, `${levelTitle}.zip`)
+    },
+
+    async downloadGroupMaterials() {
+      if (!this.isAdmin) return this.showToastMessage('无权操作')
+      if (!this.editingGroup || !this.editingGroup.name) return
+      const zip = new JSZip()
+      const groupName = this.sanitizeFileName(this.editingGroup.name)
+      this.showToastMessage('正在打包下载...')
+      
+      const levels = this.getLevelsForGroup(this.editingGroup.name)
+      for (const level of levels) {
+        const levelTitle = this.sanitizeFileName(level.title)
+        if (level.topics) {
+          for (const topic of level.topics) {
+            const topicTitle = this.sanitizeFileName(topic.title)
+            if (topic.chapters) {
+              for (const chapter of topic.chapters) {
+                await this.addChapterToZip(zip, `${groupName}/${levelTitle}/${topicTitle}`, chapter)
+              }
+            }
+          }
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: 'blob' })
+      this.triggerDownload(content, `${groupName}.zip`)
+    },
+
+    async downloadChapter() {
+      if (!this.isAdmin) return this.showToastMessage('无权操作')
+      const chapter = this.editingChapter
+      const safeTitle = this.sanitizeFileName(chapter.title)
+      
+      if (chapter.contentType === 'markdown') {
+        if (!chapter.content) return this.showToastMessage('没有内容可下载')
+        const filename = `${safeTitle}.md`
+        const blob = new Blob([chapter.content], { type: 'text/markdown' })
+        this.triggerDownload(blob, filename)
+      } else if (chapter.contentType === 'html') {
+        if (!chapter.resourceUrl) return this.showToastMessage('没有资源链接')
+        try {
+          let fetchUrl = chapter.resourceUrl
+          const headers = {}
+          const token = localStorage.getItem('auth_token')
+          if (token) {
+              headers['Authorization'] = `Bearer ${token}`
+          }
+
+          if (fetchUrl.startsWith('http')) {
+             fetchUrl = `/api/course/proxy?url=${encodeURIComponent(fetchUrl)}`
+          } else if (fetchUrl.indexOf('public/courseware') !== -1) {
+            if (fetchUrl.startsWith('/public/')) fetchUrl = '/api' + fetchUrl
+            else if (fetchUrl.startsWith('public/')) fetchUrl = '/api/' + fetchUrl
+            if (token) {
+              const separator = fetchUrl.includes('?') ? '&' : '?'
+              fetchUrl = `${fetchUrl}${separator}token=${token}`
+            }
+          }
+          const response = await fetch(fetchUrl, { headers })
+          if (response.ok) {
+            const blob = await response.blob()
+            let extension = 'html'
+            const lowerUrl = chapter.resourceUrl.toLowerCase()
+            if (lowerUrl.endsWith('.ppt')) extension = 'ppt'
+            else if (lowerUrl.endsWith('.pptx')) extension = 'pptx'
+            else if (lowerUrl.endsWith('.pdf')) extension = 'pdf'
+            else if (lowerUrl.endsWith('.doc')) extension = 'doc'
+            else if (lowerUrl.endsWith('.docx')) extension = 'docx'
+
+            const filename = `${safeTitle}.${extension}`
+            this.triggerDownload(blob, filename)
+          } else {
+            this.showToastMessage('下载失败: 无法获取文件')
+          }
+        } catch (e) {
+          this.showToastMessage('下载失败: ' + e.message)
+        }
+      }
+    },
     async saveChapter() {
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
@@ -1196,6 +1395,7 @@ export default {
             model: model,
             language: language,
             chapterId: chapterId,
+            topicId: this.editingTopicForChapter._id,
             clientKey: chapterId
           })
         })
@@ -1260,6 +1460,7 @@ export default {
             chapterContent: chapterContent,
             requirements: requirements,
             chapterId: chapterId,
+            topicId: topicId,
             topicTitle: topicTitle,
             chapterTitle: chapterTitle,
             levelNum: levelNum,
@@ -1339,6 +1540,7 @@ export default {
             chapterTitle: this.editingChapter.title,
             problemTitle: doc.title,
             chapterId: this.editingChapter.id,
+            topicId: this.editingTopicForChapter._id,
             clientKey: id, // Pass the UI key (usually _id) to server
             model: this.selectedModel,
             language: this.editingLevelForChapter.subject || 'C++',
@@ -1443,6 +1645,209 @@ export default {
       }
     },
 
+    async batchGenerateLessonPlans() {
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成教案吗？这将覆盖已有内容。`)) return
+
+      const levelNum = this.editingLevelForTopic.level
+      const topicTitle = this.editingTopic.title
+      const groupName = this.editingLevelForTopic.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+
+      const topicId = this.selectedNode.id
+      this.aiLoadingMap[topicId] = true
+      let successCount = 0
+
+      for (let i = 0; i < this.editingTopic.chapters.length; i++) {
+        const chapter = this.editingTopic.chapters[i]
+        const chapterId = chapter._id || chapter.id
+        const chapterTitle = chapter.title
+
+        this.aiStatusMap[topicId] = `正在提交教案任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
+        
+        try {
+            this.aiLoadingMap[chapterId] = true
+            this.aiStatusMap[chapterId] = '正在后台生成教案...'
+
+            await request('/api/lesson-plan/background', {
+                method: 'POST',
+                body: JSON.stringify({
+                    topic: chapterTitle,
+                    context: topicTitle,
+                    topicId: topicId,
+                    level: `Level ${levelNum}`,
+                    requirements: '', 
+                    model: model,
+                    language: language,
+                    chapterId: chapterId,
+                    clientKey: chapterId
+                })
+            })
+            successCount++
+        } catch (e) {
+            console.error(`Failed to submit lesson plan for ${chapterTitle}`, e)
+            this.aiLoadingMap[chapterId] = false
+            this.aiStatusMap[chapterId] = '提交失败'
+        }
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      this.aiLoadingMap[topicId] = false
+      this.aiStatusMap[topicId] = ''
+      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+    },
+
+    async batchGeneratePPTs() {
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成 PPT 吗？`)) return
+
+      const levelNum = this.editingLevelForTopic.level
+      const levelTitle = this.editingLevelForTopic.title
+      const topicTitle = this.editingTopic.title
+      const groupName = this.editingLevelForTopic.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+      
+      const chapterList = this.editingTopic.chapters.map(c => c.title)
+
+      const topicId = this.selectedNode.id
+      this.aiLoadingMap[topicId] = true
+      let successCount = 0
+
+      for (let i = 0; i < this.editingTopic.chapters.length; i++) {
+        const chapter = this.editingTopic.chapters[i]
+        const chapterId = chapter._id || chapter.id
+        const chapterTitle = chapter.title
+        
+        this.aiStatusMap[topicId] = `正在提交 PPT 任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
+
+        try {
+            this.aiLoadingMap[chapterId] = true
+            this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
+            
+            await request('/api/generate-ppt/background', {
+              method: 'POST',
+              body: JSON.stringify({
+                topic: chapterTitle,
+                context: topicTitle,
+                level: `Level ${levelNum}`,
+                model: model,
+                language: language,
+                chapterList: chapterList,
+                currentChapterIndex: i,
+                chapterContent: '', 
+                requirements: '',
+                chapterId: chapterId,
+                topicId: topicId,
+                topicTitle: topicTitle,
+                chapterTitle: chapterTitle,
+                levelNum: levelNum,
+                levelTitle: levelTitle,
+                clientKey: chapterId,
+                group: groupName
+              })
+            })
+            successCount++
+        } catch (e) {
+            console.error(`Failed to submit PPT for ${chapterTitle}`, e)
+            this.aiLoadingMap[chapterId] = false
+            this.aiStatusMap[chapterId] = '提交失败'
+        }
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      this.aiLoadingMap[topicId] = false
+      this.aiStatusMap[topicId] = ''
+      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+    },
+
+    async batchGenerateSolutionReports() {
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!confirm(`确定要为本知识点下的所有章节生成题解报告吗？只有关联了题目的章节才会生成。`)) return
+
+      const levelNum = this.editingLevelForTopic.level
+      const topicTitle = this.editingTopic.title
+      const groupName = this.editingLevelForTopic.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+
+      const topicId = this.selectedNode.id
+      this.aiLoadingMap[topicId] = true
+      let successCount = 0
+      let skippedCount = 0
+
+      for (let i = 0; i < this.editingTopic.chapters.length; i++) {
+        const chapter = this.editingTopic.chapters[i]
+        const chapterId = chapter._id || chapter.id
+        const chapterTitle = chapter.title
+        
+        if (!chapter.problemIds || chapter.problemIds.length === 0) {
+            skippedCount++
+            continue
+        }
+
+        this.aiStatusMap[topicId] = `正在提交题解任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
+
+        try {
+            this.aiLoadingMap[chapterId] = true
+            this.aiStatusMap[chapterId] = '正在获取题目信息...'
+
+            let firstProblemId = chapter.problemIds[0]
+            if (typeof firstProblemId === 'object') firstProblemId = firstProblemId.docId || firstProblemId.id
+            
+            let docId = firstProblemId
+            let domainId = 'system'
+            if (String(firstProblemId).includes(':')) {
+                [domainId, docId] = String(firstProblemId).split(':')
+            }
+
+            const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
+            const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
+            if (!doc) throw new Error('未找到题目')
+            
+            let problemText = doc.content
+            let userCode = ''
+            
+            try {
+                const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
+                if (subRes && subRes.code) userCode = subRes.code
+            } catch (e) {}
+
+            await request.post('/api/solution-report/background', {
+                problem: problemText,
+                code: userCode,
+                reference: '',
+                level: levelNum,
+                topicTitle: topicTitle,
+                chapterTitle: chapterTitle,
+                problemTitle: doc.title,
+                chapterId: chapterId,
+                topicId: topicId,
+                clientKey: chapterId,
+                model: model,
+                language: language,
+                group: groupName
+            })
+            
+            this.aiStatusMap[chapterId] = '正在后台生成题解...'
+            successCount++
+        } catch (e) {
+            console.error(`Failed to submit solution report for ${chapterTitle}`, e)
+            this.aiLoadingMap[chapterId] = false
+            this.aiStatusMap[chapterId] = '提交失败'
+        }
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      this.aiLoadingMap[topicId] = false
+      this.aiStatusMap[topicId] = ''
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
+    },
+
     findTopicInTree(topicId) {
       if (this.levels) {
         for (const level of this.levels) {
@@ -1511,18 +1916,27 @@ export default {
 <style scoped>
 /* Variables & Reset */
 .design-container {
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
-  --secondary-color: #64748b;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
-  --bg-color: #f3f4f6;
+  --primary-color: #6366f1; /* Indigo 500 */
+  --primary-hover: #4f46e5; /* Indigo 600 */
+  --primary-light: #e0e7ff; /* Indigo 100 */
+  --secondary-color: #64748b; /* Slate 500 */
+  --success-color: #10b981; /* Emerald 500 */
+  --danger-color: #ef4444; /* Red 500 */
+  --warning-color: #f59e0b; /* Amber 500 */
+  --bg-color: #f8fafc; /* Slate 50 */
   --sidebar-bg: #ffffff;
-  --border-color: #e2e8f0;
-  --text-main: #1e293b;
-  --text-secondary: #64748b;
-  --active-bg: #eef2ff;
-  --active-border: #4f46e5;
+  --border-color: #e2e8f0; /* Slate 200 */
+  --text-main: #0f172a; /* Slate 900 */
+  --text-secondary: #475569; /* Slate 600 */
+  --text-muted: #94a3b8; /* Slate 400 */
+  --active-bg: #eff6ff; /* Blue 50 */
+  --active-border: #3b82f6; /* Blue 500 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   
   display: flex;
   height: calc(100vh - 60px);
@@ -1534,73 +1948,75 @@ export default {
 
 /* Sidebar */
 .sidebar {
-  width: 320px;
-  min-width: 320px;
+  width: 340px;
+  min-width: 340px;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.02);
   z-index: 10;
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 24px;
   border-bottom: 1px solid var(--border-color);
   background: #fff;
 }
 
 .sidebar-header h3 {
-  margin: 0 0 12px 0;
-  font-size: 18px;
+  margin: 0 0 16px 0;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-main);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  letter-spacing: -0.025em;
 }
 
 .subject-selector {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .subject-select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   color: var(--text-main);
-  background-color: #f8fafc;
+  background-color: #fff;
   transition: all 0.2s;
   cursor: pointer;
 }
 .subject-select:hover { border-color: #cbd5e1; }
-.subject-select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+.subject-select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
 .btn-add-level {
   width: 100%;
-  padding: 10px;
-  background: var(--success-color);
+  padding: 12px;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
 }
-.btn-add-level:hover { background: #059669; transform: translateY(-1px); }
+.btn-add-level:hover { 
+  background: var(--primary-hover); 
+  transform: translateY(-1px); 
+  box-shadow: var(--shadow-md);
+}
 .btn-add-level:active { transform: translateY(0); }
 
 .tree-container {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px;
 }
 
 /* Scrollbar Styling */
@@ -1620,52 +2036,48 @@ export default {
 }
 
 /* Tree Items */
+.tree-node-group { margin-bottom: 12px; }
 .tree-node-level { margin-bottom: 4px; }
 
 .tree-item {
-  padding: 8px 12px;
+  padding: 10px 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   transition: all 0.15s ease;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   margin-bottom: 2px;
   border: 1px solid transparent;
   position: relative;
+  color: var(--text-secondary);
 }
 
-.tree-item:hover { background: #f1f5f9; }
+.tree-item:hover { 
+  background: #f1f5f9; 
+  color: var(--text-main);
+}
+
 .tree-item.active { 
   background: var(--active-bg); 
   color: var(--primary-color); 
-  border-color: rgba(79, 70, 229, 0.1);
-}
-.tree-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  background: var(--primary-color);
-  border-radius: 0 3px 3px 0;
+  font-weight: 500;
 }
 
 .tree-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 10px;
-  margin-right: 4px;
+  margin-right: 8px;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
-.tree-item:hover .tree-icon { color: #64748b; }
-.tree-icon:hover { background: rgba(0,0,0,0.05); }
+.tree-item:hover .tree-icon { color: var(--text-secondary); }
+.tree-item.active .tree-icon { color: var(--primary-color); }
 
 .tree-label {
   flex: 1;
@@ -1679,7 +2091,10 @@ export default {
 .tree-actions {
   display: none;
   margin-left: 8px;
+  animation: fadeIn 0.2s ease;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 .tree-item:hover .tree-actions { display: flex; }
 
 .btn-icon {
@@ -1689,13 +2104,13 @@ export default {
   align-items: center;
   justify-content: center;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #64748b;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 .btn-icon:hover { 
   color: var(--primary-color); 
@@ -1703,51 +2118,75 @@ export default {
   transform: scale(1.05);
 }
 
-.level-item { font-weight: 600; color: var(--text-main); }
-.topic-item { padding-left: 28px; font-size: 13.5px; color: #334155; }
-.chapter-item { padding-left: 48px; font-size: 13px; color: #475569; }
+.group-item {
+    font-weight: 700;
+    color: var(--text-main);
+    background: #fff;
+    border: 1px solid var(--border-color);
+    margin-bottom: 4px;
+}
+.group-item:hover { background: #f8fafc; border-color: #cbd5e1; }
+.group-item.active { 
+  background: #f1f5f9; 
+  border-color: #cbd5e1;
+  color: var(--text-main);
+}
+.group-item.active .tree-icon { color: var(--primary-color); }
+
+.level-item { 
+  font-weight: 600; 
+  color: var(--text-main); 
+  margin-left: 8px; 
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.level-item.active { border-left-color: var(--primary-color); }
+
+.topic-item { 
+  padding-left: 24px; 
+  font-size: 13.5px; 
+  margin-left: 8px;
+  border-left: 1px solid var(--border-color);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.topic-item.active { border-left-color: var(--primary-color); }
+
+.chapter-item { 
+  padding-left: 36px; 
+  font-size: 13px; 
+  margin-left: 8px;
+  border-left: 1px solid var(--border-color);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-style: italic;
+}
+.chapter-item.active { border-left-color: var(--primary-color); }
 
 .empty-node {
   padding: 12px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
-  font-style: italic;
-}
-
-.group-item {
-    font-weight: 700;
-    color: #1e293b;
-    background: #e2e8f0;
-    margin-top: 8px;
-}
-.group-item:hover { background: #cbd5e1; }
-.group-item.active { background: #334155; color: white; }
-.group-item.active .tree-icon { color: white; }
-
-.level-item { font-weight: 600; color: var(--text-main); margin-left: 12px; }
-.topic-item { padding-left: 28px; font-size: 13.5px; color: #334155; margin-left: 12px; }
-.chapter-item { padding-left: 48px; font-size: 13px; color: #475569; margin-left: 12px;
-  padding-top: 8px;
-  padding-bottom: 8px;
   font-style: italic;
 }
 
 /* Editor Panel */
 .editor-panel {
   flex: 1;
-  padding: 40px;
+  padding: 32px 48px;
   overflow-y: auto;
-  background: #f8fafc;
+  background: var(--bg-color);
 }
 
 .editor-form {
-  max-width: 1600px;
+  max-width: 1200px;
   margin: 0 auto;
   background: white;
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .empty-state {
@@ -1756,12 +2195,13 @@ export default {
   height: 100%;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-align: center;
 }
 .empty-state p {
   font-size: 16px;
   margin-top: 16px;
+  font-weight: 500;
 }
 
 .editor-header {
@@ -1769,7 +2209,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
@@ -1782,7 +2222,7 @@ export default {
   font-size: 24px; 
   font-weight: 700;
   color: var(--text-main); 
-  letter-spacing: -0.5px;
+  letter-spacing: -0.025em;
 }
 
 .header-actions { display: flex; gap: 12px; align-items: center; }
@@ -1791,47 +2231,53 @@ export default {
 .model-select {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-size: 13px;
-  background-color: #f8fafc;
+  background-color: #fff;
   color: var(--text-main);
-  min-width: 160px;
+  min-width: 180px;
   cursor: pointer;
+  transition: all 0.2s;
 }
-.model-select:focus { border-color: var(--primary-color); outline: none; }
+.model-select:hover { border-color: #cbd5e1; }
+.model-select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
 .btn-save {
-  padding: 8px 24px;
+  padding: 10px 24px;
   background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+  box-shadow: var(--shadow-sm);
 }
-.btn-save:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3); }
+.btn-save:hover { 
+  background: var(--primary-hover); 
+  transform: translateY(-1px); 
+  box-shadow: var(--shadow-md); 
+}
 .btn-save:active { transform: translateY(0); }
 
 .btn-delete {
-  padding: 8px 16px;
+  padding: 10px 20px;
   background: white;
   color: var(--danger-color);
   border: 1px solid #fecaca;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
   transition: all 0.2s;
 }
 .btn-delete:hover { background: #fef2f2; border-color: var(--danger-color); }
 
 .btn-small {
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: white;
   color: var(--text-secondary);
@@ -1839,7 +2285,11 @@ export default {
   transition: all 0.2s;
   font-weight: 500;
 }
-.btn-small:hover { background: #f8fafc; color: var(--primary-color); border-color: #cbd5e1; }
+.btn-small:hover { 
+  background: #f8fafc; 
+  color: var(--primary-color); 
+  border-color: var(--primary-color); 
+}
 
 /* Forms */
 .form-group { margin-bottom: 24px; }
@@ -1850,36 +2300,38 @@ export default {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-main);
   font-size: 14px;
 }
 .form-input {
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-family: inherit;
   transition: all 0.2s;
   background: #fff;
-  box-sizing: border-box; /* Ensure padding doesn't affect width/height */
+  box-sizing: border-box;
+  color: var(--text-main);
 }
+.form-input:hover { border-color: #cbd5e1; }
 .form-input:focus { 
   border-color: var(--primary-color); 
   outline: none; 
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); 
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); 
 }
-.form-input.disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
+.form-input.disabled { background: #f8fafc; color: var(--text-muted); cursor: not-allowed; }
 .code-font { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 13px; line-height: 1.6; }
 
-.hint { font-size: 12px; color: #94a3b8; margin-top: 6px; display: block; }
+.hint { font-size: 13px; color: var(--text-muted); margin-top: 8px; display: block; }
 
 .split-view {
   display: flex;
-  gap: 24px;
+  gap: 0;
   height: 600px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 .split-view .form-input { 
@@ -1888,9 +2340,9 @@ export default {
   border: none; 
   border-right: 1px solid var(--border-color);
   border-radius: 0;
-  padding: 16px;
-  padding-bottom: 80px; /* Ensure last line is visible */
-  overflow-y: auto; /* Ensure scrollbar appears */
+  padding: 20px;
+  padding-bottom: 80px;
+  overflow-y: auto;
 }
 .preview-box {
   flex: 1;
@@ -1907,7 +2359,7 @@ export default {
 }
 .preview-container-large {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   height: 600px;
   background: #fff;
   overflow: hidden;
@@ -1922,59 +2374,63 @@ export default {
 .checkbox-group label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  user-select: none;
 }
 .checkbox-group input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
+  accent-color: var(--primary-color);
 }
 
 /* AI Assistant */
 .ai-assistant-box {
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-  border: 1px solid #c7d2fe;
-  border-radius: 12px;
-  padding: 20px;
+  background: #fff;
+  border: 1px solid #e0e7ff;
+  border-radius: var(--radius-lg);
+  padding: 24px;
   margin-bottom: 32px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.05);
 }
 .ai-assistant-box::before {
   content: '';
   position: absolute;
   top: 0;
-  right: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-  opacity: 0.5;
-  pointer-events: none;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), #818cf8);
 }
 
 .ai-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .ai-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #3730a3;
+  color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .ai-status {
   font-size: 13px;
-  color: #4f46e5;
-  font-weight: 500;
+  color: var(--primary-color);
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  background: var(--primary-light);
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 .ai-status::before {
   content: '';
@@ -1982,27 +2438,25 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: var(--primary-color);
   animation: pulse-dot 1.5s infinite;
 }
 
 .status-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 .btn-reset {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-muted);
     text-decoration: underline;
     background: none;
     border: none;
     cursor: pointer;
     padding: 0;
 }
-.btn-reset:hover {
-    color: #ef4444;
-}
+.btn-reset:hover { color: var(--danger-color); }
 
 .ai-controls {
   display: flex;
@@ -2010,50 +2464,98 @@ export default {
   flex-wrap: wrap;
 }
 .ai-controls.disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   pointer-events: none;
-  filter: grayscale(0.5);
+  filter: grayscale(0.2);
 }
 .ai-input {
   flex: 1;
   margin-bottom: 0 !important;
-  min-width: 200px;
-  border-color: #c7d2fe;
+  min-width: 240px;
+  border-color: #e0e7ff;
 }
-.ai-input:focus { border-color: #4f46e5; }
+.ai-input:focus { border-color: var(--primary-color); }
 
 .ai-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 .btn-ai {
-  padding: 10px 16px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 10px 20px;
+  background: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
   white-space: nowrap;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .btn-ai:hover {
-  background: #4338ca;
+  background: var(--primary-color);
+  color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
+  box-shadow: var(--shadow-md);
 }
 .btn-ai:active { transform: translateY(0); }
 .btn-ai:disabled {
-  background: #a5b4fc;
+  background: #f1f5f9;
+  color: #cbd5e1;
+  border-color: #e2e8f0;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
+
+.btn-ai-purple {
+  background-color: #8b5cf6;
+  color: white;
+  border-color: #8b5cf6;
+}
+.btn-ai-purple:hover {
+  background-color: #7c3aed;
+  border-color: #7c3aed;
+  color: white;
+}
+
+.btn-ai-pink {
+  background-color: #ec4899;
+  color: white;
+  border-color: #ec4899;
+}
+.btn-ai-pink:hover {
+  background-color: #db2777;
+  border-color: #db2777;
+  color: white;
+}
+
+.btn-ai-green {
+  background-color: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+.btn-ai-green:hover {
+  background-color: #059669;
+  border-color: #059669;
+  color: white;
+}
+
+.btn-download-md {
+  margin-right: 8px;
+  background-color: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+.btn-download-md:hover {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+  color: white;
+}
+
 
 @keyframes pulse-dot {
   0% { transform: scale(0.8); opacity: 0.5; }
@@ -2072,56 +2574,61 @@ export default {
 
 .meta-badge {
   font-size: 10px;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  line-height: 1;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
 }
 
 .badge-md {
-  background-color: #e2e8f0;
+  background-color: #f1f5f9;
   color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
 .badge-html {
-  background-color: #dbeafe;
-  color: #2563eb;
+  background-color: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #dbeafe;
 }
 
 .meta-count {
   font-size: 10px;
-  color: #94a3b8;
-  background: #f1f5f9;
-  padding: 2px 5px;
+  color: var(--text-muted);
+  background: #f8fafc;
+  padding: 2px 6px;
   border-radius: 10px;
+  border: 1px solid #e2e8f0;
 }
 .checkbox-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 8px;
+  gap: 12px;
+  padding: 16px;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   max-height: 200px;
   overflow-y: auto;
 }
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 14px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   user-select: none;
+  transition: all 0.2s;
 }
 .checkbox-item:hover {
-  border-color: #cbd5e1;
-  background: #f1f5f9;
+  border-color: var(--primary-color);
+  background: #f8fafc;
 }
 .badge-readonly {
   background-color: #fef2f2;
@@ -2130,5 +2637,6 @@ export default {
   border-radius: 4px;
   font-size: 12px;
   border: 1px solid #fecaca;
+  font-weight: 600;
 }
 </style>

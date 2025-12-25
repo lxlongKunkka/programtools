@@ -2,6 +2,7 @@ import express from 'express'
 import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
+import mongoose from 'mongoose'
 import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
 import COS from 'cos-nodejs-sdk-v5'
@@ -783,9 +784,9 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 })
 
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  let { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey, language, group } = req.body;
+  let { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, topicId, clientKey, language, group } = req.body;
   
-  console.log(`[Solution Report Background] Request received. ChapterId: ${chapterId}, Group (from body): '${group}'`);
+  console.log(`[Solution Report Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
 
   if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -918,18 +919,35 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           }
 
           // 3. Update Database
-          let courseLevel = await CourseLevel.findOne({ 
-            $or: [
-                { 'topics.chapters.id': chapterId },
-                { 'topics.chapters._id': chapterId }
-            ]
-          });
+          let query = {};
+          if (topicId) {
+              query = { 'topics._id': topicId };
+          } else {
+              query = {
+                $or: [
+                    { 'topics.chapters.id': chapterId },
+                    { 'topics.chapters._id': chapterId }
+                ]
+              };
+          }
+
+          let courseLevel = await CourseLevel.findOne(query);
 
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
+                  // If topicId is provided, ensure we are looking at the correct topic
+                  if (topicId && topic._id && topic._id.toString() !== topicId) continue;
+
+                  let chapter;
+                  if (mongoose.Types.ObjectId.isValid(chapterId)) {
+                      chapter = topic.chapters.find(c => c._id && c._id.toString() === chapterId);
+                  }
+                  if (!chapter) {
+                      chapter = topic.chapters.find(c => c.id === chapterId);
+                  }
+
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
@@ -1255,9 +1273,9 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
+  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
   
-  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, Group (from body): '${group}'`);
+  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
 
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1268,13 +1286,21 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           // If group is missing, try to fetch it from DB
           if (!group) {
               try {
-                  // Try by ID first
-                  let levelDoc = await CourseLevel.findOne({
-                      $or: [
-                          { 'topics.chapters.id': chapterId },
-                          { 'topics.chapters._id': chapterId }
-                      ]
-                  });
+                  let levelDoc;
+                  // Try by Topic ID first if available
+                  if (topicId) {
+                      levelDoc = await CourseLevel.findOne({ 'topics._id': topicId });
+                  }
+                  
+                  // If not found or no topicId, try by Chapter ID
+                  if (!levelDoc) {
+                      levelDoc = await CourseLevel.findOne({
+                          $or: [
+                              { 'topics.chapters.id': chapterId },
+                              { 'topics.chapters._id': chapterId }
+                          ]
+                      });
+                  }
 
                   // If not found, try by Level and Topic (Robust fallback for new chapters)
                   if (!levelDoc && levelNum && topicTitle) {
@@ -1477,18 +1503,35 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           // Update Database
-          let courseLevel = await CourseLevel.findOne({ 
-            $or: [
-                { 'topics.chapters.id': chapterId },
-                { 'topics.chapters._id': chapterId }
-            ]
-          });
+          let query = {};
+          if (topicId) {
+              query = { 'topics._id': topicId };
+          } else {
+              query = {
+                $or: [
+                    { 'topics.chapters.id': chapterId },
+                    { 'topics.chapters._id': chapterId }
+                ]
+              };
+          }
+
+          let courseLevel = await CourseLevel.findOne(query);
 
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
+                  // If topicId is provided, ensure we are looking at the correct topic
+                  if (topicId && topic._id && topic._id.toString() !== topicId) continue;
+
+                  let chapter;
+                  if (mongoose.Types.ObjectId.isValid(chapterId)) {
+                      chapter = topic.chapters.find(c => c._id && c._id.toString() === chapterId);
+                  }
+                  if (!chapter) {
+                      chapter = topic.chapters.find(c => c.id === chapterId);
+                  }
+
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
@@ -1540,7 +1583,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
 // Generate Lesson Plan Background
 router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, requirements, model, chapterId, clientKey, language } = req.body;
+  const { topic, context, level, requirements, model, chapterId, topicId, clientKey, language } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1597,18 +1640,35 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           const content = resp.data.choices?.[0]?.message?.content || ''
 
           // Update Database
-          let courseLevel = await CourseLevel.findOne({ 
-            $or: [
-                { 'topics.chapters.id': chapterId },
-                { 'topics.chapters._id': chapterId }
-            ]
-          });
+          let query = {};
+          if (topicId) {
+              query = { 'topics._id': topicId };
+          } else {
+              query = {
+                $or: [
+                    { 'topics.chapters.id': chapterId },
+                    { 'topics.chapters._id': chapterId }
+                ]
+              };
+          }
+
+          let courseLevel = await CourseLevel.findOne(query);
 
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
               for (const topic of courseLevel.topics) {
-                  const chapter = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId));
+                  // If topicId is provided, ensure we are looking at the correct topic
+                  if (topicId && topic._id && topic._id.toString() !== topicId) continue;
+
+                  let chapter;
+                  if (mongoose.Types.ObjectId.isValid(chapterId)) {
+                      chapter = topic.chapters.find(c => c._id && c._id.toString() === chapterId);
+                  }
+                  if (!chapter) {
+                      chapter = topic.chapters.find(c => c.id === chapterId);
+                  }
+
                   if (chapter) {
                       chapter.content = content;
                       chapter.contentType = 'markdown';
