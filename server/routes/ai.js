@@ -783,8 +783,10 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
 })
 
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  const { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey, language } = req.body;
+  let { problem, code, reference, model, level, topicTitle, chapterTitle, problemTitle, chapterId, clientKey, language, group } = req.body;
   
+  console.log(`[Solution Report Background] Request received. ChapterId: ${chapterId}, Group (from body): '${group}'`);
+
   if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
   // Respond immediately
@@ -793,6 +795,35 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
   // Start background process
   (async () => {
       try {
+          // If group is missing, try to fetch it from DB
+          if (!group) {
+              try {
+                  // Try by ID first
+                  let levelDoc = await CourseLevel.findOne({
+                      $or: [
+                          { 'topics.chapters.id': chapterId },
+                          { 'topics.chapters._id': chapterId }
+                      ]
+                  });
+
+                  // If not found, try by Level and Topic (Robust fallback for new chapters)
+                  if (!levelDoc && level && topicTitle) {
+                       console.log(`[Background] Chapter ID lookup failed, trying by Level ${level} and Topic ${topicTitle}`);
+                       levelDoc = await CourseLevel.findOne({
+                           level: Number(level),
+                           'topics.title': topicTitle
+                       });
+                  }
+
+                  if (levelDoc && levelDoc.group) {
+                      group = levelDoc.group;
+                      console.log(`[Background] Fetched group from DB: ${group}`);
+                  }
+              } catch (e) {
+                  console.warn('[Background] Failed to fetch group from DB', e);
+              }
+          }
+
           const logMsg = `[Background] Starting solution report for chapter ${chapterId} (${chapterTitle})`;
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
@@ -848,6 +879,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
           const safeLevel = 'level' + sanitize(String(level));
           const safeTopic = sanitize(topicTitle);
+          const safeGroup = group ? sanitize(group) : '';
           // Use problemTitle if available, otherwise fallback to chapterTitle
           const filenameBase = problemTitle ? sanitize(problemTitle) : sanitize(chapterTitle);
           const safeChapter = filenameBase + '.html';
@@ -856,7 +888,10 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
           // Try COS Upload first
           if (cos) {
-              const cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              let cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              if (safeGroup) {
+                  cosKey = `courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              }
               try {
                   const cosUrl = await uploadToCos(cosKey, htmlContent);
                   console.log(`[Background] Solution Report uploaded to COS: ${cosUrl}`);
@@ -1220,14 +1255,72 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language } = req.body;
+  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
   
+  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, Group (from body): '${group}'`);
+
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
   res.json({ status: 'processing', message: 'PPT generation started in background' });
 
   (async () => {
       try {
+          // If group is missing, try to fetch it from DB
+          if (!group) {
+              try {
+                  // Try by ID first
+                  let levelDoc = await CourseLevel.findOne({
+                      $or: [
+                          { 'topics.chapters.id': chapterId },
+                          { 'topics.chapters._id': chapterId }
+                      ]
+                  });
+
+                  // If not found, try by Level and Topic (Robust fallback for new chapters)
+                  if (!levelDoc && levelNum && topicTitle) {
+                       console.log(`[Background] Chapter ID lookup failed, trying by Level ${levelNum} and Topic ${topicTitle}`);
+                       levelDoc = await CourseLevel.findOne({
+                           level: Number(levelNum),
+                           'topics.title': topicTitle
+                       });
+                  }
+
+                  if (levelDoc && levelDoc.group) {
+                      group = levelDoc.group;
+                      console.log(`[Background] Fetched group from DB: ${group}`);
+                  }
+              } catch (e) {
+                  console.warn('[Background] Failed to fetch group from DB', e);
+              }
+          }
+
+          // Pre-calculate and log the expected path
+          const sanitizeForLog = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
+          const safeLevelForLog = levelTitle ? sanitizeForLog(levelTitle) : ('level' + sanitizeForLog(String(levelNum)));
+          const safeTopicForLog = sanitizeForLog(topicTitle);
+          const safeChapterForLog = sanitizeForLog(chapterTitle) + '.html';
+          const safeGroupForLog = group ? sanitizeForLog(group) : '';
+          
+          let expectedPath = '';
+          if (safeGroupForLog) {
+              expectedPath = `courseware/${safeGroupForLog}/${safeLevelForLog}/${safeTopicForLog}/${safeChapterForLog}`;
+          } else {
+              // Fallback logic (similar to saving logic)
+              let subjectFolder = '';
+              if (context && /python/i.test(context)) subjectFolder = 'Python';
+              else if (context && /web/i.test(context)) subjectFolder = 'Web';
+              
+              if (subjectFolder) {
+                  expectedPath = `courseware/${subjectFolder}/${safeLevelForLog}/${safeTopicForLog}/${safeChapterForLog}`;
+              } else {
+                  expectedPath = `courseware/${safeLevelForLog}/${safeTopicForLog}/${safeChapterForLog}`;
+              }
+          }
+          
+          const pathLogMsg = `[Background] Expected Save Path: ${expectedPath}`;
+          console.log(pathLogMsg);
+          try { getIO().emit('ai_task_log', { message: pathLogMsg, clientKey }); } catch (e) {}
+
           const logMsg = `[Background] Starting PPT generation for chapter ${chapterId} (${topic})`;
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
@@ -1336,13 +1429,16 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           const safeLevel = levelTitle ? sanitize(levelTitle) : ('level' + sanitize(String(levelNum)));
           const safeTopic = sanitize(topicTitle);
           const safeChapter = sanitize(chapterTitle) + '.html';
+          const safeGroup = group ? sanitize(group) : '';
           
           let relativePath;
           
           // Try COS Upload first
           if (cos) {
               let cosKey = '';
-              if (subjectFolder) {
+              if (safeGroup) {
+                  cosKey = `courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              } else if (subjectFolder) {
                   cosKey = `courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
               } else {
                   cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;

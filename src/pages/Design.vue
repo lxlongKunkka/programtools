@@ -1264,7 +1264,8 @@ export default {
             chapterTitle: chapterTitle,
             levelNum: levelNum,
             levelTitle: levelTitle,
-            clientKey: chapterId
+            clientKey: chapterId,
+            group: groupName
           })
         })
         
@@ -1340,7 +1341,8 @@ export default {
             chapterId: this.editingChapter.id,
             clientKey: id, // Pass the UI key (usually _id) to server
             model: this.selectedModel,
-            language: this.editingLevelForChapter.subject || 'C++'
+            language: this.editingLevelForChapter.subject || 'C++',
+            group: this.editingLevelForChapter.group
         })
         
         this.aiStatusMap[id] = '正在后台生成题解中...'
