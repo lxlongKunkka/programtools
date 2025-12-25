@@ -1,4 +1,4 @@
-export const getDataGenPrompt = (extraConstraintPrompt, cyaronDocs) => `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
+export const getDataGenPrompt = (extraConstraintPrompt, cyaronDocs, code) => `你是一个专业的算法竞赛测试数据生成专家。请输出使用 CYaRon 的高效 Python 数据生成脚本，并附简要思路说明。
 
 【语言要求：必须使用简体中文输出】
 - 所有的思路说明、代码注释必须使用简体中文。
@@ -7,6 +7,8 @@ export const getDataGenPrompt = (extraConstraintPrompt, cyaronDocs) => `你是�
 - 生成速度极快，支持 n=1e5~2e5；避免任何低效写, 根据题意生成多组测试数据的数据生成脚本。
 
 ${extraConstraintPrompt}
+
+${code ? `\n\n【参考 AC 代码】\n请参考以下标准代码的逻辑（如数组大小、变量类型、特殊处理逻辑）来辅助生成数据：\n\`\`\`cpp\n${code}\n\`\`\`\n` : ''}
 
 以下是 CYaRon 库的文档：
 

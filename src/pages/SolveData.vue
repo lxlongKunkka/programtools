@@ -76,7 +76,6 @@
     <div class="input-panel new-input-panel">
       <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h3>题目描述</h3>
-        <button @click="extractCodeFromProblem" v-if="problemText" class="btn-text-action" title="自动提取题目中的代码到下方">提取代码</button>
       </div>
       <textarea 
         v-model="problemText" 
@@ -115,7 +114,7 @@
             >
               {{ isTranslating ? '翻译中...' : '生成翻译' }}
             </div>
-            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning || manualCode.trim()" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
+            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
             <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
             <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">生成解题报告</button>
             <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
@@ -152,10 +151,19 @@
           <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
         </div>
       </div>
+      
+      <!-- 生成进度状态显示 -->
+      <div v-if="generationStatus" class="generation-status-bar" style="background:#e6f7ff; border:1px solid #91d5ff; padding:8px 12px; margin-bottom:8px; border-radius:4px; color:#0050b3; font-size:14px; display:flex; align-items:center;">
+        <span class="loading-spinner" v-if="isGenerating || isTranslating || isGeneratingReport || isGeneratingTitle" style="margin-right:8px;">⏳</span>
+        {{ generationStatus }}
+      </div>
+
       <div class="output-tabs">
         <button :class="['tab-btn', {active: activeTab === 'translate'}]" @click="activeTab = 'translate'">🌐 翻译内容</button>
         <button :class="['tab-btn', {active: activeTab === 'code'}]" @click="activeTab = 'code'">📝 解题代码</button>
+        <button :class="['tab-btn', {active: activeTab === 'pure_code'}]" @click="activeTab = 'pure_code'">💻 纯净代码</button>
         <button :class="['tab-btn', {active: activeTab === 'data'}]" @click="activeTab = 'data'">📊 数据脚本</button>
+        <button :class="['tab-btn', {active: activeTab === 'report'}]" @click="activeTab = 'report'">📽️ 解题报告</button>
       </div>
       <div class="output-tab-content">
         <div v-show="activeTab === 'translate'" class="output-block">
@@ -179,6 +187,15 @@
           </div>
           <div v-else class="translation-preview-empty">暂无解题代码</div>
         </div>
+        <div v-show="activeTab === 'pure_code'" class="output-block">
+          <div class="output-block-header">💻 纯净代码
+            <button @click="copyPureCode" :disabled="!pureAcCode" class="btn-small" style="float:right;">📋 复制</button>
+          </div>
+          <div class="rendered-output" v-if="pureAcCode">
+            <MarkdownViewer :content="formattedPureCode" />
+          </div>
+          <div v-else class="translation-preview-empty">暂无提取到的代码</div>
+        </div>
         <div v-show="activeTab === 'data'" class="output-block">
           <div class="output-block-header">📊 数据脚本
             <button @click="copyDataCode" class="btn-small" style="float:right;">📋 复制代码</button>
@@ -189,6 +206,17 @@
             <MarkdownViewer :content="dataOutput" />
           </div>
           <div v-else class="translation-preview-empty">暂无数据脚本</div>
+        </div>
+        <div v-show="activeTab === 'report'" class="output-block">
+          <div class="output-block-header">📽️ 解题报告
+            <button @click="generateReportInline" :disabled="isGeneratingReport" class="btn-small" style="float:right;">⚡ 生成报告</button>
+            <button @click="openReportNewWindow" :disabled="!reportHtml" class="btn-small" style="float:right; margin-right:8px;">↗️ 新窗口</button>
+            <button @click="downloadReport" :disabled="!reportHtml" class="btn-small" style="float:right; margin-right:8px;">💾 下载</button>
+          </div>
+          <div v-if="reportHtml" class="report-preview" style="height: 100%; width: 100%;">
+            <iframe :srcdoc="reportHtml" style="width:100%; height:100%; border:none;"></iframe>
+          </div>
+          <div v-else class="translation-preview-empty">暂无解题报告，请点击右上角生成</div>
         </div>
       </div>
       <div class="output-actions-bar">
@@ -218,13 +246,16 @@ export default {
       models: [],
       language: 'C++',
       isGenerating: false,
+      generationStatus: '', // 用于显示详细的生成进度
       isGeneratingTitle: false,
+      isGeneratingReport: false,
       activeTab: 'code',
       manualCode: '',
       referenceText: '',
       isTranslating: false,
       translationText: '',
       problemMeta: null,
+      reportHtml: '',
       
       // 批量模式相关数据
       isBatchMode: false,
@@ -276,6 +307,7 @@ export default {
     codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
     dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
     translationText(val) { this.updateCurrentTask('translationText', val) },
+    reportHtml(val) { this.updateCurrentTask('reportHtml', val) },
     problemMeta: {
       handler(val) { this.updateCurrentTask('problemMeta', val) },
       deep: true
@@ -293,6 +325,16 @@ export default {
         return '```\n' + this.manualCode + '\n```'
       }
       return this.codeOutput
+    },
+    pureAcCode() {
+      if (this.manualCode && this.manualCode.trim()) {
+        return this.manualCode.trim()
+      }
+      return this.extractPureCode(this.codeOutput)
+    },
+    formattedPureCode() {
+      const lang = this.language === 'C++' ? 'cpp' : 'python'
+      return '```' + lang + '\n' + this.pureAcCode + '\n```'
     },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
@@ -323,6 +365,76 @@ export default {
         }
       }
       this.showToastMessage('未在题目描述中发现明显的代码块')
+    },
+
+    extractPureCode(content) {
+      if (!content) return ''
+      
+      // 顶级优先：寻找 <!-- AC_CODE --> 标记
+      const markerIndex = content.indexOf('<!-- AC_CODE -->')
+      if (markerIndex !== -1) {
+         const afterMarker = content.substring(markerIndex)
+         const codePatterns = [
+            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+            /```(?:python|py)\s*\n([\s\S]*?)```/i,
+            /```java\s*\n([\s\S]*?)```/i,
+            /```\s*\n([\s\S]*?)```/
+         ]
+         for (const pattern of codePatterns) {
+            const match = afterMarker.match(pattern)
+            if (match && match[1]) {
+                let code = match[1].trim()
+                return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+            }
+         }
+      }
+
+      // 其次：优先寻找 "代码实现" 部分后的代码块
+      const codeSectionIndex = content.indexOf('## 代码实现')
+      if (codeSectionIndex !== -1) {
+         const afterSection = content.substring(codeSectionIndex)
+         const codePatterns = [
+            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+            /```(?:python|py)\s*\n([\s\S]*?)```/i,
+            /```java\s*\n([\s\S]*?)```/i,
+            /```\s*\n([\s\S]*?)```/
+         ]
+         for (const pattern of codePatterns) {
+            const match = afterSection.match(pattern)
+            if (match && match[1]) {
+                let code = match[1].trim()
+                return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+            }
+         }
+      }
+      
+      // 兜底：通用匹配
+      const codePatterns = [
+        /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+        /```cpp([\s\S]*?)```/i,
+        /```c\+\+([\s\S]*?)```/i,
+        /```(?:python|py)\s*\n([\s\S]*?)```/i,
+        /```python([\s\S]*?)```/i,
+        /```py([\s\S]*?)```/i,
+        /```java\s*\n([\s\S]*?)```/i,
+        /```java([\s\S]*?)```/i,
+        /```\s*\n([\s\S]*?)```/
+      ]
+      
+      for (const pattern of codePatterns) {
+        const match = content.match(pattern)
+        if (match && match[1]) {
+          let code = match[1].trim()
+          return code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+        }
+      }
+      
+      // 如果没有 Markdown 标记且不为空，视为纯代码
+      if (content.trim() && !content.includes('```')) {
+         return content.trim()
+      }
+      
+      return ''
     },
 
     // --- 批量模式方法 ---
@@ -389,6 +501,7 @@ export default {
       this.dataOutput = task.dataOutput || ''
       this.translationText = task.translationText || ''
       this.problemMeta = task.problemMeta || null
+      this.reportHtml = task.reportHtml || ''
     },
     
     updateCurrentTask(field, value) {
@@ -635,27 +748,72 @@ export default {
           }
           
           // 尝试提取代码块
-          const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-            /```cpp([\s\S]*?)```/i,
-            /```c\+\+([\s\S]*?)```/i,
-            /```(?:python|py)\s*\n([\s\S]*?)```/i,
-            /```python([\s\S]*?)```/i,
-            /```py([\s\S]*?)```/i,
-            /```java\s*\n([\s\S]*?)```/i,
-            /```java([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
-          ]
-             
           let extractedCode = ''
-          for (const pattern of codePatterns) {
-            const match = sourceForCode.match(pattern)
-            if (match && match[1]) {
-                extractedCode = match[1].trim()
-                // 移除可能残留的语言标识符
-                extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-                break
+          
+          // 顶级优先：寻找 <!-- AC_CODE --> 标记
+          const markerIndex = sourceForCode.indexOf('<!-- AC_CODE -->')
+          if (markerIndex !== -1) {
+             const afterMarker = sourceForCode.substring(markerIndex)
+             const codePatterns = [
+                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                /```java\s*\n([\s\S]*?)```/i,
+                /```\s*\n([\s\S]*?)```/
+             ]
+             for (const pattern of codePatterns) {
+                const match = afterMarker.match(pattern)
+                if (match && match[1]) {
+                    extractedCode = match[1].trim()
+                    extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                    break
+                }
+             }
+          }
+
+          // 其次：优先寻找 "代码实现" 部分后的代码块 (针对完整题解 Markdown)
+          if (!extractedCode) {
+            const codeSectionIndex = sourceForCode.indexOf('## 代码实现')
+            if (codeSectionIndex !== -1) {
+               const afterSection = sourceForCode.substring(codeSectionIndex)
+               const codePatterns = [
+                  /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                  /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                  /```java\s*\n([\s\S]*?)```/i,
+                  /```\s*\n([\s\S]*?)```/
+               ]
+               for (const pattern of codePatterns) {
+                  const match = afterSection.match(pattern)
+                  if (match && match[1]) {
+                      extractedCode = match[1].trim()
+                      extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                      break
+                  }
+               }
             }
+          }
+          
+          if (!extractedCode) {
+              const codePatterns = [
+                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                /```cpp([\s\S]*?)```/i,
+                /```c\+\+([\s\S]*?)```/i,
+                /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                /```python([\s\S]*?)```/i,
+                /```py([\s\S]*?)```/i,
+                /```java\s*\n([\s\S]*?)```/i,
+                /```java([\s\S]*?)```/i,
+                /```\s*\n([\s\S]*?)```/
+              ]
+                 
+              for (const pattern of codePatterns) {
+                const match = sourceForCode.match(pattern)
+                if (match && match[1]) {
+                    extractedCode = match[1].trim()
+                    // 移除可能残留的语言标识符
+                    extractedCode = extractedCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                    break
+                }
+              }
           }
              
           if (extractedCode) {
@@ -940,6 +1098,7 @@ pause
         async autoTranslate() {
           if (!this.problemText.trim()) return;
           this.isTranslating = true;
+          this.generationStatus = '正在自动翻译题目...'
           this.translationText = '';
           try {
             const data = await request('/api/translate', {
@@ -957,8 +1116,15 @@ pause
             }
             else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
             else this.translationText = '(无返回内容)';
+            
+            // 如果不是在 generateAll 流程中（即单独点击翻译），则显示完成状态
+            if (this.isGenerating !== 'all' && this.isGenerating !== 'code' && this.isGenerating !== 'data') {
+                this.generationStatus = '✅ 翻译完成'
+                setTimeout(() => { if(this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
+            }
           } catch (e) {
             this.translationText = '请求错误: ' + e.message;
+            this.generationStatus = '❌ 翻译失败: ' + e.message
           } finally {
             this.isTranslating = false;
           }
@@ -993,33 +1159,42 @@ pause
       }
       
       this.isGenerating = 'code'
+      this.generationStatus = '正在生成题解代码...'
       this.codeOutput = ''
       this.activeTab = 'code'
       
       try {
         // 确保有翻译文本，保证后续的元数据基于译文
         if (!(this.translationText && this.translationText.trim())) {
+          this.generationStatus = '正在自动翻译题目...'
           await this.autoTranslate()
+          this.generationStatus = '翻译完成，正在生成题解代码...'
         }
         
         let requests = []
         
         // 1. 请求生成代码
         let promptText = this.problemText
+        
+        // 如果 manualCode 存在，将其作为参考代码加入 Prompt
+        if (this.manualCode && this.manualCode.trim()) {
+             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${this.manualCode.trim()}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。`
+        }
+        
         // 如果 referenceText 存在，则将其加入 Prompt
         if (this.referenceText && this.referenceText.trim()) {
-             promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
+             promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写详细的解题教案。`
         }
 
         requests.push(
-          request('/api/solve', {
+          request('/api/solution', {
             method: 'POST',
             body: JSON.stringify({
               text: promptText,
               model: this.selectedModel,
               language: this.language
             })
-          }).then(res => ({ type: 'code', data: res }))
+        }).then(res => ({ type: 'code', data: res }))
         )
         
         // 2. 如果元数据尚未生成，则请求生成元数据
@@ -1046,8 +1221,11 @@ pause
               console.log('题目元数据:', this.problemMeta)
            }
         }
+        this.generationStatus = '✅ 题解代码生成完成'
+        setTimeout(() => { if(this.generationStatus === '✅ 题解代码生成完成') this.generationStatus = '' }, 3000)
       } catch (error) {
         console.error('Generate code error:', error)
+        this.generationStatus = '❌ 生成失败: ' + error.message
         this.showToastMessage('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
@@ -1061,70 +1239,78 @@ pause
       }
       
       this.isGenerating = 'all'
+      this.generationStatus = '正在初始化生成任务...'
       this.dataOutput = ''
-      this.translationText = ''
+      // 注意：这里不清空 translationText，因为如果已经有了就不需要重新生成
+      // this.translationText = '' 
       
       // 检查 manualCode 是否存在
       const manualContent = this.manualCode.trim()
-      let isManualCode = false
       
-      if (manualContent) {
-        // 只要 manualCode 有内容，就视为手动代码模式
-        isManualCode = true
-      }
-      
-      // 如果判定为手动代码模式，直接使用
-      if (isManualCode) {
-        console.log('使用手动 AC 代码')
-        this.codeOutput = manualContent
-      } else {
-        console.log('自动生成代码模式')
-        this.codeOutput = ''
-      }
-      
+      this.codeOutput = ''
       this.activeTab = 'code'
       
       try {
-        // 如果没有翻译，先执行翻译，保证后续元数据使用译文
+        // 1. 如果没有翻译，先执行翻译
         if (!(this.translationText && this.translationText.trim())) {
+          this.generationStatus = '正在自动翻译题目描述...'
           await this.autoTranslate()
         }
         
-        let requests = []
+        // 2. 先生成题解 (串行，为了拿到代码)
+        this.generationStatus = '正在生成题解代码...'
+        let promptText = this.problemText
         
-        // 准备请求列表
-        // 1. 如果不是手动代码模式，请求生成代码
-        if (!isManualCode) {
-          let promptText = this.problemText
-          if (this.referenceText && this.referenceText.trim()) {
-            promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
-          }
-          requests.push(
-            request('/api/solve', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: promptText,
-                model: this.selectedModel,
-                language: this.language
-              })
-            }).then(res => ({ type: 'code', data: res }))
-          )
+        if (manualContent) {
+             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。`
         }
         
-        // 2. 请求生成数据
-        requests.push(
+        if (this.referenceText && this.referenceText.trim()) {
+          promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写详细的解题教案。`
+        }
+        
+        const solutionRes = await request('/api/solution', {
+            method: 'POST',
+            body: JSON.stringify({
+              text: promptText,
+              model: this.selectedModel,
+              language: this.language
+            })
+        })
+        
+        // 处理题解结果
+        if (solutionRes && solutionRes.result) {
+            this.codeOutput = solutionRes.result
+            // 自动生成报告预览
+            this.generateReportInline()
+        }
+        
+        // 3. 准备并行请求：数据生成 + 元数据生成
+        this.generationStatus = '题解生成完毕，正在并行生成数据脚本和元数据...'
+        let parallelRequests = []
+        
+        // 3a. 数据生成 (使用提取的代码)
+        let codeForData = ''
+        if (manualContent) {
+            codeForData = manualContent
+        } else if (this.codeOutput) {
+            codeForData = this.extractPureCode(this.codeOutput)
+        }
+        
+        parallelRequests.push(
           request('/api/generate-data', {
             method: 'POST',
             body: JSON.stringify({
               text: this.problemText,
-              model: this.selectedModel
+              model: this.selectedModel,
+              code: codeForData
             })
           }).then(res => ({ type: 'data', data: res }))
         )
         
-        // 3. 如果元数据尚未生成（例如 autoTranslate 未能提取到），则请求生成元数据
+        // 3b. 元数据生成
         if (!this.problemMeta || !this.problemMeta.title) {
-           requests.push(
+           parallelRequests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
               body: JSON.stringify({
@@ -1135,40 +1321,40 @@ pause
            )
         }
         
-        const responses = await Promise.all(requests)
+        // 执行并行请求
+        const results = await Promise.all(parallelRequests)
         
-        // 处理响应
-        for (const res of responses) {
-           if (!res || !res.data) continue
-           
-           if (res.type === 'code' && res.data.result) {
-              this.codeOutput = res.data.result
-           } else if (res.type === 'data' && res.data.result) {
-              this.dataOutput = res.data.result
-           } else if (res.type === 'meta') {
-              this.problemMeta = res.data
-              console.log('题目元数据:', this.problemMeta)
-           }
-        }
+        // 处理结果
+        results.forEach(result => {
+            if (result.type === 'data') {
+                if (result.data && result.data.result) {
+                    this.dataOutput = result.data.result
+                }
+            } else if (result.type === 'meta') {
+                if (result.data) {
+                    this.problemMeta = result.data
+                }
+            }
+        })
         
         // 检查是否有生成成功的内容
-        let hasContent = false
-        if (isManualCode) {
-          hasContent = !!(this.dataOutput || this.translationText)
-        } else {
-          hasContent = !!(this.codeOutput || this.dataOutput || this.translationText)
-        }
+        let hasContent = !!(this.codeOutput || this.dataOutput || this.translationText)
         
         if (hasContent) {
+          this.generationStatus = '✅ 全部生成完成！'
           this.showToastMessage('✅ 全部生成完成！')
+          setTimeout(() => { if(this.generationStatus === '✅ 全部生成完成！') this.generationStatus = '' }, 5000)
           return true
         } else {
+          this.generationStatus = '❌ 生成失败'
           this.showToastMessage('生成失败，请检查网络连接和后端服务')
           return false
         }
+
       } catch (error) {
-        console.error('Generate all error:', error)
-        this.showToastMessage('生成失败: ' + error.message)
+        console.error('Generate all failed:', error)
+        this.generationStatus = '❌ 生成出错: ' + error.message
+        this.showToastMessage('一键生成失败: ' + error.message)
         return false
       } finally {
         this.isGenerating = false
@@ -1187,24 +1373,36 @@ pause
       }
       
       this.isGenerating = 'data'
+      this.generationStatus = '正在生成数据脚本...'
       this.dataOutput = ''
       this.activeTab = 'data'
       
       try {
         // 确保有翻译文本，保证元数据基于译文
         if (!(this.translationText && this.translationText.trim())) {
+          this.generationStatus = '正在自动翻译题目...'
           await this.autoTranslate()
+          this.generationStatus = '翻译完成，正在生成数据脚本...'
         }
         
         let requests = []
         
         // 1. 请求生成数据
+        // 尝试提取代码
+        let codeForData = ''
+        if (hasManualCode) {
+            codeForData = this.manualCode
+        } else if (this.codeOutput) {
+            codeForData = this.extractPureCode(this.codeOutput)
+        }
+
         requests.push(
           request('/api/generate-data', {
             method: 'POST',
             body: JSON.stringify({
               text: textForData,
-              model: this.selectedModel
+              model: this.selectedModel,
+              code: codeForData
             })
           }).then(res => ({ type: 'data', data: res }))
         )
@@ -1233,8 +1431,11 @@ pause
               console.log('题目元数据:', this.problemMeta)
            }
         }
+        this.generationStatus = '✅ 数据脚本生成完成'
+        setTimeout(() => { if(this.generationStatus === '✅ 数据脚本生成完成') this.generationStatus = '' }, 3000)
       } catch (error) {
         console.error('Generate data error:', error)
+        this.generationStatus = '❌ 生成失败: ' + error.message
         this.showToastMessage('生成失败: ' + error.message)
       } finally {
         this.isGenerating = false
@@ -1378,41 +1579,182 @@ pause
       this.referenceText = ''
       this.problemMeta = null
       this.translationText = ''
+      this.reportHtml = ''
     },
 
-    goToReport() {
-      // 优先使用 manualCode，否则使用 codeOutput
-      const codeContent = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput;
-      
-      // 提取纯代码
-      let pureCode = codeContent || '';
-      if (pureCode) {
-        const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
-        const matches = [...codeContent.matchAll(codeBlockRegex)];
-        if (matches.length > 0) {
-          pureCode = matches[0][1].trim();
-        }
-      } else {
-        pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。";
+    async generateReportInline() {
+      if (!this.problemText.trim()) {
+        this.showToastMessage('请先输入题目描述')
+        return
       }
       
-      // 构造题目描述，如果存在参考思路，则附加上去
-      let problemDesc = this.translationText || this.problemText;
-      if (this.referenceText && this.referenceText.trim()) {
-         problemDesc += `\n\n【参考思路】\n${this.referenceText.trim()}`;
-      }
+      this.isGeneratingReport = true
+      this.generationStatus = '正在生成解题报告...'
+      this.activeTab = 'report'
+      
+      try {
+        // 优先使用 manualCode，否则使用 codeOutput
+        let codeContent = (this.manualCode && this.manualCode.trim()) ? this.manualCode : this.codeOutput;
+        
+        // 如果没有代码内容，先自动生成题解
+        if (!codeContent) {
+            this.showToastMessage('正在自动生成题解思路...')
+            this.generationStatus = '正在自动生成题解思路...'
+            try {
+                let promptText = this.problemText
+                if (this.referenceText && this.referenceText.trim()) {
+                    promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
+                }
 
-      const reportData = {
-        problem: problemDesc,
-        code: pureCode,
-        autoStart: true
-      };
+                const solutionRes = await request('/api/solution', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        text: promptText,
+                        model: this.selectedModel,
+                        language: this.language
+                    })
+                })
+                if (solutionRes && solutionRes.result) {
+                    this.codeOutput = solutionRes.result
+                    codeContent = this.codeOutput
+                }
+            } catch (err) {
+                console.error('Auto generate solution failed:', err)
+                this.showToastMessage('自动生成题解失败，尝试直接生成报告...')
+            }
+        }
+
+        // 提取纯代码
+        let pureCode = codeContent || '';
+        let solutionPlan = '';
+
+        // 检查是否为 AI 生成的完整 Markdown 题解
+        const isMarkdownSolution = codeContent && (
+          codeContent.includes('## 算法思路') || 
+          codeContent.includes('## 代码实现') || 
+          codeContent.includes('**算法思路**')
+        );
+
+        if (isMarkdownSolution) {
+          solutionPlan = codeContent;
+          
+          // 尝试提取代码块
+          const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
+          const matches = [...codeContent.matchAll(codeBlockRegex)];
+          
+          let foundCode = false;
+          
+          // 顶级优先：寻找 <!-- AC_CODE --> 标记
+          const markerIndex = codeContent.indexOf('<!-- AC_CODE -->');
+          if (markerIndex !== -1 && matches.length > 0) {
+             for (const m of matches) {
+               if (m.index > markerIndex) {
+                 pureCode = m[1].trim();
+                 foundCode = true;
+                 break;
+               }
+             }
+          }
+
+          // 其次：寻找 "代码实现" 部分后的代码块
+          if (!foundCode) {
+            const codeSectionIndex = codeContent.indexOf('## 代码实现');
+            if (codeSectionIndex !== -1 && matches.length > 0) {
+               for (const m of matches) {
+                 if (m.index > codeSectionIndex) {
+                   pureCode = m[1].trim();
+                   foundCode = true;
+                   break;
+                 }
+               }
+            }
+          }
+          
+          if (!foundCode && matches.length > 0) {
+            let bestMatch = matches[0];
+            let maxLen = 0;
+            for (const m of matches) {
+               if (m[1].length > maxLen) {
+                  maxLen = m[1].length;
+                  bestMatch = m;
+               }
+            }
+            pureCode = bestMatch[1].trim();
+          }
+        } else {
+          if (pureCode) {
+            const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
+            const matches = [...codeContent.matchAll(codeBlockRegex)];
+            if (matches.length > 0) {
+              pureCode = matches[0][1].trim();
+            }
+          } else {
+            pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。";
+          }
+        }
+        
+        let problemDesc = this.translationText || this.problemText;
+        let referenceToSend = solutionPlan;
+        if (!referenceToSend && this.referenceText && this.referenceText.trim()) {
+           referenceToSend = this.referenceText.trim();
+        }
+
+        this.generationStatus = '正在渲染解题报告...'
+        const res = await request.post('/api/solution-report', {
+          problem: problemDesc,
+          code: pureCode,
+          reference: referenceToSend,
+          solutionPlan: solutionPlan,
+          model: this.selectedModel,
+          language: this.language
+        })
+        
+        if (res.html) {
+          this.reportHtml = res.html
+          this.showToastMessage('✅ 解题报告生成成功')
+          this.generationStatus = '✅ 解题报告生成成功'
+          setTimeout(() => { if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' }, 3000)
+        }
+      } catch (e) {
+        console.error('Generate report error:', e)
+        this.showToastMessage('生成报告失败: ' + e.message)
+        this.generationStatus = '❌ 生成报告失败: ' + e.message
+      } finally {
+        this.isGeneratingReport = false
+      }
+    },
+
+    openReportNewWindow() {
+      if (!this.reportHtml) return
+      const blob = new Blob([this.reportHtml], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    },
+
+    downloadReport() {
+      if (!this.reportHtml) return
+      const blob = new Blob([this.reportHtml], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'solution_report.html'
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+
+    // 左侧按钮点击动作：切换到报告 Tab，如果没有报告则自动生成
+    goToReport() {
+      this.activeTab = 'report'
+      // 如果当前没有报告内容，且没有正在生成，则自动触发生成
+      if (!this.reportHtml && !this.isGeneratingReport) {
+        this.generateReportInline()
+      }
       
-      localStorage.setItem('solution_report_data', JSON.stringify(reportData));
-      
-      // 在新标签页打开
-      const routeData = this.$router.resolve({ path: '/solution-report' });
-      window.open(routeData.href, '_blank');
+      // 移动端或窄屏下自动滚动到输出区域
+      if (window.innerWidth < 768) {
+        const outputPanel = this.$el.querySelector('.output-panel')
+        if (outputPanel) outputPanel.scrollIntoView({ behavior: 'smooth' })
+      }
     },
     
     async runAndDownload() {
@@ -1449,25 +1791,69 @@ pause
           // 自动生成模式：从 Markdown 中提取代码块
           const sourceContent = this.codeOutput || ''
           
-          const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-            /```cpp([\s\S]*?)```/i,
-            /```c\+\+([\s\S]*?)```/i,
-            /```(?:python|py)\s*\n([\s\S]*?)```/i,
-            /```python([\s\S]*?)```/i,
-            /```py([\s\S]*?)```/i,
-            /```java\s*\n([\s\S]*?)```/i,
-            /```java([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
-          ]
-          
-          for (const pattern of codePatterns) {
-            const match = sourceContent.match(pattern)
-            if (match && match[1]) {
-              stdCode = match[1].trim()
-              stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
-              break
+          // 顶级优先：寻找 <!-- AC_CODE --> 标记
+          const markerIndex = sourceContent.indexOf('<!-- AC_CODE -->')
+          if (markerIndex !== -1) {
+             const afterMarker = sourceContent.substring(markerIndex)
+             const codePatterns = [
+                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                /```java\s*\n([\s\S]*?)```/i,
+                /```\s*\n([\s\S]*?)```/
+             ]
+             for (const pattern of codePatterns) {
+                const match = afterMarker.match(pattern)
+                if (match && match[1]) {
+                    stdCode = match[1].trim()
+                    stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                    break
+                }
+             }
+          }
+
+          // 其次：优先寻找 "代码实现" 部分后的代码块 (针对完整题解 Markdown)
+          if (!stdCode) {
+            const codeSectionIndex = sourceContent.indexOf('## 代码实现')
+            if (codeSectionIndex !== -1) {
+               const afterSection = sourceContent.substring(codeSectionIndex)
+               const codePatterns = [
+                  /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                  /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                  /```java\s*\n([\s\S]*?)```/i,
+                  /```\s*\n([\s\S]*?)```/
+               ]
+               for (const pattern of codePatterns) {
+                  const match = afterSection.match(pattern)
+                  if (match && match[1]) {
+                      stdCode = match[1].trim()
+                      stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                      break
+                  }
+               }
             }
+          }
+          
+          if (!stdCode) {
+              const codePatterns = [
+                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                /```cpp([\s\S]*?)```/i,
+                /```c\+\+([\s\S]*?)```/i,
+                /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                /```python([\s\S]*?)```/i,
+                /```py([\s\S]*?)```/i,
+                /```java\s*\n([\s\S]*?)```/i,
+                /```java([\s\S]*?)```/i,
+                /```\s*\n([\s\S]*?)```/
+              ]
+              
+              for (const pattern of codePatterns) {
+                const match = sourceContent.match(pattern)
+                if (match && match[1]) {
+                  stdCode = match[1].trim()
+                  stdCode = stdCode.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+                  break
+                }
+              }
           }
           
           // 兜底逻辑：如果未提取到代码块，但内容不为空且不含 Markdown 标记，视为纯代码

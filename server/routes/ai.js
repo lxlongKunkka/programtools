@@ -15,6 +15,7 @@ import { getIO } from '../socket/index.js'
 import { 
   TRANSLATE_PROMPT, 
   SOLUTION_PROMPT, 
+  getSolutionPrompt,
   CHECKER_PROMPT, 
   getSolvePrompt, 
   getDataGenPrompt,
@@ -240,15 +241,20 @@ router.post('/translate', checkModelPermission, async (req, res) => {
 
 router.post('/solution', authenticateToken, checkModelPermission, async (req, res) => {
   try {
-    const { text, model } = req.body
+    const { text, model, language } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
+    // 优先使用动态 Prompt，如果未导入则回退到静态 Prompt
+    const prompt = (typeof getSolutionPrompt === 'function') 
+      ? getSolutionPrompt(language || 'C++') 
+      : SOLUTION_PROMPT
+
     const messages = [
-      { role: 'system', content: SOLUTION_PROMPT },
+      { role: 'system', content: prompt },
       { role: 'user', content: text }
     ]
 
@@ -434,7 +440,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
 
 router.post('/generate-data', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
   try {
-    const { text, model } = req.body
+    const { text, model, code } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     let cyaronDocs = ''
@@ -477,7 +483,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
       extraConstraintPrompt = '\n\n【没有分组表格时】请仔细阅读题目描述中的数据范围和约束条件，自动合理分组测试点（如小数据、大数据、边界、特殊情况等），必须严格生成20组测试点，每组数据需覆盖不同范围和典型情况，脚本需包含分组编号和分组注释。'
     }
 
-    const prompt = getDataGenPrompt(extraConstraintPrompt, cyaronDocs)
+    const prompt = getDataGenPrompt(extraConstraintPrompt, cyaronDocs, code)
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY

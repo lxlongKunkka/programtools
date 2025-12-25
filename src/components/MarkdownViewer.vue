@@ -177,6 +177,7 @@ export default {
             { left: '$', right: '$', display: false }
           ],
           throwOnError: false,
+          strict: false,
           ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
         })
       } catch (e) {
