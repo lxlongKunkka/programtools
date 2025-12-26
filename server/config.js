@@ -41,3 +41,9 @@ export const COS_CONFIG = {
   Region: process.env.COS_REGION,
   Domain: process.env.COS_DOMAIN // Optional: Custom domain or CDN domain
 }
+
+export const HYDRO_CONFIG = {
+  API_URL: process.env.HYDRO_API_URL,
+  API_TOKEN: process.env.HYDRO_API_TOKEN,
+  COOKIE: process.env.HYDRO_COOKIE
+}

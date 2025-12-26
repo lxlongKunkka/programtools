@@ -1,15 +1,17 @@
 import express from 'express'
 import axios from 'axios'
+import FormData from 'form-data'
 import fs from 'fs'
 import path from 'path'
 import mongoose from 'mongoose'
 import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
+import JSZip from 'jszip'
 import COS from 'cos-nodejs-sdk-v5'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
-import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG } from '../config.js'
+import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG, HYDRO_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
 import { getIO } from '../socket/index.js'
@@ -64,6 +66,88 @@ async function uploadToCos(key, content) {
             resolve(url)
         })
     })
+}
+
+async function uploadToHydro(problemId, domainId, files) {
+    if (!HYDRO_CONFIG.API_URL) {
+        console.warn('Hydro API URL not configured. Skipping upload.')
+        return { skipped: true }
+    }
+
+    if (!Array.isArray(files)) {
+        throw new Error('uploadToHydro expects an array of files')
+    }
+    
+    const baseUrl = HYDRO_CONFIG.API_URL.replace(/\/$/, '')
+    let uploadUrl
+    let refererUrl
+
+    if (domainId) {
+        uploadUrl = `${baseUrl}/d/${domainId}/p/${problemId}/files?type=additional_file`
+        refererUrl = `${baseUrl}/d/${domainId}/p/${problemId}/files`
+    } else {
+        uploadUrl = `${baseUrl}/p/${problemId}/files?type=additional_file`
+        refererUrl = `${baseUrl}/p/${problemId}/files`
+    }
+
+    const baseHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json',
+        'Origin': HYDRO_CONFIG.API_URL, // Add Origin header
+        'Referer': refererUrl
+    }
+    
+    if (HYDRO_CONFIG.COOKIE) {
+        baseHeaders['Cookie'] = HYDRO_CONFIG.COOKIE
+    } else if (HYDRO_CONFIG.API_TOKEN) {
+        baseHeaders['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
+    }
+
+    // Sequential upload with delay to mimic manual upload and avoid race conditions
+    const results = []
+    for (const file of files) {
+        const form = new FormData()
+        // Add operation field which is often required by Hydro/SYZOJ
+        form.append('operation', 'upload_file') 
+        form.append('type', 'additional_file') // Explicitly specify type
+        form.append('file', file.content, {
+            filename: file.name,
+            contentType: 'application/octet-stream' // Explicitly set content type
+        })
+        
+        const headers = {
+            ...baseHeaders,
+            ...form.getHeaders()
+        }
+
+        try {
+            console.log(`[Upload] Uploading ${file.name} to ${uploadUrl}...`)
+            // Disable redirects to catch 3xx responses
+            const response = await axios.post(uploadUrl, form, { 
+                headers,
+                maxRedirects: 0,
+                validateStatus: status => status >= 200 && status < 400 
+            })
+            
+            if (response.status >= 300 && response.status < 400) {
+                console.warn(`[Upload] Redirect detected (${response.status}) to: ${response.headers.location}`)
+                // If redirected, it might mean the PID is an alias or invalid, but we are using numeric ID now so it should be fine.
+            }
+
+            console.log(`[Upload] Success: ${file.name}`)
+            // console.log(`[Upload] Response Data:`, JSON.stringify(response.data, null, 2))
+            results.push(response.data)
+        } catch (error) {
+            console.error(`[Upload] Error (${file.name}):`, error.response?.data || error.message)
+            throw new Error(`Failed to upload ${file.name}: ${error.response?.status} ${error.message}`)
+        }
+        
+        // Wait 1.5s between uploads
+        await new Promise(resolve => setTimeout(resolve, 1500))
+    }
+    
+    return results
 }
 
 function wrapLatexIfNeeded(text) {
@@ -2086,5 +2170,140 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
       }
   })();
 });
+
+// Generate Solution Report and Upload to Hydro
+router.post('/generate-solution-report', authenticateToken, async (req, res) => {
+  try {
+    const { docId, problemId, content, domainId, force } = req.body
+    
+    if (!docId || !content) {
+      return res.status(400).json({ error: 'Missing docId or content' })
+    }
+
+    // Check if already generated
+    // Must include domainId in query to find the specific document version (referencing problem vs original)
+    const query = { docId: docId }
+    if (domainId) {
+        query.domainId = domainId
+    }
+    
+    const doc = await Document.findOne(query)
+    if (!doc) {
+         console.error(`[Generate Report] Document not found for docId: ${docId}, domainId: ${domainId}`)
+         return res.status(404).json({ error: 'Document not found' })
+    }
+
+    console.log(`[Generate Report] Processing doc: ${doc.docId}, Domain: ${doc.domainId}, HasRef: ${!!doc.reference}`)
+
+    if (doc.solutionGenerated && !force) {
+        return res.json({ 
+            success: true, 
+            skipped: true, 
+            results: [],
+            message: 'Solution already generated (skipped)' 
+        })
+    }
+
+    // 1. Generate Solution (Markdown + Code)
+    const solutionPrompt = getSolutionPrompt(content)
+    const solutionRes = await axios.post(YUN_API_URL, {
+      model: 'gemini-2.5-flash', // Use a fast model
+      messages: [{ role: 'user', content: solutionPrompt }],
+      temperature: 0.7
+    }, {
+      headers: { 'Authorization': `Bearer ${YUN_API_KEY}` }
+    })
+    
+    const solutionText = solutionRes.data.choices[0].message.content
+    
+    // Extract Code
+    const codeMatch = solutionText.match(/```cpp\s*([\s\S]*?)```/)
+    const stdCode = codeMatch ? codeMatch[1] : '// No code generated'
+    
+    // 2. Generate HTML Report
+    const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
+    const reportRes = await axios.post(YUN_API_URL, {
+      model: 'gemini-2.5-flash',
+      messages: [{ role: 'user', content: reportPrompt }],
+      temperature: 0.7
+    }, {
+      headers: { 'Authorization': `Bearer ${YUN_API_KEY}` }
+    })
+    
+    let reportHtml = reportRes.data.choices[0].message.content
+    // Clean up markdown code blocks if present
+    reportHtml = reportHtml.replace(/^```html\s*/, '').replace(/```$/, '')
+    
+    // 3. Upload to Hydro
+    // Check for reference problem
+    let targetPid = problemId || docId
+    let targetDomainId = domainId
+
+    if (doc.reference && doc.reference.pid) {
+        // Use the numeric PID from the reference (e.g., 11)
+        // Do NOT resolve to alias (e.g., P1) because:
+        // 1. The upload URL works with the numeric ID (e.g., /p/11/files).
+        // 2. The database docId is a Number, so converting to "P1" causes a CastError during update.
+        targetPid = doc.reference.pid
+        targetDomainId = doc.reference.domainId || domainId
+        
+        console.log(`[Upload] Redirecting upload from ${docId} to reference ${targetPid} (Domain: ${targetDomainId})`)
+    } else {
+        console.log(`[Upload] No reference found for ${docId}, uploading to self.`)
+    }
+    
+    const results = []
+    
+    // Prepare files for single request upload
+    const filesToUpload = [
+        { name: 'solution.md', content: Buffer.from(solutionText, 'utf-8') },
+        { name: 'std.cpp', content: Buffer.from(stdCode, 'utf-8') },
+        { name: 'report.html', content: Buffer.from(reportHtml, 'utf-8') }
+    ]
+    
+    try {
+        // Upload all files in a single request to prevent overwriting
+        await uploadToHydro(targetPid, targetDomainId, filesToUpload)
+        
+        console.log(`[Generate Report] All 3 files uploaded successfully for ${targetPid}`)
+        results.push('solution.md uploaded')
+        results.push('std.cpp uploaded')
+        results.push('report.html uploaded')
+        
+        // Update status on the TARGET document (the original problem)
+        const updateQuery = { docId: targetPid }
+        if (targetDomainId) {
+            updateQuery.domainId = targetDomainId
+        }
+        
+        const updateResult = await Document.updateOne(updateQuery, { $set: { solutionGenerated: true } })
+        if (updateResult.matchedCount > 0) {
+             console.log(`[Generate Report] Marked document ${targetPid} as solutionGenerated`)
+        } else {
+             console.warn(`[Generate Report] Could not find document ${targetPid} to mark as solutionGenerated`)
+             // Fallback: mark the current doc if we couldn't find the target
+             if (docId !== targetPid) {
+                 await Document.updateOne({ _id: doc._id }, { $set: { solutionGenerated: true } })
+             }
+        }
+
+    } catch (e) {
+        console.error(`[Generate Report] Upload failed: ${e.message}`)
+        results.push(`Upload failed: ${e.message}`)
+    }
+
+    res.json({ 
+      success: true, 
+      results,
+      solution: solutionText,
+      code: stdCode,
+      report: reportHtml
+    })
+
+  } catch (error) {
+    console.error('Generate Report Error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
 
 export default router

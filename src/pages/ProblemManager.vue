@@ -102,6 +102,7 @@
                   {{ doc._processing ? '处理中...' : '智能处理' }}
                 </button>
                 <button v-if="doc.contentbak" @click="restoreBackup(doc)" class="btn-small btn-restore">恢复备份</button>
+                <button @click="generateReport(doc)" :disabled="doc._processing" class="btn-small btn-report" style="background-color: #9c27b0; color: white;">生成题解</button>
                 <button @click="saveDoc(doc)" :disabled="!doc._modified" class="btn-small btn-save">保存</button>
               </div>
             </td>
@@ -297,6 +298,41 @@ export default {
         return false
       } finally {
         doc._processing = false
+      }
+    },
+
+    async generateReport(doc) {
+      if (!confirm('确定要生成题解报告并上传到 Hydro 吗？这可能需要几十秒。')) return
+      
+      doc._processing = true
+      this.statusMsg = `正在生成题解报告: ${doc.docId}...`
+      
+      try {
+        const res = await request('/api/generate-solution-report', {
+          method: 'POST',
+          body: JSON.stringify({
+            docId: doc.docId,
+            problemId: doc.docId, 
+            content: doc.content,
+            domainId: doc.domainId
+          })
+        })
+        
+        if (res.success) {
+          if (res.skipped) {
+            this.showToastMessage(`已跳过: ${res.message}`)
+          } else {
+            this.showToastMessage(`生成成功! 结果: ${res.results.join(', ')}`)
+          }
+        } else {
+          this.showToastMessage('生成失败')
+        }
+      } catch (e) {
+        this.showToastMessage('生成出错: ' + e.message)
+        console.error(e)
+      } finally {
+        doc._processing = false
+        this.statusMsg = ''
       }
     },
     
