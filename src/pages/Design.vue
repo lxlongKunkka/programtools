@@ -259,6 +259,7 @@
             <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
             <button @click="batchGenerateLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
             <button @click="batchGeneratePPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
+            <button @click="batchGenerateSolutionPlans" class="btn-ai btn-ai-blue" :disabled="currentAiLoading">📘 一键生成所有题解教案</button>
             <button @click="batchGenerateSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解PPT</button>
           </div>
         </div>
@@ -2105,6 +2106,80 @@ export default {
       this.aiLoadingMap[topicId] = false
       this.aiStatusMap[topicId] = ''
       this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+    },
+
+    async batchGenerateSolutionPlans() {
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!confirm(`确定要为本知识点下的所有章节生成解题教案(Markdown)吗？只有关联了题目的章节才会生成。`)) return
+
+      const model = this.selectedModel
+      const topicId = this.selectedNode.id
+      this.aiLoadingMap[topicId] = true
+      let successCount = 0
+      let skippedCount = 0
+
+      for (let i = 0; i < this.editingTopic.chapters.length; i++) {
+        const chapter = this.editingTopic.chapters[i]
+        const chapterId = chapter._id || chapter.id
+        const chapterTitle = chapter.title
+        
+        if (!chapter.problemIds || chapter.problemIds.length === 0) {
+            skippedCount++
+            continue
+        }
+
+        this.aiStatusMap[topicId] = `正在提交解题教案任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
+
+        try {
+            this.aiLoadingMap[chapterId] = true
+            this.aiStatusMap[chapterId] = '正在获取题目信息...'
+
+            let firstProblemId = chapter.problemIds[0]
+            if (typeof firstProblemId === 'object') firstProblemId = firstProblemId.docId || firstProblemId.id
+            
+            let docId = firstProblemId
+            let domainId = 'system'
+            if (String(firstProblemId).includes(':')) {
+                [domainId, docId] = String(firstProblemId).split(':')
+            }
+
+            const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
+            const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
+            if (!doc) throw new Error('未找到题目')
+            
+            let problemText = doc.content
+            let userCode = ''
+            
+            try {
+                const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
+                if (subRes && subRes.code) userCode = subRes.code
+            } catch (e) {}
+
+            await request('/api/solution-plan/background', {
+                method: 'POST',
+                body: JSON.stringify({
+                    problem: problemText,
+                    code: userCode,
+                    chapterId: chapterId,
+                    topicId: topicId,
+                    clientKey: chapterId,
+                    model: model
+                })
+            })
+            
+            this.aiStatusMap[chapterId] = '正在后台生成解题教案...'
+            successCount++
+        } catch (e) {
+            console.error(`Failed to submit solution plan for ${chapterTitle}`, e)
+            this.aiLoadingMap[chapterId] = false
+            this.aiStatusMap[chapterId] = '提交失败'
+        }
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      this.aiLoadingMap[topicId] = false
+      this.aiStatusMap[topicId] = ''
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
     },
 
     async batchGenerateSolutionReports() {
