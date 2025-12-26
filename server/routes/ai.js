@@ -1219,11 +1219,13 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
   // Start background process
   (async () => {
       try {
-          // If group or levelTitle is missing, try to fetch from DB
-          if (!group || !levelTitle) {
+          let levelDoc = null;
+
+          // If group, levelTitle, or solutionPlan is missing, try to fetch from DB
+          if (!group || !levelTitle || !solutionPlan) {
               try {
                   // Try by ID first
-                  let levelDoc = await CourseLevel.findOne({
+                  levelDoc = await CourseLevel.findOne({
                       $or: [
                           { 'topics.chapters.id': chapterId },
                           { 'topics.chapters._id': chapterId }
@@ -1247,6 +1249,23 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                       if (!levelTitle && levelDoc.title) {
                           levelTitle = levelDoc.title;
                           console.log(`[Background] Fetched levelTitle from DB: ${levelTitle}`);
+                      }
+                      
+                      // Try to find existing solution plan (markdown content)
+                      if (!solutionPlan) {
+                          let foundChapter = null;
+                          for (const topic of levelDoc.topics) {
+                              const c = topic.chapters.find(ch => ch.id === chapterId || (ch._id && ch._id.toString() === chapterId));
+                              if (c) {
+                                  foundChapter = c;
+                                  break;
+                              }
+                          }
+                          
+                          if (foundChapter && foundChapter.contentType === 'markdown' && foundChapter.content && foundChapter.content.length > 50) {
+                              solutionPlan = foundChapter.content;
+                              console.log(`[Background] Auto-detected existing solution plan for chapter ${chapterId}`);
+                          }
                       }
                   }
               } catch (e) {
