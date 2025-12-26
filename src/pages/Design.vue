@@ -1051,7 +1051,7 @@ export default {
       
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/move`, {
-          method: 'PUT',
+          method: 'POST',
           body: JSON.stringify({ direction })
         })
         this.showToastMessage('移动成功')
