@@ -334,9 +334,14 @@
         <div class="form-group">
           <div class="label-row">
              <label>内容 ({{ editingChapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
-             <button v-if="editingChapter.contentType === 'html'" @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
-               {{ showPreview ? '关闭预览' : '开启预览' }}
-             </button>
+             <div v-if="editingChapter.contentType === 'html'" style="display: inline-block;">
+                 <button @click="openInNewWindow" class="btn-small btn-preview" style="margin-right: 8px;" type="button">
+                   新窗口打开
+                 </button>
+                 <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
+                   {{ showPreview ? '关闭预览' : '开启预览' }}
+                 </button>
+             </div>
           </div>
 
           <!-- Markdown Mode: Split View -->
@@ -2565,6 +2570,15 @@ export default {
       this.aiLoadingMap[id] = false
       this.aiStatusMap[id] = ''
       this.showToastMessage('状态已重置，您可以重新尝试')
+    },
+
+    openInNewWindow() {
+        const url = this.getPreviewUrl(this.editingChapter.resourceUrl)
+        if (url) {
+            window.open(url, '_blank')
+        } else {
+            this.showToastMessage('无效的链接')
+        }
     },
 
     getPreviewUrl(url) {
