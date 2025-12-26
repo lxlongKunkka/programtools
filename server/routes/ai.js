@@ -2606,7 +2606,19 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
 
     console.log(`[Generate Report] Processing doc: ${doc.docId}, Domain: ${doc.domainId}, HasRef: ${!!doc.reference}`)
 
-    if (doc.solutionGenerated && !force) {
+    // Check reference status if applicable
+    let isGenerated = doc.solutionGenerated;
+    if (!isGenerated && doc.reference && doc.reference.pid) {
+        const refQuery = { docId: doc.reference.pid };
+        if (doc.reference.domainId || domainId) refQuery.domainId = doc.reference.domainId || domainId;
+        const refDoc = await Document.findOne(refQuery);
+        if (refDoc && refDoc.solutionGenerated) {
+            isGenerated = true;
+            console.log(`[Generate Report] Reference doc ${doc.reference.pid} already has solution.`);
+        }
+    }
+
+    if (isGenerated && !force) {
         return res.json({ 
             success: true, 
             skipped: true, 
