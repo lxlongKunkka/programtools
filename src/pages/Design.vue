@@ -591,7 +591,19 @@ export default {
                         const currentChapterId = this.editingChapter.id
                         
                         if (currentId === key || currentChapterId === data.chapterId) {
-                             this.fetchChapterContent(data.chapterId)
+                             // Optimistic update from event data
+                             if (data.resourceUrl) {
+                                 this.editingChapter.resourceUrl = data.resourceUrl
+                                 this.editingChapter.contentType = 'html'
+                                 this.updateChapterInTree(data.chapterId, { 
+                                     contentType: 'html'
+                                 })
+                             }
+
+                             // Delay fetch slightly to ensure DB consistency
+                             setTimeout(() => {
+                                 this.fetchChapterContent(data.chapterId)
+                             }, 500)
                         }
                     }
                 } else {

@@ -1433,13 +1433,27 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                       
                       console.log(`[Background] Database updated for chapter ${chapterId}`);
                       try {
-                          getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
+                          getIO().emit('ai_task_complete', { 
+                              chapterId, 
+                              chapterTitle: foundChapterTitle, 
+                              clientKey, 
+                              status: 'success', 
+                              type: 'solution-report',
+                              resourceUrl: relativePath
+                          });
                       } catch (e) { console.error('Socket emit failed', e); }
                   } catch (updateErr) {
                       console.error('[Background] Atomic update failed, falling back to save():', updateErr);
                       await courseLevel.save();
                       try {
-                          getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
+                          getIO().emit('ai_task_complete', { 
+                              chapterId, 
+                              chapterTitle: foundChapterTitle, 
+                              clientKey, 
+                              status: 'success', 
+                              type: 'solution-report',
+                              resourceUrl: relativePath
+                          });
                       } catch (e) { console.error('Socket emit failed', e); }
                   }
               } else {
@@ -1456,7 +1470,14 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                        await legacyLevel.save();
                        console.log(`[Background] Database updated for legacy chapter ${chapterId}`);
                        try {
-                           getIO().emit('ai_task_complete', { chapterId, chapterTitle: chapter.title, clientKey, status: 'success', type: 'solution-report' });
+                           getIO().emit('ai_task_complete', { 
+                               chapterId, 
+                               chapterTitle: chapter.title, 
+                               clientKey, 
+                               status: 'success', 
+                               type: 'solution-report',
+                               resourceUrl: relativePath
+                           });
                        } catch (e) { console.error('Socket emit failed', e); }
                    }
                } else {
