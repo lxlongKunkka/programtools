@@ -364,6 +364,11 @@ export default {
     },
 
     async generateReport(doc, skipConfirm = false) {
+      // Check if already generated
+      if (!skipConfirm && doc.solutionGenerated) {
+        if (!confirm('该题目已标记为“已生成题解”，确定要重新生成并覆盖吗？')) return false
+      }
+
       if (!skipConfirm && !confirm('确定要生成题解报告并上传到 Hydro 吗？这可能需要几十秒。')) return false
       
       console.log(`[ProblemManager] 🚀 生成题解开始: ${doc.docId}`)
@@ -428,6 +433,13 @@ export default {
       for (const doc of queue) {
         if (this.stopFlag) break
         
+        // Skip if already generated
+        if (doc.solutionGenerated) {
+          console.log(`[ProblemManager] ⏭️ 跳过已生成题解: ${doc.docId}`)
+          this.processedCount++
+          continue
+        }
+
         this.statusMsg = `正在生成题解 (${this.processedCount + 1}/${queue.length}): ${doc.docId}`
         await this.generateReport(doc, true)
         this.processedCount++
