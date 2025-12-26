@@ -210,24 +210,43 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
         }
     }
 
-    // 4. Populate problemIds
-    await level.populate('topics.chapters.problemIds', 'title docId domainId')
-    await level.populate('chapters.problemIds', 'title docId domainId')
+    // 4. Manually populate problemIds (since they are now strings)
+    // We need to fetch the actual problem details for the frontend
+    let populatedChapter = chapter.toObject()
     
-    // Re-find the chapter after populate to get populated fields
-    if (level.topics && level.topics.length > 0) {
-         for (const topic of level.topics) {
-             const found = topic.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
-             if (found) {
-                 chapter = found
-                 break
-             }
-         }
-    } else {
-         chapter = level.chapters.find(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
+    if (chapter.problemIds && chapter.problemIds.length > 0) {
+        const populatedProblems = []
+        for (const pidStr of chapter.problemIds) {
+            // pidStr can be "1001" or "system:1001" or a MongoID string
+            let query = {}
+            if (mongoose.Types.ObjectId.isValid(pidStr)) {
+                query = { _id: pidStr }
+            } else if (pidStr.includes(':')) {
+                const [domain, docId] = pidStr.split(':')
+                query = { domainId: domain, docId: isNaN(docId) ? docId : Number(docId) }
+            } else {
+                // Default to system domain or just search by docId
+                const docId = isNaN(pidStr) ? pidStr : Number(pidStr)
+                // Try system first
+                const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId')
+                if (sysDoc) {
+                    populatedProblems.push(sysDoc)
+                    continue
+                }
+                query = { docId: docId }
+            }
+            
+            const doc = await Document.findOne(query).select('title docId domainId')
+            if (doc) {
+                populatedProblems.push(doc)
+            } else {
+                populatedProblems.push({ _id: pidStr, title: `Unknown Problem (${pidStr})`, docId: pidStr, domainId: 'unknown' })
+            }
+        }
+        populatedChapter.problemIds = populatedProblems
     }
 
-    res.json(chapter)
+    res.json(populatedChapter)
 
   } catch (e) {
     console.error(e)
@@ -252,8 +271,8 @@ router.get('/levels', async (req, res) => {
     const levels = await CourseLevel.find(query)
       .select('-topics.chapters.content -chapters.content')
       .sort({ level: 1 })
-      .populate('topics.chapters.problemIds', 'title docId domainId')
-      .populate('chapters.problemIds', 'title docId domainId') // Legacy support
+      // .populate('topics.chapters.problemIds', 'title docId domainId') // No longer needed as we store strings
+      // .populate('chapters.problemIds', 'title docId domainId') // Legacy support
     res.json(levels)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -1134,34 +1153,8 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
 })
 
 // Helper to resolve problem IDs (ObjectId or domain:docId or docId)
-async function resolveProblemIds(ids) {
-  const resolved = []
-  for (const idStr of ids) {
-    if (mongoose.Types.ObjectId.isValid(idStr)) {
-      resolved.push(idStr)
-    } else {
-      let query = {}
-      if (idStr.includes(':')) {
-        const [domain, pid] = idStr.split(':')
-        query = { domainId: domain, docId: isNaN(pid) ? pid : Number(pid) }
-      } else {
-        // Default to system domain or just search by docId
-        // Try to find in 'system' domain first if exists, else any
-        const pid = isNaN(idStr) ? idStr : Number(idStr)
-        const docInSystem = await Document.findOne({ domainId: 'system', docId: pid })
-        if (docInSystem) {
-          resolved.push(docInSystem._id)
-          continue
-        }
-        query = { docId: pid }
-      }
-      
-      const doc = await Document.findOne(query)
-      if (doc) resolved.push(doc._id)
-    }
-  }
-  return resolved
-}
+// DEPRECATED: We now store IDs directly as strings
+// async function resolveProblemIds(ids) { ... }
 
 // --- Chapter Management (Topic Based) ---
 
@@ -1179,7 +1172,8 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
     const topic = level.topics.id(req.params.topicId)
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
-    const resolvedIds = await resolveProblemIds(problemIds || [])
+    // Store problemIds directly as strings
+    const storedProblemIds = (problemIds || []).map(String)
     
     const newChapter = { 
       id, 
@@ -1187,7 +1181,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       content, 
       contentType: contentType || 'markdown',
       resourceUrl: resourceUrl || '',
-      problemIds: resolvedIds, 
+      problemIds: storedProblemIds, 
       optional: !!optional 
     }
 
@@ -1245,13 +1239,14 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     
     if (!targetChapter) return res.status(404).json({ error: 'Chapter not found' })
     
-    const resolvedIds = await resolveProblemIds(problemIds || [])
+    // Store problemIds directly as strings
+    const storedProblemIds = (problemIds || []).map(String)
 
     targetChapter.title = title
     targetChapter.content = content
     targetChapter.contentType = contentType || 'markdown'
     targetChapter.resourceUrl = resourceUrl || ''
-    targetChapter.problemIds = resolvedIds
+    targetChapter.problemIds = storedProblemIds
     targetChapter.optional = !!optional
     
     await level.save()

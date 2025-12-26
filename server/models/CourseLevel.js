@@ -6,7 +6,7 @@ const chapterSchema = new mongoose.Schema({
   content: { type: String, default: '' }, // Markdown content
   contentType: { type: String, enum: ['markdown', 'html'], default: 'markdown' }, // Content type
   resourceUrl: { type: String }, // URL for HTML content (e.g., '/public/courseware/bfs.html')
-  problemIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }], // Linked problems
+  problemIds: [{ type: String }], // Linked problems (Stored as "domainId:docId" or "docId")
   optional: { type: Boolean, default: false } // Whether the chapter is optional
 })
 
