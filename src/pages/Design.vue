@@ -369,6 +369,11 @@
         <div class="form-group">
           <label>关联题目 ID (逗号分隔):</label>
           <input v-model="editingChapter.problemIdsStr" class="form-input" placeholder="例如: system:1001, 1002">
+          <div v-if="problemLinks && problemLinks.length > 0" class="problem-links-preview">
+              <a v-for="(link, idx) in problemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag">
+                  {{ link.text }} ↗
+              </a>
+          </div>
         </div>
         
         <div class="form-group checkbox-group">
@@ -486,6 +491,22 @@ export default {
     this.debouncedSaveChapter = this.debounce(this.saveChapter, 2000)
   },
   computed: {
+    problemLinks() {
+        if (!this.editingChapter || !this.editingChapter.problemIdsStr) return []
+        return this.editingChapter.problemIdsStr.split(/[,，]/).map(s => {
+            s = s.trim()
+            if (!s) return null
+            let domain = 'system'
+            let pid = s
+            if (s.includes(':')) {
+                [domain, pid] = s.split(':')
+            }
+            return {
+                text: s,
+                url: `https://acjudge.com/d/${domain}/p/${pid}`
+            }
+        }).filter(Boolean)
+    },
     displayGroups() {
         // 1. Start with DB groups
         const result = [...this.groups]
@@ -560,91 +581,92 @@ export default {
             // Use clientKey if available (preferred), otherwise fallback to chapterId
             const key = data.clientKey || data.chapterId
             
-            if (key && this.aiLoadingMap[key]) {
+            // Always clear loading state if key matches
+            if (key) {
                 this.aiLoadingMap[key] = false
                 this.aiStatusMap[key] = ''
+            }
+            
+            if (data.status === 'success') {
+                const taskName = data.chapterTitle ? `"${data.chapterTitle}" ` : ''
+                this.showToastMessage(`${taskName}后台生成任务完成！`)
                 
-                if (data.status === 'success') {
-                    const taskName = data.chapterTitle ? `"${data.chapterTitle}" ` : ''
-                    this.showToastMessage(`${taskName}后台生成任务完成！`)
-                    
-                    // Handle Topic Plan Generation (Chapters or Description)
-                    if (data.type === 'topic-chapters' || data.type === 'topic-desc') {
-                        // Refresh the whole tree to show new chapters
-                        this.fetchLevels().then(() => {
-                            // If we are currently editing this topic, refresh the editing form
-                            if (this.selectedNode && this.selectedNode.type === 'topic') {
-                                const currentId = this.selectedNode.id
-                                // data.chapterId holds the topicId in this case
-                                if (currentId === key || currentId === data.chapterId) {
-                                    // Find the updated topic in the fresh levels data
-                                    const updatedTopic = this.findTopicInTree(currentId)
-                                    if (updatedTopic) {
-                                        this.editingTopic = JSON.parse(JSON.stringify(updatedTopic))
-                                        // If chapters were generated, expand the node
-                                        if (data.type === 'topic-chapters') {
-                                            updatedTopic.collapsed = false
-                                        }
+                // Handle Topic Plan Generation (Chapters or Description)
+                if (data.type === 'topic-chapters' || data.type === 'topic-desc') {
+                    // Refresh the whole tree to show new chapters
+                    this.fetchLevels().then(() => {
+                        // If we are currently editing this topic, refresh the editing form
+                        if (this.selectedNode && this.selectedNode.type === 'topic') {
+                            const currentId = this.selectedNode.id
+                            // data.chapterId holds the topicId in this case
+                            if (currentId === key || currentId === data.chapterId) {
+                                // Find the updated topic in the fresh levels data
+                                const updatedTopic = this.findTopicInTree(currentId)
+                                if (updatedTopic) {
+                                    this.editingTopic = JSON.parse(JSON.stringify(updatedTopic))
+                                    // If chapters were generated, expand the node
+                                    if (data.type === 'topic-chapters') {
+                                        updatedTopic.collapsed = false
                                     }
                                 }
                             }
-                        })
-                    }
-                    // Handle Chapter Content Generation (Lesson Plan, PPT, Solution)
-                    // If currently viewing this chapter, refresh content
-                    else if (this.selectedNode && this.selectedNode.type === 'chapter') {
-                        // Robust check for current chapter
-                        const isCurrent = (id) => {
-                            if (!id) return false
-                            const strId = String(id)
-                            return String(this.selectedNode.id) === strId || 
-                                   String(this.editingChapter.id) === strId || 
-                                   String(this.editingChapter._id) === strId
                         }
+                    })
+                }
+                // Handle Chapter Content Generation (Lesson Plan, PPT, Solution)
+                // If currently viewing this chapter, refresh content
+                else if (this.selectedNode && this.selectedNode.type === 'chapter') {
+                    // Robust check for current chapter
+                    const isCurrent = (id) => {
+                        if (!id) return false
+                        const strId = String(id)
+                        return String(this.selectedNode.id) === strId || 
+                                String(this.editingChapter.id) === strId || 
+                                String(this.editingChapter._id) === strId
+                    }
 
-                        const isMatch = isCurrent(key) || isCurrent(data.chapterId)
-                        
-                        if (isMatch) {
-                             // Optimistic update from event data
-                             if (data.resourceUrl) {
-                                 this.editingChapter.resourceUrl = data.resourceUrl
-                                 this.editingChapter.contentType = 'html'
-                                 this.updateChapterInTree(data.chapterId, { 
-                                     contentType: 'html',
-                                     resourceUrl: data.resourceUrl
-                                 })
-                             } else if (data.contentType === 'markdown') {
-                                 this.editingChapter.contentType = 'markdown'
-                                 // Set to loading state instead of empty
-                                 this.editingChapter.content = '正在刷新内容...' 
-                                 this.updateChapterInTree(data.chapterId, { 
-                                     contentType: 'markdown',
-                                     content: '正在刷新内容...' 
-                                 })
-                             }
-
-                             // Delay fetch slightly to ensure DB consistency
-                             setTimeout(() => {
-                                 this.fetchChapterContent(data.chapterId || key, true)
-                             }, 1000) // Increased delay to 1s to be safe
-                        } else {
-                            // Update tree node even if not selected
+                    const isMatch = isCurrent(key) || isCurrent(data.chapterId)
+                    
+                    if (isMatch) {
+                            // Optimistic update from event data
                             if (data.resourceUrl) {
-                                this.updateChapterInTree(data.chapterId || key, { 
+                                this.editingChapter.resourceUrl = data.resourceUrl
+                                this.editingChapter.contentType = 'html'
+                                this.updateChapterInTree(data.chapterId, { 
                                     contentType: 'html',
                                     resourceUrl: data.resourceUrl
                                 })
                             } else if (data.contentType === 'markdown') {
-                                this.updateChapterInTree(data.chapterId || key, { 
+                                this.editingChapter.contentType = 'markdown'
+                                // Set to loading state instead of empty
+                                this.editingChapter.content = '正在刷新内容...' 
+                                this.updateChapterInTree(data.chapterId, { 
                                     contentType: 'markdown',
-                                    content: '' // Clear content in tree to force re-fetch
+                                    content: '正在刷新内容...' 
                                 })
                             }
+
+                            // Delay fetch slightly to ensure DB consistency
+                            setTimeout(() => {
+                                this.fetchChapterContent(data.chapterId || key, true)
+                            }, 1000) // Increased delay to 1s to be safe
+                    } else {
+                        // Update tree node even if not selected
+                        if (data.resourceUrl) {
+                            this.updateChapterInTree(data.chapterId || key, { 
+                                contentType: 'html',
+                                resourceUrl: data.resourceUrl
+                            })
+                        } else if (data.contentType === 'markdown') {
+                            this.updateChapterInTree(data.chapterId || key, { 
+                                contentType: 'markdown',
+                                content: '' // Clear content in tree to force re-fetch
+                            })
                         }
                     }
-                } else {
-                    this.showToastMessage('生成失败: ' + (data.message || '未知错误'))
                 }
+            } else {
+                this.showToastMessage('生成失败: ' + (data.message || '未知错误'))
             }
         }
     })
@@ -3406,5 +3428,32 @@ export default {
   font-size: 12px;
   border: 1px solid #fecaca;
   font-weight: 600;
+}
+
+.problem-links-preview {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.problem-link-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background-color: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.problem-link-tag:hover {
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+  transform: translateY(-1px);
 }
 </style>
