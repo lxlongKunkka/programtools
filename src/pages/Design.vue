@@ -433,8 +433,51 @@ export default {
       
       // Language
       selectedLanguage: 'C++',
-      languageOptions: ['C++', 'Python']
+      languageOptions: ['C++', 'Python'],
+      
+      // Auto-save state
+      isSelecting: false
     }
+  },
+  watch: {
+    editingGroup: {
+        handler() {
+            if (this.isSelecting) return
+            if (!this.selectedNode || this.selectedNode.type !== 'group') return
+            this.debouncedSaveGroup(true)
+        },
+        deep: true
+    },
+    editingLevel: {
+        handler() {
+            if (this.isSelecting) return
+            if (!this.selectedNode || this.selectedNode.type !== 'level') return
+            this.debouncedSaveLevel(true)
+        },
+        deep: true
+    },
+    editingTopic: {
+        handler() {
+            if (this.isSelecting) return
+            if (!this.selectedNode || this.selectedNode.type !== 'topic') return
+            this.debouncedSaveTopic(true)
+        },
+        deep: true
+    },
+    editingChapter: {
+        handler() {
+            if (this.isSelecting) return
+            if (!this.selectedNode || this.selectedNode.type !== 'chapter') return
+            this.debouncedSaveChapter(true)
+        },
+        deep: true
+    }
+  },
+  created() {
+    this.debouncedSaveGroup = this.debounce(this.saveGroup, 2000)
+    this.debouncedSaveLevel = this.debounce(this.saveLevel, 2000)
+    this.debouncedSaveTopic = this.debounce(this.saveTopic, 2000)
+    this.debouncedSaveChapter = this.debounce(this.saveChapter, 2000)
   },
   computed: {
     displayGroups() {
@@ -590,6 +633,14 @@ export default {
             this.selectedNode = null
         }
     },
+    debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+      };
+    },
     handleGlobalKeydown(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
@@ -640,6 +691,7 @@ export default {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
     },
     selectNode(type, data, parentLevel = null, parentTopic = null) {
+      this.isSelecting = true
       // Set selection ID
       const id = data._id || data.id || 'new'
       this.selectedNode = { type, id }
@@ -691,6 +743,10 @@ export default {
              this.fetchChapterContent(chapter.id)
         }
       }
+      
+      this.$nextTick(() => {
+          this.isSelecting = false
+      })
     },
     async fetchChapterContent(chapterId) {
         try {
@@ -913,23 +969,42 @@ export default {
         return this.levels.filter(l => l.group === groupName)
     },
 
-    async saveGroup() {
+    async saveGroup(isAutoSave = false) {
         try {
+            let res;
             if (this.editingGroup._id) {
-                await request(`/api/course/groups/${this.editingGroup._id}`, {
+                res = await request(`/api/course/groups/${this.editingGroup._id}`, {
                     method: 'PUT',
                     body: JSON.stringify(this.editingGroup)
                 })
             } else {
-                await request('/api/course/groups', {
+                res = await request('/api/course/groups', {
                     method: 'POST',
                     body: JSON.stringify(this.editingGroup)
                 })
+                if (res && res._id) {
+                    this.editingGroup._id = res._id
+                    this.selectedNode.id = res._id
+                    // Add to local groups list
+                    this.groups.push({ ...res, collapsed: false })
+                }
             }
-            this.showToastMessage('保存分组成功')
-            this.fetchData()
+            
+            if (!isAutoSave) {
+                this.showToastMessage('保存分组成功')
+                this.fetchData()
+            } else {
+                // Update local tree node
+                const group = this.groups.find(g => g._id === this.editingGroup._id)
+                if (group) {
+                    group.name = this.editingGroup.name
+                    group.title = this.editingGroup.title
+                    group.language = this.editingGroup.language
+                }
+            }
         } catch (e) {
-            this.showToastMessage('保存分组失败: ' + e.message)
+            if (!isAutoSave) this.showToastMessage('保存分组失败: ' + e.message)
+            else console.error('Auto-save group failed', e)
         }
     },
     async deleteGroup(id) {
@@ -957,29 +1032,46 @@ export default {
         }
     },
 
-    async saveLevel() {
+    async saveLevel(isAutoSave = false) {
       try {
         // Ensure group is set
         if (!this.editingLevel.group) {
-            this.editingLevel.group = this.selectedSubject
+            // Fallback if selectedSubject is not defined (seems to be a bug in original code or missing context)
+            // this.editingLevel.group = this.selectedSubject 
         }
 
+        let res;
         if (this.editingLevel._id) {
-          await request(`/api/course/levels/${this.editingLevel._id}`, {
+          res = await request(`/api/course/levels/${this.editingLevel._id}`, {
             method: 'PUT',
             body: JSON.stringify(this.editingLevel)
           })
         } else {
-          await request('/api/course/levels', {
+          res = await request('/api/course/levels', {
             method: 'POST',
             body: JSON.stringify(this.editingLevel)
           })
+          if (res && res._id) {
+              this.editingLevel._id = res._id
+              this.selectedNode.id = res._id
+              this.levels.push({ ...res, descCollapsed: false })
+          }
         }
-        this.showToastMessage('保存成功')
-        this.fetchData()
-        // this.selectedNode = null // Clear selection or re-select after fetch?
+        
+        if (!isAutoSave) {
+            this.showToastMessage('保存成功')
+            this.fetchData()
+        } else {
+            // Update local tree node
+            const level = this.levels.find(l => l._id === this.editingLevel._id)
+            if (level) {
+                level.title = this.editingLevel.title
+                level.description = this.editingLevel.description
+            }
+        }
       } catch (e) {
-        this.showToastMessage('保存失败: ' + e.message)
+        if (!isAutoSave) this.showToastMessage('保存失败: ' + e.message)
+        else console.error('Auto-save level failed', e)
       }
     },
     async deleteLevel(id) {
@@ -1006,7 +1098,7 @@ export default {
         this.showToastMessage('移动失败: ' + e.message)
       }
     },
-    async saveTopic() {
+    async saveTopic(isAutoSave = false) {
       try {
         let updatedLevel;
         if (this.editingTopic._id) {
@@ -1027,11 +1119,31 @@ export default {
               this.selectedNode.id = newTopic._id
           }
         }
-        this.showToastMessage('保存知识点成功')
-        await this.fetchData()
-        // this.selectedNode = null // Keep selection
+        
+        if (!isAutoSave) {
+            this.showToastMessage('保存知识点成功')
+            await this.fetchData()
+        } else {
+            // Update local tree node
+            if (updatedLevel) {
+                 const levelIndex = this.levels.findIndex(l => l._id === updatedLevel._id)
+                 if (levelIndex !== -1) {
+                     // Preserve collapsed state
+                     const oldLevel = this.levels[levelIndex]
+                     updatedLevel.descCollapsed = oldLevel.descCollapsed
+                     if (updatedLevel.topics) {
+                         updatedLevel.topics.forEach(t => {
+                             const oldT = oldLevel.topics ? oldLevel.topics.find(ot => ot._id === t._id) : null
+                             if (oldT) t.collapsed = oldT.collapsed
+                         })
+                     }
+                     this.levels[levelIndex] = updatedLevel
+                 }
+            }
+        }
       } catch (e) {
-        this.showToastMessage('保存知识点失败: ' + e.message)
+        if (!isAutoSave) this.showToastMessage('保存知识点失败: ' + e.message)
+        else console.error('Auto-save topic failed', e)
       }
     },
     async deleteTopic(levelId, topicId) {
@@ -1265,7 +1377,7 @@ export default {
         }
       }
     },
-    async saveChapter() {
+    async saveChapter(isAutoSave = false) {
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
@@ -1307,11 +1419,30 @@ export default {
            })
         }
         
-        this.showToastMessage('保存章节成功')
-        await this.fetchData()
-        // this.selectedNode = null // Keep selection
+        if (!isAutoSave) {
+            this.showToastMessage('保存章节成功')
+            await this.fetchData()
+        } else {
+            // Update local tree node
+            if (updatedLevel) {
+                 const levelIndex = this.levels.findIndex(l => l._id === updatedLevel._id)
+                 if (levelIndex !== -1) {
+                     // Preserve collapsed state
+                     const oldLevel = this.levels[levelIndex]
+                     updatedLevel.descCollapsed = oldLevel.descCollapsed
+                     if (updatedLevel.topics) {
+                         updatedLevel.topics.forEach(t => {
+                             const oldT = oldLevel.topics ? oldLevel.topics.find(ot => ot._id === t._id) : null
+                             if (oldT) t.collapsed = oldT.collapsed
+                         })
+                     }
+                     this.levels[levelIndex] = updatedLevel
+                 }
+            }
+        }
       } catch (e) {
-        this.showToastMessage('保存章节失败: ' + e.message)
+        if (!isAutoSave) this.showToastMessage('保存章节失败: ' + e.message)
+        else console.error('Auto-save chapter failed', e)
       }
     },
     async deleteChapter(levelId, topicId, chapterId) {
@@ -1439,8 +1570,21 @@ export default {
       }
     },
     // --- AI Methods ---
+    async ensureChapterSaved() {
+        if (!this.editingChapter._id || this.editingChapter.isNew) {
+            this.showToastMessage('正在自动保存章节...')
+            await this.saveChapter()
+            if (!this.editingChapter._id) {
+                throw new Error('自动保存失败，请手动保存后再试')
+            }
+        }
+    },
+
     async generateLessonPlan() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      
+      try { await this.ensureChapterSaved() } catch (e) { return }
+
       if (!confirm('确定要生成教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Capture context
@@ -1493,6 +1637,9 @@ export default {
 
     async generatePPT() {
       if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      
+      try { await this.ensureChapterSaved() } catch (e) { return }
+
       if (!confirm('确定要生成 PPT 吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Capture context to handle navigation during generation
@@ -1562,6 +1709,9 @@ export default {
 
     async generateSolutionPlan() {
       if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      
+      try { await this.ensureChapterSaved() } catch (e) { return }
+
       if (!confirm('确定要生成解题教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
       
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
@@ -1632,6 +1782,9 @@ export default {
 
     async generateSolutionReport() {
       if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      
+      try { await this.ensureChapterSaved() } catch (e) { return }
+
       if (!confirm('确定要生成题解报告吗？生成过程将在后台进行，您可以关闭此页面。')) return
       
       // Check if we have a generated solution plan

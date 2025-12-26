@@ -1304,14 +1304,21 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           // Local Storage Fallback
           if (!relativePath) {
               const baseDir = path.join(__dirname, '../public/courseware');
-              const targetDir = path.join(baseDir, safeLevel, safeTopic);
+              let targetDir = path.join(baseDir, safeLevel, safeTopic);
+              if (safeGroup) {
+                  targetDir = path.join(baseDir, safeGroup, safeLevel, safeTopic);
+              }
               
               if (!fs.existsSync(targetDir)) {
                   fs.mkdirSync(targetDir, { recursive: true });
               }
               
               const fullPath = path.join(targetDir, safeChapter);
-              relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              if (safeGroup) {
+                  relativePath = `/public/courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              } else {
+                  relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
+              }
               
               fs.writeFileSync(fullPath, htmlContent, 'utf8');
               console.log(`[Background] File saved to ${fullPath}`);
@@ -1884,7 +1891,10 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               const baseDir = path.join(__dirname, '../public/courseware');
               let targetDir;
               
-              if (subjectFolder) {
+              if (safeGroup) {
+                  targetDir = path.join(baseDir, safeGroup, safeLevel, safeTopic);
+                  relativePath = `/public/courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;
+              } else if (subjectFolder) {
                   targetDir = path.join(baseDir, subjectFolder, safeLevel, safeTopic);
                   relativePath = `/public/courseware/${subjectFolder}/${safeLevel}/${safeTopic}/${safeChapter}`;
               } else {

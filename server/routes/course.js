@@ -1470,7 +1470,7 @@ router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(
 // Upload generated courseware (HTML)
 router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { htmlContent, level, topicTitle, chapterTitle, filename } = req.body
+    const { htmlContent, level, topicTitle, chapterTitle, filename, group } = req.body
     if (!htmlContent) return res.status(400).json({ error: 'Missing content' })
 
     let relativePath = ''
@@ -1480,20 +1480,28 @@ router.post('/upload-courseware', authenticateToken, requireRole(['admin', 'teac
     const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '')
 
     if (level && topicTitle && chapterTitle) {
-        // New structure: /public/courseware/level{N}/{topic}/{chapter}.html
+        // New structure: /public/courseware/{group}/level{N}/{topic}/{chapter}.html
         const safeLevel = 'level' + sanitize(String(level))
         const safeTopic = sanitize(topicTitle)
         const safeChapter = sanitize(chapterTitle) + '.html'
+        const safeGroup = group ? sanitize(group) : ''
         
         const baseDir = path.join(__dirname, '../public/courseware')
-        const targetDir = path.join(baseDir, safeLevel, safeTopic)
+        let targetDir;
+        
+        if (safeGroup) {
+            targetDir = path.join(baseDir, safeGroup, safeLevel, safeTopic)
+            relativePath = `/public/courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`
+        } else {
+            targetDir = path.join(baseDir, safeLevel, safeTopic)
+            relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`
+        }
         
         if (!fs.existsSync(targetDir)) {
             fs.mkdirSync(targetDir, { recursive: true })
         }
         
         fullPath = path.join(targetDir, safeChapter)
-        relativePath = `/public/courseware/${safeLevel}/${safeTopic}/${safeChapter}`
     } else {
         // Fallback to old behavior
         const safeFilename = (filename ? sanitize(filename) : 'generated') + '_' + Date.now() + '.html'
