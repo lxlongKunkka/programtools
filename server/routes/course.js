@@ -279,6 +279,76 @@ router.get('/levels', async (req, res) => {
   }
 })
 
+// Get learners for a specific level
+router.get('/level/:levelId/learners', async (req, res) => {
+  try {
+    const { levelId } = req.params
+    const levelDoc = await CourseLevel.findById(levelId)
+    if (!levelDoc) return res.status(404).json({ error: 'Level not found' })
+
+    const subject = levelDoc.subject || 'C++'
+    const levelNum = levelDoc.level
+
+    // Construct query for users at this level
+    let query = {}
+    if (subject === 'C++') {
+        query = {
+            $or: [
+                { [`subjectLevels.${subject}`]: levelNum },
+                // Fallback for legacy data where subjectLevels might be missing or empty
+                { subjectLevels: { $exists: false }, currentLevel: levelNum },
+                // Fallback where C++ key is missing
+                { [`subjectLevels.${subject}`]: { $exists: false }, currentLevel: levelNum }
+            ]
+        }
+    } else {
+        query = { [`subjectLevels.${subject}`]: levelNum }
+    }
+
+    const progresses = await UserProgress.find(query).select('userId completedChapters completedChapterUids')
+    
+    if (progresses.length === 0) return res.json([])
+
+    const userIds = progresses.map(p => p.userId)
+    const users = await User.find({ _id: { $in: userIds } }).select('uname')
+
+    const result = users.map(u => {
+        const p = progresses.find(prog => prog.userId === u._id)
+        let completedCount = 0
+        if (p) {
+            const checkChapter = (c) => {
+                if (c._id && p.completedChapterUids && p.completedChapterUids.some(uid => uid.toString() === c._id.toString())) return true
+                if (c.id && p.completedChapters && p.completedChapters.includes(c.id)) return true
+                return false
+            }
+            
+            if (levelDoc.topics) {
+                levelDoc.topics.forEach(t => {
+                    if (t.chapters) t.chapters.forEach(c => { if (checkChapter(c)) completedCount++ })
+                })
+            }
+            if (levelDoc.chapters) {
+                levelDoc.chapters.forEach(c => { if (checkChapter(c)) completedCount++ })
+            }
+        }
+        return {
+            _id: u._id,
+            uname: u.uname,
+            completedCount
+        }
+    })
+    
+    // Sort by completed count descending
+    result.sort((a, b) => b.completedCount - a.completedCount)
+
+    res.json(result)
+
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Get learners for a specific topic
 router.get('/topic/:topicId/learners', async (req, res) => {
   try {

@@ -114,6 +114,32 @@
               </div>
             </div>
           </div>
+
+          <!-- Learners Section (Level) -->
+          <div class="learners-section">
+            <div class="learners-header" @click="toggleLevelLearners(selectedData)">
+              <span class="toggle-icon">{{ isLevelLearnersExpanded(selectedData) ? '▼' : '▶' }}</span>
+              <span class="learners-label">正在学习本等级的同学</span>
+            </div>
+            <div v-show="isLevelLearnersExpanded(selectedData)" class="learners-content">
+              <div v-if="loadingLearners[selectedData._id]" class="loading-small">加载中...</div>
+              <div v-else-if="levelLearners[selectedData._id] && levelLearners[selectedData._id].length > 0" class="learners-grid">
+                <div 
+                  v-for="learner in levelLearners[selectedData._id]" 
+                  :key="learner._id" 
+                  class="learner-card"
+                  @click.stop="viewLearnerProgress(learner, null)" 
+                >
+                  <div class="learner-avatar">{{ learner.uname ? learner.uname.charAt(0).toUpperCase() : '?' }}</div>
+                  <div class="learner-info">
+                    <div class="learner-name">{{ learner.uname }}</div>
+                    <div class="learner-detail" v-if="learner.completedCount !== undefined">已完成 {{ learner.completedCount }} 节</div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-learners">暂无同学记录</div>
+            </div>
+          </div>
         </div>
 
         <!-- Topic View -->
@@ -167,14 +193,18 @@
             <div v-show="isLearnersExpanded(selectedData)" class="learners-content">
               <div v-if="loadingLearners[selectedData._id]" class="loading-small">加载中...</div>
               <div v-else-if="topicLearners[selectedData._id] && topicLearners[selectedData._id].length > 0" class="learners-grid">
-                <span 
+                <div 
                   v-for="learner in topicLearners[selectedData._id]" 
                   :key="learner._id" 
-                  class="learner-tag"
+                  class="learner-card"
                   @click.stop="viewLearnerProgress(learner, selectedData)"
                 >
-                  {{ learner.uname }}
-                </span>
+                  <div class="learner-avatar">{{ learner.uname ? learner.uname.charAt(0).toUpperCase() : '?' }}</div>
+                  <div class="learner-info">
+                    <div class="learner-name">{{ learner.uname }}</div>
+                    <div class="learner-detail" v-if="learner.completedCount !== undefined">已完成 {{ learner.completedCount }} 节</div>
+                  </div>
+                </div>
               </div>
               <div v-else class="no-learners">暂无同学记录</div>
             </div>
@@ -200,11 +230,12 @@
             <div class="progress-stat-card">
                <h4>当前等级</h4>
                <div class="levels-list">
-                 <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="level-item">
-                   <span class="subj-name">{{ subj }}</span>
-                   <span class="lvl-val">Level {{ lvl }}
-                     <span class="lvl-title-small">{{ getLevelTitle(subj, lvl) }}</span>
-                   </span>
+                 <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="stat-level-item">
+                   <div class="stat-level-header">
+                     <span class="stat-subj-name">{{ subj }}</span>
+                     <span class="stat-lvl-badge">Lv.{{ lvl }}</span>
+                   </div>
+                   <div class="stat-lvl-title">{{ getLevelTitle(subj, lvl) || '未知等级' }}</div>
                  </div>
                </div>
             </div>
@@ -258,6 +289,7 @@ export default {
       expandedLearnerIds: [],
       
       topicLearners: {},
+      levelLearners: {},
       loadingLearners: {},
       showLearnerModal: false,
       selectedLearner: null,
@@ -408,6 +440,34 @@ export default {
         return text.replace(/[#*`]/g, '').slice(0, 100) + (text.length > 100 ? '...' : '')
     },
     
+    toggleLevelLearners(level) {
+      const id = level._id
+      const index = this.expandedLearnerIds.indexOf(id)
+      if (index > -1) {
+        this.expandedLearnerIds.splice(index, 1)
+      } else {
+        this.expandedLearnerIds.push(id)
+        if (!this.levelLearners[id]) {
+          this.fetchLevelLearners(id)
+        }
+      }
+    },
+    isLevelLearnersExpanded(level) {
+      return this.expandedLearnerIds.includes(level._id)
+    },
+    async fetchLevelLearners(levelId) {
+      this.loadingLearners[levelId] = true
+      try {
+        const users = await request(`/api/course/level/${levelId}/learners`)
+        // Vue 3 reactivity
+        this.levelLearners[levelId] = users
+      } catch (e) {
+        console.error('Failed to fetch level learners', e)
+      } finally {
+        this.loadingLearners[levelId] = false
+      }
+    },
+
     // ... Keep existing helper methods ...
     toggleLearners(topic) {
       const id = topic._id
@@ -901,9 +961,85 @@ export default {
 /* Learners */
 .learners-section { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
 .learners-header { cursor: pointer; color: #7f8c8d; font-size: 14px; display: flex; align-items: center; }
-.learners-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.learner-tag { background: #f0f2f5; padding: 4px 10px; border-radius: 15px; font-size: 12px; cursor: pointer; }
-.learner-tag:hover { background: #3498db; color: white; }
+.learners-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 15px; }
+
+.learner-card {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.learner-card:hover {
+  background: white;
+  border-color: #3498db;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+.learner-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #3498db;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  margin-right: 10px;
+  font-size: 14px;
+}
+.learner-info {
+  flex: 1;
+  overflow: hidden;
+}
+.learner-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.learner-detail {
+  font-size: 11px;
+  color: #95a5a6;
+  margin-top: 2px;
+}
+
+/* Modal Stats */
+.stat-level-item {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.stat-level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.stat-subj-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+.stat-lvl-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+}
+.stat-lvl-title {
+  font-size: 13px;
+  color: #7f8c8d;
+}
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
@@ -934,5 +1070,11 @@ export default {
 
 .tree-children .tree-children > .empty-node {
     padding-left: 65px;
+}
+
+.learner-progress-badge {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.8;
 }
 </style>
