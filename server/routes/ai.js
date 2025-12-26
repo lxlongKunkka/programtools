@@ -7,9 +7,10 @@ import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
 import COS from 'cos-nodejs-sdk-v5'
 import User from '../models/User.js'
+import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG } from '../config.js'
-import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
+import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
 import { getIO } from '../socket/index.js'
 import { 
@@ -331,7 +332,7 @@ router.post('/translate', checkModelPermission, async (req, res) => {
 
 router.post('/solution', authenticateToken, checkModelPermission, async (req, res) => {
   try {
-    const { text, model, language } = req.body
+    const { text, model, language, requireAC } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
@@ -340,7 +341,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
 
     // 优先使用动态 Prompt，如果未导入则回退到静态 Prompt
     const prompt = (typeof getSolutionPrompt === 'function') 
-      ? getSolutionPrompt(language || 'C++') 
+      ? getSolutionPrompt(language || 'C++', requireAC) 
       : SOLUTION_PROMPT
 
     const messages = [

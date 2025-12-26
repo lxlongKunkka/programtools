@@ -190,7 +190,8 @@ const data = await request('/api/solution', {
 method: 'POST',
 body: JSON.stringify({
 text: text,
-model: this.model
+model: this.model,
+requireAC: true // Solution page requires AC code check
 })
 })
 

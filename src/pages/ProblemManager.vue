@@ -242,15 +242,18 @@ export default {
         }
 
         // 1. Translate Content
+        // Use contentbak as source if available (to avoid translating already translated text)
+        const sourceText = doc.contentbak || doc.content
+
         // Check if content is English (simple check)
-        const isEnglish = /[a-zA-Z]{5,}/.test(doc.content || '')
+        const isEnglish = /[a-zA-Z]{5,}/.test(sourceText || '')
         let newContent = doc.content
         
         if (isEnglish) {
           const transRes = await request('/api/translate', {
             method: 'POST',
             body: JSON.stringify({ 
-              text: doc.content,
+              text: sourceText,
               model: this.selectedModel
             })
           })
