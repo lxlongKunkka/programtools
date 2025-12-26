@@ -1160,9 +1160,38 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
               }
 
               if (chapterFound) {
-                  await courseLevel.save();
-                  console.log(`[Background] Solution Plan saved for chapter ${chapterId}`);
-                  try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+                  // Atomic update for solution plan
+                  try {
+                      if (topicId && chapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
+                              ? { "c._id": chapterId } 
+                              : { "c.id": chapterId };
+                              
+                          await CourseLevel.updateOne(
+                              { _id: courseLevel._id },
+                              { 
+                                  $set: { 
+                                      "topics.$[t].chapters.$[c].content": content,
+                                      "topics.$[t].chapters.$[c].contentType": 'markdown'
+                                  } 
+                              },
+                              {
+                                  arrayFilters: [
+                                      { "t._id": topicId },
+                                      chapterFilter
+                                  ]
+                              }
+                          );
+                      } else {
+                          await courseLevel.save();
+                      }
+                      console.log(`[Background] Solution Plan saved for chapter ${chapterId}`);
+                      try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+                  } catch (updateErr) {
+                      console.error('[Background] Atomic update failed for solution plan, falling back to save():', updateErr);
+                      await courseLevel.save();
+                      try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+                  }
               } else {
                   console.error(`[Background] Chapter ${chapterId} not found for saving solution plan`);
               }
@@ -1369,11 +1398,50 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                   }
               }
               if (chapterFound) {
-                  await courseLevel.save();
-                  console.log(`[Background] Database updated for chapter ${chapterId}`);
+                  // Use atomic update to avoid race conditions
                   try {
-                      getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
-                  } catch (e) { console.error('Socket emit failed', e); }
+                      // Construct the update path dynamically
+                      // We need to find the index of the topic and the chapter
+                      // Since we already found the objects, we can find their indices
+                      // But Mongoose arrays are tricky.
+                      // Safer to use array filters if we have IDs.
+                      
+                      if (topicId && chapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
+                              ? { "c._id": chapterId } 
+                              : { "c.id": chapterId };
+                              
+                          await CourseLevel.updateOne(
+                              { _id: courseLevel._id },
+                              { 
+                                  $set: { 
+                                      "topics.$[t].chapters.$[c].resourceUrl": relativePath,
+                                      "topics.$[t].chapters.$[c].contentType": 'html'
+                                  } 
+                              },
+                              {
+                                  arrayFilters: [
+                                      { "t._id": topicId },
+                                      chapterFilter
+                                  ]
+                              }
+                          );
+                      } else {
+                          // Fallback to save() if we can't construct atomic update
+                          await courseLevel.save();
+                      }
+                      
+                      console.log(`[Background] Database updated for chapter ${chapterId}`);
+                      try {
+                          getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
+                      } catch (e) { console.error('Socket emit failed', e); }
+                  } catch (updateErr) {
+                      console.error('[Background] Atomic update failed, falling back to save():', updateErr);
+                      await courseLevel.save();
+                      try {
+                          getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
+                      } catch (e) { console.error('Socket emit failed', e); }
+                  }
               } else {
                   throw new Error('Database record found but chapter not found in topics');
               }
@@ -1965,18 +2033,54 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   }
               }
               if (chapterFound) {
-                  await courseLevel.save();
-                  console.log(`[Background] Database updated for chapter ${chapterId}`);
-                  
-                  // Notify client
-                  getIO().emit('ai_task_complete', {
-                      chapterId,
-                      chapterTitle: foundChapterTitle,
-                      clientKey,
-                      type: 'ppt',
-                      status: 'success',
-                      message: 'PPT 生成完成'
-                  });
+                  // Atomic update for PPT
+                  try {
+                      if (topicId && chapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
+                              ? { "c._id": chapterId } 
+                              : { "c.id": chapterId };
+                              
+                          await CourseLevel.updateOne(
+                              { _id: courseLevel._id },
+                              { 
+                                  $set: { 
+                                      "topics.$[t].chapters.$[c].resourceUrl": relativePath,
+                                      "topics.$[t].chapters.$[c].contentType": 'html'
+                                  } 
+                              },
+                              {
+                                  arrayFilters: [
+                                      { "t._id": topicId },
+                                      chapterFilter
+                                  ]
+                              }
+                          );
+                      } else {
+                          await courseLevel.save();
+                      }
+                      console.log(`[Background] Database updated for chapter ${chapterId}`);
+                      
+                      // Notify client
+                      getIO().emit('ai_task_complete', {
+                          chapterId,
+                          chapterTitle: foundChapterTitle,
+                          clientKey,
+                          type: 'ppt',
+                          status: 'success',
+                          message: 'PPT 生成完成'
+                      });
+                  } catch (updateErr) {
+                      console.error('[Background] Atomic update failed for PPT, falling back to save():', updateErr);
+                      await courseLevel.save();
+                      getIO().emit('ai_task_complete', {
+                          chapterId,
+                          chapterTitle: foundChapterTitle,
+                          clientKey,
+                          type: 'ppt',
+                          status: 'success',
+                          message: 'PPT 生成完成'
+                      });
+                  }
               } else {
                   throw new Error('Database record found but chapter not found in topics');
               }
@@ -2105,18 +2209,54 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                   }
               }
               if (chapterFound) {
-                  await courseLevel.save();
-                  console.log(`[Background] Database updated for chapter ${chapterId} (Lesson Plan)`);
-                  
-                  // Notify client
-                  getIO().emit('ai_task_complete', {
-                      chapterId,
-                      chapterTitle: foundChapterTitle,
-                      clientKey,
-                      type: 'lesson-plan',
-                      status: 'success',
-                      message: '教案生成完成'
-                  });
+                  // Atomic update for Lesson Plan
+                  try {
+                      if (topicId && chapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
+                              ? { "c._id": chapterId } 
+                              : { "c.id": chapterId };
+                              
+                          await CourseLevel.updateOne(
+                              { _id: courseLevel._id },
+                              { 
+                                  $set: { 
+                                      "topics.$[t].chapters.$[c].content": content,
+                                      "topics.$[t].chapters.$[c].contentType": 'markdown'
+                                  } 
+                              },
+                              {
+                                  arrayFilters: [
+                                      { "t._id": topicId },
+                                      chapterFilter
+                                  ]
+                              }
+                          );
+                      } else {
+                          await courseLevel.save();
+                      }
+                      console.log(`[Background] Database updated for chapter ${chapterId} (Lesson Plan)`);
+                      
+                      // Notify client
+                      getIO().emit('ai_task_complete', {
+                          chapterId,
+                          chapterTitle: foundChapterTitle,
+                          clientKey,
+                          type: 'lesson-plan',
+                          status: 'success',
+                          message: '教案生成完成'
+                      });
+                  } catch (updateErr) {
+                      console.error('[Background] Atomic update failed for Lesson Plan, falling back to save():', updateErr);
+                      await courseLevel.save();
+                      getIO().emit('ai_task_complete', {
+                          chapterId,
+                          chapterTitle: foundChapterTitle,
+                          clientKey,
+                          type: 'lesson-plan',
+                          status: 'success',
+                          message: '教案生成完成'
+                      });
+                  }
               } else {
                   console.warn(`[Background] Chapter ${chapterId} found in DB query but not in iteration (Lesson Plan)`);
                   throw new Error('Database record found but chapter not found in topics');
