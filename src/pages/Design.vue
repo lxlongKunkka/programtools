@@ -811,6 +811,13 @@ export default {
 
     // --- Data Fetching ---
     async fetchData() {
+        // Save scroll position
+        const treeContainer = this.$el.querySelector('.tree-container')
+        let scrollTop = 0
+        if (treeContainer) {
+            scrollTop = treeContainer.scrollTop
+        }
+
         this.loadingCourses = true
         try {
             const [groups, levels] = await Promise.all([
@@ -835,6 +842,13 @@ export default {
             this.showToastMessage('加载失败: ' + e.message)
         } finally {
             this.loadingCourses = false
+            // Restore scroll position
+            this.$nextTick(() => {
+                const container = this.$el.querySelector('.tree-container')
+                if (container && scrollTop > 0) {
+                    container.scrollTop = scrollTop
+                }
+            })
         }
     },
     rebindSelection() {
