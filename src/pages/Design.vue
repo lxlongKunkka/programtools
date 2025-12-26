@@ -259,7 +259,7 @@
             <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
             <button @click="batchGenerateLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
             <button @click="batchGeneratePPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
-            <button @click="batchGenerateSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解</button>
+            <button @click="batchGenerateSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解PPT</button>
           </div>
         </div>
         <div class="form-group">
@@ -2112,6 +2112,7 @@ export default {
       if (!confirm(`确定要为本知识点下的所有章节生成题解报告吗？只有关联了题目的章节才会生成。`)) return
 
       const levelNum = this.editingLevelForTopic.level
+      const levelTitle = this.editingLevelForTopic.title
       const topicTitle = this.editingTopic.title
       const groupName = this.editingLevelForTopic.group
       const groupObj = this.groups.find(g => g.name === groupName)
@@ -2175,7 +2176,8 @@ export default {
                     clientKey: chapterId,
                     model: model,
                     language: language,
-                    group: groupName
+                    group: groupName,
+                    levelTitle: levelTitle
                 })
             })
             
