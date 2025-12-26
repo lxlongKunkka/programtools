@@ -1718,6 +1718,9 @@ export default {
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
 
       const id = this.editingChapter._id || this.editingChapter.id
+      const targetChapterId = this.editingChapter.id // Capture current chapter ID
+      const targetTopicId = this.editingTopicForChapter._id // Capture current topic ID
+      
       this.aiLoadingMap[id] = true
       this.aiStatusMap[id] = '正在获取题目信息...'
       
@@ -1763,8 +1766,8 @@ export default {
         await request.post('/api/solution-plan/background', {
             problem: doc.content,
             code: userCode,
-            chapterId: this.editingChapter.id,
-            topicId: this.editingTopicForChapter._id,
+            chapterId: targetChapterId, // Use captured ID
+            topicId: targetTopicId, // Use captured ID
             clientKey: id,
             model: this.selectedModel
         })
@@ -1800,6 +1803,15 @@ export default {
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
 
       const id = this.editingChapter._id || this.editingChapter.id
+      const targetChapterId = this.editingChapter.id // Capture current chapter ID
+      const targetTopicId = this.editingTopicForChapter._id // Capture current topic ID
+      const targetChapterTitle = this.editingChapter.title // Capture title
+      const targetLevel = this.editingLevelForChapter.level
+      const targetTopicTitle = this.editingTopicForChapter.title
+      const targetLanguage = this.editingLevelForChapter.subject || 'C++'
+      const targetGroup = this.editingLevelForChapter.group
+      const targetLevelTitle = this.editingLevelForChapter.title
+
       this.aiLoadingMap[id] = true
       this.aiStatusMap[id] = '正在获取题目信息...'
       
@@ -1848,17 +1860,17 @@ export default {
             code: userCode,
             reference: '',
             solutionPlan: solutionPlan,
-            level: this.editingLevelForChapter.level,
-            topicTitle: this.editingTopicForChapter.title,
-            chapterTitle: this.editingChapter.title,
+            level: targetLevel,
+            topicTitle: targetTopicTitle,
+            chapterTitle: targetChapterTitle,
             problemTitle: doc.title,
-            chapterId: this.editingChapter.id,
-            topicId: this.editingTopicForChapter._id,
+            chapterId: targetChapterId, // Use captured ID
+            topicId: targetTopicId, // Use captured ID
             clientKey: id, // Pass the UI key (usually _id) to server
             model: this.selectedModel,
-            language: this.editingLevelForChapter.subject || 'C++',
-            group: this.editingLevelForChapter.group,
-            levelTitle: this.editingLevelForChapter.title
+            language: targetLanguage,
+            group: targetGroup,
+            levelTitle: targetLevelTitle
         })
         
         this.aiStatusMap[id] = '正在后台生成题解中...'
