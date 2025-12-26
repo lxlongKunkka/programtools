@@ -121,11 +121,13 @@
             </td>
             <td>
               <div class="actions">
-                <button @click="processOne(doc)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing }">
-                  {{ doc._processing ? '处理中...' : '智能处理' }}
+                <button @click="processOne(doc)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing && doc._processingType === 'smart' }">
+                  {{ (doc._processing && doc._processingType === 'smart') ? '处理中...' : '智能处理' }}
                 </button>
                 <button v-if="doc.contentbak" @click="restoreBackup(doc)" class="btn-small btn-restore">恢复备份</button>
-                <button @click="generateReport(doc)" :disabled="doc._processing" class="btn-small btn-report" style="background-color: #9c27b0; color: white;">生成题解</button>
+                <button @click="generateReport(doc)" :disabled="doc._processing" class="btn-small btn-report" :class="{ 'processing': doc._processing && doc._processingType === 'report' }" style="background-color: #9c27b0; color: white;">
+                  {{ (doc._processing && doc._processingType === 'report') ? '生成中...' : '生成题解' }}
+                </button>
                 <button @click="saveDoc(doc)" :disabled="!doc._modified" class="btn-small btn-save">保存</button>
               </div>
             </td>
@@ -215,7 +217,7 @@ export default {
         let url = `/api/documents?page=${this.page}&limit=${this.limit}`
         if (this.currentDomain) url += `&domainId=${encodeURIComponent(this.currentDomain)}`
         const res = await request(url)
-        this.documents = (res.docs || []).map(d => ({ ...d, _modified: false, _processing: false }))
+        this.documents = (res.docs || []).map(d => ({ ...d, _modified: false, _processing: false, _processingType: null }))
         this.total = res.total
         this.totalPages = res.totalPages
         this.selectedIds = []
@@ -290,7 +292,9 @@ export default {
 
     // Core logic: Translate -> Extract Title -> Extract Tags -> Remove PID
     async processOne(doc) {
+      console.log(`[ProblemManager] 🚀 智能处理开始: ${doc.docId} (${doc._id})`)
       doc._processing = true
+      doc._processingType = 'smart'
       this.statusMsg = `正在处理: ${doc._id}...`
       try {
         // Backup content if not already backed up
@@ -346,21 +350,25 @@ export default {
         doc.tag = newTags
         doc._modified = true
         
+        console.log(`[ProblemManager] ✅ 智能处理成功: ${doc.docId}`)
         this.statusMsg = `处理完成: ${doc._id}`
         return true
       } catch (e) {
+        console.error(`[ProblemManager] ❌ 智能处理失败: ${doc.docId}`, e)
         this.statusMsg = `处理失败 ${doc._id}: ${e.message}`
-        console.error(e)
         return false
       } finally {
         doc._processing = false
+        doc._processingType = null
       }
     },
 
     async generateReport(doc, skipConfirm = false) {
       if (!skipConfirm && !confirm('确定要生成题解报告并上传到 Hydro 吗？这可能需要几十秒。')) return false
       
+      console.log(`[ProblemManager] 🚀 生成题解开始: ${doc.docId}`)
       doc._processing = true
+      doc._processingType = 'report'
       if (!skipConfirm) this.statusMsg = `正在生成题解报告: ${doc.docId}...`
       
       try {
@@ -375,7 +383,12 @@ export default {
         })
         
         if (res.success) {
+          console.log(`[ProblemManager] ✅ 生成题解成功: ${doc.docId}`, res)
           doc.solutionGenerated = true // Update UI immediately
+          
+          // Refresh file list
+          this.fetchHydroFiles(doc, true)
+
           if (!skipConfirm) {
             if (res.skipped) {
               this.showToastMessage(`已跳过: ${res.message}`)
@@ -385,16 +398,20 @@ export default {
           }
           return true
         } else {
+          console.warn(`[ProblemManager] ⚠️ 生成题解失败/跳过: ${doc.docId}`, res)
           if (!skipConfirm) this.showToastMessage('生成失败')
           return false
         }
       } catch (e) {
+        console.error(`[ProblemManager] ❌ 生成题解出错: ${doc.docId}`, e)
         if (!skipConfirm) this.showToastMessage('生成出错: ' + e.message)
-        console.error(e)
         return false
       } finally {
         doc._processing = false
+        doc._processingType = null
         if (!skipConfirm) this.statusMsg = ''
+        // Force update to ensure UI reflects the change
+        this.$forceUpdate && this.$forceUpdate()
       }
     },
     
@@ -479,6 +496,7 @@ export default {
     async fetchHydroFiles(doc, silent = false) {
         if (doc._loadingFiles) return
         
+        console.log(`[ProblemManager] 📂 获取文件列表: ${doc.docId}`)
         doc._loadingFiles = true
         
         try {
@@ -494,7 +512,9 @@ export default {
             // Hydro returns array of file objects
             const files = Array.isArray(res) ? res : []
             doc.hydroFiles = files
+            console.log(`[ProblemManager] 📂 获取文件列表成功: ${doc.docId}, 数量: ${files.length}`)
         } catch (e) {
+            console.error(`[ProblemManager] ❌ 获取文件列表失败: ${doc.docId}`, e)
             if (!silent) {
                 this.showToastMessage('获取文件列表失败: ' + e.message)
             }
@@ -757,10 +777,13 @@ button:active {
 .content-preview {
   color: #95a5a6;
   font-size: 13px;
-  max-width: 250px;
-  white-space: nowrap;
+  line-height: 1.5;
+  max-width: 350px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
 }
 
 .links-col {
@@ -865,7 +888,8 @@ button:active {
 .actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 280px; /* Ensure enough space for buttons */
 }
 .btn-small {
   padding: 6px 10px;
@@ -901,6 +925,11 @@ button:active {
   color: #7b1fa2;
 }
 .btn-report:hover { background: #e1bee7; }
+.btn-report.processing {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  animation: pulse 2s infinite;
+}
 
 .btn-restore {
   background: #fff3e0;

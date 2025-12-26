@@ -12,7 +12,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
    - 将教案中的“复杂度分析”对应到 PPT 的“总结页”。
 
 ### 核心要求
-1. **输出格式**：单一 HTML 文件，包含完整的 CSS 和 JS。
+1. **输出格式**：单一 HTML 文件，包含完整的 CSS 和 JS。**严禁在 HTML 内容中混用 Markdown 语法（如 **text**），必须使用 HTML 标签（如 <strong>text</strong>）。**
 2. **风格**：深色背景或简洁风格的幻灯片，带有翻页动画。
 3. **结构**：
    - **封面页**：题目名称、副标题（核心算法）。
@@ -24,8 +24,11 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
        - 错误：\`1 le N le 10^5\`
        - 正确：\`$1 \\le N \\le 10^5$\` (注意 \\le 前的反斜杠)
        - 如果你需要输出一个反斜杠，请确保它不会被转义消失。
+     - **关于输入输出样例**：
+       - 如果样例包含数学公式（如矩阵、大数、特定符号），请直接使用 LaTeX 格式（\`$\`包裹），且**严禁**将其放在 \`<pre>\` 或 \`<code>\` 标签中（因为 KaTeX 默认不渲染这些标签内的公式）。
+       - 请使用 \`<div class="sample-box">\` 包裹样例内容。
    - **思路探讨页**：这是报告的核心。请**详细且通俗易懂**地讲解解题思路。
-     - **排版要求**：正文使用 &lt;p&gt; 标签。小标题使用 &lt;h3&gt; 或 &lt;h4&gt;，**严禁**使用 &lt;h1&gt; 或 &lt;h2&gt;，以免字体过大。
+     - **排版要求**：正文使用 &lt;p&gt; 标签。小标题使用 &lt;h3&gt; 或 &lt;h4&gt;，**严禁**使用 &lt;h1&gt; 或 &lt;h2&gt;，以免字体过大。**严禁使用 Markdown 加粗（**text**），请使用 <strong> 标签。**
      - 必须包含**从暴力解法到优化解法**的推导过程。
      - 详细解释算法的关键步骤（如状态定义、转移方程、贪心策略证明）。
      - 使用类比或生活中的例子来辅助解释抽象概念。
@@ -60,7 +63,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
      - **复杂度分析**：明确给出时间复杂度和空间复杂度。
      - **核心知识点**：列出具体的算法标签和涉及的数据结构。
    - **反思与扩展页**：
-     - **易错点**：总结学生容易犯错的地方。
+     - **易错点**：总结学生容易犯错的地方。**（注意：不要使用 Markdown 加粗，使用 <strong> 标签）**
      - **变式思考**：如何修改题目条件会变成什么新题。
      - **推荐题目**：推荐 3 道与本题**核心算法逻辑一致**的经典题目。
        - 必须注明题目来源（如 LeetCode, Luogu, Codeforces, AtCoder）。
@@ -111,6 +114,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         h4 { font-size: clamp(1.3em, 2.8vw, 1.8em); color: #333; margin-top: 15px; margin-bottom: 8px; }
         p, li { font-size: clamp(1.2em, 2.5vw, 1.5em); line-height: 1.6; color: #444; }
         .problem-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; font-size: clamp(1.1em, 2.2vw, 1.4em); }
+        .sample-box { background-color: #f1f3f5; padding: 10px; border-radius: 4px; border-left: 4px solid #007aff; margin-top: 10px; font-family: "Courier New", monospace; }
         .conclusion { margin-top: 3vh; padding: 15px; background-color: #e6f7ff; border-left: 5px solid #1890ff; border-radius: 4px; font-style: italic; font-size: clamp(1.1em, 2.2vw, 1.4em); }
         
         /* --- 代码块样式 --- */
