@@ -1374,6 +1374,8 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                   try {
                       getIO().emit('ai_task_complete', { chapterId, chapterTitle: foundChapterTitle, clientKey, status: 'success', type: 'solution-report' });
                   } catch (e) { console.error('Socket emit failed', e); }
+              } else {
+                  throw new Error('Database record found but chapter not found in topics');
               }
           } else {
                // Try legacy 'chapters'
@@ -1399,8 +1401,9 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
       } catch (err) {
           console.error('[Background] Error generating solution report:', err);
+          const errMsg = err.message || String(err) || 'Unknown error';
           try {
-              getIO().emit('ai_task_complete', { chapterId, chapterTitle: chapterTitle, clientKey, status: 'error', message: err.message, type: 'solution-report' });
+              getIO().emit('ai_task_complete', { chapterId, chapterTitle: chapterTitle, clientKey, status: 'error', message: errMsg, type: 'solution-report' });
           } catch (e) { console.error('Socket emit failed', e); }
       }
   })();
@@ -1974,6 +1977,8 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                       status: 'success',
                       message: 'PPT 生成完成'
                   });
+              } else {
+                  throw new Error('Database record found but chapter not found in topics');
               }
           } else {
               console.error(`[Background] CourseLevel not found for chapter ${chapterId} (PPT)`);
@@ -1989,6 +1994,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
       } catch (err) {
           console.error('[Background] Error generating PPT:', err);
+          const errMsg = err.message || String(err) || 'Unknown error';
           // Notify client of error
           getIO().emit('ai_task_complete', {
               chapterId,
@@ -1996,7 +2002,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               clientKey,
               type: 'ppt',
               status: 'error',
-              message: 'PPT 生成失败: ' + err.message
+              message: 'PPT 生成失败: ' + errMsg
           });
       }
   })();
@@ -2113,6 +2119,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                   });
               } else {
                   console.warn(`[Background] Chapter ${chapterId} found in DB query but not in iteration (Lesson Plan)`);
+                  throw new Error('Database record found but chapter not found in topics');
               }
           } else {
               console.error(`[Background] CourseLevel not found for chapter ${chapterId} (Lesson Plan)`);
@@ -2121,6 +2128,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
 
       } catch (err) {
           console.error('[Background] Error generating Lesson Plan:', err);
+          const errMsg = err.message || String(err) || 'Unknown error';
           // Notify client of error
           getIO().emit('ai_task_complete', {
               chapterId,
@@ -2128,7 +2136,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
               clientKey,
               type: 'lesson-plan',
               status: 'error',
-              message: '教案生成失败: ' + err.message
+              message: '教案生成失败: ' + errMsg
           });
       }
   })();
