@@ -602,27 +602,29 @@ export default {
                                  this.editingChapter.resourceUrl = data.resourceUrl
                                  this.editingChapter.contentType = 'html'
                                  this.updateChapterInTree(data.chapterId, { 
-                                     contentType: 'html'
+                                     contentType: 'html',
+                                     resourceUrl: data.resourceUrl
                                  })
                              } else if (data.contentType === 'markdown') {
                                  this.editingChapter.contentType = 'markdown'
-                                 // Clear content to force re-fetch if we don't have it in payload
-                                 this.editingChapter.content = '' 
+                                 // Set to loading state instead of empty
+                                 this.editingChapter.content = '正在刷新内容...' 
                                  this.updateChapterInTree(data.chapterId, { 
                                      contentType: 'markdown',
-                                     content: '' // Clear content in tree to force re-fetch
+                                     content: '正在刷新内容...' 
                                  })
                              }
 
                              // Delay fetch slightly to ensure DB consistency
                              setTimeout(() => {
                                  this.fetchChapterContent(data.chapterId || key, true)
-                             }, 500)
+                             }, 1000) // Increased delay to 1s to be safe
                         } else {
                             // Update tree node even if not selected
                             if (data.resourceUrl) {
                                 this.updateChapterInTree(data.chapterId || key, { 
-                                    contentType: 'html'
+                                    contentType: 'html',
+                                    resourceUrl: data.resourceUrl
                                 })
                             } else if (data.contentType === 'markdown') {
                                 this.updateChapterInTree(data.chapterId || key, { 
@@ -790,19 +792,23 @@ export default {
         // Check if we are currently editing this chapter before starting
         const isEditing = this.selectedNode && 
                           this.selectedNode.type === 'chapter' && 
-                          (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+                          (String(this.editingChapter.id) === String(chapterId) || String(this.editingChapter._id) === String(chapterId));
         
         if (!isEditing) return;
 
         try {
-            this.editingChapter.content = '加载中...'
+            this.editingChapter.content = '正在刷新内容...'
             const query = this.editingLevelForChapter ? `?levelId=${this.editingLevelForChapter._id}` : ''
-            const fullChapter = await request(`/api/course/chapter/${chapterId}${query}`)
+            // Add timestamp to prevent caching
+            const separator = query ? '&' : '?'
+            const url = `/api/course/chapter/${chapterId}${query}${separator}_t=${Date.now()}`
+            
+            const fullChapter = await request(url)
+            
             // Ensure the user hasn't switched to another node while fetching
-            // Check both id (string) and _id (mongo) to handle different ID types
             const isSameChapter = this.selectedNode && 
                                   this.selectedNode.type === 'chapter' && 
-                                  (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+                                  (String(this.editingChapter.id) === String(chapterId) || String(this.editingChapter._id) === String(chapterId));
             
             if (isSameChapter) {
                 // If AI is currently generating content for this chapter, do not overwrite local loading state with server content
@@ -826,7 +832,7 @@ export default {
             console.error(e)
             const isSameChapter = this.selectedNode && 
                                   this.selectedNode.type === 'chapter' && 
-                                  (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+                                  (String(this.editingChapter.id) === String(chapterId) || String(this.editingChapter._id) === String(chapterId));
             if (isSameChapter) {
                 this.editingChapter.content = '加载失败: ' + e.message
             }
@@ -1768,17 +1774,31 @@ export default {
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
 
+      // Capture ALL necessary context at the start
       const id = this.editingChapter._id || this.editingChapter.id
-      const targetChapterId = this.editingChapter.id // Capture current chapter ID
-      const targetTopicId = this.editingTopicForChapter._id // Capture current topic ID
+      const targetChapterId = this.editingChapter.id 
+      const targetTopicId = this.editingTopicForChapter._id 
+      const targetLevelId = this.editingLevelForChapter._id
+      const targetChapterTitle = this.editingChapter.title 
+      
+      // Capture chapter state for potential update
+      const targetChapterState = {
+          content: '正在生成解题教案中，请稍候...', // We are setting this
+          contentType: 'markdown', // We are setting this
+          resourceUrl: this.editingChapter.resourceUrl,
+          problemIdsStr: this.editingChapter.problemIdsStr,
+          optional: this.editingChapter.optional
+      }
       
       this.aiLoadingMap[id] = true
       this.aiStatusMap[id] = '正在获取题目信息...'
       
-      // Switch to Markdown mode
-      this.editingChapter.contentType = 'markdown'
-      this.editingChapter.content = '正在生成解题教案中，请稍候...'
-      this.updateChapterInTree(id, { contentType: 'markdown', content: '正在生成解题教案中，请稍候...' })
+      // Switch to Markdown mode (Update tree and current view if matches)
+      this.updateChapterInTree(id, { contentType: 'markdown', content: targetChapterState.content })
+      if ((this.editingChapter._id || this.editingChapter.id) === id) {
+          this.editingChapter.contentType = 'markdown'
+          this.editingChapter.content = targetChapterState.content
+      }
 
       try {
         // 1. Fetch problem details
@@ -1794,9 +1814,30 @@ export default {
         if (!doc) throw new Error('未找到该题目')
 
         // Auto-update chapter title
-        if (doc.title && this.editingChapter.title !== doc.title) {
-            this.editingChapter.title = doc.title
-            await this.saveChapter()
+        if (doc.title && targetChapterTitle !== doc.title) {
+            // Update local tree
+            this.updateChapterInTree(id, { title: doc.title })
+            
+            // If still editing this chapter, update the view
+            if ((this.editingChapter._id || this.editingChapter.id) === id) {
+                this.editingChapter.title = doc.title
+            }
+
+            // Update server using captured IDs and state
+            const problemIds = (targetChapterState.problemIdsStr || '')
+                .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+
+            await request(`/api/course/levels/${targetLevelId}/topics/${targetTopicId}/chapters/${targetChapterId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    title: doc.title,
+                    content: targetChapterState.content,
+                    contentType: targetChapterState.contentType,
+                    resourceUrl: targetChapterState.resourceUrl,
+                    problemIds: problemIds,
+                    optional: targetChapterState.optional
+                })
+            })
         }
 
         // 1.5 Fetch User's Best Submission
@@ -1853,22 +1894,35 @@ export default {
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
 
+      // Capture ALL necessary context at the start
       const id = this.editingChapter._id || this.editingChapter.id
-      const targetChapterId = this.editingChapter.id // Capture current chapter ID
-      const targetTopicId = this.editingTopicForChapter._id // Capture current topic ID
-      const targetChapterTitle = this.editingChapter.title // Capture title
+      const targetChapterId = this.editingChapter.id 
+      const targetTopicId = this.editingTopicForChapter._id 
+      const targetLevelId = this.editingLevelForChapter._id
+      const targetChapterTitle = this.editingChapter.title 
       const targetLevel = this.editingLevelForChapter.level
       const targetTopicTitle = this.editingTopicForChapter.title
       const targetLanguage = this.editingLevelForChapter.subject || 'C++'
       const targetGroup = this.editingLevelForChapter.group
       const targetLevelTitle = this.editingLevelForChapter.title
+      
+      // Capture chapter state for potential update
+      const targetChapterState = {
+          content: this.editingChapter.content,
+          contentType: 'html', // We are setting this
+          resourceUrl: this.editingChapter.resourceUrl,
+          problemIdsStr: this.editingChapter.problemIdsStr,
+          optional: this.editingChapter.optional
+      }
 
       this.aiLoadingMap[id] = true
       this.aiStatusMap[id] = '正在获取题目信息...'
       
-      // Immediately switch to HTML mode
-      this.editingChapter.contentType = 'html'
+      // Immediately switch to HTML mode (Update tree and current view if matches)
       this.updateChapterInTree(id, { contentType: 'html' })
+      if ((this.editingChapter._id || this.editingChapter.id) === id) {
+          this.editingChapter.contentType = 'html'
+      }
 
       try {
         // 1. Fetch problem details
@@ -1884,9 +1938,30 @@ export default {
         if (!doc) throw new Error('未找到该题目')
 
         // Auto-update chapter title to problem title
-        if (doc.title && this.editingChapter.title !== doc.title) {
-            this.editingChapter.title = doc.title
-            await this.saveChapter()
+        if (doc.title && targetChapterTitle !== doc.title) {
+            // Update local tree
+            this.updateChapterInTree(id, { title: doc.title })
+            
+            // If still editing this chapter, update the view
+            if ((this.editingChapter._id || this.editingChapter.id) === id) {
+                this.editingChapter.title = doc.title
+            }
+
+            // Update server using captured IDs and state
+            const problemIds = (targetChapterState.problemIdsStr || '')
+                .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+
+            await request(`/api/course/levels/${targetLevelId}/topics/${targetTopicId}/chapters/${targetChapterId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    title: doc.title,
+                    content: targetChapterState.content,
+                    contentType: targetChapterState.contentType,
+                    resourceUrl: targetChapterState.resourceUrl,
+                    problemIds: problemIds,
+                    optional: targetChapterState.optional
+                })
+            })
         }
 
         let problemText = doc.content
