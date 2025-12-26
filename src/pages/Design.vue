@@ -611,7 +611,7 @@ export default {
 
                              // Delay fetch slightly to ensure DB consistency
                              setTimeout(() => {
-                                 this.fetchChapterContent(data.chapterId || key)
+                                 this.fetchChapterContent(data.chapterId || key, true)
                              }, 500)
                         } else {
                             // Update tree node even if not selected
@@ -781,7 +781,14 @@ export default {
           this.isSelecting = false
       })
     },
-    async fetchChapterContent(chapterId) {
+    async fetchChapterContent(chapterId, force = false) {
+        // Check if we are currently editing this chapter before starting
+        const isEditing = this.selectedNode && 
+                          this.selectedNode.type === 'chapter' && 
+                          (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
+        
+        if (!isEditing) return;
+
         try {
             this.editingChapter.content = '加载中...'
             const query = this.editingLevelForChapter ? `?levelId=${this.editingLevelForChapter._id}` : ''
@@ -794,7 +801,8 @@ export default {
             
             if (isSameChapter) {
                 // If AI is currently generating content for this chapter, do not overwrite local loading state with server content
-                if (this.aiLoadingMap[chapterId] || this.aiLoadingMap[fullChapter._id]) {
+                // Unless forced (e.g. task completed)
+                if (!force && (this.aiLoadingMap[chapterId] || this.aiLoadingMap[fullChapter._id])) {
                     return
                 }
 
