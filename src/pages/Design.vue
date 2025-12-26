@@ -41,7 +41,7 @@
 
                 <!-- Topics (Children of Level) -->
                 <div v-show="!level.descCollapsed" class="tree-children">
-                    <div v-for="topic in level.topics" :key="topic._id" class="tree-node-topic">
+                    <div v-for="(topic, tIdx) in level.topics" :key="topic._id" class="tree-node-topic">
                     <!-- Topic Node -->
                     <div 
                         :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
@@ -51,13 +51,14 @@
                         <span class="tree-label">{{ topic.title }}</span>
                         <div class="tree-actions">
                         <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
+                        <button @click.stop="createNewTopic(level, tIdx)" class="btn-icon" title="在此前插入 Topic">↰</button>
                         </div>
                     </div>
 
                     <!-- Chapters (Children of Topic) -->
                     <div v-show="!topic.collapsed" class="tree-children">
                         <div 
-                        v-for="chapter in topic.chapters" 
+                        v-for="(chapter, cIdx) in topic.chapters" 
                         :key="chapter.id" 
                         :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
                         @click="selectNode('chapter', chapter, level, topic)"
@@ -70,6 +71,9 @@
                             <span v-if="chapter.problemIds && chapter.problemIds.length > 0" class="meta-count" title="题目数量">
                             {{ chapter.problemIds.length }}题
                             </span>
+                        </div>
+                        <div class="tree-actions">
+                            <button @click.stop="createNewChapter(level, topic, cIdx)" class="btn-icon" title="在此前插入章节">↰</button>
                         </div>
                         </div>
                     </div>
@@ -900,23 +904,24 @@ export default {
       
       this.selectNode('level', newLevel)
     },
-    createNewTopic(level) {
+    createNewTopic(level, insertIndex = -1) {
       // Expand level if collapsed
       level.descCollapsed = false
       
       const newTopic = {
         title: '新知识点',
         description: '',
-        _id: null // Marker for new
+        _id: null, // Marker for new
+        _insertIndex: insertIndex
       }
       this.selectNode('topic', newTopic, level)
     },
-    createNewChapter(level, topic) {
+    createNewChapter(level, topic, insertIndex = -1) {
       // Expand topic if collapsed
       topic.collapsed = false
       
       const nextIndex = (topic.chapters ? topic.chapters.length : 0) + 1
-      const nextId = `${level.level}-${nextIndex}`
+      const nextId = `${level.level}-${nextIndex}-${Date.now()}`
       
       const defaultContent = `### 新章节标题
 
@@ -947,7 +952,8 @@ export default {
         title: '新章节',
         content: defaultContent,
         contentType: 'markdown',
-        isNew: true
+        isNew: true,
+        _insertIndex: insertIndex
       }
       this.selectNode('chapter', newChapter, level, topic)
     },
@@ -1196,11 +1202,19 @@ export default {
         } else {
           updatedLevel = await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics`, {
             method: 'POST',
-            body: JSON.stringify(this.editingTopic)
+            body: JSON.stringify({
+                ...this.editingTopic,
+                insertIndex: this.editingTopic._insertIndex
+            })
           })
           
           // Update ID for new topic (assuming appended to end)
           if (updatedLevel && updatedLevel.topics && updatedLevel.topics.length > 0) {
+              if (!isAutoSave) {
+                  this.showToastMessage('知识点创建成功')
+                  await this.fetchData()
+                  return
+              }
               const newTopic = updatedLevel.topics[updatedLevel.topics.length - 1]
               this.editingTopic._id = newTopic._id
               this.selectedNode.id = newTopic._id
@@ -1476,7 +1490,8 @@ export default {
           contentType: this.editingChapter.contentType,
           resourceUrl: this.editingChapter.resourceUrl,
           problemIds: problemIds,
-          optional: this.editingChapter.optional
+          optional: this.editingChapter.optional,
+          insertIndex: this.editingChapter._insertIndex
         }
 
         let updatedLevel;
@@ -1490,12 +1505,16 @@ export default {
            if (updatedLevel && updatedLevel.topics) {
                const topic = updatedLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
                if (topic && topic.chapters && topic.chapters.length > 0) {
-                   // Assuming appended to end
-                   const newChapter = topic.chapters[topic.chapters.length - 1]
-                   this.editingChapter.id = newChapter.id
-                   this.editingChapter._id = newChapter._id
-                   this.editingChapter.isNew = false
-                   this.selectedNode.id = newChapter.id || newChapter._id
+                   // If we inserted, we need to find the chapter we just added.
+                   // Since IDs are re-generated on server, we might need to rely on title or just refresh.
+                   // But for simplicity, let's just refresh the whole tree which is safer.
+                   this.fetchData().then(() => {
+                       // Try to re-select the new chapter
+                       // This is tricky because ID changed.
+                       // Maybe we can find it by title? Or just select the topic.
+                       this.showToastMessage('章节创建成功')
+                   })
+                   return // Stop here as we are refreshing
                }
            }
         } else {
