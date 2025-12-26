@@ -1,5 +1,6 @@
 import express from 'express'
 import axios from 'axios'
+import https from 'https'
 import FormData from 'form-data'
 import fs from 'fs'
 import path from 'path'
@@ -70,6 +71,43 @@ async function uploadToCos(key, content) {
 
 let currentHydroCookie = HYDRO_CONFIG.COOKIE
 
+// Global HTTPS Agent for connection reuse
+// const hydroAgent = new https.Agent({ keepAlive: true })
+
+// Helper to merge new cookies into existing cookie string
+function mergeCookies(oldCookieString, newSetCookieHeader) {
+    if (!newSetCookieHeader) return oldCookieString
+    
+    const cookieMap = new Map()
+    
+    // Parse old cookies
+    if (oldCookieString) {
+        oldCookieString.split(';').forEach(c => {
+            const [key, ...val] = c.trim().split('=')
+            if (key) cookieMap.set(key, val.join('='))
+        })
+    }
+    
+    // Parse new cookies
+    const newCookies = Array.isArray(newSetCookieHeader) ? newSetCookieHeader : [newSetCookieHeader]
+    newCookies.forEach(c => {
+        const part = c.split(';')[0]
+        const [key, ...val] = part.trim().split('=')
+        if (key) {
+            // Handle deletion (empty value)
+            const value = val.join('=')
+            if (value === '' || value.toLowerCase() === 'deleted') {
+                cookieMap.delete(key)
+            } else {
+                cookieMap.set(key, value)
+            }
+        }
+    })
+    
+    // Reconstruct string
+    return Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ')
+}
+
 async function loginToHydro() {
     if (!HYDRO_CONFIG.USERNAME || !HYDRO_CONFIG.PASSWORD) {
         return null
@@ -85,14 +123,18 @@ async function loginToHydro() {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Origin': HYDRO_CONFIG.API_URL.replace(/\/$/, ''),
+                'Referer': HYDRO_CONFIG.API_URL,
+                'Connection': 'close'
             }
         })
 
         const setCookie = response.headers['set-cookie']
         if (setCookie) {
-            currentHydroCookie = setCookie.map(c => c.split(';')[0]).join('; ')
-            console.log('[Hydro Login] Login successful')
+            // Reset cookie jar on fresh login to avoid pollution
+            currentHydroCookie = mergeCookies('', setCookie)
+            console.log('[Hydro Login] Login successful. Cookie:', currentHydroCookie)
             return currentHydroCookie
         }
     } catch (e) {
@@ -133,9 +175,21 @@ async function uploadToHydro(problemId, domainId, files) {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
-            'Origin': HYDRO_CONFIG.API_URL,
-            'Referer': refererUrl
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Origin': HYDRO_CONFIG.API_URL.replace(/\/$/, ''),
+            'Referer': refererUrl,
+            'Sec-Ch-Ua': '"Not(A:Brand";v="99", "Microsoft Edge";v="143", "Chromium";v="143"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin'
         }
+        // IMPORTANT: HydroOJ seems to validate Origin/Referer strictly.
+        // If we are uploading to a specific problem, the Referer MUST match exactly what the browser sends.
+        // Browser sends: https://acjudge.com/d/wfoj/p/P1/files
+        // Our code constructs: ${baseUrl}/d/${domainId}/p/${problemId}/files
+        
         if (HYDRO_CONFIG.API_TOKEN) {
             h['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
         } else if (currentHydroCookie) {
@@ -147,15 +201,25 @@ async function uploadToHydro(problemId, domainId, files) {
     // Sequential upload with delay to mimic manual upload and avoid race conditions
     const results = []
     for (const file of files) {
-        const form = new FormData()
-        // Add operation field which is often required by Hydro/SYZOJ
-        form.append('operation', 'upload_file') 
-        form.append('type', 'additional_file') // Explicitly specify type
-        form.append('file', file.content, {
-            filename: file.name,
-            contentType: 'application/octet-stream' // Explicitly set content type
-        })
+        const createForm = () => {
+            const f = new FormData()
+            f.append('operation', 'upload_file') 
+            f.append('type', 'additional_file') 
+            f.append('file', file.content, {
+                filename: file.name,
+                contentType: 'application/octet-stream' 
+            })
+            return f
+        }
+
+        let form = createForm()
         
+        // Force login before EACH file upload to guarantee a fresh session
+        // This is the "Nuclear Option" because previous attempts to maintain session failed
+        if (!HYDRO_CONFIG.API_TOKEN) {
+            await loginToHydro()
+        }
+
         const headers = {
             ...getHeaders(),
             ...form.getHeaders()
@@ -163,15 +227,31 @@ async function uploadToHydro(problemId, domainId, files) {
 
         try {
             console.log(`[Upload] Uploading ${file.name} to ${uploadUrl}...`)
+            if (currentHydroCookie) console.log(`[Upload] Using Cookie: ${currentHydroCookie.substring(0, 20)}...`)
+            
             // Disable redirects to catch 3xx responses
             const response = await axios.post(uploadUrl, form, { 
-                headers,
+                headers: { ...headers, 'Connection': 'close' },
                 maxRedirects: 0,
                 validateStatus: status => status >= 200 && status < 400 
             })
             
             // Strict check: Inspect response body for application-level errors
+            if (typeof response.data === 'string') {
+                 // If it looks like HTML, it's probably a login page or error page
+                 if (response.data.trim().startsWith('<')) {
+                     const err = new Error('Response is HTML (likely login page)')
+                     err.response = { status: 401 } // Force retry
+                     throw err
+                 }
+            }
+
             if (response.data && typeof response.data === 'object') {
+                if (response.data.url) {
+                     const err = new Error('Soft Redirect')
+                     err.response = { status: 401 } // Force retry
+                     throw err
+                }
                 if (response.data.error) {
                     throw new Error(`Hydro API Error: ${response.data.error}`)
                 }
@@ -180,24 +260,55 @@ async function uploadToHydro(problemId, domainId, files) {
                 }
             }
 
+            // Update cookie if present to maintain session
+            if (response.headers['set-cookie']) {
+                const oldCookie = currentHydroCookie
+                currentHydroCookie = mergeCookies(currentHydroCookie, response.headers['set-cookie'])
+                console.log(`[Upload] Cookie updated from response.\nOld: ${oldCookie}\nNew: ${currentHydroCookie}`)
+            } else {
+                // If no Set-Cookie, we should NOT clear the cookie, but we should check if the session is still valid
+                // However, since we got a 200-399 status, we assume it's valid.
+                // The issue might be that we are NOT updating the cookie if the server expects us to use the SAME cookie
+                // but we are somehow losing it or using an old one in the next iteration?
+                // Actually, currentHydroCookie is a global variable (module level), so it persists.
+            }
+
             console.log(`[Upload] Success: ${file.name} (Status: ${response.status})`)
             results.push({ name: file.name, status: 'success' })
         } catch (e) {
+            // Log detailed error for debugging
+            if (e.response) {
+                console.log(`[Upload] Error Status: ${e.response.status}`)
+                if (e.response.data) console.log(`[Upload] Error Data:`, JSON.stringify(e.response.data).slice(0, 200))
+            }
+
             // Handle 401/403 by re-logging in once
-            if (e.response && (e.response.status === 401 || e.response.status === 403) && !HYDRO_CONFIG.API_TOKEN) {
-                console.log('[Upload] Auth failed, retrying login...')
+            if ((e.response && (e.response.status === 401 || e.response.status === 403)) || (e.message === 'Soft Redirect') || (e.message === 'Response is HTML (likely login page)') && !HYDRO_CONFIG.API_TOKEN) {
+                console.log('[Upload] Auth failed (or Rate Limit). Current Cookie:', currentHydroCookie)
+                console.log('[Upload] Retrying login...')
+                
+                // Clear old cookie to ensure fresh login
+                currentHydroCookie = null
                 await loginToHydro()
-                // Retry upload
+                
+                // Recreate form for retry because the stream is consumed
+                form = createForm()
                 const newHeaders = {
                     ...getHeaders(),
                     ...form.getHeaders()
                 }
                 try {
-                    await axios.post(uploadUrl, form, { 
-                        headers: newHeaders,
+                    const retryResponse = await axios.post(uploadUrl, form, { 
+                        headers: { ...newHeaders, 'Connection': 'close' },
                         maxRedirects: 0,
                         validateStatus: status => status >= 200 && status < 400 
                     })
+                    
+                    // Update cookie if present
+                    if (retryResponse.headers['set-cookie']) {
+                        currentHydroCookie = mergeCookies(currentHydroCookie, retryResponse.headers['set-cookie'])
+                    }
+
                     console.log(`[Upload] Success (Retry): ${file.name}`)
                     results.push({ name: file.name, status: 'success' })
                     continue // Next file
@@ -217,8 +328,8 @@ async function uploadToHydro(problemId, domainId, files) {
             }
         }
         
-        // Add delay between uploads
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // Add delay between uploads (Increased to 2s to avoid rate limits)
+        await new Promise(resolve => setTimeout(resolve, 3000))
     }
     
     return results
@@ -2727,12 +2838,22 @@ router.get('/hydro/files', authenticateToken, async (req, res) => {
             console.log(`[Hydro Files] Fetching from ${url}`)
             const response = await axios.get(url, { headers: getHeaders() })
             
+            // Update cookie if present
+            if (response.headers['set-cookie']) {
+                currentHydroCookie = mergeCookies(currentHydroCookie, response.headers['set-cookie'])
+            }
+
             if (Array.isArray(response.data)) {
                 files = response.data
             } else if (response.data && Array.isArray(response.data.additional_file)) {
                 files = response.data.additional_file
+            } else if (response.data && response.data.url) {
+                // Treat as auth error (soft redirect)
+                const err = new Error('Soft Redirect')
+                err.response = { status: 401 }
+                throw err
             } else {
-                console.warn('[Hydro Files] Unknown response format:', Object.keys(response.data || {}))
+                console.warn('[Hydro Files] Unknown response format:', JSON.stringify(response.data))
             }
 
             console.log(`[Hydro Files] Got ${files.length} files`)
@@ -2744,10 +2865,17 @@ router.get('/hydro/files', authenticateToken, async (req, res) => {
                 try {
                     const response = await axios.get(url, { headers: getHeaders() })
                     
+                    // Update cookie if present
+                    if (response.headers['set-cookie']) {
+                        currentHydroCookie = mergeCookies(currentHydroCookie, response.headers['set-cookie'])
+                    }
+
                     if (Array.isArray(response.data)) {
                         files = response.data
                     } else if (response.data && Array.isArray(response.data.additional_file)) {
                         files = response.data.additional_file
+                    } else {
+                        console.warn('[Hydro Files] Unknown response format (Retry):', JSON.stringify(response.data))
                     }
 
                     console.log(`[Hydro Files] Got ${files.length} files (Retry)`)

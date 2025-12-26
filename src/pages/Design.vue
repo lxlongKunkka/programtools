@@ -1505,14 +1505,44 @@ export default {
            if (updatedLevel && updatedLevel.topics) {
                const topic = updatedLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
                if (topic && topic.chapters && topic.chapters.length > 0) {
-                   // If we inserted, we need to find the chapter we just added.
-                   // Since IDs are re-generated on server, we might need to rely on title or just refresh.
-                   // But for simplicity, let's just refresh the whole tree which is safer.
+                   // Find the newly created chapter to update local state immediately
+                   let newCh = null
+                   // Try to find by title (most reliable for immediate match)
+                   const matches = topic.chapters.filter(c => c.title === this.editingChapter.title)
+                   if (matches.length > 0) {
+                       // Pick the last one found (assuming it's the newest)
+                       newCh = matches[matches.length - 1]
+                   }
+                   
+                   if (newCh) {
+                       // Update the current editing object in place so subsequent calls (like generate) use the real ID
+                       this.editingChapter._id = newCh._id
+                       this.editingChapter.id = newCh._id
+                       this.editingChapter.isNew = false
+                       
+                       // Also update selectedNode data if it exists
+                       if (this.selectedNode && this.selectedNode.data) {
+                           this.selectedNode.data._id = newCh._id
+                           this.selectedNode.data.id = newCh._id
+                           this.selectedNode.data.isNew = false
+                       }
+                   }
+
                    this.fetchData().then(() => {
-                       // Try to re-select the new chapter
-                       // This is tricky because ID changed.
-                       // Maybe we can find it by title? Or just select the topic.
                        this.showToastMessage('章节创建成功')
+                       // Re-select the node in the new tree to ensure we have the fresh object
+                       if (newCh) {
+                           const newLevel = this.levels.find(l => l._id === this.editingLevelForChapter._id)
+                           if (newLevel) {
+                               const newTopic = newLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
+                               if (newTopic) {
+                                   const freshChapter = newTopic.chapters.find(c => c._id === newCh._id)
+                                   if (freshChapter) {
+                                       this.selectNode('chapter', freshChapter, newLevel, newTopic)
+                                   }
+                               }
+                           }
+                       }
                    })
                    return // Stop here as we are refreshing
                }
