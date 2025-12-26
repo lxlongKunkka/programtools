@@ -2812,6 +2812,27 @@ router.get('/hydro/files', authenticateToken, async (req, res) => {
             refererUrl = `${baseUrl}/p/${pid}/files`
         }
 
+        // Check local DB first to avoid Hydro API rate limits/auth issues
+        const docQuery = { docId: pid }
+        if (domainId) docQuery.domainId = domainId
+        const localDoc = await Document.findOne(docQuery)
+        
+        // If we have files in DB and sync is not explicitly forced, return local files
+        // Or if sync is 'false' (default behavior if not specified usually implies fetch)
+        // Actually, let's prefer local DB if it has data, unless sync=true is passed
+        if (localDoc && localDoc.hydroFiles && localDoc.hydroFiles.length > 0 && sync !== 'true') {
+            console.log(`[Hydro Files] Returning ${localDoc.hydroFiles.length} files from local DB for ${pid}`)
+            return res.json(localDoc.hydroFiles)
+        }
+
+        // If we just uploaded files (solutionGenerated is true), we should trust the local DB even if sync=true
+        // because the upload process already updated the DB.
+        // This prevents the immediate 403 after upload.
+        if (localDoc && localDoc.solutionGenerated && localDoc.hydroFiles && localDoc.hydroFiles.length > 0) {
+             console.log(`[Hydro Files] Returning ${localDoc.hydroFiles.length} files from local DB (Recently Generated) for ${pid}`)
+             return res.json(localDoc.hydroFiles)
+        }
+
         // Ensure login
         if (!HYDRO_CONFIG.API_TOKEN && !currentHydroCookie) {
             await loginToHydro()
@@ -2836,7 +2857,9 @@ router.get('/hydro/files', authenticateToken, async (req, res) => {
         let files = []
         try {
             console.log(`[Hydro Files] Fetching from ${url}`)
-            const response = await axios.get(url, { headers: getHeaders() })
+            // Force close connection to avoid reuse issues
+            const headers = { ...getHeaders(), 'Connection': 'close' }
+            const response = await axios.get(url, { headers })
             
             // Update cookie if present
             if (response.headers['set-cookie']) {
@@ -2863,7 +2886,9 @@ router.get('/hydro/files', authenticateToken, async (req, res) => {
                 console.log('[Hydro Files] Auth failed, retrying login...')
                 await loginToHydro()
                 try {
-                    const response = await axios.get(url, { headers: getHeaders() })
+                    // Force close connection on retry
+                    const headers = { ...getHeaders(), 'Connection': 'close' }
+                    const response = await axios.get(url, { headers })
                     
                     // Update cookie if present
                     if (response.headers['set-cookie']) {
