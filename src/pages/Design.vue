@@ -434,7 +434,7 @@ export default {
       aiStatusMap: {},
       
       // Models
-      selectedModel: 'gemini-2.5-flash',
+      selectedModel: 'o4-mini',
       rawModelOptions: [],
       
       // Language
@@ -593,10 +593,18 @@ export default {
                     // Handle Chapter Content Generation (Lesson Plan, PPT, Solution)
                     // If currently viewing this chapter, refresh content
                     else if (this.selectedNode && this.selectedNode.type === 'chapter') {
-                        const currentId = this.selectedNode.id
-                        const currentChapterId = this.editingChapter.id
+                        // Robust check for current chapter
+                        const isCurrent = (id) => {
+                            if (!id) return false
+                            const strId = String(id)
+                            return String(this.selectedNode.id) === strId || 
+                                   String(this.editingChapter.id) === strId || 
+                                   String(this.editingChapter._id) === strId
+                        }
+
+                        const isMatch = isCurrent(key) || isCurrent(data.chapterId)
                         
-                        if (currentId === key || currentChapterId === data.chapterId) {
+                        if (isMatch) {
                              // Optimistic update from event data
                              if (data.resourceUrl) {
                                  this.editingChapter.resourceUrl = data.resourceUrl
