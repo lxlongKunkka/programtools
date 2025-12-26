@@ -32,11 +32,46 @@ router.get('/documents', authenticateToken, requireRole(['admin', 'teacher']), a
     
     // Only fetch necessary fields for list to save bandwidth
     const docs = await Document.find(query)
-      .select('title content contentbak domainId tag pid docId reference config')
+      .select('title content contentbak domainId tag pid docId reference config solutionGenerated hydroFiles')
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .lean()
       
+    // Handle references for solutionGenerated status and hydroFiles
+    const refPids = docs
+      .filter(d => d.reference && d.reference.pid)
+      .map(d => Number(d.reference.pid)) // Ensure Number
+      .filter(pid => !isNaN(pid))
+      
+    if (refPids.length > 0) {
+        const refDocs = await Document.find({ docId: { $in: refPids } })
+            .select('docId solutionGenerated hydroFiles')
+            .lean()
+            
+        const statusMap = {}
+        const filesMap = {}
+        refDocs.forEach(d => {
+            if (d.solutionGenerated) {
+                statusMap[d.docId] = true
+            }
+            if (d.hydroFiles) {
+                filesMap[d.docId] = d.hydroFiles
+            }
+        })
+        
+        docs.forEach(d => {
+            if (d.reference && d.reference.pid) {
+                const refPid = Number(d.reference.pid)
+                if (statusMap[refPid]) {
+                    d.solutionGenerated = true
+                }
+                if (filesMap[refPid]) {
+                    d.hydroFiles = filesMap[refPid]
+                }
+            }
+        })
+    }
+
     const total = await Document.countDocuments(query)
     
     return res.json({ docs, total, page: Number(page), totalPages: Math.ceil(total / limit) })
@@ -179,6 +214,36 @@ router.post('/send-batch-zip', authenticateToken, async (req, res) => {
     return res.json({ ok: true })
   } catch (e) {
     console.error('Send batch zip error:', e)
+    return res.status(500).json({ error: e.message })
+  }
+})
+
+// Toggle solution generated status
+router.put('/documents/:id/solution-status', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    
+    const doc = await Document.findById(id)
+    if (!doc) return res.status(404).json({ error: 'Document not found' })
+    
+    let targetId = doc._id
+    
+    // If it's a reference, update the original
+    if (doc.reference && doc.reference.pid) {
+        const query = { docId: doc.reference.pid }
+        if (doc.reference.domainId) query.domainId = doc.reference.domainId
+        
+        const original = await Document.findOne(query)
+        if (original) {
+            targetId = original._id
+        }
+    }
+    
+    await Document.findByIdAndUpdate(targetId, { $set: { solutionGenerated: status } })
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Toggle solution status error:', e)
     return res.status(500).json({ error: e.message })
   }
 })

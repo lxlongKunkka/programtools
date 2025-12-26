@@ -31,7 +31,10 @@
       <div class="control-group">
         <button @click="fetchDocuments" class="btn-refresh">刷新列表</button>
         <button @click="batchProcess" :disabled="processing || selectedDocs.length === 0" class="btn-batch">
-          {{ processing ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签+去PID)' }}
+          {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签+去PID)' }}
+        </button>
+        <button @click="batchGenerateReport" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-report">
+          {{ processing && processingType === 'report' ? `生成中 (${processedCount}/${selectedDocs.length})` : '批量生成题解' }}
         </button>
         <button @click="stopProcessing" v-if="processing" class="btn-stop">停止</button>
       </div>
@@ -59,6 +62,8 @@
             <th width="10%">链接</th>
             <th width="25%">内容预览</th>
             <th width="15%">标签</th>
+            <th width="5%">文件数</th>
+            <th width="5%">题解</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -94,6 +99,24 @@
             <td>
               <div class="tags-container">
                 <span v-for="t in doc.tag" :key="t" class="tag-badge">{{ t }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="files-container" @click="fetchHydroFiles(doc)">
+                <div v-if="doc._loadingFiles" class="file-loading">...</div>
+                <div v-else-if="doc.hydroFiles && doc.hydroFiles.length > 0">
+                    <span class="file-count-badge" :title="doc.hydroFiles.map(f => f.name + ' (' + formatSize(f.size) + ')').join('\n')">
+                        {{ doc.hydroFiles.length }}
+                    </span>
+                </div>
+                <div v-else-if="doc.hydroFiles && doc.hydroFiles.length === 0" class="file-empty">0</div>
+                <div v-else class="file-sync">同步</div>
+              </div>
+            </td>
+            <td>
+              <div class="solution-status" @click="toggleSolutionStatus(doc)">
+                <span v-if="doc.solutionGenerated" class="status-icon success" title="已生成">✔</span>
+                <span v-else class="status-icon" title="未生成">✘</span>
               </div>
             </td>
             <td>
@@ -140,7 +163,13 @@ export default {
       processedCount: 0,
       stopFlag: false,
       statusMsg: '',
-      lastCheckedIndex: null
+      lastCheckedIndex: null,
+      showFilesModal: false,
+      currentFileDoc: null,
+      fileList: [],
+      loadingFiles: false,
+      currentSyncId: 0,
+      processingType: ''
     }
   },
   computed: {
@@ -190,9 +219,22 @@ export default {
         this.total = res.total
         this.totalPages = res.totalPages
         this.selectedIds = []
+        
+        // Trigger auto sync for files
+        this.currentSyncId++
+        this.autoSyncHydroFiles(this.currentSyncId)
       } catch (e) {
         this.showToastMessage('加载失败: ' + e.message)
       }
+    },
+
+    async autoSyncHydroFiles(syncId) {
+        const docsToSync = this.documents.filter(d => !d.hydroFiles)
+        for (const doc of docsToSync) {
+            if (syncId !== this.currentSyncId) return
+            await this.fetchHydroFiles(doc, true) // silent mode
+            await new Promise(r => setTimeout(r, 500)) // 500ms delay
+        }
     },
     async changePage(p) {
       this.page = p
@@ -230,6 +272,20 @@ export default {
         }
       }
       this.lastCheckedIndex = index
+    },
+
+    async toggleSolutionStatus(doc) {
+      try {
+        const newStatus = !doc.solutionGenerated
+        await request(`/api/documents/${doc._id}/solution-status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: newStatus })
+        })
+        doc.solutionGenerated = newStatus
+        this.showToastMessage(`状态已更新为: ${newStatus ? '已生成' : '未生成'}`, 'success')
+      } catch (e) {
+        this.showToastMessage('更新状态失败: ' + e.message, 'error')
+      }
     },
 
     // Core logic: Translate -> Extract Title -> Extract Tags -> Remove PID
@@ -301,11 +357,11 @@ export default {
       }
     },
 
-    async generateReport(doc) {
-      if (!confirm('确定要生成题解报告并上传到 Hydro 吗？这可能需要几十秒。')) return
+    async generateReport(doc, skipConfirm = false) {
+      if (!skipConfirm && !confirm('确定要生成题解报告并上传到 Hydro 吗？这可能需要几十秒。')) return false
       
       doc._processing = true
-      this.statusMsg = `正在生成题解报告: ${doc.docId}...`
+      if (!skipConfirm) this.statusMsg = `正在生成题解报告: ${doc.docId}...`
       
       try {
         const res = await request('/api/generate-solution-report', {
@@ -319,23 +375,52 @@ export default {
         })
         
         if (res.success) {
-          if (res.skipped) {
-            this.showToastMessage(`已跳过: ${res.message}`)
-          } else {
-            this.showToastMessage(`生成成功! 结果: ${res.results.join(', ')}`)
+          doc.solutionGenerated = true // Update UI immediately
+          if (!skipConfirm) {
+            if (res.skipped) {
+              this.showToastMessage(`已跳过: ${res.message}`)
+            } else {
+              this.showToastMessage(`生成成功! 结果: ${res.results.join(', ')}`)
+            }
           }
+          return true
         } else {
-          this.showToastMessage('生成失败')
+          if (!skipConfirm) this.showToastMessage('生成失败')
+          return false
         }
       } catch (e) {
-        this.showToastMessage('生成出错: ' + e.message)
+        if (!skipConfirm) this.showToastMessage('生成出错: ' + e.message)
         console.error(e)
+        return false
       } finally {
         doc._processing = false
-        this.statusMsg = ''
+        if (!skipConfirm) this.statusMsg = ''
       }
     },
     
+    async batchGenerateReport() {
+      if (!confirm(`确定要为选中的 ${this.selectedDocs.length} 个题目生成题解吗？这将消耗大量 Token 并需要较长时间。`)) return
+      
+      this.processing = true
+      this.processingType = 'report'
+      this.stopFlag = false
+      this.processedCount = 0
+      
+      const queue = [...this.selectedDocs]
+      
+      for (const doc of queue) {
+        if (this.stopFlag) break
+        
+        this.statusMsg = `正在生成题解 (${this.processedCount + 1}/${queue.length}): ${doc.docId}`
+        await this.generateReport(doc, true)
+        this.processedCount++
+      }
+      
+      this.processing = false
+      this.processingType = ''
+      this.statusMsg = this.stopFlag ? '批量生成已停止' : '批量生成完成'
+    },
+
     async saveDoc(doc) {
       try {
         await request(`/api/documents/${doc._id}`, {
@@ -389,61 +474,122 @@ export default {
     
     stopProcessing() {
       this.stopFlag = true
+    },
+
+    async fetchHydroFiles(doc, silent = false) {
+        if (doc._loadingFiles) return
+        
+        doc._loadingFiles = true
+        
+        try {
+            // Resolve PID if reference
+            let pid = doc.docId
+            let domainId = doc.domainId
+            if (doc.reference && doc.reference.pid) {
+                pid = doc.reference.pid
+                domainId = doc.reference.domainId || domainId
+            }
+
+            const res = await request(`/api/hydro/files?pid=${pid}&domainId=${domainId || ''}&sync=true`)
+            // Hydro returns array of file objects
+            const files = Array.isArray(res) ? res : []
+            doc.hydroFiles = files
+        } catch (e) {
+            if (!silent) {
+                this.showToastMessage('获取文件列表失败: ' + e.message)
+            }
+            doc.hydroFiles = []
+        } finally {
+            doc._loadingFiles = false
+        }
+    },
+
+    formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
   }
 }
 </script>
 
 <style scoped>
+:root {
+  --primary-color: #3498db;
+  --success-color: #2ecc71;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --purple-color: #9b59b6;
+  --text-color: #2c3e50;
+  --bg-color: #f5f7fa;
+  --card-bg: #ffffff;
+  --border-color: #e0e0e0;
+}
+
 .problem-manager {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 30px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
 h2 {
   color: #2c3e50;
-  margin-bottom: 25px;
-  font-size: 24px;
-  font-weight: 600;
+  margin-bottom: 20px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
-/* Controls */
+/* Controls Card */
 .controls {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.05);
   display: flex;
   gap: 20px;
-  margin-bottom: 25px;
   align-items: center;
-  background: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  border: 1px solid #eee;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 }
+
 .control-group {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
 }
+
 .control-group label {
   font-weight: 600;
-  color: #34495e;
-  font-size: 14px;
+  color: #546e7a;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+
 select {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #dfe6e9;
   border-radius: 6px;
   font-size: 14px;
-  color: #2c3e50;
-  background-color: white;
+  color: #2d3436;
+  background-color: #fff;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+select:hover {
+  border-color: #b2bec3;
 }
 select:focus {
   border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
   outline: none;
 }
 
@@ -453,31 +599,54 @@ button {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
-  font-size: 14px;
+  font-size: 13px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
+button:active {
+  transform: translateY(1px);
+}
+
 .btn-refresh {
-  padding: 8px 16px;
+  padding: 9px 18px;
   background-color: #3498db;
   color: white;
+  box-shadow: 0 2px 6px rgba(52, 152, 219, 0.2);
 }
-.btn-refresh:hover { background-color: #2980b9; }
+.btn-refresh:hover { background-color: #2980b9; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); }
 
 .btn-batch {
-  padding: 8px 16px;
+  padding: 9px 18px;
   background-color: #9b59b6;
   color: white;
+  box-shadow: 0 2px 6px rgba(155, 89, 182, 0.2);
 }
-.btn-batch:hover { background-color: #8e44ad; }
+.btn-batch:hover { background-color: #8e44ad; box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3); }
 .btn-batch:disabled {
-  background-color: #d7bde2;
+  background-color: #e1bee7;
+  box-shadow: none;
   cursor: not-allowed;
+  transform: none;
+}
+
+.btn-batch-report {
+  background-color: #9c27b0;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(156, 39, 176, 0.2);
+}
+.btn-batch-report:hover {
+  background-color: #8e24aa;
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
 }
 
 .btn-stop {
-  padding: 8px 16px;
+  padding: 9px 18px;
   background-color: #e74c3c;
   color: white;
+  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.2);
 }
 .btn-stop:hover { background-color: #c0392b; }
 
@@ -492,76 +661,103 @@ button {
   border: 1px solid #c8e6c9;
   display: flex;
   align-items: center;
+  font-size: 14px;
 }
 .status-bar::before {
   content: 'ℹ';
-  display: inline-block;
-  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #2e7d32;
+  color: white;
+  border-radius: 50%;
+  margin-right: 12px;
+  font-size: 12px;
   font-weight: bold;
 }
 
-/* Table */
+/* Table Container */
 .table-container {
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  border: 1px solid #eee;
-  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.05);
+  overflow: hidden;
 }
+
 .doc-table {
   width: 100%;
-  min-width: 1000px; /* Ensure table has enough width to display content properly */
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   font-size: 14px;
 }
-.doc-table th, .doc-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
+
 .doc-table th {
   background-color: #f8f9fa;
+  padding: 16px;
+  text-align: left;
   font-weight: 600;
-  color: #2c3e50;
+  color: #636e72;
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
+  border-bottom: 2px solid #eee;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
+
+.doc-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f2f6;
+  vertical-align: middle;
+  color: #2d3436;
+}
+
 .doc-table tr:last-child td {
   border-bottom: none;
 }
+
 .doc-table tr:hover td {
-  background-color: #fcfcfc;
-}
-.doc-table tr.modified td {
-  background-color: #fff8e1;
+  background-color: #f8f9fa;
 }
 
+.doc-table tr.modified td {
+  background-color: #fffbf0;
+}
+
+/* Columns */
 .id-col {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  color: #7f8c8d;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  color: #636e72;
   font-size: 12px;
 }
 
 .input-title {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
+  padding: 8px 10px;
+  border: 1px solid transparent;
   border-radius: 4px;
-  font-size: 13px;
-  transition: border-color 0.2s;
+  font-size: 14px;
+  background: transparent;
+  transition: all 0.2s;
+}
+.input-title:hover {
+  background: #f1f2f6;
 }
 .input-title:focus {
+  background: white;
   border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
   outline: none;
 }
 
 .content-preview {
-  color: #7f8c8d;
+  color: #95a5a6;
   font-size: 13px;
-  line-height: 1.4;
-  max-width: 300px;
+  max-width: 250px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -570,123 +766,183 @@ button {
 .links-col {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .link-item {
-  display: inline-block;
   font-size: 12px;
   color: #3498db;
   text-decoration: none;
   font-weight: 500;
+  transition: color 0.2s;
 }
-.link-item:hover {
-  text-decoration: underline;
-  color: #2980b9;
-}
-.link-item.ref {
-  color: #27ae60;
-}
-.link-item.ref:hover {
-  color: #219150;
-}
+.link-item:hover { color: #2980b9; text-decoration: underline; }
+.link-item.ref { color: #27ae60; }
+.link-item.ref:hover { color: #219150; }
 
+/* Tags */
 .tags-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 .tag-badge {
-  display: inline-block;
-  background: #e1f5fe;
-  color: #0277bd;
-  padding: 3px 8px;
-  border-radius: 12px;
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(21, 101, 192, 0.1);
+}
+
+/* Files Column */
+.files-container {
+  cursor: pointer;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-loading {
+  color: #b2bec3;
+  font-size: 12px;
+}
+
+.file-count-badge {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-weight: 700;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(21, 101, 192, 0.15);
+}
+
+.file-empty {
+  color: #dfe6e9;
+  font-size: 12px;
   font-weight: 500;
 }
 
+.file-sync {
+  color: #3498db;
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.file-sync:hover {
+  color: #2980b9;
+  text-decoration-style: solid;
+}
+
+/* Solution Status */
+.solution-status {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-icon {
+  color: #dfe6e9;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+.status-icon.success {
+  color: #2ecc71;
+  text-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
+}
+.status-icon:hover {
+  transform: scale(1.2);
+}
+
+/* Actions */
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 .btn-small {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 6px 10px;
+  font-size: 11px;
   border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 .btn-process {
-  background: #3498db;
-  color: white;
+  background: #e3f2fd;
+  color: #1976d2;
 }
-.btn-process:hover { background-color: #2980b9; }
-.btn-process:disabled {
-  background: #bdc3c7;
-  cursor: not-allowed;
-}
+.btn-process:hover { background: #bbdefb; }
 .btn-process.processing {
-  background: #f39c12;
-  color: white;
+  background: #fff3e0;
+  color: #f57c00;
   animation: pulse 2s infinite;
 }
 
 .btn-save {
-  background: #2ecc71;
-  color: white;
+  background: #e8f5e9;
+  color: #2e7d32;
 }
-.btn-save:hover { background-color: #27ae60; }
+.btn-save:hover { background: #c8e6c9; }
 .btn-save:disabled {
-  background: #bdc3c7;
+  background: #f5f5f5;
+  color: #bdbdbd;
   cursor: not-allowed;
 }
 
-.btn-restore {
-  background: #e67e22;
-  color: white;
+.btn-report {
+  background: #f3e5f5;
+  color: #7b1fa2;
 }
-.btn-restore:hover { background-color: #d35400; }
+.btn-report:hover { background: #e1bee7; }
 
+.btn-restore {
+  background: #fff3e0;
+  color: #e65100;
+}
+.btn-restore:hover { background: #ffe0b2; }
+
+/* Checkbox */
 .checkbox-large {
   width: 18px;
   height: 18px;
   cursor: pointer;
+  accent-color: #3498db;
 }
 
 /* Pagination */
 .pagination {
-  margin-top: 25px;
+  margin-top: 20px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 .pagination button {
-  padding: 8px 16px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  color: #666;
-}
-.pagination button:disabled {
-  background-color: #f9f9f9;
-  color: #ccc;
-  cursor: not-allowed;
+  padding: 8px 14px;
+  background-color: white;
+  border: 1px solid #dfe6e9;
+  color: #636e72;
+  border-radius: 6px;
 }
 .pagination button:not(:disabled):hover {
-  background-color: #f0f0f0;
-  color: #333;
+  border-color: #3498db;
+  color: #3498db;
 }
 .pagination span {
-  font-size: 14px;
-  color: #7f8c8d;
-  font-weight: 500;
+  font-size: 13px;
+  color: #636e72;
+  font-weight: 600;
+  margin: 0 10px;
 }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
-}
-
+/* Badges */
 .badge-rj {
   display: inline-block;
   background: #9b59b6;
@@ -694,10 +950,15 @@ button {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 10px;
+  font-weight: bold;
   margin-left: 5px;
   vertical-align: middle;
-  font-weight: bold;
-  cursor: help;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
 
 @media (max-width: 768px) {

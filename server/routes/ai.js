@@ -68,6 +68,39 @@ async function uploadToCos(key, content) {
     })
 }
 
+let currentHydroCookie = HYDRO_CONFIG.COOKIE
+
+async function loginToHydro() {
+    if (!HYDRO_CONFIG.USERNAME || !HYDRO_CONFIG.PASSWORD) {
+        return null
+    }
+    
+    try {
+        console.log('[Hydro Login] Attempting to login...')
+        const loginUrl = `${HYDRO_CONFIG.API_URL.replace(/\/$/, '')}/login`
+        const response = await axios.post(loginUrl, {
+            uname: HYDRO_CONFIG.USERNAME,
+            password: HYDRO_CONFIG.PASSWORD
+        }, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            }
+        })
+
+        const setCookie = response.headers['set-cookie']
+        if (setCookie) {
+            currentHydroCookie = setCookie.map(c => c.split(';')[0]).join('; ')
+            console.log('[Hydro Login] Login successful')
+            return currentHydroCookie
+        }
+    } catch (e) {
+        console.error('[Hydro Login] Error:', e.message)
+    }
+    return null
+}
+
 async function uploadToHydro(problemId, domainId, files) {
     if (!HYDRO_CONFIG.API_URL) {
         console.warn('Hydro API URL not configured. Skipping upload.')
@@ -90,18 +123,25 @@ async function uploadToHydro(problemId, domainId, files) {
         refererUrl = `${baseUrl}/p/${problemId}/files`
     }
 
-    const baseHeaders = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json',
-        'Origin': HYDRO_CONFIG.API_URL, // Add Origin header
-        'Referer': refererUrl
+    // Ensure we have a cookie if not using token
+    if (!HYDRO_CONFIG.API_TOKEN && !currentHydroCookie) {
+        await loginToHydro()
     }
-    
-    if (HYDRO_CONFIG.COOKIE) {
-        baseHeaders['Cookie'] = HYDRO_CONFIG.COOKIE
-    } else if (HYDRO_CONFIG.API_TOKEN) {
-        baseHeaders['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
+
+    const getHeaders = () => {
+        const h = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'Origin': HYDRO_CONFIG.API_URL,
+            'Referer': refererUrl
+        }
+        if (HYDRO_CONFIG.API_TOKEN) {
+            h['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
+        } else if (currentHydroCookie) {
+            h['Cookie'] = currentHydroCookie
+        }
+        return h
     }
 
     // Sequential upload with delay to mimic manual upload and avoid race conditions
@@ -117,7 +157,7 @@ async function uploadToHydro(problemId, domainId, files) {
         })
         
         const headers = {
-            ...baseHeaders,
+            ...getHeaders(),
             ...form.getHeaders()
         }
 
@@ -130,20 +170,54 @@ async function uploadToHydro(problemId, domainId, files) {
                 validateStatus: status => status >= 200 && status < 400 
             })
             
-            if (response.status >= 300 && response.status < 400) {
-                console.warn(`[Upload] Redirect detected (${response.status}) to: ${response.headers.location}`)
-                // If redirected, it might mean the PID is an alias or invalid, but we are using numeric ID now so it should be fine.
+            // Strict check: Inspect response body for application-level errors
+            if (response.data && typeof response.data === 'object') {
+                if (response.data.error) {
+                    throw new Error(`Hydro API Error: ${response.data.error}`)
+                }
+                if (response.data.success === false) {
+                    throw new Error(`Hydro API returned success: false. Msg: ${response.data.message || 'Unknown'}`)
+                }
             }
 
-            console.log(`[Upload] Success: ${file.name}`)
-            // console.log(`[Upload] Response Data:`, JSON.stringify(response.data, null, 2))
-            results.push(response.data)
-        } catch (error) {
-            console.error(`[Upload] Error (${file.name}):`, error.response?.data || error.message)
-            throw new Error(`Failed to upload ${file.name}: ${error.response?.status} ${error.message}`)
+            console.log(`[Upload] Success: ${file.name} (Status: ${response.status})`)
+            results.push({ name: file.name, status: 'success' })
+        } catch (e) {
+            // Handle 401/403 by re-logging in once
+            if (e.response && (e.response.status === 401 || e.response.status === 403) && !HYDRO_CONFIG.API_TOKEN) {
+                console.log('[Upload] Auth failed, retrying login...')
+                await loginToHydro()
+                // Retry upload
+                const newHeaders = {
+                    ...getHeaders(),
+                    ...form.getHeaders()
+                }
+                try {
+                    await axios.post(uploadUrl, form, { 
+                        headers: newHeaders,
+                        maxRedirects: 0,
+                        validateStatus: status => status >= 200 && status < 400 
+                    })
+                    console.log(`[Upload] Success (Retry): ${file.name}`)
+                    results.push({ name: file.name, status: 'success' })
+                    continue // Next file
+                } catch (retryErr) {
+                    console.error(`[Upload] Retry failed for ${file.name}:`, retryErr.message)
+                    throw retryErr
+                }
+            }
+
+            // Check for redirect (302) which often indicates success in Hydro
+            if (e.response && e.response.status === 302) {
+                 console.log(`[Upload] Success (Redirect): ${file.name}`)
+                 results.push({ name: file.name, status: 'success' })
+            } else {
+                 console.error(`[Upload] Failed ${file.name}:`, e.message)
+                 throw e
+            }
         }
         
-        // Wait 1.5s between uploads
+        // Add delay between uploads
         await new Promise(resolve => setTimeout(resolve, 1500))
     }
     
@@ -2205,7 +2279,8 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     }
 
     // 1. Generate Solution (Markdown + Code)
-    const solutionPrompt = getSolutionPrompt(content)
+    // Fix: Pass 'C++' as language, and append content separately
+    const solutionPrompt = getSolutionPrompt('C++') + `\n\n题目内容：\n${content}`
     const solutionRes = await axios.post(YUN_API_URL, {
       model: 'gemini-2.5-flash', // Use a fast model
       messages: [{ role: 'user', content: solutionPrompt }],
@@ -2217,8 +2292,51 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     const solutionText = solutionRes.data.choices[0].message.content
     
     // Extract Code
-    const codeMatch = solutionText.match(/```cpp\s*([\s\S]*?)```/)
-    const stdCode = codeMatch ? codeMatch[1] : '// No code generated'
+    let stdCode = '// No code generated'
+    
+    console.log('[Generate Report] Solution Text Preview:', solutionText.substring(0, 500).replace(/\n/g, '\\n'))
+
+    // Strategy 1: Look for explicit AC_CODE marker (OUTSIDE block)
+    let codeMatch = solutionText.match(/<!--\s*AC_CODE\s*-->\s*```(?:\w+)?\s*([\s\S]*?)```/)
+    
+    // Strategy 1b: Look for explicit AC_CODE marker (INSIDE block)
+    if (!codeMatch) {
+        codeMatch = solutionText.match(/```(?:\w+)?\s*<!--\s*AC_CODE\s*-->\s*([\s\S]*?)```/)
+    }
+
+    // Strategy 2: Look for C++/CPP code blocks
+    if (!codeMatch) {
+        // Find all cpp blocks
+        const cppMatches = [...solutionText.matchAll(/```(?:cpp|c\+\+|C\+\+)\s*([\s\S]*?)```/gi)]
+        if (cppMatches.length > 0) {
+             // Prefer the one with #include, otherwise the longest one
+             const withInclude = cppMatches.find(m => m[1].includes('#include'))
+             if (withInclude) {
+                 codeMatch = withInclude
+             } else {
+                 // Sort by length descending
+                 cppMatches.sort((a, b) => b[1].length - a[1].length)
+                 codeMatch = cppMatches[0]
+             }
+        }
+    }
+    
+    // Strategy 3: Look for any code block containing typical C++ keywords
+    if (!codeMatch) {
+        const allBlocks = [...solutionText.matchAll(/```(?:\w+)?\s*([\s\S]*?)```/g)]
+        for (const match of allBlocks) {
+            if (match[1].includes('#include') || match[1].includes('using namespace std') || match[1].includes('int main')) {
+                codeMatch = match
+                break
+            }
+        }
+    }
+    
+    if (codeMatch) {
+        stdCode = codeMatch[1].trim()
+        // Remove <!-- AC_CODE --> if it was captured inside
+        stdCode = stdCode.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
+    }
     
     // 2. Generate HTML Report
     const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
@@ -2276,9 +2394,38 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
             updateQuery.domainId = targetDomainId
         }
         
-        const updateResult = await Document.updateOne(updateQuery, { $set: { solutionGenerated: true } })
-        if (updateResult.matchedCount > 0) {
-             console.log(`[Generate Report] Marked document ${targetPid} as solutionGenerated`)
+        // We know we just uploaded these files
+        const uploadedFileNames = filesToUpload.map(f => ({ name: f.name, size: f.content.length }))
+
+        // Use $addToSet to avoid duplicates if we run this multiple times, 
+        // but since we might overwrite files, maybe we should merge?
+        // For simplicity, let's just set the list to these 3 files if it's empty, 
+        // or if we want to be smarter, we should probably fetch the full list from Hydro if we want accuracy.
+        // But for now, let's just assume these are the files we care about.
+        // Actually, let's just update the specific files in the array or add them.
+        // But MongoDB array updates are tricky.
+        // Let's just set 'solutionGenerated' and maybe a 'generatedFiles' field?
+        // The user wants "hydroFiles".
+        
+        // Let's try to be safe: Pull these names first then push them? Or just set them if we assume these are the only ones?
+        // Let's just use $set for now, assuming these are the main ones. 
+        // BETTER: Fetch the current doc, update the array in JS, then save.
+        
+        const targetDoc = await Document.findOne(updateQuery)
+        if (targetDoc) {
+            let currentFiles = targetDoc.hydroFiles || []
+            // Remove existing entries with same name
+            currentFiles = currentFiles.filter(f => !uploadedFileNames.find(uf => uf.name === f.name))
+            // Add new ones
+            currentFiles.push(...uploadedFileNames)
+            
+            await Document.updateOne(updateQuery, { 
+                $set: { 
+                    solutionGenerated: true,
+                    hydroFiles: currentFiles
+                } 
+            })
+             console.log(`[Generate Report] Marked document ${targetPid} as solutionGenerated and updated file list`)
         } else {
              console.warn(`[Generate Report] Could not find document ${targetPid} to mark as solutionGenerated`)
              // Fallback: mark the current doc if we couldn't find the target
@@ -2304,6 +2451,106 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     console.error('Generate Report Error:', error)
     res.status(500).json({ error: error.message })
   }
+})
+
+// Get Hydro Files
+router.get('/hydro/files', authenticateToken, async (req, res) => {
+    try {
+        const { pid, domainId, sync } = req.query
+        if (!pid) return res.status(400).json({ error: 'Missing pid' })
+
+        if (!HYDRO_CONFIG.API_URL) {
+            return res.status(500).json({ error: 'Hydro API not configured' })
+        }
+
+        const baseUrl = HYDRO_CONFIG.API_URL.replace(/\/$/, '')
+        let url
+        let refererUrl
+
+        if (domainId) {
+            url = `${baseUrl}/d/${domainId}/p/${pid}/files`
+            refererUrl = `${baseUrl}/d/${domainId}/p/${pid}/files`
+        } else {
+            url = `${baseUrl}/p/${pid}/files`
+            refererUrl = `${baseUrl}/p/${pid}/files`
+        }
+
+        // Ensure login
+        if (!HYDRO_CONFIG.API_TOKEN && !currentHydroCookie) {
+            await loginToHydro()
+        }
+
+        const getHeaders = () => {
+            const h = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'Origin': HYDRO_CONFIG.API_URL,
+                'Referer': refererUrl
+            }
+            if (HYDRO_CONFIG.API_TOKEN) {
+                h['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
+            } else if (currentHydroCookie) {
+                h['Cookie'] = currentHydroCookie
+            }
+            return h
+        }
+
+        let files = []
+        try {
+            console.log(`[Hydro Files] Fetching from ${url}`)
+            const response = await axios.get(url, { headers: getHeaders() })
+            
+            if (Array.isArray(response.data)) {
+                files = response.data
+            } else if (response.data && Array.isArray(response.data.additional_file)) {
+                files = response.data.additional_file
+            } else {
+                console.warn('[Hydro Files] Unknown response format:', Object.keys(response.data || {}))
+            }
+
+            console.log(`[Hydro Files] Got ${files.length} files`)
+        } catch (e) {
+            // Retry login on 401/403
+            if (e.response && (e.response.status === 401 || e.response.status === 403) && !HYDRO_CONFIG.API_TOKEN) {
+                console.log('[Hydro Files] Auth failed, retrying login...')
+                await loginToHydro()
+                try {
+                    const response = await axios.get(url, { headers: getHeaders() })
+                    
+                    if (Array.isArray(response.data)) {
+                        files = response.data
+                    } else if (response.data && Array.isArray(response.data.additional_file)) {
+                        files = response.data.additional_file
+                    }
+
+                    console.log(`[Hydro Files] Got ${files.length} files (Retry)`)
+                } catch (retryErr) {
+                    throw retryErr
+                }
+            } else {
+                throw e
+            }
+        }
+
+        // Sync to DB if requested
+        if (sync === 'true' && Array.isArray(files)) {
+            const updateQuery = { docId: pid }
+            if (domainId) updateQuery.domainId = domainId
+            
+            // Filter only relevant fields to save space
+            const cleanFiles = files.map(f => ({ name: f.name, size: f.size }))
+            
+            await Document.updateOne(updateQuery, { $set: { hydroFiles: cleanFiles } })
+            console.log(`[Hydro Files] Synced ${files.length} files for ${pid}`)
+        }
+
+        return res.json(files)
+
+    } catch (e) {
+        console.error('Get Hydro Files Error:', e.message)
+        res.status(500).json({ error: e.message })
+    }
 })
 
 export default router

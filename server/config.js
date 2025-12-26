@@ -45,5 +45,7 @@ export const COS_CONFIG = {
 export const HYDRO_CONFIG = {
   API_URL: process.env.HYDRO_API_URL,
   API_TOKEN: process.env.HYDRO_API_TOKEN,
-  COOKIE: process.env.HYDRO_COOKIE
+  COOKIE: process.env.HYDRO_COOKIE,
+  USERNAME: process.env.HYDRO_USERNAME,
+  PASSWORD: process.env.HYDRO_PASSWORD
 }
