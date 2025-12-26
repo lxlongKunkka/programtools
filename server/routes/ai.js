@@ -1186,11 +1186,27 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
                           await courseLevel.save();
                       }
                       console.log(`[Background] Solution Plan saved for chapter ${chapterId}`);
-                      try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+                      try { 
+                          getIO().emit('ai_task_complete', { 
+                              clientKey, 
+                              result: 'success',
+                              type: 'solution-plan',
+                              contentType: 'markdown',
+                              chapterId: chapterId
+                          }); 
+                      } catch (e) {}
                   } catch (updateErr) {
                       console.error('[Background] Atomic update failed for solution plan, falling back to save():', updateErr);
                       await courseLevel.save();
-                      try { getIO().emit('ai_task_complete', { clientKey, result: 'success' }); } catch (e) {}
+                      try { 
+                          getIO().emit('ai_task_complete', { 
+                              clientKey, 
+                              result: 'success',
+                              type: 'solution-plan',
+                              contentType: 'markdown',
+                              chapterId: chapterId
+                          }); 
+                      } catch (e) {}
                   }
               } else {
                   console.error(`[Background] Chapter ${chapterId} not found for saving solution plan`);

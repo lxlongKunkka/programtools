@@ -599,12 +599,32 @@ export default {
                                  this.updateChapterInTree(data.chapterId, { 
                                      contentType: 'html'
                                  })
+                             } else if (data.contentType === 'markdown') {
+                                 this.editingChapter.contentType = 'markdown'
+                                 // Clear content to force re-fetch if we don't have it in payload
+                                 this.editingChapter.content = '' 
+                                 this.updateChapterInTree(data.chapterId, { 
+                                     contentType: 'markdown',
+                                     content: '' // Clear content in tree to force re-fetch
+                                 })
                              }
 
                              // Delay fetch slightly to ensure DB consistency
                              setTimeout(() => {
-                                 this.fetchChapterContent(data.chapterId)
+                                 this.fetchChapterContent(data.chapterId || key)
                              }, 500)
+                        } else {
+                            // Update tree node even if not selected
+                            if (data.resourceUrl) {
+                                this.updateChapterInTree(data.chapterId || key, { 
+                                    contentType: 'html'
+                                })
+                            } else if (data.contentType === 'markdown') {
+                                this.updateChapterInTree(data.chapterId || key, { 
+                                    contentType: 'markdown',
+                                    content: '' // Clear content in tree to force re-fetch
+                                })
+                            }
                         }
                     }
                 } else {
