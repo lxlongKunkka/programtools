@@ -760,6 +760,11 @@ export default {
                                   (this.editingChapter.id === chapterId || this.editingChapter._id === chapterId);
             
             if (isSameChapter) {
+                // If AI is currently generating content for this chapter, do not overwrite local loading state with server content
+                if (this.aiLoadingMap[chapterId] || this.aiLoadingMap[fullChapter._id]) {
+                    return
+                }
+
                 this.editingChapter.content = fullChapter.content || ''
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
@@ -1607,7 +1612,7 @@ export default {
       // Immediately switch to Markdown mode and show loading state
       this.editingChapter.contentType = 'markdown'
       this.editingChapter.content = '正在生成教案中，请稍候...'
-      this.updateChapterInTree(chapterId, { contentType: 'markdown' })
+      this.updateChapterInTree(chapterId, { contentType: 'markdown', content: '正在生成教案中，请稍候...' })
       
       try {
         await request('/api/lesson-plan/background', {
@@ -1727,7 +1732,7 @@ export default {
       // Switch to Markdown mode
       this.editingChapter.contentType = 'markdown'
       this.editingChapter.content = '正在生成解题教案中，请稍候...'
-      this.updateChapterInTree(id, { contentType: 'markdown' })
+      this.updateChapterInTree(id, { contentType: 'markdown', content: '正在生成解题教案中，请稍候...' })
 
       try {
         // 1. Fetch problem details
