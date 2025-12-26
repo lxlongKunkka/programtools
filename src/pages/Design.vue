@@ -1857,7 +1857,8 @@ export default {
             clientKey: id, // Pass the UI key (usually _id) to server
             model: this.selectedModel,
             language: this.editingLevelForChapter.subject || 'C++',
-            group: this.editingLevelForChapter.group
+            group: this.editingLevelForChapter.group,
+            levelTitle: this.editingLevelForChapter.title
         })
         
         this.aiStatusMap[id] = '正在后台生成题解中...'

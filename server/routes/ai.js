@@ -1178,7 +1178,7 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
 });
 
 router.post('/solution-report/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  let { problem, code, reference, solutionPlan, model, level, topicTitle, chapterTitle, problemTitle, chapterId, topicId, clientKey, language, group } = req.body;
+  let { problem, code, reference, solutionPlan, model, level, topicTitle, chapterTitle, problemTitle, chapterId, topicId, clientKey, language, group, levelTitle } = req.body;
   
   console.log(`[Solution Report Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
 
@@ -1190,8 +1190,8 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
   // Start background process
   (async () => {
       try {
-          // If group is missing, try to fetch it from DB
-          if (!group) {
+          // If group or levelTitle is missing, try to fetch from DB
+          if (!group || !levelTitle) {
               try {
                   // Try by ID first
                   let levelDoc = await CourseLevel.findOne({
@@ -1210,12 +1210,18 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                        });
                   }
 
-                  if (levelDoc && levelDoc.group) {
-                      group = levelDoc.group;
-                      console.log(`[Background] Fetched group from DB: ${group}`);
+                  if (levelDoc) {
+                      if (!group && levelDoc.group) {
+                          group = levelDoc.group;
+                          console.log(`[Background] Fetched group from DB: ${group}`);
+                      }
+                      if (!levelTitle && levelDoc.title) {
+                          levelTitle = levelDoc.title;
+                          console.log(`[Background] Fetched levelTitle from DB: ${levelTitle}`);
+                      }
                   }
               } catch (e) {
-                  console.warn('[Background] Failed to fetch group from DB', e);
+                  console.warn('[Background] Failed to fetch info from DB', e);
               }
           }
 
@@ -1277,7 +1283,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
           // 2. Save File
           const sanitize = (str) => str.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '');
-          const safeLevel = 'level' + sanitize(String(level));
+          const safeLevel = levelTitle ? sanitize(levelTitle) : ('level' + sanitize(String(level)));
           const safeTopic = sanitize(topicTitle);
           const safeGroup = group ? sanitize(group) : '';
           // Use problemTitle if available, otherwise fallback to chapterTitle
@@ -1689,8 +1695,8 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
   (async () => {
       try {
-          // If group is missing, try to fetch it from DB
-          if (!group) {
+          // If group or levelTitle is missing, try to fetch from DB
+          if (!group || !levelTitle) {
               try {
                   let levelDoc;
                   // Try by Topic ID first if available
@@ -1717,12 +1723,18 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                        });
                   }
 
-                  if (levelDoc && levelDoc.group) {
-                      group = levelDoc.group;
-                      console.log(`[Background] Fetched group from DB: ${group}`);
+                  if (levelDoc) {
+                      if (!group && levelDoc.group) {
+                          group = levelDoc.group;
+                          console.log(`[Background] Fetched group from DB: ${group}`);
+                      }
+                      if (!levelTitle && levelDoc.title) {
+                          levelTitle = levelDoc.title;
+                          console.log(`[Background] Fetched levelTitle from DB: ${levelTitle}`);
+                      }
                   }
               } catch (e) {
-                  console.warn('[Background] Failed to fetch group from DB', e);
+                  console.warn('[Background] Failed to fetch info from DB', e);
               }
           }
 
