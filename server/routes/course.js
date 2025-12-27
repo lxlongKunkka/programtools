@@ -1326,7 +1326,7 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot add topics to this group.' })
     }
     
@@ -1352,7 +1352,7 @@ router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot edit topics in this group.' })
     }
 
@@ -1374,7 +1374,7 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot delete topics in this group.' })
     }
 
@@ -1414,7 +1414,7 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot move topics in this group.' })
     }
 
@@ -1456,7 +1456,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot add chapters to this group.' })
     }
 
@@ -1514,7 +1514,7 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot edit chapters in this group.' })
     }
 
@@ -1557,7 +1557,7 @@ router.delete('/levels/:id/topics/:topicId/chapters', authenticateToken, require
         return res.status(404).json({ error: 'Level not found' })
     }
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
     }
 
@@ -1602,7 +1602,7 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
     }
 
@@ -1666,7 +1666,7 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateT
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
-    if (level.group && !(await checkGroupPermission(req.user, level.group))) {
+    if (level.group && !(await checkGroupPermission(req.user, level.group)) && !checkLevelPermission(req.user, level)) {
         return res.status(403).json({ error: 'Access denied: You cannot move chapters in this group.' })
     }
 
