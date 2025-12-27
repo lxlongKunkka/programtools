@@ -412,13 +412,18 @@ export default {
       // 1. Map groups
       const groupMap = {}
       groups.forEach(g => {
-        groupMap[g.name] = { ...g, levels: [], collapsed: true }
+        groupMap[g.name] = { ...g, levels: [], collapsed: true, problemCount: 0 }
       })
       
       // 2. Handle levels
       const orphanedLevels = []
       levels.forEach(l => {
-        const levelData = { ...l, collapsed: true } // Default collapsed
+        const levelData = { 
+            ...l, 
+            collapsed: true, 
+            problemCount: 0,
+            topics: (l.topics || []).map(t => ({ ...t, problemCount: 0 }))
+        } 
         if (l.group && groupMap[l.group]) {
           groupMap[l.group].levels.push(levelData)
         } else {

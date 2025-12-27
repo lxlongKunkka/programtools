@@ -930,23 +930,30 @@ export default {
                 request('/api/course/levels')
             ])
             
-            this.groups = groups.map(g => ({ ...g, collapsed: false }))
-            this.levels = levels.map(l => ({ ...l, descCollapsed: false }))
+            this.groups = groups.map(g => ({ ...g, collapsed: false, problemCount: 0 }))
+            this.levels = levels.map(l => ({ 
+                ...l, 
+                descCollapsed: false, 
+                problemCount: 0,
+                topics: (l.topics || []).map(t => ({
+                    ...t,
+                    collapsed: false,
+                    problemCount: 0
+                }))
+            }))
             
-            // Initialize topics collapsed state default false & Calculate Counts
+            // Calculate Counts
             this.levels.forEach(l => {
                 let levelCount = 0
                 if (l.topics) {
                     l.topics.forEach(t => {
-                        t.collapsed = false
                         let topicCount = 0
                         if (t.chapters) {
                             t.chapters.forEach(c => {
                                 if (c.problemIds && c.problemIds.length > 0) {
                                     topicCount += c.problemIds.length
                                 } else if (c.problemIdsStr) {
-                                    // Fallback if problemIds is not parsed yet (though usually it is on backend or not needed here if we trust problemIds)
-                                    // But let's stick to problemIds array which should be present
+                                    // Fallback
                                 }
                             })
                         }
