@@ -247,7 +247,13 @@ export default {
     },
     isChapterCompleted() {
       if (!this.userProgress || !this.chapter) return false
-      return this.userProgress.completedChapters.includes(this.chapter.id)
+      // 1. Check explicit completion
+      if (this.userProgress.completedChapters.includes(this.chapter.id)) return true
+      
+      // 2. Check implicit completion (All problems solved)
+      if (this.totalProblems > 0 && this.solvedCount >= this.totalProblems) return true
+      
+      return false
     },
     hasNextChapter() {
       // Simple check if there's a next chapter in the current level
