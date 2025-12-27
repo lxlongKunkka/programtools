@@ -239,9 +239,37 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
             }
             
             if (prevChapter) {
-                const isPrevCompleted = progress.completedChapters.includes(prevChapter.id) || 
+                let isPrevCompleted = progress.completedChapters.includes(prevChapter.id) || 
                                         (prevChapter._id && progress.completedChapterUids && progress.completedChapterUids.some(id => id.toString() === prevChapter._id.toString()))
                 
+                // Deep check: If not marked completed, check if all problems are solved
+                if (!isPrevCompleted && prevChapter.problemIds && prevChapter.problemIds.length > 0) {
+                    const prevChapterData = progress.chapterProgress.get(prevChapter.id)
+                    if (prevChapterData && prevChapterData.solvedProblems) {
+                        const requiredIds = prevChapter.problemIds.map(p => p.toString())
+                        const solvedIds = prevChapterData.solvedProblems
+                        const allSolved = requiredIds.every(id => solvedIds.includes(id))
+                        if (allSolved) {
+                            isPrevCompleted = true
+                            // Auto-repair: Mark previous chapter as completed
+                            if (!progress.completedChapters.includes(prevChapter.id)) {
+                                progress.completedChapters.push(prevChapter.id)
+                            }
+                            if (prevChapter._id) {
+                                if (!progress.completedChapterUids) progress.completedChapterUids = []
+                                const uidStr = prevChapter._id.toString()
+                                if (!progress.completedChapterUids.some(id => id.toString() === uidStr)) {
+                                    progress.completedChapterUids.push(prevChapter._id)
+                                }
+                            }
+                        }
+                    }
+                } else if (!isPrevCompleted && (!prevChapter.problemIds || prevChapter.problemIds.length === 0)) {
+                    // If previous chapter has no problems (reading only), we can't easily verify completion without the flag.
+                    // But usually reading chapters are marked completed explicitly.
+                    // We could be lenient here if needed, but let's stick to explicit completion for reading chapters.
+                }
+
                 if (isPrevCompleted) {
                     isUnlocked = true
                     // Auto-repair: Save this unlock to DB
