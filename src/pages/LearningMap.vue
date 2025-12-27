@@ -834,26 +834,46 @@ export default {
   font-weight: 500;
 }
 .tree-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: #1976d2;
+  display: none;
 }
 
 .group-item {
   font-weight: 600;
   font-size: 15px;
+  background: #f8fafc;
+  border-left: 4px solid #94a3b8;
+  margin-bottom: 2px;
 }
+.group-item.active {
+  background: #e2e8f0;
+  border-left-color: #475569;
+  color: #0f172a;
+}
+
 .level-item {
   padding-left: 30px;
+  border-left: 4px solid #60a5fa;
+  background: #fff;
+  margin-bottom: 1px;
 }
+.level-item.active {
+  background: #eff6ff;
+  border-left-color: #2563eb;
+  color: #1e40af;
+}
+
 .topic-item {
   padding-left: 50px;
   font-size: 13px;
   color: #555;
+  border-left: 4px solid #34d399;
+  background: #fff;
+  margin-bottom: 1px;
+}
+.topic-item.active {
+  background: #ecfdf5;
+  border-left-color: #059669;
+  color: #065f46;
 }
 
 .tree-icon {

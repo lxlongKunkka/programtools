@@ -2911,48 +2911,67 @@ export default {
 
 .group-item {
     font-weight: 700;
-    color: var(--text-main);
-    background: #fff;
-    border: 1px solid var(--border-color);
+    color: #1e293b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     margin-bottom: 4px;
 }
-.group-item:hover { background: #f8fafc; border-color: #cbd5e1; }
+.group-item:hover { background: #e2e8f0; border-color: #cbd5e1; }
 .group-item.active { 
-  background: #f1f5f9; 
-  border-color: #cbd5e1;
-  color: var(--text-main);
+  background: #e2e8f0; 
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 .group-item.active .tree-icon { color: var(--primary-color); }
 
 .level-item { 
   font-weight: 600; 
-  color: var(--text-main); 
+  color: #334155; 
   margin-left: 8px; 
-  border-left: 2px solid transparent;
+  border-left: 3px solid #60a5fa;
+  background: #fff;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
-.level-item.active { border-left-color: var(--primary-color); }
+.level-item:hover { background: #f8fafc; }
+.level-item.active { 
+  background: #eff6ff;
+  border-left-color: #2563eb;
+  color: #1e40af;
+}
 
 .topic-item { 
   padding-left: 24px; 
   font-size: 13.5px; 
   margin-left: 8px;
-  border-left: 1px solid var(--border-color);
+  border-left: 3px solid #34d399;
+  background: #fff;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: #475569;
 }
-.topic-item.active { border-left-color: var(--primary-color); }
+.topic-item:hover { background: #f8fafc; }
+.topic-item.active { 
+  background: #ecfdf5;
+  border-left-color: #059669;
+  color: #065f46;
+}
 
 .chapter-item { 
   padding-left: 36px; 
   font-size: 13px; 
   margin-left: 8px;
-  border-left: 1px solid var(--border-color);
+  border-left: 3px solid #fbbf24;
+  background: #fff;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   padding-top: 8px;
   padding-bottom: 8px;
-  font-style: italic;
+  color: #64748b;
 }
-.chapter-item.active { border-left-color: var(--primary-color); }
+.chapter-item:hover { background: #f8fafc; }
+.chapter-item.active { 
+  background: #fffbeb;
+  border-left-color: #d97706;
+  color: #92400e;
+}
 
 .empty-node {
   padding: 12px;
