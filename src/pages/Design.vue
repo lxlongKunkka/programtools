@@ -452,50 +452,8 @@ export default {
       
       // Auto-save state
       isSelecting: false,
-      isSaving: false,
-      hasPendingSave: false,
-      pendingSaveType: null
+      isSaving: false
     }
-  },
-  watch: {
-    editingGroup: {
-        handler() {
-            if (this.isSelecting) return
-            if (!this.selectedNode || this.selectedNode.type !== 'group') return
-            this.debouncedSaveGroup(true)
-        },
-        deep: true
-    },
-    editingLevel: {
-        handler() {
-            if (this.isSelecting) return
-            if (!this.selectedNode || this.selectedNode.type !== 'level') return
-            this.debouncedSaveLevel(true)
-        },
-        deep: true
-    },
-    editingTopic: {
-        handler() {
-            if (this.isSelecting) return
-            if (!this.selectedNode || this.selectedNode.type !== 'topic') return
-            this.debouncedSaveTopic(true)
-        },
-        deep: true
-    },
-    editingChapter: {
-        handler() {
-            if (this.isSelecting) return
-            if (!this.selectedNode || this.selectedNode.type !== 'chapter') return
-            this.debouncedSaveChapter(true)
-        },
-        deep: true
-    }
-  },
-  created() {
-    this.debouncedSaveGroup = this.debounce(this.saveGroup, 2000)
-    this.debouncedSaveLevel = this.debounce(this.saveLevel, 2000)
-    this.debouncedSaveTopic = this.debounce(this.saveTopic, 2000)
-    this.debouncedSaveChapter = this.debounce(this.saveChapter, 2000)
   },
   computed: {
     problemLinks() {
@@ -709,14 +667,6 @@ export default {
             this.fetchTeachers()
             this.selectedNode = null
         }
-    },
-    debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-      };
     },
     handleGlobalKeydown(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -1065,22 +1015,9 @@ export default {
         return this.levels.filter(l => l.group === groupName)
     },
 
-    async saveGroup(isAutoSave = false) {
-        // 1. Skip auto-save for new nodes
-        if (isAutoSave && !this.editingGroup._id) return
-
-        // 2. Handle pending saves
-        if (this.isSaving) {
-            if (isAutoSave) {
-                this.hasPendingSave = true
-                this.pendingSaveType = 'group'
-            }
-            return
-        }
+    async saveGroup() {
+        if (this.isSaving) return
         this.isSaving = true
-        this.hasPendingSave = false
-        this.pendingSaveType = null
-
         try {
             let res;
             if (this.editingGroup._id) {
@@ -1101,26 +1038,12 @@ export default {
                 }
             }
             
-            if (!isAutoSave) {
-                this.showToastMessage('保存分组成功')
-                this.fetchData()
-            } else {
-                // Update local tree node
-                const group = this.groups.find(g => g._id === this.editingGroup._id)
-                if (group) {
-                    group.name = this.editingGroup.name
-                    group.title = this.editingGroup.title
-                    group.language = this.editingGroup.language
-                }
-            }
+            this.showToastMessage('保存分组成功')
+            this.fetchData()
         } catch (e) {
-            if (!isAutoSave) this.showToastMessage('保存分组失败: ' + e.message)
-            else console.error('Auto-save group failed', e)
+            this.showToastMessage('保存分组失败: ' + e.message)
         } finally {
             this.isSaving = false
-            if (this.hasPendingSave && this.pendingSaveType === 'group') {
-                this.saveGroup(true)
-            }
         }
     },
     async deleteGroup(id) {
@@ -1148,22 +1071,9 @@ export default {
         }
     },
 
-    async saveLevel(isAutoSave = false) {
-      // 1. Skip auto-save for new nodes
-      if (isAutoSave && !this.editingLevel._id) return
-
-      // 2. Handle pending saves
-      if (this.isSaving) {
-          if (isAutoSave) {
-              this.hasPendingSave = true
-              this.pendingSaveType = 'level'
-          }
-          return
-      }
+    async saveLevel() {
+      if (this.isSaving) return
       this.isSaving = true
-      this.hasPendingSave = false
-      this.pendingSaveType = null
-
       try {
         // Ensure group is set
         if (!this.editingLevel.group) {
@@ -1189,25 +1099,12 @@ export default {
           }
         }
         
-        if (!isAutoSave) {
-            this.showToastMessage('保存成功')
-            this.fetchData()
-        } else {
-            // Update local tree node
-            const level = this.levels.find(l => l._id === this.editingLevel._id)
-            if (level) {
-                level.title = this.editingLevel.title
-                level.description = this.editingLevel.description
-            }
-        }
+        this.showToastMessage('保存成功')
+        this.fetchData()
       } catch (e) {
-        if (!isAutoSave) this.showToastMessage('保存失败: ' + e.message)
-        else console.error('Auto-save level failed', e)
+        this.showToastMessage('保存失败: ' + e.message)
       } finally {
         this.isSaving = false
-        if (this.hasPendingSave && this.pendingSaveType === 'level') {
-            this.saveLevel(true)
-        }
       }
     },
     async deleteLevel(id) {
@@ -1235,22 +1132,9 @@ export default {
       }
     },
 
-    async saveTopic(isAutoSave = false) {
-      // 1. Skip auto-save for new nodes
-      if (isAutoSave && !this.editingTopic._id) return
-
-      // 2. Handle pending saves
-      if (this.isSaving) {
-          if (isAutoSave) {
-              this.hasPendingSave = true
-              this.pendingSaveType = 'topic'
-          }
-          return
-      }
+    async saveTopic() {
+      if (this.isSaving) return
       this.isSaving = true
-      this.hasPendingSave = false
-      this.pendingSaveType = null
-
       try {
         let updatedLevel;
         if (this.editingTopic._id) {
@@ -1269,11 +1153,8 @@ export default {
           
           // Update ID for new topic (assuming appended to end)
           if (updatedLevel && updatedLevel.topics && updatedLevel.topics.length > 0) {
-              if (!isAutoSave) {
-                  this.showToastMessage('知识点创建成功')
-                  await this.fetchData()
-                  return
-              }
+              this.showToastMessage('知识点创建成功')
+              await this.fetchData()
               
               let newTopic;
               if (this.editingTopic._insertIndex !== undefined && this.editingTopic._insertIndex !== -1 && this.editingTopic._insertIndex < updatedLevel.topics.length) {
@@ -1286,38 +1167,16 @@ export default {
                 this.editingTopic._id = newTopic._id
                 this.selectedNode.id = newTopic._id
               }
+              return
           }
         }
         
-        if (!isAutoSave) {
-            this.showToastMessage('保存知识点成功')
-            await this.fetchData()
-        } else {
-            // Update local tree node
-            if (updatedLevel) {
-                 const levelIndex = this.levels.findIndex(l => l._id === updatedLevel._id)
-                 if (levelIndex !== -1) {
-                     // Preserve collapsed state
-                     const oldLevel = this.levels[levelIndex]
-                     updatedLevel.descCollapsed = oldLevel.descCollapsed
-                     if (updatedLevel.topics) {
-                         updatedLevel.topics.forEach(t => {
-                             const oldT = oldLevel.topics ? oldLevel.topics.find(ot => ot._id === t._id) : null
-                             if (oldT) t.collapsed = oldT.collapsed
-                         })
-                     }
-                     this.levels[levelIndex] = updatedLevel
-                 }
-            }
-        }
+        this.showToastMessage('保存知识点成功')
+        await this.fetchData()
       } catch (e) {
-        if (!isAutoSave) this.showToastMessage('保存知识点失败: ' + e.message)
-        else console.error('Auto-save topic failed', e)
+        this.showToastMessage('保存知识点失败: ' + e.message)
       } finally {
         this.isSaving = false
-        if (this.hasPendingSave && this.pendingSaveType === 'topic') {
-            this.saveTopic(true)
-        }
       }
     },
     async deleteTopic(levelId, topicId) {
@@ -1551,22 +1410,9 @@ export default {
         }
       }
     },
-    async saveChapter(isAutoSave = false) {
-      // 1. Skip auto-save for new nodes
-      if (isAutoSave && (this.editingChapter.isNew || !this.editingChapter._id)) return
-
-      // 2. Handle pending saves
-      if (this.isSaving) {
-          if (isAutoSave) {
-              this.hasPendingSave = true
-              this.pendingSaveType = 'chapter'
-          }
-          return
-      }
+    async saveChapter() {
+      if (this.isSaving) return
       this.isSaving = true
-      this.hasPendingSave = false
-      this.pendingSaveType = null
-
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
@@ -1643,35 +1489,12 @@ export default {
            })
         }
         
-        if (!isAutoSave) {
-            this.showToastMessage('保存章节成功')
-            await this.fetchData()
-        } else {
-            // Update local tree node
-            if (updatedLevel) {
-                 const levelIndex = this.levels.findIndex(l => l._id === updatedLevel._id)
-                 if (levelIndex !== -1) {
-                     // Preserve collapsed state
-                     const oldLevel = this.levels[levelIndex]
-                     updatedLevel.descCollapsed = oldLevel.descCollapsed
-                     if (updatedLevel.topics) {
-                         updatedLevel.topics.forEach(t => {
-                             const oldT = oldLevel.topics ? oldLevel.topics.find(ot => ot._id === t._id) : null
-                             if (oldT) t.collapsed = oldT.collapsed
-                         })
-                     }
-                     this.levels[levelIndex] = updatedLevel
-                 }
-            }
-        }
+        this.showToastMessage('保存章节成功')
+        await this.fetchData()
       } catch (e) {
-        if (!isAutoSave) this.showToastMessage('保存章节失败: ' + e.message)
-        else console.error('Auto-save chapter failed', e)
+        this.showToastMessage('保存章节失败: ' + e.message)
       } finally {
         this.isSaving = false
-        if (this.hasPendingSave && this.pendingSaveType === 'chapter') {
-            this.saveChapter(true)
-        }
       }
     },
     async deleteChapter(levelId, topicId, chapterId) {
