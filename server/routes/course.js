@@ -17,6 +17,43 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
+// Helper: Resolve problem definition strings (e.g. "1001", "system:1001") to Document ObjectIds
+async function resolveProblemIds(problemIdStrings) {
+    if (!problemIdStrings || !Array.isArray(problemIdStrings)) return []
+    
+    const resolvedIds = []
+    for (const pidStr of problemIdStrings) {
+        if (!pidStr) continue
+        
+        // If it looks like a MongoID, assume it is one (or check DB)
+        if (mongoose.Types.ObjectId.isValid(pidStr)) {
+            resolvedIds.push(pidStr.toString())
+            continue
+        }
+        
+        let query = {}
+        if (pidStr.includes(':')) {
+            const [domain, docId] = pidStr.split(':')
+            query = { domainId: domain, docId: isNaN(docId) ? docId : Number(docId) }
+        } else {
+            const docId = isNaN(pidStr) ? pidStr : Number(pidStr)
+            // Try system first
+            const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('_id')
+            if (sysDoc) {
+                resolvedIds.push(sysDoc._id.toString())
+                continue
+            }
+            query = { docId: docId }
+        }
+        
+        const doc = await Document.findOne(query).select('_id')
+        if (doc) {
+            resolvedIds.push(doc._id.toString())
+        }
+    }
+    return resolvedIds
+}
+
 // --- Group Routes ---
 
 // Get all groups
@@ -246,9 +283,12 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
                 if (!isPrevCompleted && prevChapter.problemIds && prevChapter.problemIds.length > 0) {
                     const prevChapterData = progress.chapterProgress.get(prevChapter.id)
                     if (prevChapterData && prevChapterData.solvedProblems) {
-                        const requiredIds = prevChapter.problemIds.map(p => p.toString())
-                        const solvedIds = prevChapterData.solvedProblems
-                        const allSolved = requiredIds.every(id => solvedIds.includes(id))
+                        // Resolve problem IDs to MongoIDs for comparison
+                        const requiredIds = await resolveProblemIds(prevChapter.problemIds)
+                        const solvedIds = prevChapterData.solvedProblems.map(id => id.toString())
+                        
+                        const allSolved = requiredIds.length > 0 && requiredIds.every(id => solvedIds.includes(id))
+                        
                         if (allSolved) {
                             isPrevCompleted = true
                             // Auto-repair: Mark previous chapter as completed
@@ -856,10 +896,11 @@ router.post('/submit-problem', authenticateToken, async (req, res) => {
     }
 
     if (level && chapter) {
-        const requiredIds = chapter.problemIds.map(p => p.toString())
-        const solvedIds = chapterData.solvedProblems
+        // Resolve problem IDs to MongoIDs for comparison
+        const requiredIds = await resolveProblemIds(chapter.problemIds)
+        const solvedIds = chapterData.solvedProblems.map(id => id.toString())
         
-        const allSolved = requiredIds.every(id => solvedIds.includes(id))
+        const allSolved = requiredIds.length > 0 && requiredIds.every(id => solvedIds.includes(id))
         
         const isCompletedLegacy = progress.completedChapters.includes(chapterId)
         let isCompletedUid = false
@@ -987,9 +1028,11 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
        }
 
        if (level && chapter) {
-           const requiredIds = chapter.problemIds.map(p => p.toString())
-           const solvedIds = chapterData.solvedProblems
-           const allSolved = requiredIds.every(id => solvedIds.includes(id))
+           // Resolve problem IDs to MongoIDs for comparison
+           const requiredIds = await resolveProblemIds(chapter.problemIds)
+           const solvedIds = chapterData.solvedProblems.map(id => id.toString())
+           
+           const allSolved = requiredIds.length > 0 && requiredIds.every(id => solvedIds.includes(id))
            
            const isCompletedLegacy = progress.completedChapters.includes(chapterId)
            let isCompletedUid = false
