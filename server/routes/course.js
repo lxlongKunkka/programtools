@@ -624,8 +624,20 @@ async function unlockNext(progress, currentChapterId) {
         return level.topics[loopTIdx].chapters[loopCIdx]
       }
       
-      // End of topic: Do NOT automatically jump to next topic's first chapter
-      // because topics are independent and their first chapters are unlocked by default.
+      // End of topic: Move to next topic's first chapter
+      if (loopTIdx < level.topics.length - 1) {
+          let nextT = loopTIdx + 1
+          while (nextT < level.topics.length) {
+              if (level.topics[nextT].chapters && level.topics[nextT].chapters.length > 0) {
+                  // Update indices for the loop (though we return immediately, good for consistency)
+                  loopTIdx = nextT
+                  loopCIdx = 0
+                  return level.topics[nextT].chapters[0]
+              }
+              nextT++
+          }
+      }
+      
       return null 
     } else {
       // Legacy
