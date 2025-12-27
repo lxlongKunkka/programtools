@@ -280,14 +280,19 @@ export default {
 
       // Check next level
       if (this.allLevels.length > 0) {
-          const currentSubject = this.level.subject || 'C++'
-          const subjectLevels = this.allLevels
-              .filter(l => (l.subject || 'C++') === currentSubject)
-              .sort((a, b) => a.level - b.level)
+          let contextLevels = []
+          if (this.level.group) {
+              contextLevels = this.allLevels.filter(l => l.group === this.level.group)
+          } else {
+              const currentSubject = this.level.subject || 'C++'
+              contextLevels = this.allLevels.filter(l => !l.group && (l.subject || 'C++') === currentSubject)
+          }
           
-          const currentLevelIdx = subjectLevels.findIndex(l => l._id === this.level._id)
-          if (currentLevelIdx !== -1 && currentLevelIdx < subjectLevels.length - 1) {
-              const nextLevel = subjectLevels[currentLevelIdx + 1]
+          contextLevels.sort((a, b) => a.level - b.level)
+          
+          const currentLevelIdx = contextLevels.findIndex(l => l._id === this.level._id)
+          if (currentLevelIdx !== -1 && currentLevelIdx < contextLevels.length - 1) {
+              const nextLevel = contextLevels[currentLevelIdx + 1]
               if (nextLevel.topics && nextLevel.topics.length > 0) {
                   return nextLevel.topics.some(t => t.chapters && t.chapters.length > 0)
               }
@@ -631,14 +636,19 @@ export default {
       
       // If not found in current level, check next level
       if (!nextChapter && this.allLevels.length > 0) {
-          const currentSubject = this.level.subject || 'C++'
-          const subjectLevels = this.allLevels
-              .filter(l => (l.subject || 'C++') === currentSubject)
-              .sort((a, b) => a.level - b.level)
+          let contextLevels = []
+          if (this.level.group) {
+              contextLevels = this.allLevels.filter(l => l.group === this.level.group)
+          } else {
+              const currentSubject = this.level.subject || 'C++'
+              contextLevels = this.allLevels.filter(l => !l.group && (l.subject || 'C++') === currentSubject)
+          }
           
-          const currentLevelIdx = subjectLevels.findIndex(l => l._id === this.level._id)
-          if (currentLevelIdx !== -1 && currentLevelIdx < subjectLevels.length - 1) {
-              const nextLevel = subjectLevels[currentLevelIdx + 1]
+          contextLevels.sort((a, b) => a.level - b.level)
+          
+          const currentLevelIdx = contextLevels.findIndex(l => l._id === this.level._id)
+          if (currentLevelIdx !== -1 && currentLevelIdx < contextLevels.length - 1) {
+              const nextLevel = contextLevels[currentLevelIdx + 1]
               
               if (nextLevel.topics && nextLevel.topics.length > 0) {
                   for (const t of nextLevel.topics) {
