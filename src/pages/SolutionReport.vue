@@ -81,6 +81,7 @@ import request from '../utils/request'
 import { getModels } from '../utils/models'
 
 export default {
+  name: 'SolutionReport',
   inject: ['showToastMessage'],
   data() {
     return {
@@ -116,29 +117,35 @@ export default {
       this.model = this.modelOptions[0].id
     }
 
-    // 检查是否有自动生成任务
-    const reportDataStr = localStorage.getItem('solution_report_data');
-    if (reportDataStr) {
-      try {
-        const reportData = JSON.parse(reportDataStr);
-        if (reportData.problem) this.problemText = reportData.problem;
-        if (reportData.code) this.codeText = reportData.code;
-        if (reportData.reference) this.referenceText = reportData.reference;
-        
-        // 清除数据
-        localStorage.removeItem('solution_report_data');
-
-        if (reportData.autoStart && this.problemText && this.codeText) {
-          this.$nextTick(() => {
-            this.generate();
-          });
-        }
-      } catch (e) {
-        console.error('Failed to parse report data', e);
-      }
-    }
+    this.checkAutoFill()
+  },
+  activated() {
+    this.checkAutoFill()
   },
   methods: {
+    checkAutoFill() {
+      // 检查是否有自动生成任务
+      const reportDataStr = localStorage.getItem('solution_report_data');
+      if (reportDataStr) {
+        try {
+          const reportData = JSON.parse(reportDataStr);
+          if (reportData.problem) this.problemText = reportData.problem;
+          if (reportData.code) this.codeText = reportData.code;
+          if (reportData.reference) this.referenceText = reportData.reference;
+          
+          // 清除数据
+          localStorage.removeItem('solution_report_data');
+
+          if (reportData.autoStart && this.problemText && this.codeText) {
+            this.$nextTick(() => {
+              this.generate();
+            });
+          }
+        } catch (e) {
+          console.error('Failed to parse report data', e);
+        }
+      }
+    },
     async generatePlan() {
       if (!this.problemText.trim()) return this.showToastMessage('请先输入题目描述')
       

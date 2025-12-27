@@ -452,7 +452,9 @@ export default {
       
       // Auto-save state
       isSelecting: false,
-      isSaving: false
+      isSaving: false,
+      hasPendingSave: false,
+      pendingSaveType: null
     }
   },
   watch: {
@@ -1064,8 +1066,21 @@ export default {
     },
 
     async saveGroup(isAutoSave = false) {
-        if (this.isSaving) return
+        // 1. Skip auto-save for new nodes
+        if (isAutoSave && !this.editingGroup._id) return
+
+        // 2. Handle pending saves
+        if (this.isSaving) {
+            if (isAutoSave) {
+                this.hasPendingSave = true
+                this.pendingSaveType = 'group'
+            }
+            return
+        }
         this.isSaving = true
+        this.hasPendingSave = false
+        this.pendingSaveType = null
+
         try {
             let res;
             if (this.editingGroup._id) {
@@ -1103,6 +1118,9 @@ export default {
             else console.error('Auto-save group failed', e)
         } finally {
             this.isSaving = false
+            if (this.hasPendingSave && this.pendingSaveType === 'group') {
+                this.saveGroup(true)
+            }
         }
     },
     async deleteGroup(id) {
@@ -1131,8 +1149,21 @@ export default {
     },
 
     async saveLevel(isAutoSave = false) {
-      if (this.isSaving) return
+      // 1. Skip auto-save for new nodes
+      if (isAutoSave && !this.editingLevel._id) return
+
+      // 2. Handle pending saves
+      if (this.isSaving) {
+          if (isAutoSave) {
+              this.hasPendingSave = true
+              this.pendingSaveType = 'level'
+          }
+          return
+      }
       this.isSaving = true
+      this.hasPendingSave = false
+      this.pendingSaveType = null
+
       try {
         // Ensure group is set
         if (!this.editingLevel.group) {
@@ -1174,6 +1205,9 @@ export default {
         else console.error('Auto-save level failed', e)
       } finally {
         this.isSaving = false
+        if (this.hasPendingSave && this.pendingSaveType === 'level') {
+            this.saveLevel(true)
+        }
       }
     },
     async deleteLevel(id) {
@@ -1202,8 +1236,21 @@ export default {
     },
 
     async saveTopic(isAutoSave = false) {
-      if (this.isSaving) return
+      // 1. Skip auto-save for new nodes
+      if (isAutoSave && !this.editingTopic._id) return
+
+      // 2. Handle pending saves
+      if (this.isSaving) {
+          if (isAutoSave) {
+              this.hasPendingSave = true
+              this.pendingSaveType = 'topic'
+          }
+          return
+      }
       this.isSaving = true
+      this.hasPendingSave = false
+      this.pendingSaveType = null
+
       try {
         let updatedLevel;
         if (this.editingTopic._id) {
@@ -1268,6 +1315,9 @@ export default {
         else console.error('Auto-save topic failed', e)
       } finally {
         this.isSaving = false
+        if (this.hasPendingSave && this.pendingSaveType === 'topic') {
+            this.saveTopic(true)
+        }
       }
     },
     async deleteTopic(levelId, topicId) {
@@ -1502,8 +1552,21 @@ export default {
       }
     },
     async saveChapter(isAutoSave = false) {
-      if (this.isSaving) return
+      // 1. Skip auto-save for new nodes
+      if (isAutoSave && (this.editingChapter.isNew || !this.editingChapter._id)) return
+
+      // 2. Handle pending saves
+      if (this.isSaving) {
+          if (isAutoSave) {
+              this.hasPendingSave = true
+              this.pendingSaveType = 'chapter'
+          }
+          return
+      }
       this.isSaving = true
+      this.hasPendingSave = false
+      this.pendingSaveType = null
+
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
@@ -1606,6 +1669,9 @@ export default {
         else console.error('Auto-save chapter failed', e)
       } finally {
         this.isSaving = false
+        if (this.hasPendingSave && this.pendingSaveType === 'chapter') {
+            this.saveChapter(true)
+        }
       }
     },
     async deleteChapter(levelId, topicId, chapterId) {
