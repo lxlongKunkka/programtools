@@ -204,6 +204,61 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
         if (!isUnlocked && isFirstChapter) {
             isUnlocked = true
         }
+
+        // Fallback: Check if previous chapter is completed (Self-Healing)
+        if (!isUnlocked) {
+            let prevChapter = null
+            if (level.chapters && level.chapters.length > 0) {
+                 // Legacy
+                 const idx = level.chapters.findIndex(c => c.id === chapter.id || (c._id && chapter._id && c._id.toString() === chapter._id.toString()))
+                 if (idx > 0) prevChapter = level.chapters[idx - 1]
+            } else if (level.topics) {
+                 // Topics
+                 for (let t = 0; t < level.topics.length; t++) {
+                     const topic = level.topics[t]
+                     const cIdx = topic.chapters.findIndex(c => c.id === chapter.id || (c._id && chapter._id && c._id.toString() === chapter._id.toString()))
+                     if (cIdx !== -1) {
+                         if (cIdx > 0) {
+                             prevChapter = topic.chapters[cIdx - 1]
+                         } else if (t > 0) {
+                             // Last chapter of previous topic
+                             // Find previous topic with chapters
+                             let prevT = t - 1
+                             while (prevT >= 0) {
+                                 const prevTopic = level.topics[prevT]
+                                 if (prevTopic.chapters && prevTopic.chapters.length > 0) {
+                                     prevChapter = prevTopic.chapters[prevTopic.chapters.length - 1]
+                                     break
+                                 }
+                                 prevT--
+                             }
+                         }
+                         break
+                     }
+                 }
+            }
+            
+            if (prevChapter) {
+                const isPrevCompleted = progress.completedChapters.includes(prevChapter.id) || 
+                                        (prevChapter._id && progress.completedChapterUids && progress.completedChapterUids.some(id => id.toString() === prevChapter._id.toString()))
+                
+                if (isPrevCompleted) {
+                    isUnlocked = true
+                    // Auto-repair: Save this unlock to DB
+                    if (!progress.unlockedChapters.includes(chapter.id)) {
+                        progress.unlockedChapters.push(chapter.id)
+                    }
+                    if (chapter._id) {
+                        if (!progress.unlockedChapterUids) progress.unlockedChapterUids = []
+                        const uidStr = chapter._id.toString()
+                        if (!progress.unlockedChapterUids.some(id => id.toString() === uidStr)) {
+                            progress.unlockedChapterUids.push(chapter._id)
+                        }
+                    }
+                    await progress.save()
+                }
+            }
+        }
         
         if (!isUnlocked) {
             return res.status(403).json({ error: 'Chapter is locked' })
