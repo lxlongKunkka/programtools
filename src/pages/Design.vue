@@ -1170,10 +1170,10 @@ export default {
             }
         }
       } catch (e) {
-        }
-      } catch (e) {
         if (!isAutoSave) this.showToastMessage('保存失败: ' + e.message)
         else console.error('Auto-save level failed', e)
+      } finally {
+        this.isSaving = false
       }
     },
     async deleteLevel(id) {
@@ -1197,7 +1197,9 @@ export default {
         this.showToastMessage('移动成功')
         this.fetchData()
       } catch (e) {
-      if (this.isSaving) return
+        this.showToastMessage('移动失败: ' + e.message)
+      }
+    },
       this.isSaving = true
       try {
         let updatedLevel;
@@ -1263,11 +1265,11 @@ export default {
                  }
             }
         }
-        this.isSaving = false
-        }
       } catch (e) {
         if (!isAutoSave) this.showToastMessage('保存知识点失败: ' + e.message)
         else console.error('Auto-save topic failed', e)
+      } finally {
+        this.isSaving = false
       }
     },
     async deleteTopic(levelId, topicId) {
