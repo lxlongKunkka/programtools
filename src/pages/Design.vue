@@ -1064,6 +1064,8 @@ export default {
     },
 
     async saveGroup(isAutoSave = false) {
+        if (this.isSaving) return
+        this.isSaving = true
         try {
             let res;
             if (this.editingGroup._id) {
@@ -1099,6 +1101,8 @@ export default {
         } catch (e) {
             if (!isAutoSave) this.showToastMessage('保存分组失败: ' + e.message)
             else console.error('Auto-save group failed', e)
+        } finally {
+            this.isSaving = false
         }
     },
     async deleteGroup(id) {
@@ -1123,10 +1127,8 @@ export default {
             this.fetchData()
         } catch (e) {
             this.showToastMessage('移动失败: ' + e.message)
-        }
-    },
-
-    async saveLevel(isAutoSave = false) {
+      if (this.isSaving) return
+      this.isSaving = true
       try {
         // Ensure group is set
         if (!this.editingLevel.group) {
@@ -1166,6 +1168,12 @@ export default {
       } catch (e) {
         if (!isAutoSave) this.showToastMessage('保存失败: ' + e.message)
         else console.error('Auto-save level failed', e)
+      } finally {
+        this.isSaving = false
+        }
+      } catch (e) {
+        if (!isAutoSave) this.showToastMessage('保存失败: ' + e.message)
+        else console.error('Auto-save level failed', e)
       }
     },
     async deleteLevel(id) {
@@ -1189,10 +1197,8 @@ export default {
         this.showToastMessage('移动成功')
         this.fetchData()
       } catch (e) {
-        this.showToastMessage('移动失败: ' + e.message)
-      }
-    },
-    async saveTopic(isAutoSave = false) {
+      if (this.isSaving) return
+      this.isSaving = true
       try {
         let updatedLevel;
         if (this.editingTopic._id) {
@@ -1216,9 +1222,18 @@ export default {
                   await this.fetchData()
                   return
               }
-              const newTopic = updatedLevel.topics[updatedLevel.topics.length - 1]
-              this.editingTopic._id = newTopic._id
-              this.selectedNode.id = newTopic._id
+              
+              let newTopic;
+              if (this.editingTopic._insertIndex !== undefined && this.editingTopic._insertIndex !== -1 && this.editingTopic._insertIndex < updatedLevel.topics.length) {
+                  newTopic = updatedLevel.topics[this.editingTopic._insertIndex]
+              } else {
+                  newTopic = updatedLevel.topics[updatedLevel.topics.length - 1]
+              }
+
+              if (newTopic) {
+                this.editingTopic._id = newTopic._id
+                this.selectedNode.id = newTopic._id
+              }
           }
         }
         
@@ -1242,6 +1257,12 @@ export default {
                      this.levels[levelIndex] = updatedLevel
                  }
             }
+        }
+      } catch (e) {
+        if (!isAutoSave) this.showToastMessage('保存知识点失败: ' + e.message)
+        else console.error('Auto-save topic failed', e)
+      } finally {
+        this.isSaving = false
         }
       } catch (e) {
         if (!isAutoSave) this.showToastMessage('保存知识点失败: ' + e.message)
