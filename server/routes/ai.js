@@ -2585,7 +2585,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
 // Generate Solution Report and Upload to Hydro
 router.post('/generate-solution-report', authenticateToken, async (req, res) => {
   try {
-    const { docId, problemId, content, domainId, force } = req.body
+    const { docId, problemId, content, domainId, force, model } = req.body
     
     if (!docId || !content) {
       return res.status(400).json({ error: 'Missing docId or content' })
@@ -2631,7 +2631,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // Fix: Pass 'C++' as language, and append content separately
     const solutionPrompt = getSolutionPrompt('C++') + `\n\n题目内容：\n${content}`
     const solutionRes = await axios.post(YUN_API_URL, {
-      model: 'gemini-2.5-flash', // Use a fast model
+      model: model || 'gemini-2.5-flash', // Use user selected model or default to fast model
       messages: [{ role: 'user', content: solutionPrompt }],
       temperature: 0.7
     }, {
@@ -2690,7 +2690,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // 2. Generate HTML Report
     const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
     const reportRes = await axios.post(YUN_API_URL, {
-      model: 'gemini-2.5-flash',
+      model: model || 'gemini-2.5-flash',
       messages: [{ role: 'user', content: reportPrompt }],
       temperature: 0.7
     }, {

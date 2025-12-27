@@ -387,7 +387,8 @@ export default {
             docId: doc.docId,
             problemId: doc.docId, 
             content: doc.content,
-            domainId: doc.domainId
+            domainId: doc.domainId,
+            model: this.selectedModel
           })
         })
         
