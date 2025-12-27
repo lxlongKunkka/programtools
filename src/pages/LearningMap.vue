@@ -227,31 +227,19 @@
         <div class="modal-body">
           <div v-if="loadingLearnerProgress" class="loading">加载中...</div>
           <div v-else-if="selectedLearnerProgress" class="progress-details">
-            <div class="progress-stat-card">
-               <h4>当前等级</h4>
-               <div class="levels-list">
-                 <div v-for="(lvl, subj) in selectedLearnerProgress.subjectLevels" :key="subj" class="stat-level-item">
-                   <div class="stat-level-header">
-                     <span class="stat-subj-name">{{ subj }}</span>
-                     <span class="stat-lvl-badge">Lv.{{ lvl }}</span>
+            <div class="progress-stat-card" v-for="(level, idx) in learnerActiveLevels" :key="idx">
+               <h4>{{ level.group }} - {{ level.title }}</h4>
+               <div class="modal-topics-list">
+                 <div v-for="(topic, tIdx) in level.topics" :key="tIdx" class="stat-topic-item">
+                   <div class="stat-topic-header">
+                     <span class="stat-topic-title">{{ topic.title }}</span>
+                     <span class="stat-topic-pct">{{ topic.percentage }}%</span>
                    </div>
-                   <div class="stat-lvl-title">{{ getLevelTitle(subj, lvl) || '未知等级' }}</div>
-                 </div>
-               </div>
-            </div>
-            <div class="progress-stat-card" v-if="selectedLearnerTopic">
-               <h4>{{ selectedLearnerTopic.title }} 进度</h4>
-               <div class="stat-row">
-                 <div class="stat-item">
-                   <div class="stat-value">
-                     {{ getLearnerTopicSolvedCount(selectedLearnerProgress, selectedLearnerTopic) }} / {{ getTopicTotalProblems(selectedLearnerTopic) }}
-                     <span class="stat-label">题目</span>
+                   <div class="stat-topic-bar">
+                     <div class="stat-topic-fill" :style="{ width: topic.percentage + '%' }"></div>
                    </div>
-                 </div>
-                 <div class="stat-item">
-                   <div class="stat-value">
-                     {{ getTopicProgress(selectedLearnerProgress, selectedLearnerTopic) }} / {{ selectedLearnerTopic.chapters.length }}
-                     <span class="stat-label">章节</span>
+                   <div class="stat-topic-detail">
+                     已完成 {{ topic.completed }} / {{ topic.total }} 章节
                    </div>
                  </div>
                </div>
@@ -297,6 +285,92 @@ export default {
       selectedLearnerTopic: null,
       loadingLearnerProgress: false,
       isInitialLoad: true
+    }
+  },
+  computed: {
+    learnerActiveLevels() {
+      if (!this.selectedLearnerProgress || !this.treeData) return []
+      
+      const activeLevels = []
+      const progress = this.selectedLearnerProgress
+      const completedChapterIds = new Set(progress.completedChapters || [])
+      const completedChapterUids = new Set(progress.completedChapterUids || [])
+      const unlockedChapterIds = new Set(progress.unlockedChapters || [])
+      const unlockedChapterUids = new Set(progress.unlockedChapterUids || [])
+      
+      const isChapterDone = (chapter) => {
+        if (chapter._id && completedChapterUids.has(chapter._id)) return true
+        if (completedChapterIds.has(chapter.id)) return true
+        return false
+      }
+
+      const isChapterUnlocked = (chapter) => {
+        if (chapter._id && unlockedChapterUids.has(chapter._id)) return true
+        if (unlockedChapterIds.has(chapter.id)) return true
+        return false
+      }
+
+      this.treeData.forEach(group => {
+        if (!group.levels) return
+        group.levels.forEach(level => {
+          const levelData = {
+            title: level.title,
+            group: group.name,
+            levelNum: level.level,
+            topics: []
+          }
+          
+          let levelHasProgress = false
+          
+          if (level.topics && level.topics.length > 0) {
+            level.topics.forEach(topic => {
+              const totalChapters = topic.chapters ? topic.chapters.length : 0
+              if (totalChapters === 0) return
+
+              let completedCount = 0
+              let unlockedCount = 0
+              topic.chapters.forEach(c => {
+                if (isChapterDone(c)) completedCount++
+                if (isChapterUnlocked(c)) unlockedCount++
+              })
+
+              if (completedCount > 0 || unlockedCount > 0) {
+                levelHasProgress = true
+                levelData.topics.push({
+                  title: topic.title,
+                  completed: completedCount,
+                  total: totalChapters,
+                  percentage: Math.round((completedCount / totalChapters) * 100)
+                })
+              }
+            })
+          } else if (level.chapters && level.chapters.length > 0) {
+             const totalChapters = level.chapters.length
+             let completedCount = 0
+             let unlockedCount = 0
+             level.chapters.forEach(c => {
+                if (isChapterDone(c)) completedCount++
+                if (isChapterUnlocked(c)) unlockedCount++
+             })
+             
+             if (completedCount > 0 || unlockedCount > 0) {
+                levelHasProgress = true
+                levelData.topics.push({
+                  title: level.title,
+                  completed: completedCount,
+                  total: totalChapters,
+                  percentage: Math.round((completedCount / totalChapters) * 100)
+                })
+             }
+          }
+          
+          if (levelHasProgress) {
+            activeLevels.push(levelData)
+          }
+        })
+      })
+      
+      return activeLevels
     }
   },
   watch: {
@@ -1084,5 +1158,64 @@ export default {
   font-size: 10px;
   margin-left: 4px;
   opacity: 0.8;
+}
+
+.modal-topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress-stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+.progress-stat-card h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+.stat-topic-item {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+}
+.stat-topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.stat-topic-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+.stat-topic-pct {
+  font-size: 12px;
+  color: #3498db;
+  font-weight: bold;
+}
+.stat-topic-bar {
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.stat-topic-fill {
+  height: 100%;
+  background: #3498db;
+  border-radius: 3px;
+}
+.stat-topic-detail {
+  font-size: 11px;
+  color: #95a5a6;
+  text-align: right;
 }
 </style>
