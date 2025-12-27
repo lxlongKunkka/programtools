@@ -152,6 +152,7 @@ export default {
     return {
       loading: true,
       level: null,
+      allLevels: [],
       chapter: null,
       userProgress: null,
       showSolveModal: false,
@@ -255,7 +256,7 @@ export default {
       // Check legacy
       let idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
       if (idx !== -1) {
-        return idx < this.level.chapters.length - 1
+        if (idx < this.level.chapters.length - 1) return true
       }
       
       // Check topics
@@ -272,10 +273,28 @@ export default {
                if (this.level.topics[nextT].chapters && this.level.topics[nextT].chapters.length > 0) return true
                nextT++
             }
-            return false
+            break
           }
         }
       }
+
+      // Check next level
+      if (this.allLevels.length > 0) {
+          const currentSubject = this.level.subject || 'C++'
+          const subjectLevels = this.allLevels
+              .filter(l => (l.subject || 'C++') === currentSubject)
+              .sort((a, b) => a.level - b.level)
+          
+          const currentLevelIdx = subjectLevels.findIndex(l => l._id === this.level._id)
+          if (currentLevelIdx !== -1 && currentLevelIdx < subjectLevels.length - 1) {
+              const nextLevel = subjectLevels[currentLevelIdx + 1]
+              if (nextLevel.topics && nextLevel.topics.length > 0) {
+                  return nextLevel.topics.some(t => t.chapters && t.chapters.length > 0)
+              }
+              if (nextLevel.chapters && nextLevel.chapters.length > 0) return true
+          }
+      }
+
       return false
     }
   },
@@ -377,6 +396,7 @@ export default {
           request('/api/course/levels'),
           request('/api/course/progress')
         ])
+        this.allLevels = levelsData
         
         // 1. Determine the correct Subject Context
         const selectedSubjectName = localStorage.getItem('selected_subject') || 'C++基础'
@@ -579,6 +599,7 @@ export default {
       if (!this.level || !this.chapter) return
       
       let nextChapter = null
+      let nextLevelId = this.level._id
       
       // Check legacy
       let idx = this.level.chapters.findIndex(c => c.id === this.chapter.id)
@@ -608,11 +629,41 @@ export default {
         }
       }
       
+      // If not found in current level, check next level
+      if (!nextChapter && this.allLevels.length > 0) {
+          const currentSubject = this.level.subject || 'C++'
+          const subjectLevels = this.allLevels
+              .filter(l => (l.subject || 'C++') === currentSubject)
+              .sort((a, b) => a.level - b.level)
+          
+          const currentLevelIdx = subjectLevels.findIndex(l => l._id === this.level._id)
+          if (currentLevelIdx !== -1 && currentLevelIdx < subjectLevels.length - 1) {
+              const nextLevel = subjectLevels[currentLevelIdx + 1]
+              
+              if (nextLevel.topics && nextLevel.topics.length > 0) {
+                  for (const t of nextLevel.topics) {
+                      if (t.chapters && t.chapters.length > 0) {
+                          nextChapter = t.chapters[0]
+                          break
+                      }
+                  }
+              } else if (nextLevel.chapters && nextLevel.chapters.length > 0) {
+                  nextChapter = nextLevel.chapters[0]
+              }
+              
+              if (nextChapter) {
+                  nextLevelId = nextLevel._id
+              }
+          }
+      }
+      
       if (nextChapter) {
         this.$router.push({
             path: `/course/${nextChapter.id}`,
-            query: { lid: this.level._id }
+            query: { lid: nextLevelId }
         })
+      } else {
+        this.showToastMessage('这是本课程的最后一章')
       }
     },
     adjustFontSize(delta) {
