@@ -231,9 +231,13 @@ export default {
     },
 
     async autoSyncHydroFiles(syncId) {
-        const docsToSync = this.documents.filter(d => !d.hydroFiles)
+        // Sync if missing OR empty (to catch stale 0s)
+        const docsToSync = this.documents.filter(d => !d.hydroFiles || d.hydroFiles.length === 0)
         for (const doc of docsToSync) {
             if (syncId !== this.currentSyncId) return
+            // If it's already loading (e.g. clicked manually), skip
+            if (doc._loadingFiles) continue;
+
             await this.fetchHydroFiles(doc, true) // silent mode
             await new Promise(r => setTimeout(r, 500)) // 500ms delay
         }
