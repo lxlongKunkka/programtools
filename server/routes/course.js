@@ -1042,6 +1042,28 @@ router.delete('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']
         if (!hasGroupPerm && !hasLevelPerm) {
             return res.status(403).json({ error: 'Access denied: You cannot delete this level.' })
         }
+
+        // Delete physical files for all topics in this level
+        if (level.topics) {
+            for (const topic of level.topics) {
+                if (topic.chapters) {
+                    for (const chapter of topic.chapters) {
+                        if (chapter.resourceUrl) {
+                            try {
+                                const relativePath = chapter.resourceUrl.startsWith('/') ? chapter.resourceUrl.slice(1) : chapter.resourceUrl
+                                const filePath = path.join(__dirname, '..', relativePath)
+                                if (fs.existsSync(filePath)) {
+                                    fs.unlinkSync(filePath)
+                                    console.log(`[File Delete] Deleted file: ${filePath}`)
+                                }
+                            } catch (err) {
+                                console.error(`[File Delete] Failed to delete file for chapter ${chapter.title}:`, err)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     await CourseLevel.findByIdAndDelete(req.params.id)
     res.json({ success: true })
@@ -1176,6 +1198,27 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
     
     if (level.group && !(await checkGroupPermission(req.user, level.group))) {
         return res.status(403).json({ error: 'Access denied: You cannot delete topics in this group.' })
+    }
+
+    // Delete physical files
+    const topic = level.topics.id(req.params.topicId)
+    if (topic && topic.chapters) {
+      for (const chapter of topic.chapters) {
+        if (chapter.resourceUrl) {
+          try {
+            // resourceUrl example: /public/courseware/path/to/file.html
+            const relativePath = chapter.resourceUrl.startsWith('/') ? chapter.resourceUrl.slice(1) : chapter.resourceUrl
+            const filePath = path.join(__dirname, '..', relativePath)
+            
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath)
+              console.log(`[File Delete] Deleted file: ${filePath}`)
+            }
+          } catch (err) {
+            console.error(`[File Delete] Failed to delete file for chapter ${chapter.title}:`, err)
+          }
+        }
+      }
     }
 
     level.topics.pull(req.params.topicId)
@@ -1347,6 +1390,23 @@ router.delete('/levels/:id/topics/:topicId/chapters', authenticateToken, require
     }
     
     console.log(`[DELETE ALL CHAPTERS] Clearing ${topic.chapters.length} chapters`);
+    
+    // Physical File Deletion
+    for (const chapter of topic.chapters) {
+        if (chapter.resourceUrl) {
+            try {
+                const relativePath = chapter.resourceUrl.startsWith('/') ? chapter.resourceUrl.slice(1) : chapter.resourceUrl
+                const filePath = path.join(__dirname, '..', relativePath)
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath)
+                    console.log(`[File Delete] Deleted file: ${filePath}`)
+                }
+            } catch (err) {
+                console.error(`[File Delete] Failed to delete file for chapter ${chapter.title}:`, err)
+            }
+        }
+    }
+
     topic.chapters = [] // Clear all chapters
 
     await level.save()
@@ -1373,13 +1433,35 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
     
     // Try to remove by _id or id string
     let targetChapter = topic.chapters.id(req.params.chapterId)
+    
+    // If not found by _id, try to find by string ID
+    if (!targetChapter) {
+        targetChapter = topic.chapters.find(c => c.id === req.params.chapterId)
+    }
+
     if (targetChapter) {
-        topic.chapters.pull(req.params.chapterId)
+        // Physical File Deletion
+        if (targetChapter.resourceUrl) {
+            try {
+                const relativePath = targetChapter.resourceUrl.startsWith('/') ? targetChapter.resourceUrl.slice(1) : targetChapter.resourceUrl
+                const filePath = path.join(__dirname, '..', relativePath)
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath)
+                    console.log(`[File Delete] Deleted file: ${filePath}`)
+                }
+            } catch (err) {
+                console.error(`[File Delete] Failed to delete file for chapter ${targetChapter.title}:`, err)
+            }
+        }
+
+        // Remove from array
+        if (topic.chapters.id(req.params.chapterId)) {
+             topic.chapters.pull(req.params.chapterId)
+        } else {
+             topic.chapters = topic.chapters.filter(c => c.id !== req.params.chapterId)
+        }
     } else {
-        // Filter out by string ID
-        const initialLen = topic.chapters.length
-        topic.chapters = topic.chapters.filter(c => c.id !== req.params.chapterId)
-        if (topic.chapters.length === initialLen) return res.status(404).json({ error: 'Chapter not found' })
+        return res.status(404).json({ error: 'Chapter not found' })
     }
 
     // Auto-renumber chapters

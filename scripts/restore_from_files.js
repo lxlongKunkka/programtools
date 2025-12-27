@@ -13,10 +13,11 @@ const __dirname = path.dirname(__filename);
 // Load .env
 dotenv.config({ path: path.resolve(__dirname, '../server/.env') });
 
-const ROOT_DIR = path.resolve(__dirname, '../server/public/courseware');
+const ROOT_DIR = path.resolve(__dirname, '../server/public/courseware/C++');
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/programtools';
 
 console.log('Using MongoDB URI:', MONGO_URI);
+console.log('Scanning directory:', ROOT_DIR);
 
 const GROUP_MAPPING = {
     1: 'C++基础',
@@ -50,19 +51,22 @@ async function restore() {
 
                 console.log(`Processing Level ${levelNum}...`);
                 
-                // Check if level exists
-                let levelDoc = await CourseLevel.findOne({ level: levelNum });
+                const targetGroup = GROUP_MAPPING[levelNum] || 'C++提高';
+
+                // Check if level exists specifically in this group
+                let levelDoc = await CourseLevel.findOne({ level: levelNum, group: targetGroup });
+                
                 if (!levelDoc) {
                     levelDoc = new CourseLevel({
                         level: levelNum,
                         title: `Level ${levelNum}`,
-                        group: GROUP_MAPPING[levelNum] || 'C++提高',
+                        group: targetGroup,
                         subject: 'C++',
                         topics: []
                     });
+                    console.log(`  Creating new Level ${levelNum} in group ${targetGroup}`);
                 } else {
-                    // Update group if missing
-                    if (!levelDoc.group) levelDoc.group = GROUP_MAPPING[levelNum] || 'C++提高';
+                    console.log(`  Found existing Level ${levelNum} in group ${targetGroup}`);
                 }
 
                 const levelPath = path.join(ROOT_DIR, entry.name);
@@ -76,8 +80,9 @@ async function restore() {
                         // Check if topic exists
                         let topic = levelDoc.topics.find(t => t.title === topicTitle);
                         if (!topic) {
-                            topic = { title: topicTitle, chapters: [] };
-                            levelDoc.topics.push(topic);
+                            // Create and push, then get reference to subdocument
+                            levelDoc.topics.push({ title: topicTitle, chapters: [] });
+                            topic = levelDoc.topics[levelDoc.topics.length - 1];
                         }
 
                         // Scan Chapters
@@ -87,7 +92,8 @@ async function restore() {
                         for (const file of chapterFiles) {
                             if (file.endsWith('.html') || file.endsWith('.md')) {
                                 const title = path.basename(file, path.extname(file));
-                                const relativePath = `/public/courseware/${entry.name}/${topicTitle}/${file}`;
+                                // Fix path to include C++
+                                const relativePath = `/public/courseware/C++/${entry.name}/${topicTitle}/${file}`;
                                 
                                 // Check if chapter exists
                                 const chapterExists = topic.chapters.find(c => c.title === title);
