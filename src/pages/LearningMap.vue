@@ -17,6 +17,7 @@
             >
               <span class="tree-icon" @click.stop="toggleGroup(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
               <span class="tree-label">{{ group.title || group.name }}</span>
+              <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
             </div>
 
             <!-- Levels -->
@@ -29,6 +30,7 @@
                 >
                   <span class="tree-icon" @click.stop="toggleLevel(level)">{{ level.collapsed ? '▶' : '▼' }}</span>
                   <span class="tree-label">{{ level.title }}</span>
+                  <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}题</span>
                   <span v-if="isLevelCompleted(level)" class="status-dot completed" title="已完成">●</span>
                   <span v-else-if="isLevelUnlocked(level)" class="status-dot unlocked" title="进行中">●</span>
                   <span v-else class="status-dot locked" title="未解锁">●</span>
@@ -43,6 +45,7 @@
                       @click="selectNode('topic', topic, level)"
                     >
                       <span class="tree-label">{{ topic.title }}</span>
+                      <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
                     </div>
                   </div>
                   <div v-if="!level.topics || level.topics.length === 0" class="empty-node">暂无内容</div>
@@ -76,7 +79,7 @@
               </div>
               <p class="level-mini-desc" v-if="level.description">{{ stripMarkdown(level.description) }}</p>
               <div class="level-mini-stats">
-                {{ level.topics ? level.topics.length : 0 }} 个知识点
+                {{ level.topics ? level.topics.length : 0 }} 个知识点 · {{ level.problemCount || 0 }} 题
               </div>
             </div>
           </div>
@@ -440,6 +443,31 @@ export default {
       this.treeData = Object.values(groupMap).sort((a, b) => (a.order || 0) - (b.order || 0))
       this.treeData.forEach(g => {
         g.levels.sort((a, b) => a.level - b.level)
+        
+        // Calculate Counts
+        let groupCount = 0
+        g.levels.forEach(l => {
+            let levelCount = 0
+            if (l.topics) {
+                l.topics.forEach(t => {
+                    let topicCount = 0
+                    if (t.chapters) {
+                        t.chapters.forEach(c => {
+                            if (c.problemIds && c.problemIds.length > 0) {
+                                topicCount += c.problemIds.length
+                            } else if (c.problemIdsStr) {
+                                // Fallback
+                            }
+                        })
+                    }
+                    t.problemCount = topicCount
+                    levelCount += topicCount
+                })
+            }
+            l.problemCount = levelCount
+            groupCount += levelCount
+        })
+        g.problemCount = groupCount
       })
     },
     restoreSelection() {
@@ -838,6 +866,17 @@ export default {
 .status-dot.completed { color: #2ecc71; }
 .status-dot.unlocked { color: #3498db; }
 .status-dot.locked { color: #bdc3c7; }
+
+.tree-count-badge {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+}
 
 /* Content Area */
 .course-content {

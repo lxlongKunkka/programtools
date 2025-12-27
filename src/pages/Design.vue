@@ -17,6 +17,7 @@
             >
                 <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
                 <span class="tree-label">{{ group.title || group.name }}</span>
+                <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
                 <span v-if="isExplicitEditor(group)" class="permission-icon" title="您拥有此分组的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
                 <div class="tree-actions">
                     <button @click.stop="createNewLevel(group)" class="btn-icon" title="添加模块">+</button>
@@ -33,6 +34,7 @@
                 >
                     <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
                     <span class="tree-label">{{ level.title }}</span>
+                    <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}题</span>
                     <span v-if="isExplicitLevelEditor(level)" class="permission-icon" title="您拥有此模块的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
                     <div class="tree-actions">
                     <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
@@ -49,6 +51,7 @@
                     >
                         <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
                         <span class="tree-label">{{ topic.title }}</span>
+                        <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
                         <div class="tree-actions">
                         <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
                         <button @click.stop="createNewTopic(level, tIdx)" class="btn-icon" title="在此前插入 Topic">↰</button>
@@ -929,9 +932,35 @@ export default {
             
             this.groups = groups.map(g => ({ ...g, collapsed: false }))
             this.levels = levels.map(l => ({ ...l, descCollapsed: false }))
-            // Initialize topics collapsed state default false
+            
+            // Initialize topics collapsed state default false & Calculate Counts
             this.levels.forEach(l => {
-                if (l.topics) l.topics.forEach(t => t.collapsed = false)
+                let levelCount = 0
+                if (l.topics) {
+                    l.topics.forEach(t => {
+                        t.collapsed = false
+                        let topicCount = 0
+                        if (t.chapters) {
+                            t.chapters.forEach(c => {
+                                if (c.problemIds && c.problemIds.length > 0) {
+                                    topicCount += c.problemIds.length
+                                } else if (c.problemIdsStr) {
+                                    // Fallback if problemIds is not parsed yet (though usually it is on backend or not needed here if we trust problemIds)
+                                    // But let's stick to problemIds array which should be present
+                                }
+                            })
+                        }
+                        t.problemCount = topicCount
+                        levelCount += topicCount
+                    })
+                }
+                l.problemCount = levelCount
+            })
+
+            // Calculate Group Counts
+            this.groups.forEach(g => {
+                const groupLevels = this.levels.filter(l => l.group === g.name)
+                g.problemCount = groupLevels.reduce((sum, l) => sum + (l.problemCount || 0), 0)
             })
 
             this.restoreTreeState()
@@ -3420,5 +3449,16 @@ export default {
   background-color: #e0f2fe;
   border-color: #7dd3fc;
   transform: translateY(-1px);
+}
+
+.tree-count-badge {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
 }
 </style>
