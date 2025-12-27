@@ -412,31 +412,71 @@ router.get('/level/:levelId/learners', async (req, res) => {
     const subject = levelDoc.subject || 'C++'
     const levelNum = levelDoc.level
 
-    // Construct query for users at this level
-    let query = {}
-    if (subject === 'C++') {
-        query = {
-            $or: [
-                { [`subjectLevels.${subject}`]: levelNum },
-                // Fallback for legacy data where subjectLevels might be missing or empty
-                { subjectLevels: { $exists: false }, currentLevel: levelNum },
-                // Fallback where C++ key is missing
-                { [`subjectLevels.${subject}`]: { $exists: false }, currentLevel: levelNum }
-            ]
-        }
-    } else {
-        query = { [`subjectLevels.${subject}`]: levelNum }
+    // Collect all chapter IDs for this level to find anyone who has touched it
+    const levelChapterIds = []
+    const levelChapterUids = []
+    
+    const collectIds = (chapters) => {
+        if (!chapters) return
+        chapters.forEach(c => {
+            if (c.id) levelChapterIds.push(c.id)
+            if (c._id) levelChapterUids.push(c._id)
+        })
     }
 
-    const progresses = await UserProgress.find(query).select('userId completedChapters completedChapterUids')
+    if (levelDoc.topics) {
+        levelDoc.topics.forEach(t => collectIds(t.chapters))
+    }
+    if (levelDoc.chapters) {
+        collectIds(levelDoc.chapters)
+    }
+
+    // Construct query for users at this level
+    // Criteria: 
+    // 1. Current level matches (Standard path)
+    // 2. OR Has completed ANY chapter in this level (Non-standard path / Skippers)
+    let query = {
+        $or: [
+            { [`subjectLevels.${subject}`]: levelNum },
+            { completedChapters: { $in: levelChapterIds } },
+            { completedChapterUids: { $in: levelChapterUids } }
+        ]
+    }
+    
+    // Legacy fallbacks for C++
+    if (subject === 'C++') {
+        query.$or.push(
+            { subjectLevels: { $exists: false }, currentLevel: levelNum },
+            { [`subjectLevels.${subject}`]: { $exists: false }, currentLevel: levelNum }
+        )
+    }
+
+    const progresses = await UserProgress.find(query).select('userId completedChapters completedChapterUids subjectLevels currentLevel')
     
     if (progresses.length === 0) return res.json([])
 
-    const userIds = progresses.map(p => p.userId)
+    // Filter out users who have already passed this level (Graduates)
+    const activeProgresses = progresses.filter(p => {
+        let userLevel = 1
+        if (p.subjectLevels && p.subjectLevels.get) {
+             userLevel = p.subjectLevels.get(subject) || 1
+        } else if (p.subjectLevels && p.subjectLevels[subject]) {
+             userLevel = p.subjectLevels[subject]
+        } else if (subject === 'C++' && p.currentLevel) {
+             userLevel = p.currentLevel
+        }
+        // Include if user level is <= current level (Skippers or Standard)
+        // Exclude if user level > current level (Graduates)
+        return userLevel <= levelNum
+    })
+
+    if (activeProgresses.length === 0) return res.json([])
+
+    const userIds = activeProgresses.map(p => p.userId)
     const users = await User.find({ _id: { $in: userIds } }).select('uname')
 
     const result = users.map(u => {
-        const p = progresses.find(prog => prog.userId === u._id)
+        const p = activeProgresses.find(prog => prog.userId.toString() === u._id.toString())
         let completedCount = 0
         if (p) {
             const checkChapter = (c) => {
