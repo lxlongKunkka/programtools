@@ -1200,14 +1200,12 @@ export default {
         this.showToastMessage('移动失败: ' + e.message)
       }
     },
+
+    async saveTopic(isAutoSave = false) {
+      if (this.isSaving) return
       this.isSaving = true
       try {
         let updatedLevel;
-        this.showToastMessage('移动失败: ' + e.message)
-      }
-    },
-
-    async saveTopic(isAutoSave = false) {
         if (this.editingTopic._id) {
           updatedLevel = await request(`/api/course/levels/${this.editingLevelForTopic._id}/topics/${this.editingTopic._id}`, {
             method: 'PUT',
