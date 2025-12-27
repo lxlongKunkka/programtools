@@ -530,12 +530,20 @@ export default {
       return completedCount
     },
     getLevelTitle(subject, levelNum) {
-      // Find in tree
-      const group = this.treeData.find(g => g.name === subject)
+      // 1. Try to find group by name (Direct match)
+      let group = this.treeData.find(g => g.name === subject)
       if (group) {
           const level = group.levels.find(l => l.level === levelNum)
-          return level ? level.title : ''
+          if (level) return level.title
       }
+
+      // 2. Fallback: Search all groups for a matching level
+      // This handles cases where Group Name != Subject Name (e.g. Group="C++基础", Subject="C++")
+      for (const g of this.treeData) {
+          const level = g.levels.find(l => l.level === levelNum && (l.subject === subject || (!l.subject && subject === 'C++')))
+          if (level) return level.title
+      }
+      
       return ''
     },
     getChapterProblemCount(chapter) {
