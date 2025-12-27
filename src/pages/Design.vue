@@ -451,7 +451,8 @@ export default {
       languageOptions: ['C++', 'Python'],
       
       // Auto-save state
-      isSelecting: false
+      isSelecting: false,
+      isSaving: false
     }
   },
   watch: {
@@ -1479,6 +1480,8 @@ export default {
       }
     },
     async saveChapter(isAutoSave = false) {
+      if (this.isSaving) return
+      this.isSaving = true
       try {
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
@@ -1579,6 +1582,8 @@ export default {
       } catch (e) {
         if (!isAutoSave) this.showToastMessage('保存章节失败: ' + e.message)
         else console.error('Auto-save chapter failed', e)
+      } finally {
+        this.isSaving = false
       }
     },
     async deleteChapter(levelId, topicId, chapterId) {
