@@ -13,7 +13,7 @@ const router = express.Router()
 // --- Document Management Routes ---
 
 // Get all unique domainIds
-router.get('/documents/domains', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/documents/domains', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const domains = await Document.distinct('domainId', { docType: 10 })
     return res.json(domains.filter(Boolean).sort())
@@ -82,7 +82,7 @@ router.get('/documents', authenticateToken, requireRole(['admin', 'teacher']), a
 })
 
 // Update a document
-router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+router.put('/documents/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
     const { id } = req.params
     const { title, content, contentbak, tag, removePid } = req.body
