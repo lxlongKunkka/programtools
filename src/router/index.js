@@ -81,4 +81,26 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
+// 页面访问统计
+router.afterEach((to) => {
+  try {
+    // 避免在登录页重复上报（如果需要）
+    // 使用 request.js 中的 request 实例可能更好，但这里为了解耦直接用 fetch
+    // 注意：这里假设后端地址是相对路径 /api，如果配置了代理
+    const token = localStorage.getItem('token')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    fetch('/api/log/visit', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ 
+        path: to.fullPath,
+        name: to.name || to.path,
+        title: to.meta.title || document.title
+      })
+    }).catch(e => console.error('Log visit failed', e))
+  } catch (e) {}
+})
+
 export default router

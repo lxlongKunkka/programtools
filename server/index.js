@@ -60,6 +60,11 @@ app.use('/api/course', courseRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/daily', dailyRoutes)
 
+// 简单的日志上报接口，用于前端统计页面访问
+app.post('/api/log/visit', (req, res) => {
+  res.json({ ok: true })
+})
+
 // 全局错误处理中间件 - 确保所有错误都返回JSON
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err)

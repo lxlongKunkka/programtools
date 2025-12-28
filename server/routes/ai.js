@@ -393,6 +393,7 @@ router.post('/translate', checkModelPermission, async (req, res) => {
       temperature: 0.1,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -624,6 +625,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
       temperature: 0.5,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -686,6 +688,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
       temperature: 0.3,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -751,6 +754,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
       temperature: 0.2,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -860,6 +864,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
       temperature: 0.3,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -947,7 +952,8 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
       model: model || 'gemini-2.0-flash',
       messages,
       temperature: 0.1,
-      max_tokens: 1000
+     
+    res.locals.logModel = payload.model max_tokens: 1000
     }
 
     const resp = await axios.post(apiUrl, payload, {
@@ -1021,7 +1027,8 @@ router.post('/generate-problem-meta', checkModelPermission, async (req, res) => 
       model: model || 'gemini-2.0-flash',
       messages,
       temperature: 0.3,
-      max_tokens: 1000
+     
+    res.locals.logModel = payload.model max_tokens: 1000
     }
 
     const resp = await axios.post(apiUrl, payload, {
@@ -1124,6 +1131,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       temperature: 0.3,
       max_tokens: 32767
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -1733,6 +1741,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
       temperature: 0.7,
       max_tokens: 16000
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -1804,6 +1813,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
       temperature: 0.7,
       max_tokens: 16000
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -1873,6 +1883,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
       temperature: 0.7,
       max_tokens: 4000
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {

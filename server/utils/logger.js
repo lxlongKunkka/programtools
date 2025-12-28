@@ -34,8 +34,13 @@ export const requestLogger = async (req, res, next) => {
   const ua = req.headers['user-agent'] || ''
   const method = req.method
   const pathName = req.path
-  // 仅记录 /api/* 路径
-  const shouldLog = pathName && pathName.startsWith('/api/')
+  
+  // 定义需要记录日志的条件
+  const isApi = pathName && pathName.startsWith('/api/')
+  const isPage = pathName === '/' || pathName === '/index.html'
+  const isCourseware = pathName && (pathName.startsWith('/public/courseware/') || pathName.startsWith('/api/public/courseware/'))
+  
+  const shouldLog = isApi || isPage || isCourseware
   if (!shouldLog) return next()
 
   const chunks = []
@@ -51,8 +56,14 @@ export const requestLogger = async (req, res, next) => {
       let status = res.statusCode
       let model = undefined
       try {
-        // 尝试从请求体提取 model 字段
-        if (req.body && typeof req.body === 'object') model = req.body.model
+        // 优先从 res.locals 获取模型信息（由路由处理函数设置）
+        if (res.locals && res.locals.logModel) {
+          model = res.locals.logModel
+        }
+        // 否则尝试从请求体提取 model 字段
+        else if (req.body && typeof req.body === 'object') {
+          model = req.body.model
+        }
       } catch {}
       // 序列化请求/响应内容（限制长度，避免日志过大）
       const bodyText = (() => {
