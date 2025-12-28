@@ -688,7 +688,7 @@ export default {
     canEditGroup(group) {
       if (!this.user) return false
       if (this.isAdmin) return true
-      return this.isExplicitEditor(group)
+      return false // Only admin can edit groups
     },
     isExplicitEditor(group) {
       if (!this.user || !group.editors) return false

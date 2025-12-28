@@ -86,35 +86,21 @@ router.post('/groups', authenticateToken, requireRole('admin'), async (req, res)
 })
 
 // Update group (Rename & Editors)
-router.put('/groups/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { name, title, editors, language } = req.body
     const group = await CourseGroup.findById(req.params.id)
     if (!group) return res.status(404).json({ error: 'Group not found' })
 
-    // Check permissions
-    const isAdmin = req.user.role === 'admin' || req.user.priv === -1
-    const isEditor = group.editors && group.editors.includes(Number(req.user.id))
-    
-    if (!isAdmin && !isEditor) {
-        return res.status(403).json({ error: 'Access denied: You do not have permission to edit this group.' })
-    }
-
     const oldName = group.name
     if (name && name !== oldName) {
-      if (!isAdmin) return res.status(403).json({ error: 'Only admins can rename groups (ID).' })
       // Update all levels that use this group name
       await CourseLevel.updateMany({ group: oldName }, { $set: { group: name } })
       group.name = name
     }
-    
     if (title) group.title = title
+    if (editors) group.editors = editors
     if (language) group.language = language
-    
-    if (editors) {
-        if (!isAdmin) return res.status(403).json({ error: 'Only admins can manage group editors.' })
-        group.editors = editors
-    }
     
     await group.save()
     res.json(group)
