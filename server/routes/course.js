@@ -34,16 +34,30 @@ async function resolveProblemIds(problemIdStrings) {
         let query = {}
         if (pidStr.includes(':')) {
             const [domain, docId] = pidStr.split(':')
-            query = { domainId: domain, docId: isNaN(docId) ? docId : Number(docId) }
-        } else {
-            const docId = isNaN(pidStr) ? pidStr : Number(pidStr)
-            // Try system first
-            const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('_id')
-            if (sysDoc) {
-                resolvedIds.push(sysDoc._id.toString())
-                continue
+            if (!isNaN(docId)) {
+                query = { domainId: domain, docId: Number(docId) }
+            } else {
+                query = { domainId: domain, pid: docId }
             }
-            query = { docId: docId }
+        } else {
+            if (!isNaN(pidStr)) {
+                const docId = Number(pidStr)
+                // Try system first
+                const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('_id')
+                if (sysDoc) {
+                    resolvedIds.push(sysDoc._id.toString())
+                    continue
+                }
+                query = { docId: docId }
+            } else {
+                // Try system first with pid
+                const sysDoc = await Document.findOne({ domainId: 'system', pid: pidStr }).select('_id')
+                if (sysDoc) {
+                    resolvedIds.push(sysDoc._id.toString())
+                    continue
+                }
+                query = { pid: pidStr }
+            }
         }
         
         const doc = await Document.findOne(query).select('_id')
@@ -346,17 +360,31 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
                 query = { _id: pidStr }
             } else if (pidStr.includes(':')) {
                 const [domain, docId] = pidStr.split(':')
-                query = { domainId: domain, docId: isNaN(docId) ? docId : Number(docId) }
+                if (!isNaN(docId)) {
+                    query = { domainId: domain, docId: Number(docId) }
+                } else {
+                    query = { domainId: domain, pid: docId }
+                }
             } else {
                 // Default to system domain or just search by docId
-                const docId = isNaN(pidStr) ? pidStr : Number(pidStr)
-                // Try system first
-                const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId')
-                if (sysDoc) {
-                    populatedProblems.push(sysDoc)
-                    continue
+                if (!isNaN(pidStr)) {
+                    const docId = Number(pidStr)
+                    // Try system first
+                    const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId')
+                    if (sysDoc) {
+                        populatedProblems.push(sysDoc)
+                        continue
+                    }
+                    query = { docId: docId }
+                } else {
+                    // Try system first with pid
+                    const sysDoc = await Document.findOne({ domainId: 'system', pid: pidStr }).select('title docId domainId')
+                    if (sysDoc) {
+                        populatedProblems.push(sysDoc)
+                        continue
+                    }
+                    query = { pid: pidStr }
                 }
-                query = { docId: docId }
             }
             
             const doc = await Document.findOne(query).select('title docId domainId')
