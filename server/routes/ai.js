@@ -952,9 +952,9 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
       model: model || 'gemini-2.0-flash',
       messages,
       temperature: 0.1,
-     
-    res.locals.logModel = payload.model max_tokens: 1000
+      max_tokens: 1000
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
@@ -1027,9 +1027,9 @@ router.post('/generate-problem-meta', checkModelPermission, async (req, res) => 
       model: model || 'gemini-2.0-flash',
       messages,
       temperature: 0.3,
-     
-    res.locals.logModel = payload.model max_tokens: 1000
+      max_tokens: 1000
     }
+    res.locals.logModel = payload.model
 
     const resp = await axios.post(apiUrl, payload, {
       headers: {
