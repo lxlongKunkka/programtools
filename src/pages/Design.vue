@@ -342,7 +342,7 @@
           <div class="label-row">
              <label>内容 ({{ editingChapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
              <div v-if="editingChapter.contentType === 'html'" style="display: inline-block;">
-                 <button @click="openInNewWindow" class="btn-small btn-preview" style="margin-right: 8px;" type="button">
+                 <button v-if="isAdmin" @click="openInNewWindow" class="btn-small btn-preview" style="margin-right: 8px;" type="button">
                    新窗口打开
                  </button>
                  <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
