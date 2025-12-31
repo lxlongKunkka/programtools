@@ -14,6 +14,17 @@ const router = express.Router()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Check Python environment on startup
+const pythonCmd = process.env.PYTHON_CMD || 'python3'
+exec(`${pythonCmd} --version`, (error, stdout, stderr) => {
+    if (error) {
+        console.warn(`[WARNING] Default python command '${pythonCmd}' failed:`, error.message)
+        console.warn('Please set PYTHON_CMD environment variable if python is located elsewhere.')
+    } else {
+        console.log(`[INFO] Using Python: ${stdout.trim() || stderr.trim()}`)
+    }
+})
+
 // Define paths to scripts
 const SCRIPTS_DIR = path.join(__dirname, '../scripts/gesp')
 const PARSE_SCRIPT = path.join(SCRIPTS_DIR, 'parse_gesp.py')
