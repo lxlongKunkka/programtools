@@ -30,9 +30,10 @@ def convert_to_hydro_md(json_file):
         p_type = prob.get('type_name', '未知题型')
         stem = prob.get('stem', '').strip()
         
-        # 构造题目行: 1), 题目内容 {{ select(1) }}
-        # 注意：Hydro 格式要求 {{ select(N) }}
-        md_lines.append(f"{global_index}), {stem} {{{{ select({global_index}) }}}}")
+        # 构造题目行: 1), 题目内容
+        md_lines.append(f"{global_index}), {stem}")
+        # 题目后面, 选项的前面, 增加 {{ select(global_index) }}
+        md_lines.append(f"{{{{ select({global_index}) }}}}")
         
         options = prob.get('options', [])
         answers = prob.get('answer', [])

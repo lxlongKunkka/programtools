@@ -20,7 +20,7 @@ import GespTool from '../pages/GespTool.vue'
 
 const routes = [
   { path: '/', component: Home },
-  { path: '/gesp', component: GespTool, meta: { requiresAuth: true } },
+  { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },

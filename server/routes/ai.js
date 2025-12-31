@@ -29,7 +29,8 @@ import {
   PPT_PROMPT,
   TOPIC_PLAN_PROMPT,
   TOPIC_DESC_PROMPT,
-  HYDRO_REFINE_PROMPT
+  HYDRO_REFINE_PROMPT,
+  ANSWER_GEN_PROMPT
 } from '../prompts.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -641,7 +642,7 @@ function parseMarkdownWithImages(text) {
   return { content: parts, imageMap }
 }
 
-router.post('/refine-hydro', checkModelPermission, async (req, res) => {
+router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req, res) => {
   try {
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
@@ -899,6 +900,75 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     console.error('Solve error:', err?.response?.data || err.message || err)
     const message = err?.response?.data || err.message || 'unknown error'
     return res.status(500).json({ error: 'Code generation failed', detail: message })
+  }
+})
+
+router.post('/generate-answer', authenticateToken, checkModelPermission, async (req, res) => {
+  try {
+    const { problem, model } = req.body
+    if (!problem) return res.status(400).json({ error: 'Missing problem data' })
+
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
+
+    // Construct the user content from the problem object
+    let userContent = `题目：${problem.stem}\n`
+    if (problem.options && problem.options.length > 0) {
+        userContent += `选项：\n`
+        problem.options.forEach((opt, idx) => {
+            const label = String.fromCharCode(65 + idx)
+            userContent += `${label}. ${opt}\n`
+        })
+    }
+
+    const messages = [
+      { role: 'system', content: ANSWER_GEN_PROMPT },
+      { role: 'user', content: userContent }
+    ]
+
+    const payload = {
+      model: model || 'gemini-2.0-flash',
+      messages,
+      temperature: 0.1,
+      max_tokens: 2048,
+      response_format: { type: "json_object" }
+    }
+    res.locals.logModel = payload.model
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 60000
+    })
+
+    const data = resp.data
+    let content = ''
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+    } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+    } else {
+        content = JSON.stringify(data)
+    }
+
+    // Parse JSON
+    let jsonResult = {}
+    try {
+        const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+        jsonResult = JSON.parse(cleanContent)
+    } catch (e) {
+        console.warn('Failed to parse AI JSON response:', content)
+        return res.json({ raw: content })
+    }
+
+    return res.json(jsonResult)
+
+  } catch (err) {
+    console.error('Generate Answer error:', err?.response?.data || err.message)
+    return res.status(500).json({ error: 'Generation failed' })
   }
 })
 

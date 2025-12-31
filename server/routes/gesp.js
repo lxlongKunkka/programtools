@@ -4,7 +4,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { exec } from 'child_process'
 import util from 'util'
+import nodemailer from 'nodemailer'
 import { authenticateToken } from '../middleware/auth.js'
+import { MAIL_CONFIG } from '../config.js'
 
 const execPromise = util.promisify(exec)
 const router = express.Router()
@@ -119,6 +121,13 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
         console.warn('Python script stderr:', stderr)
     }
 
+    // Extract title from the first line if possible
+    let title = ''
+    const lines = stdout.trim().split('\n')
+    if (lines.length > 0 && lines[0].startsWith('# ')) {
+        title = lines[0].substring(2).trim()
+    }
+
     // Clean up
     try {
       fs.rmSync(requestDir, { recursive: true, force: true })
@@ -126,11 +135,55 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
       console.error('Failed to cleanup temp dir:', e)
     }
 
-    res.json({ md: stdout })
+    res.json({ md: stdout, title })
 
   } catch (error) {
     console.error('HTML Conversion error:', error)
     res.status(500).json({ error: 'Conversion failed', details: error.message })
+  }
+})
+
+router.post('/send-email', authenticateToken, async (req, res) => {
+  try {
+    const { zipData, fileName, to } = req.body
+    if (!zipData || !fileName) {
+      return res.status(400).json({ error: 'Missing zip data or filename' })
+    }
+
+    // Default recipient if not provided
+    const recipient = to || '110076790@qq.com'
+
+    const transporter = nodemailer.createTransport({
+      host: MAIL_CONFIG.host,
+      port: MAIL_CONFIG.port,
+      secure: MAIL_CONFIG.secure,
+      auth: MAIL_CONFIG.user ? {
+        user: MAIL_CONFIG.user,
+        pass: MAIL_CONFIG.pass
+      } : undefined
+    })
+
+    // Decode base64
+    const buffer = Buffer.from(zipData.replace(/^data:.*?;base64,/, ""), 'base64')
+
+    const info = await transporter.sendMail({
+      from: MAIL_CONFIG.from,
+      to: recipient,
+      subject: `GESP 导出文件: ${fileName}`,
+      text: `您好，\n\n附件是您导出的 GESP 试卷包：${fileName}。\n\n请查收。`,
+      attachments: [
+        {
+          filename: fileName,
+          content: buffer
+        }
+      ]
+    })
+
+    res.json({ success: true, messageId: info.messageId })
+
+  } catch (error) {
+    console.error('Send Email Error:', error)
+    res.status(500).json({ error: 'Failed to send email', details: error.message })
   }
 })
 
