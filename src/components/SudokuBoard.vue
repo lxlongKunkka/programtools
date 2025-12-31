@@ -20,6 +20,8 @@ const mistakes = ref(0);
 const isPaused = ref(false);
 const maxMistakes = 3;
 const isDaily = ref(false);
+const hintsUsed = ref(0);
+const maxHints = 3;
 
 const showLeaderboard = ref(false);
 const leaderboardData = ref([]);
@@ -124,6 +126,7 @@ const loadGameData = (data) => {
     selectedCell.value = null;
     history.value = [];
     mistakes.value = 0;
+    hintsUsed.value = 0;
     isPaused.value = false;
     startTimer();
     saveProgress();
@@ -470,6 +473,11 @@ const checkCompletion = () => {
 
 const getHint = () => {
   if (isPaused.value) return;
+  if (hintsUsed.value >= maxHints) {
+    alert('No hints remaining!');
+    return;
+  }
+  
   const size = boardSize.value;
   let targetR = -1, targetC = -1;
   
@@ -494,6 +502,7 @@ const getHint = () => {
     cell.val = cell.solution;
     cell.notes = [];
     cell.isFixed = true; 
+    hintsUsed.value++;
     checkCompletion();
     saveProgress();
   }
@@ -536,7 +545,8 @@ const saveProgress = () => {
     timer: timer.value,
     difficulty: difficulty.value,
     boardSize: boardSize.value,
-    mistakes: mistakes.value
+    mistakes: mistakes.value,
+    hintsUsed: hintsUsed.value
   };
   localStorage.setItem('sudoku-state', JSON.stringify(state));
 };
@@ -551,6 +561,7 @@ const loadProgress = () => {
       difficulty.value = state.difficulty;
       boardSize.value = state.boardSize || 9;
       mistakes.value = state.mistakes || 0;
+      hintsUsed.value = state.hintsUsed || 0;
       startTimer();
       return true;
     } catch (e) {
@@ -580,7 +591,8 @@ onUnmounted(() => {
     '--cell-size': cellSize + 'px', 
     '--font-size': (cellSize * 0.55) + 'px',
     '--note-size': (cellSize * 0.25) + 'px',
-    '--ui-size': (cellSize * 0.3) + 'px'
+    '--ui-size': (cellSize * 0.3) + 'px',
+    '--board-size': boardSize
   }">
     <div class="top-bar">
       <div class="difficulty-tabs">
@@ -693,9 +705,10 @@ onUnmounted(() => {
             <span class="text">Notes</span>
             <span class="badge" v-if="isNoteMode">ON</span>
           </button>
-          <button class="tool-btn-circle" @click="getHint" title="Hint">
+          <button class="tool-btn-circle" @click="getHint" :disabled="hintsUsed >= maxHints" :title="`Hints (${maxHints - hintsUsed} left)`">
             <span class="icon">💡</span>
             <span class="text">Hint</span>
+            <span class="badge">{{ maxHints - hintsUsed }}</span>
           </button>
         </div>
 
@@ -831,6 +844,102 @@ onUnmounted(() => {
   }
 }
 
+@media (max-width: 600px) {
+  .game-container {
+    padding: 10px 5px;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .difficulty-tabs {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .size-selector {
+    text-align: center;
+  }
+
+  .main-content {
+    gap: 20px;
+  }
+
+  /* Reorder for mobile: Board -> Controls -> Daily -> Leaderboard */
+  .board-section {
+    order: 1;
+    width: 100%;
+  }
+  
+  .controls-section {
+    order: 2;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .daily-section {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .leaderboard-section {
+    order: 4;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Responsive Board */
+  .board-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .cell {
+    /* Calculate cell size based on viewport width (minus padding/borders) */
+    /* 100vw - 10px padding - 4px borders approx */
+    --mobile-cell-size: calc((100vw - 20px) / var(--board-size));
+    width: var(--mobile-cell-size) !important;
+    height: var(--mobile-cell-size) !important;
+    font-size: calc(var(--mobile-cell-size) * 0.55) !important;
+  }
+  
+  .notes-grid {
+    font-size: calc((100vw - 20px) / var(--board-size) * 0.25) !important;
+  }
+
+  /* Hide zoom controls on mobile as it is auto-sized */
+  .zoom-controls {
+    display: none;
+  }
+
+  /* Compact Controls */
+  .numpad-grid button {
+    height: 50px;
+  }
+  
+  .numpad-grid button .num {
+    font-size: 24px;
+  }
+
+  .tool-btn-circle {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .tool-btn-circle .icon {
+    font-size: 18px;
+  }
+  
+  .tool-btn-circle .text {
+    font-size: 9px;
+  }
+}
+
 .board-section {
   display: flex;
   justify-content: center;
@@ -880,6 +989,13 @@ onUnmounted(() => {
 
 .tool-btn-circle:hover {
   background: #e0e6ed;
+}
+
+.tool-btn-circle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  color: #bdc3c7;
 }
 
 .tool-btn-circle.active {
