@@ -24,6 +24,27 @@ const isDaily = ref(false);
 const showLeaderboard = ref(false);
 const leaderboardData = ref([]);
 const leaderboardLoading = ref(false);
+const activityData = ref([]);
+
+const fetchActivity = async () => {
+  try {
+    const data = await request('/api/activity?limit=20');
+    activityData.value = Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Failed to fetch activity', e);
+  }
+};
+
+const formatRelativeTime = (dateStr) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
+  
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return date.toLocaleDateString();
+};
 
 const getBoxDims = () => {
   if (boardSize.value === 4) return { w: 2, h: 2 };
@@ -401,6 +422,7 @@ const submitScore = async () => {
     
     if (res && res.success) {
       fetchLeaderboard();
+      fetchActivity();
     } else {
       console.error('Score submission failed:', res);
     }
@@ -541,6 +563,7 @@ const loadProgress = () => {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown);
+  fetchActivity();
   if (!loadProgress()) {
     fetchGame();
   }
@@ -587,6 +610,21 @@ onUnmounted(() => {
           <div class="daily-info">
             <div class="daily-title">{{ new Date().toLocaleDateString() }}</div>
             <div class="daily-desc">Hard • 9x9</div>
+          </div>
+        </div>
+
+        <div class="activity-feed">
+          <h3>Recent Activity</h3>
+          <div class="activity-list">
+            <div v-for="(item, index) in activityData" :key="index" class="activity-item">
+              <div class="activity-header">
+                <span class="user-name">{{ item.username }}</span>
+                <span class="activity-time">{{ formatRelativeTime(item.createdAt) }}</span>
+              </div>
+              <div class="activity-details">
+                Completed {{ item.size }}x{{ item.size }} ({{ item.difficulty }}) in {{ formatTime(item.timeElapsed) }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1159,6 +1197,63 @@ onUnmounted(() => {
 
 .daily-desc {
   font-size: 12px;
+  color: #7f8c8d;
+}
+
+.activity-feed {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.activity-feed h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.user-name {
+  font-weight: bold;
+  color: #3498db;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-time {
+  color: #95a5a6;
+}
+
+.activity-details {
+  font-size: 11px;
   color: #7f8c8d;
 }
 

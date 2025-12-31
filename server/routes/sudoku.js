@@ -204,4 +204,21 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
+// Get recent activity
+router.get('/activity', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+        
+        const results = await SudokuResult.find()
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('username size timeElapsed createdAt difficulty');
+        
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching activity:', error);
+        res.status(500).json({ error: 'Failed to fetch activity' });
+    }
+});
+
 export default router;

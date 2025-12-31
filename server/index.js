@@ -16,6 +16,7 @@ import courseRoutes from './routes/course.js'
 import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
+import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
@@ -81,6 +82,9 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ error: 'API endpoint not found', path: req.path })
 })
+
+// Start cron jobs
+startDailyReportJob()
 
 httpServer.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`)
