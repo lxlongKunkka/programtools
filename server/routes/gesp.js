@@ -48,8 +48,8 @@ router.post('/convert', authenticateToken, async (req, res) => {
 
     // 1. Parse PDF -> JSON
     // Note: We assume 'python' is available in the system path.
-    // If using a specific venv, this might need adjustment.
-    await execPromise(`python "${PARSE_SCRIPT}" "${pdfPath}"`)
+    const pythonCmd = process.env.PYTHON_CMD || 'python3'
+    await execPromise(`${pythonCmd} "${PARSE_SCRIPT}" "${pdfPath}"`)
 
     const jsonPath = pdfPath + '.json'
     if (!fs.existsSync(jsonPath)) {
@@ -58,11 +58,11 @@ router.post('/convert', authenticateToken, async (req, res) => {
 
     // 2. JSON -> FPS XML
     const xmlPath = pdfPath + '.xml'
-    await execPromise(`python "${FPS_SCRIPT}" "${jsonPath}" "${xmlPath}"`)
+    await execPromise(`${pythonCmd} "${FPS_SCRIPT}" "${jsonPath}" "${xmlPath}"`)
 
     // 3. JSON -> Hydro Markdown
     // The script generates .md file in the same directory
-    await execPromise(`python "${MD_SCRIPT}" "${jsonPath}"`)
+    await execPromise(`${pythonCmd} "${MD_SCRIPT}" "${jsonPath}"`)
     const mdPath = pdfPath + '.md'
 
     // Read results
@@ -114,8 +114,9 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
     await fs.promises.writeFile(htmlPath, htmlContent, 'utf-8')
 
     // Run python script
-    // Use 'python' or 'python3' depending on environment. Assuming 'python' works based on previous context.
-    const { stdout, stderr } = await execPromise(`python "${PARSE_HTML_SCRIPT}" "${htmlPath}"`)
+    // Use 'python' or 'python3' depending on environment.
+    const pythonCmd = process.env.PYTHON_CMD || 'python3'
+    const { stdout, stderr } = await execPromise(`${pythonCmd} "${PARSE_HTML_SCRIPT}" "${htmlPath}"`)
     
     if (stderr) {
         console.warn('Python script stderr:', stderr)
@@ -139,7 +140,11 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('HTML Conversion error:', error)
-    res.status(500).json({ error: 'Conversion failed', details: error.message })
+    res.status(500).json({ 
+        error: 'Conversion failed', 
+        details: error.message,
+        stderr: error.stderr || '' 
+    })
   }
 })
 
