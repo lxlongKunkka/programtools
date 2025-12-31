@@ -12,6 +12,7 @@
         <router-link to="/typing">Typing</router-link>
         <router-link v-if="user" to="/course">Course</router-link>
         <router-link v-if="user" to="/daily">Daily</router-link>
+        <router-link v-if="user" to="/gesp">GESP</router-link>
         <router-link v-if="user" to="/checker">Checker</router-link>
         <router-link v-if="user" to="/solution">Solution</router-link>
         <router-link v-if="isPremium" to="/solution-report">Report</router-link>

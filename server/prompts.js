@@ -9,3 +9,5 @@ export * from './prompts/lesson_plan.js';
 export * from './prompts/ppt.js';
 export * from './prompts/topic_plan.js';
 export * from './prompts/topic_desc.js';
+export * from './prompts/hydro_refine.js';
+

@@ -42,6 +42,12 @@
           <div class="card-title">智能翻译</div>
           <div class="card-desc">按模板输出中文题面，自动处理公式与格式。</div>
         </router-link>
+
+        <router-link to="/gesp" class="card">
+          <div class="card-icon">📄</div>
+          <div class="card-title">GESP 转换</div>
+          <div class="card-desc">PDF 试卷转 Hydro 题库，自动提取图片。</div>
+        </router-link>
       </div>
     </section>
 

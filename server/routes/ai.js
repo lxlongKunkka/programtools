@@ -28,7 +28,8 @@ import {
   LESSON_PLAN_PROMPT,
   PPT_PROMPT,
   TOPIC_PLAN_PROMPT,
-  TOPIC_DESC_PROMPT
+  TOPIC_DESC_PROMPT,
+  HYDRO_REFINE_PROMPT
 } from '../prompts.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -597,6 +598,105 @@ router.post('/translate', checkModelPermission, async (req, res) => {
     console.error('Translate error:', err?.response?.data || err.message || err)
     const message = err?.response?.data || err.message || 'unknown error'
     return res.status(500).json({ error: 'Translation failed', detail: message })
+  }
+})
+
+function parseMarkdownWithImages(text) {
+  const parts = []
+  const imageMap = {}
+  const regex = /!\[(.*?)\]\((data:image\/.*?;base64,.*?)\)/g
+  let lastIndex = 0
+  let match
+  let imgCount = 0
+  
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', text: text.substring(lastIndex, match.index) })
+    }
+    
+    const placeholder = `[[IMG_${imgCount}]]`
+    imageMap[placeholder] = match[0] // Store the full markdown image tag
+    
+    // Insert placeholder text AND the image for the model to see
+    parts.push({ type: 'text', text: placeholder })
+    parts.push({ 
+      type: 'image_url', 
+      image_url: { 
+        url: match[2] 
+      } 
+    })
+    
+    imgCount++
+    lastIndex = regex.lastIndex
+  }
+  
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', text: text.substring(lastIndex) })
+  }
+  
+  if (parts.length === 0) {
+    return { content: text, imageMap: {} }
+  }
+  
+  return { content: parts, imageMap }
+}
+
+router.post('/refine-hydro', checkModelPermission, async (req, res) => {
+  try {
+    const { text, model } = req.body
+    if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const { content: userContent, imageMap } = parseMarkdownWithImages(text)
+
+    const messages = [
+      { role: 'system', content: HYDRO_REFINE_PROMPT },
+      { role: 'user', content: userContent }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: 0.1,
+      max_tokens: 32767
+    }
+    res.locals.logModel = payload.model
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let resultText = ''
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      resultText = data.choices[0].message.content
+    } else if (data.choices && data.choices[0] && data.choices[0].text) {
+      resultText = data.choices[0].text
+    } else {
+      resultText = JSON.stringify(data)
+    }
+
+    // Restore images from placeholders
+    for (const [placeholder, originalImage] of Object.entries(imageMap)) {
+      // Use a global replace in case the model repeated the placeholder (unlikely but possible)
+      // Escape the placeholder for regex (brackets)
+      const escapedPlaceholder = placeholder.replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+      resultText = resultText.replace(new RegExp(escapedPlaceholder, 'g'), originalImage)
+    }
+
+    return res.json({ result: resultText })
+
+  } catch (err) {
+    console.error('Refine Hydro error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Refine failed', detail: message })
   }
 })
 

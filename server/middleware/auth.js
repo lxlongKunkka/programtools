@@ -54,10 +54,17 @@ export function checkModelPermission(req, res, next) {
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
-  if (!token) return res.sendStatus(401)
+  
+  if (!token) {
+    console.log('[Auth] No token provided')
+    return res.sendStatus(401)
+  }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(401)
+    if (err) {
+      console.log('[Auth] Token verification failed:', err.message)
+      return res.sendStatus(401)
+    }
     req.user = user
     next()
   })

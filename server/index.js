@@ -14,6 +14,7 @@ import adminRoutes from './routes/admin.js'
 import typingRoutes from './routes/typing.js'
 import courseRoutes from './routes/course.js'
 import dailyRoutes from './routes/daily.js'
+import gespRoutes from './routes/gesp.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
@@ -59,6 +60,7 @@ app.use('/api/typing', typingRoutes)
 app.use('/api/course', courseRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/daily', dailyRoutes)
+app.use('/api/gesp', gespRoutes)
 
 // 简单的日志上报接口，用于前端统计页面访问
 app.post('/api/log/visit', (req, res) => {
