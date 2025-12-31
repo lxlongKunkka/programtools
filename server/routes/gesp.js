@@ -14,14 +14,26 @@ const router = express.Router()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Check Python environment on startup
+// Check Python environment and dependencies on startup
 const pythonCmd = process.env.PYTHON_CMD || 'python3'
 exec(`${pythonCmd} --version`, (error, stdout, stderr) => {
     if (error) {
         console.warn(`[WARNING] Default python command '${pythonCmd}' failed:`, error.message)
         console.warn('Please set PYTHON_CMD environment variable if python is located elsewhere.')
     } else {
-        console.log(`[INFO] Using Python: ${stdout.trim() || stderr.trim()}`)
+        const version = stdout.trim() || stderr.trim()
+        console.log(`[INFO] Using Python: ${version}`)
+        
+        // Check for required dependencies
+        exec(`${pythonCmd} -c "import bs4; import fitz"`, (depError, depStdout, depStderr) => {
+            if (depError) {
+                console.warn(`[WARNING] Python dependencies missing. GESP conversion features will fail.`)
+                console.warn(`[WARNING] Error: ${depStderr ? depStderr.trim() : depError.message}`)
+                console.warn(`[TIP] Please run: pip install -r ${path.join(__dirname, '../requirements.txt')}`)
+            } else {
+                console.log(`[INFO] Python dependencies (bs4, pymupdf) are installed.`)
+            }
+        })
     }
 })
 

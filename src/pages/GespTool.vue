@@ -312,7 +312,13 @@ const processBatch = async () => {
       item.progress = '完成'
       
     } catch (err) {
-      console.error(err)
+      console.error('Batch processing error:', err)
+      if (err.response && err.response.data) {
+          console.error('Server Error Details:', err.response.data)
+          if (err.response.data.stderr) {
+              console.error('Python Stderr:', err.response.data.stderr)
+          }
+      }
       item.status = 'error'
       item.progress = '失败: ' + (err.message || '未知错误')
     }
@@ -466,7 +472,13 @@ const convertHtml = async () => {
     editableMarkdown.value = response.data.md
     
   } catch (err) {
-    console.error(err)
+    console.error('HTML Convert Error:', err)
+    if (err.response && err.response.data) {
+        console.error('Server Error Details:', err.response.data)
+        if (err.response.data.stderr) {
+            console.error('Python Stderr:', err.response.data.stderr)
+        }
+    }
     const data = err.response?.data
     if (data) {
         error.value = `HTML 转换失败: ${data.error || ''} ${data.details || ''} ${data.stderr || ''}`
