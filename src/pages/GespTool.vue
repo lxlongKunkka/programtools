@@ -467,7 +467,12 @@ const convertHtml = async () => {
     
   } catch (err) {
     console.error(err)
-    error.value = err.response?.data?.error || 'HTML 转换失败'
+    const data = err.response?.data
+    if (data) {
+        error.value = `HTML 转换失败: ${data.error || ''} ${data.details || ''} ${data.stderr || ''}`
+    } else {
+        error.value = 'HTML 转换失败: ' + (err.message || '未知错误')
+    }
   } finally {
     loading.value = false
   }
