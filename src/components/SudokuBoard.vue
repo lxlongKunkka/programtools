@@ -866,6 +866,7 @@ onUnmounted(() => {
 
   .main-content {
     gap: 20px;
+    width: 100%;
   }
 
   /* Reorder for mobile: Board -> Controls -> Daily -> Leaderboard */
@@ -897,19 +898,21 @@ onUnmounted(() => {
     width: 100%;
     display: flex;
     justify-content: center;
+    padding: 0 10px;
+    box-sizing: border-box;
   }
 
   .cell {
     /* Calculate cell size based on viewport width (minus padding/borders) */
-    /* 100vw - 10px padding - 4px borders approx */
-    --mobile-cell-size: calc((100vw - 20px) / var(--board-size));
+    /* 100vw - 20px padding - 4px borders approx */
+    --mobile-cell-size: calc((100vw - 30px) / var(--board-size));
     width: var(--mobile-cell-size) !important;
     height: var(--mobile-cell-size) !important;
     font-size: calc(var(--mobile-cell-size) * 0.55) !important;
   }
   
   .notes-grid {
-    font-size: calc((100vw - 20px) / var(--board-size) * 0.25) !important;
+    font-size: calc((100vw - 30px) / var(--board-size) * 0.25) !important;
   }
 
   /* Hide zoom controls on mobile as it is auto-sized */
@@ -1155,6 +1158,7 @@ onUnmounted(() => {
 
 .row {
   display: flex;
+  justify-content: center;
 }
 
 .cell {
