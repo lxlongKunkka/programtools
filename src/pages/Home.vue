@@ -48,6 +48,12 @@
           <div class="card-title">GESP 转换</div>
           <div class="card-desc">PDF 试卷转 Hydro 题库，自动提取图片。</div>
         </router-link>
+
+        <router-link to="/sudoku" class="card">
+          <div class="card-icon">🧩</div>
+          <div class="card-title">数独游戏</div>
+          <div class="card-desc">经典数独与变体，锻炼逻辑思维。</div>
+        </router-link>
       </div>
     </section>
 

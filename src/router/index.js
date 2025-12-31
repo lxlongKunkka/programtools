@@ -17,6 +17,7 @@ import SolutionReport from '../pages/SolutionReport.vue'
 import Design from '../pages/Design.vue'
 import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
+import GameSudoku from '../pages/GameSudoku.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -36,7 +37,8 @@ const routes = [
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
-  { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } }
+  { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
+  { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

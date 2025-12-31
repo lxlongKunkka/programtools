@@ -29,6 +29,7 @@
     "nodemailer": "^6.9.11",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "sudoku-gen": "^1.0.2",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"
   },
