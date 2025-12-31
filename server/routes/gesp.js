@@ -16,20 +16,22 @@ const __dirname = path.dirname(__filename)
 
 // Check Python environment and dependencies on startup
 const pythonCmd = process.env.PYTHON_CMD || 'python3'
-exec(`${pythonCmd} --version`, (error, stdout, stderr) => {
+exec(`${pythonCmd} -c "import sys; print(sys.executable); print(sys.version.split()[0])"`, (error, stdout, stderr) => {
     if (error) {
         console.warn(`[WARNING] Default python command '${pythonCmd}' failed:`, error.message)
         console.warn('Please set PYTHON_CMD environment variable if python is located elsewhere.')
     } else {
-        const version = stdout.trim() || stderr.trim()
-        console.log(`[INFO] Using Python: ${version}`)
+        const lines = stdout.trim().split('\n')
+        const executable = lines[0]
+        const version = lines.length > 1 ? lines[1] : 'unknown'
+        console.log(`[INFO] Using Python: ${executable} (Version: ${version})`)
         
         // Check for required dependencies
         exec(`${pythonCmd} -c "import bs4; import fitz"`, (depError, depStdout, depStderr) => {
             if (depError) {
-                console.warn(`[WARNING] Python dependencies missing. GESP conversion features will fail.`)
+                console.warn(`[WARNING] Python dependencies missing for ${executable}`)
                 console.warn(`[WARNING] Error: ${depStderr ? depStderr.trim() : depError.message}`)
-                console.warn(`[TIP] Please run: pip install -r ${path.join(__dirname, '../requirements.txt')}`)
+                console.warn(`[TIP] Try running: ${executable} -m pip install -r ${path.join(__dirname, '../requirements.txt')}`)
             } else {
                 console.log(`[INFO] Python dependencies (bs4, pymupdf) are installed.`)
             }

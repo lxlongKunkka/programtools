@@ -1,6 +1,13 @@
 import sys
 import os
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    sys.stderr.write("Error: The 'beautifulsoup4' library is missing.\n")
+    sys.stderr.write(f"Current Python Executable: {sys.executable}\n")
+    sys.stderr.write(f"Current Python Path: {sys.path}\n")
+    sys.stderr.write("Please ensure you installed the library for THIS python interpreter.\n")
+    sys.exit(1)
 import re
 
 def clean_katex(elem):
