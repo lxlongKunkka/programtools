@@ -1061,6 +1061,7 @@ export default {
       nextLevel,
       resetLevel,
       undo,
+      move,
       getTileClass,
       isTargetCell,
       isPlayer,
