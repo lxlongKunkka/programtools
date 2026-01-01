@@ -531,6 +531,10 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Level not found' });
     }
 
+    // Clean up related data (results and user progress)
+    await SokobanResult.deleteMany({ levelId });
+    await SokobanProgress.deleteMany({ levelId });
+
     res.json({ success: true, message: 'Level deleted successfully' });
   } catch (error) {
     console.error('Error deleting level:', error);
