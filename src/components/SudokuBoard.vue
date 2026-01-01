@@ -437,7 +437,11 @@ const submitScore = async () => {
 const fetchLeaderboard = async () => {
   leaderboardLoading.value = true;
   try {
-    const data = await request(`/api/leaderboard?difficulty=${difficulty.value}&size=${boardSize.value}`);
+    let url = `/api/leaderboard?difficulty=${difficulty.value}&size=${boardSize.value}`;
+    if (isDaily.value) {
+      url += '&isDaily=true';
+    }
+    const data = await request(url);
     leaderboardData.value = Array.isArray(data) ? data : [];
   } catch (e) {
     console.error('Failed to fetch leaderboard', e);
@@ -735,7 +739,7 @@ onUnmounted(() => {
       </div>
 
       <div class="leaderboard-section">
-        <h3>Leaderboard</h3>
+        <h3>Leaderboard <span v-if="isDaily" style="font-size: 14px; font-weight: normal; color: #666;">{{ new Date().toLocaleDateString() }}</span></h3>
         <div v-if="leaderboardLoading">Loading...</div>
         <div v-else-if="leaderboardData.length === 0">No records yet.</div>
         <table v-else class="leaderboard-table-small">

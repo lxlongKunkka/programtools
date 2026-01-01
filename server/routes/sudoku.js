@@ -186,13 +186,24 @@ router.post('/submit', authenticateToken, async (req, res) => {
 // Get leaderboard
 router.get('/leaderboard', async (req, res) => {
     try {
-        const { difficulty, size } = req.query;
+        const { difficulty, size, isDaily } = req.query;
         const limit = parseInt(req.query.limit) || 20;
         
-        const results = await SudokuResult.find({ 
+        const query = { 
             difficulty, 
             size: parseInt(size) 
-        })
+        };
+
+        if (isDaily === 'true') {
+            query.isDaily = true;
+            const start = new Date();
+            start.setHours(0, 0, 0, 0);
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: start, $lte: end };
+        }
+        
+        const results = await SudokuResult.find(query)
         .sort({ timeElapsed: 1, mistakes: 1, createdAt: -1 })
         .limit(limit)
         .select('username timeElapsed mistakes createdAt');
