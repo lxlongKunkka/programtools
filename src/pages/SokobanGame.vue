@@ -263,11 +263,9 @@
               <div class="mobile-controls" v-if="!gameState.isVictory && viewMode === 'play'">
                 <div class="d-pad">
                    <button class="d-btn up" @click="move('up')">⬆️</button>
-                   <div class="d-row">
-                     <button class="d-btn left" @click="move('left')">⬅️</button>
-                     <button class="d-btn down" @click="move('down')">⬇️</button>
-                     <button class="d-btn right" @click="move('right')">➡️</button>
-                   </div>
+                   <button class="d-btn left" @click="move('left')">⬅️</button>
+                   <button class="d-btn down" @click="move('down')">⬇️</button>
+                   <button class="d-btn right" @click="move('right')">➡️</button>
                 </div>
                 <div class="action-pad">
                    <button class="a-btn" @click="undo" :disabled="!gameState.canUndo" title="Undo">↩️</button>
@@ -2121,13 +2119,16 @@ export default {
 /* --- Mobile Controls --- */
 .mobile-controls {
   display: none;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
   gap: 16px;
   margin-top: 24px;
-  padding: 10px;
+  padding: 16px 32px;
   background: rgba(255,255,255,0.5);
   border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
 }
 
 @media (max-width: 768px) {
@@ -2137,20 +2138,15 @@ export default {
 }
 
 .d-pad {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.d-row {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 50px);
+  grid-template-rows: repeat(3, 50px);
+  gap: 4px;
 }
 
 .d-btn {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 12px;
   border: none;
   background: #e2e8f0;
@@ -2165,6 +2161,11 @@ export default {
   transition: all 0.1s;
 }
 
+.d-btn.up { grid-column: 2; grid-row: 1; }
+.d-btn.left { grid-column: 1; grid-row: 2; }
+.d-btn.right { grid-column: 3; grid-row: 2; }
+.d-btn.down { grid-column: 2; grid-row: 3; }
+
 .d-btn:active {
   background: #cbd5e0;
   transform: translateY(2px);
@@ -2173,7 +2174,8 @@ export default {
 
 .action-pad {
   display: flex;
-  gap: 24px;
+  gap: 16px;
+  flex-direction: column;
 }
 
 .a-btn {
