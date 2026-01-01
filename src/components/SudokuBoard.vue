@@ -485,15 +485,20 @@ const getHint = () => {
     targetR = selectedCell.value.r;
     targetC = selectedCell.value.c;
   } else {
+    const emptyCells = [];
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
         if (!grid.value[r][c].val) {
-          targetR = r;
-          targetC = c;
-          break;
+          emptyCells.push({ r, c });
         }
       }
-      if (targetR !== -1) break;
+    }
+    
+    if (emptyCells.length > 0) {
+      const randomIndex = Math.floor(Math.random() * emptyCells.length);
+      const target = emptyCells[randomIndex];
+      targetR = target.r;
+      targetC = target.c;
     }
   }
   
