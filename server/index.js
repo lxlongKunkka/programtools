@@ -88,6 +88,18 @@ app.use((req, res) => {
 // Start cron jobs
 startDailyReportJob()
 
+// Global error handlers for uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! Server crashing...', err)
+  // Ideally we should exit, but for dev/debug we might want to keep it alive or at least log it
+  // process.exit(1) 
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION! Reason:', reason)
+  // promise.catch(err => console.error('Promise error:', err))
+})
+
 httpServer.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`)
 })

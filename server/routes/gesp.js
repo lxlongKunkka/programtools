@@ -2,49 +2,17 @@ import express from 'express'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { exec } from 'child_process'
-import util from 'util'
 import nodemailer from 'nodemailer'
 import { authenticateToken } from '../middleware/auth.js'
 import { MAIL_CONFIG } from '../config.js'
+import { parseHtml } from '../utils/gesp/parseHtml.js'
+import { parsePdf } from '../utils/gesp/parsePdf.js'
+import { jsonToFps } from '../utils/gesp/jsonToFps.js'
+import { jsonToHydroMd } from '../utils/gesp/jsonToHydroMd.js'
 
-const execPromise = util.promisify(exec)
 const router = express.Router()
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-// Check Python environment and dependencies on startup
-const pythonCmd = process.env.PYTHON_CMD || 'python3'
-exec(`${pythonCmd} -c "import sys; print(sys.executable); print(sys.version.split()[0])"`, (error, stdout, stderr) => {
-    if (error) {
-        console.warn(`[WARNING] Default python command '${pythonCmd}' failed:`, error.message)
-        console.warn('Please set PYTHON_CMD environment variable if python is located elsewhere.')
-    } else {
-        const lines = stdout.trim().split('\n')
-        const executable = lines[0]
-        const version = lines.length > 1 ? lines[1] : 'unknown'
-        console.log(`[INFO] Using Python: ${executable} (Version: ${version})`)
-        
-        // Check for required dependencies
-        exec(`${pythonCmd} -c "import bs4; import fitz"`, (depError, depStdout, depStderr) => {
-            if (depError) {
-                console.warn(`[WARNING] Python dependencies missing for ${executable}`)
-                console.warn(`[WARNING] Error: ${depStderr ? depStderr.trim() : depError.message}`)
-                console.warn(`[TIP] Try running: ${executable} -m pip install -r ${path.join(__dirname, '../requirements.txt')}`)
-            } else {
-                console.log(`[INFO] Python dependencies (bs4, pymupdf) are installed.`)
-            }
-        })
-    }
-})
-
-// Define paths to scripts
-const SCRIPTS_DIR = path.join(__dirname, '../scripts/gesp')
-const PARSE_SCRIPT = path.join(SCRIPTS_DIR, 'parse_gesp.py')
-const PARSE_HTML_SCRIPT = path.join(SCRIPTS_DIR, 'parse_html_gesp.py')
-const FPS_SCRIPT = path.join(SCRIPTS_DIR, 'json_to_fps.py')
-const MD_SCRIPT = path.join(SCRIPTS_DIR, 'json_to_hydro_md.py')
 
 // Ensure temp directory exists
 const TEMP_DIR = path.join(__dirname, '../temp_gesp')
@@ -59,36 +27,25 @@ router.post('/convert', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing file data or name' })
     }
 
-    // Create a unique temp folder for this request to avoid collisions
     const requestId = Date.now() + '_' + Math.random().toString(36).substring(7)
     const requestDir = path.join(TEMP_DIR, requestId)
     fs.mkdirSync(requestDir)
 
     const pdfPath = path.join(requestDir, fileName)
-    
-    // Decode Base64 and write to file
-    // Remove data URL prefix if present (e.g., "data:application/pdf;base64,")
     const base64Data = fileData.replace(/^data:application\/pdf;base64,/, "")
     await fs.promises.writeFile(pdfPath, base64Data, 'base64')
 
     // 1. Parse PDF -> JSON
-    // Note: We assume 'python' is available in the system path.
-    const pythonCmd = process.env.PYTHON_CMD || 'python3'
-    await execPromise(`${pythonCmd} "${PARSE_SCRIPT}" "${pdfPath}"`)
-
+    const questions = await parsePdf(pdfPath)
     const jsonPath = pdfPath + '.json'
-    if (!fs.existsSync(jsonPath)) {
-      throw new Error('Failed to generate JSON')
-    }
+    await fs.promises.writeFile(jsonPath, JSON.stringify(questions, null, 2), 'utf-8')
 
     // 2. JSON -> FPS XML
     const xmlPath = pdfPath + '.xml'
-    await execPromise(`${pythonCmd} "${FPS_SCRIPT}" "${jsonPath}" "${xmlPath}"`)
+    jsonToFps(jsonPath, xmlPath)
 
     // 3. JSON -> Hydro Markdown
-    // The script generates .md file in the same directory
-    await execPromise(`${pythonCmd} "${MD_SCRIPT}" "${jsonPath}"`)
-    const mdPath = pdfPath + '.md'
+    const mdPath = jsonToHydroMd(jsonPath)
 
     // Read results
     const jsonContent = await fs.promises.readFile(jsonPath, 'utf-8')
@@ -97,16 +54,13 @@ router.post('/convert', authenticateToken, async (req, res) => {
     if (fs.existsSync(xmlPath)) {
       xmlContent = await fs.promises.readFile(xmlPath, 'utf-8')
     }
-
+    
     let mdContent = ''
     if (fs.existsSync(mdPath)) {
       mdContent = await fs.promises.readFile(mdPath, 'utf-8')
     }
 
     // Clean up
-    // fs.rmSync(requestDir, { recursive: true, force: true }) 
-    // Uncomment above line to enable cleanup. Kept commented for debugging if needed.
-    // For production, we should clean up.
     fs.rmSync(requestDir, { recursive: true, force: true })
 
     res.json({
@@ -120,7 +74,7 @@ router.post('/convert', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('GESP Conversion Error:', error)
-    res.status(500).json({ error: error.message, details: error.stderr })
+    res.status(500).json({ error: error.message })
   }
 })
 
@@ -138,37 +92,19 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
     const htmlPath = path.join(requestDir, 'input.html')
     await fs.promises.writeFile(htmlPath, htmlContent, 'utf-8')
 
-    // Run python script
-    // Use 'python' or 'python3' depending on environment.
-    const pythonCmd = process.env.PYTHON_CMD || 'python3'
-    const { stdout, stderr } = await execPromise(`${pythonCmd} "${PARSE_HTML_SCRIPT}" "${htmlPath}"`)
-    
-    if (stderr) {
-        console.warn('Python script stderr:', stderr)
-    }
-
-    // Extract title from the first line if possible
-    let title = ''
-    const lines = stdout.trim().split('\n')
-    if (lines.length > 0 && lines[0].startsWith('# ')) {
-        title = lines[0].substring(2).trim()
-    }
+    // Parse HTML
+    const { md, title } = parseHtml(htmlPath)
 
     // Clean up
-    try {
-      fs.rmSync(requestDir, { recursive: true, force: true })
-    } catch (e) {
-      console.error('Failed to cleanup temp dir:', e)
-    }
+    fs.rmSync(requestDir, { recursive: true, force: true })
 
-    res.json({ md: stdout, title })
+    res.json({ md, title })
 
   } catch (error) {
     console.error('HTML Conversion error:', error)
     res.status(500).json({ 
         error: 'Conversion failed', 
-        details: error.message,
-        stderr: error.stderr || '' 
+        details: error.message
     })
   }
 })

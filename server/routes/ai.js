@@ -905,6 +905,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
 
 router.post('/generate-answer', authenticateToken, checkModelPermission, async (req, res) => {
   try {
+    if (!req.body) return res.status(400).json({ error: 'Missing request body' })
     const { problem, model } = req.body
     if (!problem) return res.status(400).json({ error: 'Missing problem data' })
 
@@ -931,8 +932,8 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
       model: model || 'gemini-2.0-flash',
       messages,
       temperature: 0.1,
-      max_tokens: 2048,
-      response_format: { type: "json_object" }
+      max_tokens: 32767
+      // response_format: { type: "json_object" } // Removed to allow free text format
     }
     res.locals.logModel = payload.model
 
@@ -941,7 +942,7 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      timeout: 60000
+      timeout: 120000
     })
 
     const data = resp.data
@@ -954,14 +955,34 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
         content = JSON.stringify(data)
     }
 
-    // Parse JSON
-    let jsonResult = {}
-    try {
-        const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
-        jsonResult = JSON.parse(cleanContent)
-    } catch (e) {
-        console.warn('Failed to parse AI JSON response:', content)
-        return res.json({ raw: content })
+    // Parse Custom Format: [ANSWER]: X ... [EXPLANATION]: ...
+    let jsonResult = { answer: '', explanation: '' }
+    
+    const ansMatch = content.match(/\[ANSWER\]:\s*([A-Z0-9]+)/i)
+    if (ansMatch) {
+        jsonResult.answer = ansMatch[1].toUpperCase()
+    }
+    
+    const expMatch = content.match(/\[EXPLANATION\]:\s*([\s\S]*)/i)
+    if (expMatch) {
+        jsonResult.explanation = expMatch[1].trim()
+    } else {
+        // Fallback: if no explicit explanation tag, but we have an answer, 
+        // assume everything after answer is explanation
+        if (ansMatch) {
+             const afterAns = content.substring(ansMatch.index + ansMatch[0].length).trim()
+             if (afterAns) jsonResult.explanation = afterAns
+        }
+    }
+    
+    // Legacy JSON fallback (just in case model ignores instruction)
+    if (!jsonResult.answer && content.trim().startsWith('{')) {
+        try {
+            const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+            const parsed = JSON.parse(cleanContent)
+            jsonResult.answer = parsed.answer || ''
+            jsonResult.explanation = parsed.explanation || ''
+        } catch (e) {}
     }
 
     return res.json(jsonResult)

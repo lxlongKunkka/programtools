@@ -127,69 +127,24 @@ const INITIAL_LEVELS = [
 # @ #
 #####
 `),
-  createLevelData('Microban I - 5', 'Classic Level by David W. Skinner', `
-  ####
-###  #
-#  $ #
-#  . #
-#  # #
-#  @ #
-######
-`),
-  createLevelData('Microban I - 6', 'Classic Level by David W. Skinner', `
-  ####
-###  ####
-# .  $  #
-#   @   #
-# $  .  #
-####  ###
-   ####
-`),
-  createLevelData('Microban I - 7', 'Classic Level by David W. Skinner', `
-   ###
-   #.#
-####$####
-#       #
-# $ @ $ #
-#       #
-####$####
-   #.#
-   ###
-`),
-  createLevelData('Microban I - 8', 'Classic Level by David W. Skinner', `
-#####
-#   #
-#$  #
-#  $#
-# . #
-#.@ #
-#####
-`),
-  createLevelData('Microban I - 9', 'Classic Level by David W. Skinner', `
-  ####
-###  ###
-#      #
-# $  $ #
-# .  . #
-#  @   #
-########
-`),
-  createLevelData('Microban I - 10', 'Classic Level by David W. Skinner', `
-   #####
-   #   #
-   #   #
-#### # ####
-# $  #  $ #
-# .  #  . #
-#    @    #
-###########
-`)
+
 ];
 
 // 初始化数据库中的关卡
 async function initLevels() {
   try {
     console.log('Checking system levels...');
+
+    // 1. 清理：删除不再 INITIAL_LEVELS 中的系统关卡
+    const initialNames = INITIAL_LEVELS.map(l => l.name);
+    const deleteResult = await SokobanLevel.deleteMany({ 
+      isSystem: true, 
+      name: { $nin: initialNames } 
+    });
+    if (deleteResult.deletedCount > 0) {
+        console.log(`Removed ${deleteResult.deletedCount} deprecated system levels.`);
+    }
+
     const count = await SokobanLevel.countDocuments();
     console.log(`Current level count in DB: ${count}`);
     

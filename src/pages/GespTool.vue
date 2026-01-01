@@ -609,6 +609,25 @@ const downloadSolutionMd = () => {
 const downloadZip = async () => {
   if (!result.value || !result.value.json) return
   
+  // --- Sync Editor Content to JSON before download ---
+  // This ensures manual edits in the editor are reflected in solution.md and config.yaml
+  const { problems: currentProblems, title: currentTitle } = parseMarkdownToJson(editableMarkdown.value)
+  
+  // Merge existing answers/explanations
+  const oldMap = new Map(result.value.json.map(p => [p.id, p]))
+  currentProblems.forEach(p => {
+      const old = oldMap.get(p.id)
+      if (old) {
+          if (old.userAnswer) p.userAnswer = old.userAnswer
+          if (old.explanation) p.explanation = old.explanation
+          if (old.score) p.score = old.score
+      }
+  })
+  
+  result.value.json = currentProblems
+  if (currentTitle) result.value.title = currentTitle
+  // --------------------------------------------------
+
   const zip = new JSZip()
   
   // 1. problem.yaml
@@ -641,7 +660,7 @@ tag:
   testdata.file("config.yaml", configYaml)
   
   // 4. additional_file/solution.md
-  let solutionMd = "# GESP 题目与解析\n\n"
+  let solutionMd = `# ${title} - 题目与解析\n\n`
   result.value.json.forEach(p => {
     solutionMd += `${p.id}), ${p.stem}\n`
     solutionMd += `{{ select(${p.id}) }}\n`
@@ -838,6 +857,27 @@ const refineMarkdown = async () => {
       }
 
       editableMarkdown.value = refined
+      
+      // 重新解析 JSON 以更新 result.value.json，确保下载时使用的是优化后的文本
+      // 同时保留已有的答案和解析
+      const { problems: newProblems, title: newTitle } = parseMarkdownToJson(refined)
+      
+      // Merge old answers/explanations
+      if (result.value && result.value.json) {
+          const oldMap = new Map(result.value.json.map(p => [p.id, p]))
+          newProblems.forEach(p => {
+              const old = oldMap.get(p.id)
+              if (old) {
+                  if (old.userAnswer) p.userAnswer = old.userAnswer
+                  if (old.explanation) p.explanation = old.explanation
+                  if (old.score) p.score = old.score
+              }
+          })
+      }
+      
+      result.value.json = newProblems
+      if (newTitle) result.value.title = newTitle
+      
     }
   } catch (err) {
     console.error(err)
