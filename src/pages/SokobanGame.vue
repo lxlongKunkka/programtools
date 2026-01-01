@@ -258,6 +258,22 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Mobile Controls -->
+              <div class="mobile-controls" v-if="!gameState.isVictory && viewMode === 'play'">
+                <div class="d-pad">
+                   <button class="d-btn up" @click="move('up')">⬆️</button>
+                   <div class="d-row">
+                     <button class="d-btn left" @click="move('left')">⬅️</button>
+                     <button class="d-btn down" @click="move('down')">⬇️</button>
+                     <button class="d-btn right" @click="move('right')">➡️</button>
+                   </div>
+                </div>
+                <div class="action-pad">
+                   <button class="a-btn" @click="undo" :disabled="!gameState.canUndo" title="Undo">↩️</button>
+                   <button class="a-btn" @click="resetLevel" title="Restart">🔄</button>
+                </div>
+              </div>
               
               <!-- 胜利遮罩 -->
               <div v-if="gameState.isVictory" class="victory-overlay">
@@ -2099,5 +2115,90 @@ export default {
 
 .activity-details b {
   color: #4a5568;
+}
+
+/* --- Mobile Controls --- */
+.mobile-controls {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 10px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 16px;
+}
+
+@media (max-width: 768px) {
+  .mobile-controls {
+    display: flex;
+  }
+}
+
+.d-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.d-row {
+  display: flex;
+  gap: 8px;
+}
+
+.d-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: none;
+  background: #e2e8f0;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.1s;
+}
+
+.d-btn:active {
+  background: #cbd5e0;
+  transform: translateY(2px);
+  box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+
+.action-pad {
+  display: flex;
+  gap: 24px;
+}
+
+.a-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #edf2f7;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.a-btn:active {
+  background: #e2e8f0;
+  transform: translateY(2px);
+  box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+
+.a-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 </style>
