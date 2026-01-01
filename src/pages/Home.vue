@@ -54,6 +54,12 @@
           <div class="card-title">数独游戏</div>
           <div class="card-desc">经典数独与变体，锻炼逻辑思维。</div>
         </router-link>
+
+        <router-link v-if="user" to="/sokoban" class="card">
+          <div class="card-icon">🐹</div>
+          <div class="card-title">推箱子</div>
+          <div class="card-desc">经典益智游戏，支持自定义关卡。</div>
+        </router-link>
       </div>
     </section>
 
@@ -70,7 +76,22 @@
 
 <script>
 export default {
-  name: 'HomePage'
+  name: 'HomePage',
+  data() {
+    return {
+      user: null
+    }
+  },
+  mounted() {
+    const u = localStorage.getItem('user_info')
+    if (u) {
+      try {
+        this.user = JSON.parse(u)
+      } catch (e) {
+        this.user = null
+      }
+    }
+  }
 }
 </script>
 

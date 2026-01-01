@@ -18,6 +18,7 @@ import Design from '../pages/Design.vue'
 import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
+import SokobanGame from '../pages/SokobanGame.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -38,7 +39,8 @@ const routes = [
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
-  { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } }
+  { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
+  { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({
