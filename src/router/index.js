@@ -19,9 +19,12 @@ import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
+import AncientGame from '../pages/AncientGame/index.vue'
+import SpriteGallery from '../pages/SpriteGallery.vue'
 
 const routes = [
   { path: '/', component: Home },
+  { path: '/sprites', component: SpriteGallery, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
@@ -40,7 +43,8 @@ const routes = [
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
-  { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } }
+  { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
+  { path: '/ancient', component: AncientGame, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

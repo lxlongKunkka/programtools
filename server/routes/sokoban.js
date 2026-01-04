@@ -101,15 +101,6 @@ const INITIAL_LEVELS = [
 #  ###
 ####
 `),
-  createLevelData('Microban I - 2', 'Classic Level by David W. Skinner', `
-#####
-#   #
-#   #
-# #$##
-# *  #
-#  @ #
-######
-`),
   createLevelData('Microban I - 3', 'Classic Level by David W. Skinner', `
   ####
 ###  ####
@@ -117,15 +108,6 @@ const INITIAL_LEVELS = [
 # #  #$ #
 # . .#@ #
 #########
-`),
-  createLevelData('Microban I - 4', 'Classic Level by David W. Skinner', `
-  ###
-  #.#
-  #$#
-### #
-# * #
-# @ #
-#####
 `),
 
 ];

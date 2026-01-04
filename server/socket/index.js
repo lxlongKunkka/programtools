@@ -1,4 +1,5 @@
 import { Server } from 'socket.io'
+import AncientLevel from '../models/AncientLevel.js';
 
 let io;
 
@@ -85,6 +86,57 @@ export function setupSocket(httpServer) {
         wpm
       })
     })
+
+    // --- Ancient Empires Logic ---
+    socket.on('ancient_find_match', async () => {
+        // Simple queue for Ancient Empires
+        const ancientQueue = global.ancientQueue || [];
+        global.ancientQueue = ancientQueue;
+
+        // Check if already in queue
+        if (ancientQueue.find(p => p.id === socket.id)) return;
+
+        if (ancientQueue.length > 0) {
+            const opponent = ancientQueue.shift();
+            const roomId = `ancient_${socket.id}_${opponent.id}`;
+            
+            // Select a random map
+            let levelId = null;
+            try {
+                const count = await AncientLevel.countDocuments();
+                if (count > 0) {
+                    const random = Math.floor(Math.random() * count);
+                    const level = await AncientLevel.findOne().skip(random);
+                    if (level) levelId = level._id;
+                }
+            } catch (err) {
+                console.error("Error selecting map:", err);
+            }
+
+            socket.join(roomId);
+            opponent.join(roomId);
+
+            // Assign teams: Opponent (first in queue) is Blue (First), Socket is Red
+            io.to(opponent.id).emit('ancient_match_found', { roomId, team: 'blue', opponentId: socket.id, levelId });
+            io.to(socket.id).emit('ancient_match_found', { roomId, team: 'red', opponentId: opponent.id, levelId });
+
+            console.log(`Ancient Match: ${opponent.id} vs ${socket.id} on map ${levelId}`);
+        } else {
+            ancientQueue.push(socket);
+            socket.emit('ancient_waiting');
+        }
+    });
+
+    socket.on('ancient_action', ({ roomId, action }) => {
+        // Relay action to everyone else in the room (which is just the opponent)
+        socket.to(roomId).emit('ancient_opponent_action', action);
+    });
+
+    socket.on('ancient_leave', ({ roomId }) => {
+        socket.to(roomId).emit('ancient_opponent_left');
+        socket.leave(roomId);
+    });
+
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id)
       // Remove from queue if present
@@ -94,6 +146,11 @@ export function setupSocket(httpServer) {
         broadcastQueueCount()
       }
       
+      if (global.ancientQueue) {
+          const aidx = global.ancientQueue.findIndex(u => u.id === socket.id);
+          if (aidx !== -1) global.ancientQueue.splice(aidx, 1);
+      }
+
       // Handle active rooms (notify opponent)
       // This is a simplified implementation
     })

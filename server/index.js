@@ -17,6 +17,7 @@ import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
 import sokobanRoutes from './routes/sokoban.js'
+import ancientRoutes from './routes/ancient.js'
 import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
@@ -66,6 +67,7 @@ app.use('/api/daily', dailyRoutes)
 app.use('/api/gesp', gespRoutes)
 app.use('/api', sudokuRoutes)
 app.use('/api/sokoban', sokobanRoutes)
+app.use('/api/ancient', ancientRoutes)
 
 // 简单的日志上报接口，用于前端统计页面访问
 app.post('/api/log/visit', (req, res) => {
