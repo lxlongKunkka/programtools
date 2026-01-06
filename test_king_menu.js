@@ -1,6 +1,6 @@
 import { GameState } from './src/game/ancient/GameState.js';
 import { Grid } from './src/game/ancient/Grid.js';
-import { Unit } from './src/game/ancient/Unit.js';
+import { Unit } from './src/game/ancient/entity/Unit.js';
 import { UNIT_TYPES, TEAMS, TERRAIN } from './src/game/ancient/constants.js';
 
 // Mock Map Data (10x10)

@@ -1,4 +1,4 @@
-import { Unit } from './Unit.js';
+import { Unit } from './entity/Unit.js';
 import { TEAMS, TERRAIN, TERRAIN_DEFENSE, UNIT_STATS, ATTACK_TYPES, MOVE_TYPES, UNIT_TYPES, ABILITIES, TERRAIN_STATS } from './constants.js';
 
 export class GameState {
@@ -38,21 +38,36 @@ export class GameState {
       for (let y = 0; y < this.grid.height; y++) {
           for (let x = 0; x < this.grid.width; x++) {
               const terrain = this.grid.getTerrainAt(x, y);
-              if (terrain === TERRAIN.CASTLE || terrain === TERRAIN.VILLAGE || terrain === TERRAIN.TOWN) {
+              
+              const isCastle = terrain === TERRAIN.CASTLE || terrain === TERRAIN.CASTLE_2 || 
+                               terrain === TERRAIN.CASTLE_BLUE || terrain === TERRAIN.CASTLE_RED || 
+                               terrain === TERRAIN.CASTLE_GREEN || terrain === TERRAIN.CASTLE_BLACK;
+                               
+              const isVillage = terrain === TERRAIN.VILLAGE || terrain === TERRAIN.TOWN || 
+                                terrain === TERRAIN.VILLAGE_BLUE || terrain === TERRAIN.VILLAGE_RED || 
+                                terrain === TERRAIN.VILLAGE_GREEN || terrain === TERRAIN.VILLAGE_BLACK;
+
+              if (isCastle || isVillage) {
                   const key = `${x},${y}`;
                   const predefined = buildingMap.get(key);
                   
                   let team = null;
                   let type = 'village';
-                  if (terrain === TERRAIN.CASTLE) type = 'castle';
+                  if (isCastle) type = 'castle';
                   else if (terrain === TERRAIN.TOWN) type = 'town';
 
                   if (predefined) {
                       team = predefined.team;
                       // type = predefined.type; // Trust terrain type over predefined type?
                   } else {
+                      // Determine team from terrain type
+                      if (terrain === TERRAIN.CASTLE_BLUE || terrain === TERRAIN.VILLAGE_BLUE) team = TEAMS.BLUE;
+                      else if (terrain === TERRAIN.CASTLE_RED || terrain === TERRAIN.VILLAGE_RED) team = TEAMS.RED;
+                      else if (terrain === TERRAIN.CASTLE_GREEN || terrain === TERRAIN.VILLAGE_GREEN) team = TEAMS.GREEN;
+                      else if (terrain === TERRAIN.CASTLE_BLACK || terrain === TERRAIN.VILLAGE_BLACK) team = TEAMS.BLACK;
+                      
                       // Fallback heuristic for maps without building data
-                      if (terrain === TERRAIN.CASTLE) {
+                      else if (terrain === TERRAIN.CASTLE || terrain === TERRAIN.CASTLE_2) {
                           if (x < 3) team = TEAMS.BLUE;
                           else if (x >= this.grid.width - 3) team = TEAMS.RED;
                       }
@@ -168,8 +183,14 @@ export class GameState {
 
     // Case 2.5: Select a building (Castle) to buy units
     const building = this.getBuildingAt(x, y);
+    console.log(`[SelectTile] Clicked ${x},${y}. Unit: ${unit}, Building:`, building, `ActingTeam: ${effectiveActingTeam}`);
     if (!unit && building && building.team === effectiveActingTeam && building.type === 'castle') {
+        console.log("[SelectTile] Selected Building!");
         this.selectedBuilding = building;
+        this.selectedUnit = null; // Ensure unit is deselected
+        this.reachableTiles = [];
+        this.threatTiles = [];
+        this.attackableTiles = [];
         return { action: 'select_building', building };
     }
 
@@ -414,25 +435,37 @@ export class GameState {
       }
   }
 
-  buyUnit(type, x, y) {
+  getUnitPrice(type, team) {
       let cost = UNIT_STATS[type].cost;
       
       // Commander cost scaling
-      if (type === UNIT_TYPES.KING) { // Assuming King is Commander
-          // Check if commander already exists
-          const existingCommander = this.units.find(u => u.team === this.currentTurn && u.type === UNIT_TYPES.KING && u.hp > 0);
-          if (existingCommander) return false; // Only one commander
-
-          cost = 400 + (this.commanderDeaths[this.currentTurn] * 100);
+      if (type === UNIT_TYPES.KING) { 
+          cost = 400 + (this.commanderDeaths[team] * 100);
       }
+      return cost;
+  }
 
-      // Check if castle is occupied by enemy (actually, any unit blocks spawn usually, but rule says "non-friendly unit")
-      // But standard logic is: cannot spawn on occupied tile.
+  canBuy(type, team) {
+      const cost = this.getUnitPrice(type, team);
+      if (this.money[team] < cost) return false;
+      
+      if (type === UNIT_TYPES.KING) {
+          const existingCommander = this.units.find(u => u.team === team && u.type === UNIT_TYPES.KING && u.hp > 0);
+          if (existingCommander) return false;
+      }
+      return true;
+  }
+
+  buyUnit(type, x, y, team = null) {
+      const effectiveTeam = team || this.currentTurn;
+      
+      // Check if tile is occupied
       if (this.getUnitAt(x, y)) return false;
 
-      if (this.money[this.currentTurn] >= cost) {
-          this.money[this.currentTurn] -= cost;
-          const newUnit = new Unit(type, this.currentTurn, x, y);
+      if (this.canBuy(type, effectiveTeam)) {
+          const cost = this.getUnitPrice(type, effectiveTeam);
+          this.money[effectiveTeam] -= cost;
+          const newUnit = new Unit(type, effectiveTeam, x, y);
           newUnit.state = 'ready'; // Can move immediately
           this.addUnit(newUnit);
           
@@ -440,7 +473,9 @@ export class GameState {
               this.onEvent('buy', { unit: newUnit });
           }
 
-          this.deselect();
+          if (effectiveTeam === this.currentTurn) {
+              this.deselect();
+          }
           return true;
       }
       return false;
@@ -627,7 +662,7 @@ export class GameState {
           // this.addFloatingText(defender.x, defender.y, "DEAD", 'black');
       }
 
-      attacker.state = 'done';
+      // attacker.state = 'done'; // Moved to Controller (GameCanvas)
       if (attacker.hp > attacker.maxHp) attacker.hp = attacker.maxHp;
       this.checkCapture(attacker);
       this.checkWinCondition();
@@ -1440,5 +1475,58 @@ export class GameState {
       this.showMoveRange(newUnit);
 
       return newUnit;
+  }
+
+  endTurn() {
+      // 1. Reset units of current team
+      this.units.forEach(u => {
+          if (u.team === this.currentTurn) {
+              u.state = 'ready';
+              u.moved = false;
+              u.attacked = false;
+              
+              // Heal on buildings
+              const building = this.getBuildingAt(u.x, u.y);
+              if (building && building.team === u.team && u.hp < u.maxHp) {
+                  u.hp = Math.min(u.hp + 20, u.maxHp);
+                  this.addFloatingText(u.x, u.y, "+20", "green");
+              }
+          }
+      });
+
+      // 2. Switch Team
+      this.currentTurn = this.currentTurn === TEAMS.BLUE ? TEAMS.RED : TEAMS.BLUE;
+      
+      // 3. Income for new team
+      const income = this.calculateIncome(this.currentTurn);
+      this.money[this.currentTurn] += income;
+      
+      // 4. Update Tombstones
+      for (let i = this.tombstones.length - 1; i >= 0; i--) {
+          const t = this.tombstones[i];
+          if (t.team === this.currentTurn) {
+              t.life--;
+              if (t.life <= 0) {
+                  this.tombstones.splice(i, 1);
+              }
+          }
+      }
+      
+      // 5. Campaign Hook: onTurnStart
+      if (this.stageScript && this.stageScript.onTurnStart) {
+          this.stageScript.onTurnStart(this.campaignContext, this.currentTurn);
+      }
+      
+      this.deselect();
+  }
+
+  calculateIncome(team) {
+      let income = 0;
+      this.buildings.forEach(b => {
+          if (b.team === team) {
+              income += 50; // Default income per building
+          }
+      });
+      return income;
   }
 }

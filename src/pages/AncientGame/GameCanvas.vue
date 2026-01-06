@@ -40,23 +40,13 @@
         </div>
     </div>
 
-    <div v-if="gameState?.selectedBuilding" 
-         class="buy-menu"
-         :style="{ left: (gameState.selectedBuilding.x * 40 + 40) + 'px', top: (gameState.selectedBuilding.y * 40) + 'px' }">
-        <div class="menu-title">Recruit</div>
-        <div v-for="(stats, type) in UNIT_STATS" :key="type" 
-             class="buy-item" 
-             :class="{ disabled: gameState.money[gameState.currentTurn] < stats.cost }"
-             @click="handleBuyUnit(type)">
-            <div class="unit-preview">
-                <img v-if="getUnitImageSrc(type)" :src="getUnitImageSrc(type)" class="unit-sprite" />
-                <span v-else class="icon">{{ stats.symbol }}</span>
-            </div>
-            <span class="name">{{ type }}</span>
-            <span class="cost">{{ stats.cost }}G</span>
-        </div>
-        <button class="close-btn" @click="gameState.deselect()">Cancel</button>
-    </div>
+    <UnitStoreDialog 
+        v-if="gameState?.selectedBuilding"
+        :gameState="gameState"
+        :castle="gameState.selectedBuilding"
+        @close="gameState.deselect()"
+        @buy="handleBuyUnit"
+    />
 
     <div v-if="gameState?.winner" class="game-over-overlay">
         <div class="winner-text" :style="{ color: TEAM_COLORS[gameState.winner] }">
@@ -75,7 +65,11 @@
                 <div v-if="gameState?.selectedUnit">
                     <div class="unit-header">
                         <div class="unit-icon-large">
-                             <img v-if="getUnitImageSrc(gameState.selectedUnit.type)" :src="getUnitImageSrc(gameState.selectedUnit.type)" class="unit-sprite-large" />
+                             <div v-if="gameState.selectedUnit">
+                                <div :style="getUnitInfoStyle(gameState.selectedUnit)">
+                                    <div v-if="gameState.selectedUnit.type === 'king'" :style="getHeadStyle(gameState.selectedUnit)"></div>
+                                </div>
+                             </div>
                         </div>
                         <div class="unit-basic-stats">
                             <div class="stat-row">
@@ -125,8 +119,8 @@
                 <div v-else-if="clickedTile">
                     <div class="unit-header">
                         <div class="unit-icon-large">
-                             <!-- Placeholder for terrain/building icon -->
-                             <span style="font-size: 24px;">🏞️</span>
+                             <img v-if="getTerrainImageSrc(clickedTile)" :src="getTerrainImageSrc(clickedTile)" class="unit-sprite-large" />
+                             <span v-else style="font-size: 24px;">🏞️</span>
                         </div>
                         <div class="unit-basic-stats">
                             <div class="stat-row">
@@ -139,36 +133,36 @@
                         </div>
                     </div>
 
-                    <div v-if="gameState.getBuildingAt(clickedTile.x, clickedTile.y)" class="building-details">
-                        <div class="unit-secondary-stats">
-                            <div class="sec-stat">
-                                <span class="label">Type:</span> {{ gameState.getBuildingAt(clickedTile.x, clickedTile.y).type.toUpperCase() }}
+                    <div v-if="currentBuilding" class="building-details">
+                            <div class="unit-secondary-stats">
+                                <div class="sec-stat">
+                                    <span class="label">Type:</span> {{ currentBuildingType }}
+                                </div>
+                                <div class="sec-stat">
+                                    <span class="label">Team:</span> 
+                                    <span :style="{ color: currentBuildingTeamColor }">
+                                        {{ currentBuildingTeamName }}
+                                    </span>
+                                </div>
                             </div>
-                            <div class="sec-stat">
-                                <span class="label">Team:</span> 
-                                <span :style="{ color: TEAM_COLORS[gameState.getBuildingAt(clickedTile.x, clickedTile.y).team] || '#aaa' }">
-                                    {{ gameState.getBuildingAt(clickedTile.x, clickedTile.y).team || 'Neutral' }}
-                                </span>
+                            <div class="unit-secondary-stats">
+                                <div class="sec-stat" v-if="currentBuildingHasIncome">
+                                    <span class="label">Income:</span> 
+                                    <span class="value-gold">{{ currentBuildingIncome }}</span>
+                                </div>
+                                <div class="sec-stat" v-if="currentBuildingHasHeal">
+                                    <span class="label">Heal:</span> 
+                                    <span class="value-heal">20 HP</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="unit-secondary-stats">
-                             <div class="sec-stat" v-if="['town', 'castle'].includes(gameState.getBuildingAt(clickedTile.x, clickedTile.y).type)">
-                                <span class="label">Income:</span> 
-                                <span style="color: gold;">{{ gameState.getBuildingAt(clickedTile.x, clickedTile.y).type === 'castle' ? '100G' : '50G' }}</span>
-                            </div>
-                             <div class="sec-stat" v-if="['village', 'castle', 'town'].includes(gameState.getBuildingAt(clickedTile.x, clickedTile.y).type)">
-                                <span class="label">Heal:</span> 
-                                <span style="color: #2ecc71;">20 HP</span>
-                            </div>
-                        </div>
                     </div>
-                    <div v-else class="unit-secondary-stats">
+                    <div v-if="!currentBuilding" class="unit-secondary-stats">
                         <div class="sec-stat">
                             <span class="label">Position:</span> ({{ clickedTile.x }}, {{ clickedTile.y }})
                         </div>
-                        <div class="sec-stat" v-if="[TERRAIN.TEMPLE, TERRAIN.TEMPLE_WATER, TERRAIN.TEMPLE_HEAL].includes(clickedTile.terrain)">
+                        <div v-if="isHealTile" class="sec-stat">
                             <span class="label">Heal:</span> 
-                            <span style="color: #2ecc71;">20 HP</span>
+                            <span class="value-heal">20 HP</span>
                         </div>
                     </div>
 
@@ -191,13 +185,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed, reactive, shallowReactive, markRaw } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed, reactive, shallowReactive, markRaw, triggerRef } from 'vue';
 import { Grid } from '../../game/ancient/Grid';
 import { GameState } from '../../game/ancient/GameState';
-import { Unit } from '../../game/ancient/Unit';
+import { Unit } from '../../game/ancient/entity/Unit';
 import { AI } from '../../game/ancient/AI';
 import { SoundManager } from '../../game/ancient/SoundManager';
-import { TILE_SIZE, TERRAIN_NAMES, TERRAIN_DEFENSE, UNIT_TYPES, UNIT_STATS, TEAMS, TEAM_COLORS, TERRAIN, TERRAIN_STATS, UNIT_DESCRIPTIONS, UNIT_QUOTES, TERRAIN_DESCRIPTIONS, TERRAIN_QUOTES } from '../../game/ancient/constants';
+import { GameManager } from '../../game/ancient/manager/GameManager';
+import { CampaignContext } from '../../game/ancient/campaign/CampaignContext';
+import { TILE_SIZE, TERRAIN_NAMES, TERRAIN_DEFENSE, UNIT_TYPES, UNIT_STATS, TEAMS, TEAM_COLORS, TERRAIN, TERRAIN_STATS, UNIT_DESCRIPTIONS, UNIT_QUOTES, TERRAIN_DESCRIPTIONS, TERRAIN_QUOTES, TERRAIN_SPRITES } from '../../game/ancient/constants';
+import UnitStoreDialog from '../../components/UnitStoreDialog.vue';
 
 const props = defineProps({
   levelData: {
@@ -225,6 +222,7 @@ const canvas = ref(null);
 const ctx = ref(null);
 let grid = null;
 const gameState = ref(null); // Make reactive to update UI
+const gameManager = ref(null);
 const isAiTurn = ref(false);
 const dialogueQueue = ref([]);
 const showDialogue = ref(false);
@@ -274,24 +272,165 @@ const getUnitImageSrc = (type) => {
     return null;
 };
 
-const formatActionName = (action) => {
-    return action.charAt(0).toUpperCase() + action.slice(1).replace('_', ' ');
+// New function for Terrain/Building Images
+const getTerrainImageSrc = (tile) => {
+    if (!tile) return null;
+    
+    // Check for buildings first (Village, Castle, etc.)
+    const building = gameState.value ? gameState.value.getBuildingAt(tile.x, tile.y) : null;
+    const terrainId = tile.terrain;
+    const baseName = `t${terrainId}`;
+
+    if (building) {
+         // Special handling for Team-Colored Buildings (Town: 36, Castle: 37)
+         // Note: 30 (Village) usually doesn't change color in this set, or maybe it does?
+         // loadSprites only handles t36 and t37 for recoloring.
+         if ((terrainId === 36 || terrainId === 37) && building.team) {
+             return `/sprites_atlas/${baseName}_${building.team}.png`;
+         }
+         // Neutral or other buildings use default terrain sprite
+    }
+    
+    // Default: Return t{ID}.png
+    // Check if within range 0-83? Assuming valid.
+    return `/sprites_atlas/${baseName}.png`;
+};
+
+const getBuildingAtHelper = (tile) => {
+    if (!gameState.value || !tile) return null;
+    return gameState.value.getBuildingAt(tile.x, tile.y);
+};
+
+const currentBuilding = computed(() => {
+    if (!clickedTile.value) return null;
+    return getBuildingAtHelper(clickedTile.value);
+});
+
+const currentBuildingIncome = computed(() => {
+    const b = currentBuilding.value;
+    if (!b) return null;
+    return getIncome(b.type);
+});
+
+const currentBuildingHasIncome = computed(() => {
+    const b = currentBuilding.value;
+    if (!b) return false;
+    return hasIncome(b.type);
+});
+
+const currentBuildingHasHeal = computed(() => {
+    const b = currentBuilding.value;
+    if (!b) return false;
+    return hasHeal(b.type);
+});
+
+const currentBuildingTeamColor = computed(() => {
+    const b = currentBuilding.value;
+    if (!b || !b.team) return '#aaa';
+    return TEAM_COLORS[b.team] || '#aaa';
+});
+
+const currentBuildingTeamName = computed(() => {
+    const b = currentBuilding.value;
+    if (!b || !b.team) return 'Neutral';
+    return b.team;
+});
+
+const currentBuildingType = computed(() => {
+    const b = currentBuilding.value;
+    if (!b) return '';
+    return b.type.toUpperCase();
+});
+
+const isHealTile = computed(() => {
+   if (!clickedTile.value) return false;
+   return [TERRAIN.TEMPLE, TERRAIN.TEMPLE_WATER, TERRAIN.TEMPLE_HEAL].includes(clickedTile.value.terrain);
+});
+
+const getUnitInfoStyle = (unit) => {
+    if (!unit) return {};
+    const stats = UNIT_STATS[unit.type];
+    if (!stats || !stats.spriteAtlas) return {};
+
+    const unitIndex = parseInt(stats.spriteAtlas.substring(1));
+    const team = unit.team;
+    
+    const teamOrder = [TEAMS.BLUE, TEAMS.RED, TEAMS.GREEN, TEAMS.BLACK];
+    const teamIndex = Math.max(0, teamOrder.indexOf(team));
+    
+    // Precision fix: Explicitly set width based on known column count (21 columns: u0-u20)
+    // 21 columns * 64px = 1344px
+    return {
+        backgroundImage: `url(/sprites_atlas/unit_sheet_${teamIndex}.png)`,
+        backgroundSize: `1344px 128px`, 
+        backgroundPosition: `-${unitIndex * 64}px 0px`, 
+        backgroundRepeat: 'no-repeat',
+        imageRendering: 'pixelated',
+        width: '64px',
+        height: '64px',
+        position: 'relative' // For absolute positioning of head
+    };
+};
+
+const getHeadStyle = (unit) => {
+    if (!unit || unit.type !== UNIT_TYPES.KING) return {};
+    const team = unit.team;
+    const teamOrder = [TEAMS.BLUE, TEAMS.RED, TEAMS.GREEN, TEAMS.BLACK];
+    const teamIndex = Math.max(0, teamOrder.indexOf(team));
+
+    // Head positioning (Based on Java: x + 7/24*ts, y + ts/2 - 0)
+    // TS mapped to 64px here.
+    // X = 64 * 7/24 approx 18.6px
+    // Y = 64 * 12/24 approx 32px (Base Y offset, inverted for web?)
+    // In Java "y + ts/2" is typically "center vertically" or similar depending on origin.
+    // If Java origin is bottom-left: y + 24 is 24px up from bottom. (Mid-point).
+    // The head is 24px high. So it sits from 24px to 48px (Top half).
+    // In Web (Top-Left origin): Top half corresponds to Y=0 to 24px.
+    // So Top estimate: 0 to 10px range.
+    
+    // Width: 13/24 * 64 = 34.6px
+    // Height: 12/24 * 64 = 32px
+    
+    // heads.png has 4 frames. 
+    // Assuming heads.png is e.g. 104x24 (original). 
+    // We display it scaled.
+    // backgroundSize: 4 frames * Width
+    
+    return {
+        backgroundImage: `url(/sprites_atlas/heads.png)`,
+        backgroundSize: `auto 32px`, // Height 32px
+        backgroundPosition: `-${teamIndex * (34.6)}px 0`, // Approx width shift?
+        // Wait, better to let background size scale automatically based on aspect ratio?
+        // Original: 26x24. Scaled 2x? Or just fit to 32px height?
+        // 64 unit icon. 48 original tile. 64/48 = 1.33 scale.
+        // Head original: 26x24. Scaled: 34.6 x 32.
+        // backgroundSize: (4 * 34.6)px 32px = 138.6px 32px.
+        
+        // Let's rely on fixed aspect calc.
+        backgroundSize: `140px 32px`, // 4 frames approx
+        backgroundPosition: `-${teamIndex * 35}px 0px`, 
+        
+        width: '35px',
+        height: '32px',
+        position: 'absolute',
+        top: '0px', // Top of tile
+        left: '18px', // Centered horizontally usually? 7/24 is approx 29%
+        imageRendering: 'pixelated'
+    };
+};
+const getIncome = (buildingType) => {
+    return buildingType === 'castle' ? '100G' : '50G';
+};
+
+const hasIncome = (buildingType) => {
+    return ['town', 'castle'].includes(buildingType);
+};
+
+const hasHeal = (buildingType) => {
+    return ['village', 'castle', 'town'].includes(buildingType);
 };
 
 const selectAction = (action) => {
-    if (action === 'buy') {
-        if (gameState.value && gameState.value.selectedUnit) {
-            const unit = gameState.value.selectedUnit;
-            const building = gameState.value.getBuildingAt(unit.x, unit.y);
-            if (building) {
-                gameState.value.selectedBuilding = building;
-                gameState.value.selectedUnit = null; // Deselect unit to show buy menu
-                menuVisible.value = false;
-            }
-        }
-        return;
-    }
-
     interactionMode.value = 'target';
     selectedAction.value = action;
     
@@ -324,6 +463,10 @@ const initGame = () => {
   grid.setAtlasImages(atlasImages); // Inject atlas images
   gameState.value = new GameState(grid, props.levelData);
   
+  // Initialize GameManager for logic handling
+  // We pass gameState as gameCore. Note: GameState must implement necessary interfaces (canBuy, buyUnit, etc.)
+  gameManager.value = new GameManager(gameState.value, null, soundManager, null);
+  
   if (props.gameConfig && props.gameConfig.players) {
       // Override money and set alliances
       Object.entries(props.gameConfig.players).forEach(([team, config]) => {
@@ -336,53 +479,6 @@ const initGame = () => {
       });
   }
 
-  // Campaign Initialization
-  if (props.campaignConfig && props.campaignConfig.stageData) {
-      const stage = props.campaignConfig.stageData;
-      
-      // Create a context object for the stage script to use
-      const context = {
-          setAlliance: (team, alliance) => {
-              gameState.value.alliances[team] = alliance;
-          },
-          setVar: (name, value) => {
-              if (!gameState.value.vars) gameState.value.vars = {};
-              gameState.value.vars[name] = value;
-          },
-          getVar: (name) => {
-              return gameState.value.vars ? gameState.value.vars[name] : undefined;
-          },
-          showDialog: (messages) => {
-              console.log("DIALOGUE:", messages);
-              if (messages.length > 0) {
-                  dialogueQueue.value = messages;
-                  currentDialogueIndex.value = 0;
-                  showDialogue.value = true;
-              }
-          },
-          spawnUnit: (team, type, x, y) => {
-              const u = new Unit(type, team, x, y);
-              gameState.value.addUnit(u);
-              // Trigger spawn effect?
-          },
-          countUnits: (team) => {
-              return gameState.value.units.filter(u => u.team === team && u.hp > 0).length;
-          },
-          gameOver: (winner) => {
-              gameState.value.winner = winner;
-          }
-      };
-
-      // Attach context to gameState for event hooks
-      gameState.value.campaignContext = context;
-      gameState.value.stageScript = stage;
-
-      // Run onGameStart
-      if (stage.onGameStart) {
-          stage.onGameStart(context);
-      }
-  }
-  
   // Register animation callback
   gameState.value.onEvent = (type, data) => {
       if (type === 'move') {
@@ -393,8 +489,8 @@ const initGame = () => {
           triggerDeathAnimation(data.unit);
       } else if (type === 'skill') {
           triggerSkillAnimation(data.unit, data.targetX, data.targetY, data.skillName);
-      } else if (type === 'buy') {
-          soundManager.play('buy');
+      } else if (type === 'buy' || type === 'spawn') {
+          if (type === 'buy') soundManager.play('buy');
           // Use summon visual effect for spawning
           const effect = {
               x: data.unit.x * TILE_SIZE,
@@ -405,8 +501,32 @@ const initGame = () => {
               time: 0
           };
           oneShotEffects.value.push(effect);
+      } else if (type === 'dialog') {
+          // Handle dialog event from CampaignContext
+          if (data && data.length > 0) {
+              dialogueQueue.value = data;
+              currentDialogueIndex.value = 0;
+              showDialogue.value = true;
+          }
       }
   };
+
+  // Campaign Initialization
+  if (props.campaignConfig && props.campaignConfig.stageData) {
+      const stage = props.campaignConfig.stageData;
+      
+      // Create a context object for the stage script to use
+      const context = new CampaignContext(gameState.value);
+
+      // Attach context to gameState for event hooks
+      gameState.value.campaignContext = context;
+      gameState.value.stageScript = stage;
+
+      // Run onGameStart
+      if (stage.onGameStart) {
+          stage.onGameStart(context);
+      }
+  }
 
   // Initialize units from map data if available
   if (units && units.length > 0) {
@@ -656,47 +776,38 @@ const render = () => {
       }
 
       // Draw Path
-      if (currentPath.value.length > 0 && atlasImages['button_regular_down'] && atlasImages['button_regular_down'].complete && !isAiTurn.value) {
-          const img = atlasImages['button_regular_down'];
+      if (currentPath.value.length > 0 && !isAiTurn.value) {
+          // Use Red Color for path (Classic Style)
+          ctx.value.fillStyle = 'rgba(255, 0, 0, 0.6)'; 
           
-          // Draw from index 1 (index 0 is unit pos)
-          for (let i = 1; i < currentPath.value.length; i++) {
+          for (let i = 0; i < currentPath.value.length; i++) {
               const curr = currentPath.value[i];
-              const prev = currentPath.value[i-1];
+              const prev = i > 0 ? currentPath.value[i-1] : null;
               const next = i < currentPath.value.length - 1 ? currentPath.value[i+1] : null;
               
               const px = curr.x * TILE_SIZE;
               const py = curr.y * TILE_SIZE;
-              
-              const dotSize = TILE_SIZE / 3.5; 
-              const centerOffset = (TILE_SIZE - dotSize) / 2;
-              const gap = TILE_SIZE / 3; 
-              
-              // Always draw Center
-              ctx.value.drawImage(img, px + centerOffset, py + centerOffset, dotSize, dotSize);
+              const cx = px + TILE_SIZE / 2;
+              const cy = py + TILE_SIZE / 2;
+              const w = TILE_SIZE / 3; // Width of the path line
 
-              // Draw Entry (From Prev)
-              if (prev.x < curr.x) { // Came from Left
-                  ctx.value.drawImage(img, px + centerOffset - gap, py + centerOffset, dotSize, dotSize);
-              } else if (prev.x > curr.x) { // Came from Right
-                  ctx.value.drawImage(img, px + centerOffset + gap, py + centerOffset, dotSize, dotSize);
-              } else if (prev.y < curr.y) { // Came from Top
-                  ctx.value.drawImage(img, px + centerOffset, py + centerOffset - gap, dotSize, dotSize);
-              } else if (prev.y > curr.y) { // Came from Bottom
-                  ctx.value.drawImage(img, px + centerOffset, py + centerOffset + gap, dotSize, dotSize);
+              // Draw Center
+              ctx.value.fillRect(cx - w/2, cy - w/2, w, w);
+
+              // Draw Connection to Prev
+              if (prev) {
+                  if (prev.x < curr.x) ctx.value.fillRect(px, cy - w/2, TILE_SIZE/2, w);
+                  else if (prev.x > curr.x) ctx.value.fillRect(cx, cy - w/2, TILE_SIZE/2, w);
+                  else if (prev.y < curr.y) ctx.value.fillRect(cx - w/2, py, w, TILE_SIZE/2);
+                  else if (prev.y > curr.y) ctx.value.fillRect(cx - w/2, cy, w, TILE_SIZE/2);
               }
-
-              // Draw Exit (To Next)
+              
+              // Draw Connection to Next
               if (next) {
-                  if (next.x < curr.x) { // Going Left
-                      ctx.value.drawImage(img, px + centerOffset - gap, py + centerOffset, dotSize, dotSize);
-                  } else if (next.x > curr.x) { // Going Right
-                      ctx.value.drawImage(img, px + centerOffset + gap, py + centerOffset, dotSize, dotSize);
-                  } else if (next.y < curr.y) { // Going Top
-                      ctx.value.drawImage(img, px + centerOffset, py + centerOffset - gap, dotSize, dotSize);
-                  } else if (next.y > curr.y) { // Going Bottom
-                      ctx.value.drawImage(img, px + centerOffset, py + centerOffset + gap, dotSize, dotSize);
-                  }
+                  if (next.x < curr.x) ctx.value.fillRect(px, cy - w/2, TILE_SIZE/2, w);
+                  else if (next.x > curr.x) ctx.value.fillRect(cx, cy - w/2, TILE_SIZE/2, w);
+                  else if (next.y < curr.y) ctx.value.fillRect(cx - w/2, py, w, TILE_SIZE/2);
+                  else if (next.y > curr.y) ctx.value.fillRect(cx - w/2, cy, w, TILE_SIZE/2);
               }
               
               // Draw Target Cursor on top of the last tile
@@ -837,71 +948,8 @@ const render = () => {
       const teamIndex = ['blue', 'red', 'green', 'black'].indexOf(unit.team);
       const sheetKey = `unit_sheet_${teamIndex >= 0 ? teamIndex : 0}`;
       
-      // Check for individual sprite override (for new units or missing ones)
-      // u11 (Wisdom Crystal), u19 (Mermaid), u20 (Druid) and others > 18
-      const useIndividual = unitIndex >= 19 || unitIndex === 11;
-      
-      // Try to use _0 and _1 for animation if available
-      const img0 = atlasImages[`u${unitIndex}_0`];
-      const img1 = atlasImages[`u${unitIndex}_1`];
-
-      if (useIndividual && img0 && img0.complete && img1 && img1.complete) {
-          const isDone = unit.state === 'done';
-          const frame = isDone ? 0 : Math.floor(Date.now() / 500) % 2;
-          
-          const img = frame === 0 ? img0 : img1;
-          
-          const oldSmoothing = ctx.value.imageSmoothingEnabled;
-          ctx.value.imageSmoothingEnabled = false;
-
-          if (isDone) {
-              ctx.value.filter = 'grayscale(100%)';
-          }
-          
-          ctx.value.drawImage(img, 
-              0, 0, img.width, img.height,
-              px, py, TILE_SIZE, TILE_SIZE
-          );
-          
-          if (isDone) {
-              ctx.value.filter = 'none';
-          }
-          ctx.value.imageSmoothingEnabled = oldSmoothing;
-          return; // Skip sheet drawing
-      }
-
-      if (useIndividual && atlasImages[`u${unitIndex}`] && atlasImages[`u${unitIndex}`].complete) {
-          const img = atlasImages[`u${unitIndex}`];
-          
-          // Assume horizontal strip (2 frames) if width > height
-          const isStrip = img.width > img.height;
-          const frameWidth = isStrip ? img.width / 2 : img.width;
-          const frameHeight = img.height;
-          
-          const isDone = unit.state === 'done';
-          const frame = isDone ? 0 : Math.floor(Date.now() / 500) % 2;
-          
-          // Frame 0 is usually left, Frame 1 is right
-          const sx = (isStrip && !isDone && frame === 1) ? frameWidth : 0;
-          
-          const oldSmoothing = ctx.value.imageSmoothingEnabled;
-          ctx.value.imageSmoothingEnabled = false;
-
-          if (isDone) {
-              ctx.value.filter = 'grayscale(100%)';
-          }
-          
-          ctx.value.drawImage(img, 
-              sx, 0, frameWidth, frameHeight,
-              px, py, TILE_SIZE, TILE_SIZE
-          );
-          
-          if (isDone) {
-              ctx.value.filter = 'none';
-          }
-          ctx.value.imageSmoothingEnabled = oldSmoothing;
-          return; // Skip sheet drawing
-      }
+      // Removed individual sprite check as requested by user. All units now in sheets.
+      // const useIndividual = unitIndex >= 19 || unitIndex === 11;
 
       if (unitIndex >= 0 && atlasImages[sheetKey] && atlasImages[sheetKey].complete) {
           const img = atlasImages[sheetKey];
@@ -926,7 +974,7 @@ const render = () => {
           
           // Animation: 500ms per frame
           // If done, freeze frame at 0
-          const isDone = unit.state === 'done';
+          const isDone = unit.state === 'done' && !animationStates.has(unit);
           const frame = isDone ? 0 : Math.floor(Date.now() / 500) % 2;
           
           // Row 0: Frame 0
@@ -962,7 +1010,9 @@ const render = () => {
           if (unit.type === UNIT_TYPES.KING && atlasImages['heads'] && atlasImages['heads'].complete) {
               const headImg = atlasImages['heads'];
               const headSize = headImg.width / 4; // 4 heads in a row
-              const headIndex = (unit.variant || 0) % 4;
+              
+              // Use teamIndex calculated above
+              const headIndex = Math.max(0, teamIndex); 
               
               const hsx = headIndex * headSize;
               
@@ -988,7 +1038,7 @@ const render = () => {
               const destH = TILE_SIZE * (12/24);
               
               ctx.value.drawImage(headImg,
-                  hsx, 0, headSize, headSize,
+                  hsx, 0, headSize, headImg.height, // Use full height (32 typically)
                   destX, destY, destW, destH
               );
           }
@@ -1330,16 +1380,21 @@ const animationStates = new Map(); // Unit -> { visual: {x, y}, attack: ... }
 const currentPath = ref([]);
 
 const findPath = (from, to, unit) => {
-    // Simple BFS to find a valid path for animation
-    const queue = [[from]];
-    const visited = new Set([`${from.x},${from.y}`]);
+    // Dijkstra to find path with lowest movement cost
+    const queue = [{ pos: from, cost: 0, path: [from] }];
+    const visited = new Map(); // key -> minCost
     
     while (queue.length > 0) {
-        const path = queue.shift();
-        const curr = path[path.length - 1];
+        // Sort by cost (Simple Priority Queue)
+        queue.sort((a, b) => a.cost - b.cost);
+        const { pos: curr, cost, path } = queue.shift();
         
         if (curr.x === to.x && curr.y === to.y) return path;
         
+        const key = `${curr.x},${curr.y}`;
+        if (visited.has(key) && visited.get(key) <= cost) continue;
+        visited.set(key, cost);
+
         const neighbors = [
             {x: curr.x, y: curr.y - 1},
             {x: curr.x, y: curr.y + 1},
@@ -1349,20 +1404,17 @@ const findPath = (from, to, unit) => {
         
         for (const n of neighbors) {
             if (n.x < 0 || n.x >= grid.width || n.y < 0 || n.y >= grid.height) continue;
-            const key = `${n.x},${n.y}`;
-            if (visited.has(key)) continue;
             
-            // Check obstacles
-            const cost = gameState.value.getMovementCost(unit, n.x, n.y);
-            if (cost > 10) continue; // Impassable
-            
-            // Check units
+            // Check obstacles and cost
+            const moveCost = gameState.value.getMovementCost(unit, n.x, n.y);
+            if (moveCost > 99) continue; // Impassable
+
+            // Check units (Block enemies)
             const u = gameState.value.getUnitAt(n.x, n.y);
-            // Block enemies, allow allies
             if (u && u !== unit && u.team !== unit.team) continue;
             
-            visited.add(key);
-            queue.push([...path, n]);
+            const newCost = cost + moveCost;
+            queue.push({ pos: n, cost: newCost, path: [...path, n] });
         }
     }
     return [from, to]; // Fallback
@@ -1528,6 +1580,11 @@ const startRenderLoop = () => {
         gameState.value.updateEffects();
         updateAnimations(dt);
     }
+    
+    if (gameManager.value) {
+        gameManager.value.update(dt * 1000);
+    }
+
     render();
     animationFrameId = requestAnimationFrame(loop);
   };
@@ -1648,21 +1705,15 @@ const handleClick = async (event) => {
       // Always update clickedTile when clicking on the map
       const terrain = grid.getTerrainAt(tile.x, tile.y);
       clickedTile.value = { ...tile, terrain };
-
-      // DEBUG: Log tile info on click
-      const building = gameState.value.getBuildingAt(tile.x, tile.y);
-      console.log(`[Click Debug] Tile: (${tile.x}, ${tile.y}), Terrain: ${terrain}`);
-      if (building) {
-          console.log(`[Click Debug] Building: Type=${building.type}, Team=${building.team}`);
-          const spriteName = `t${terrain === 136 ? 36 : (terrain === 4 ? 37 : terrain)}`; // Simple mapping guess
-          const teamSuffix = building.team ? `_${building.team}` : '_neutral';
-          const fullSpriteName = spriteName + teamSuffix;
-          console.log(`[Click Debug] Expected Sprite: ${fullSpriteName}`);
-          console.log(`[Click Debug] Atlas Image Exists: ${!!atlasImages[fullSpriteName]}`);
-          if (atlasImages[fullSpriteName]) {
-               console.log(`[Click Debug] Image Src: ${atlasImages[fullSpriteName].src.substring(0, 50)}...`);
-          }
-      }
+      
+      // If we clicked on a unit, we want to prioritize showing the unit in the modal if it opens
+      // But if we clicked on empty terrain, we want the tile info.
+      // The modal uses v-if="gameState.selectedUnit" then v-else-if="clickedTile"
+      // If a unit is selected (game statewise), it shows unit info.
+      // If no unit is selected, it shows tile info (if clickedTile is set).
+      
+      // However, handleClick logic below changes selectedUnit.
+      // We should ensure clickedTile is accurate to the clicked location.
 
       // Target Selection Mode
       if (interactionMode.value === 'target') {
@@ -1706,6 +1757,8 @@ const handleClick = async (event) => {
     // Pass myTeam to selectTile to ensure we can only move OUR units
     // But allow selecting enemy units to see range (handled in GameState)
     const result = await gameState.value.selectTile(tile.x, tile.y, myTeam);
+    console.log("[GameCanvas] selectTile result:", result);
+    triggerRef(gameState); // Force update UI to reflect state changes (e.g. selectedBuilding)
     
     if (result && result.action === 'select') {
         soundManager.play('select');
@@ -1729,6 +1782,7 @@ const handleClick = async (event) => {
     } else if (result && result.action === 'move') {
         // menuVisible.value = true; // Delayed until animation finishes
         interactionMode.value = 'normal'; // Ensure we are in normal mode to show menu
+        currentPath.value = []; // Clear path immediately upon move confirmation
     } else if (result && result.action === 'cancel_move') {
         // Move cancelled, re-show menu at original position?
         // No, if cancelled, we go back to 'select' state.
@@ -1751,6 +1805,9 @@ const handleClick = async (event) => {
     } else if (result && result.action === 'attack') {
         interactionMode.value = 'normal';
         menuVisible.value = false;
+        if (unitBefore) {
+            unitBefore.state = 'done';
+        }
     } else {
         menuVisible.value = false;
     }
@@ -1809,31 +1866,34 @@ const endTurn = async () => {
         emit('mp-action', { type: 'endTurn' });
     }
 
+    // End the current player's turn
     gameState.value.endTurn();
 
-    // Check for AI turn based on gameConfig or default behavior
-    const currentTeam = gameState.value.currentTurn;
-    let isCpu = false;
+    // Loop to handle consecutive AI turns
+    while (!gameState.value.winner) {
+        const currentTeam = gameState.value.currentTurn;
+        let isCpu = false;
 
-    if (props.multiplayer) {
-        // In multiplayer, we never run AI locally for the opponent
-        isCpu = false;
-    } else if (props.gameConfig && props.gameConfig.players) {
-        // Use provided config
-        const playerConfig = props.gameConfig.players[currentTeam];
-        if (playerConfig && playerConfig.type === 'cpu') {
-            isCpu = true;
+        if (props.multiplayer) {
+            // In multiplayer, we never run AI locally for the opponent
+            isCpu = false;
+        } else if (props.gameConfig && props.gameConfig.players) {
+            // Use provided config
+            const playerConfig = props.gameConfig.players[currentTeam];
+            if (playerConfig && playerConfig.type === 'cpu') {
+                isCpu = true;
+            }
+        } else {
+            // Default fallback: Red is AI
+            if (currentTeam === TEAMS.RED) {
+                isCpu = true;
+            }
         }
-    } else {
-        // Default fallback: Red is AI
-        if (currentTeam === TEAMS.RED) {
-            isCpu = true;
-        }
-    }
 
-    if (isCpu) {
+        if (!isCpu) break; // Human turn or network opponent
+
+        // It's an AI turn
         isAiTurn.value = true;
-        // Deselect any player selection before AI starts
         gameState.value.deselect();
         
         // Small delay for visual pacing
@@ -1844,8 +1904,14 @@ const endTurn = async () => {
         
         // Ensure AI deselects everything when done
         gameState.value.deselect();
-        isAiTurn.value = false;
+
+        if (gameState.value.winner) break;
+
+        // End the AI's turn to pass to next player
+        gameState.value.endTurn();
     }
+    
+    isAiTurn.value = false;
 };
 
 const waitUnit = () => {
@@ -1877,9 +1943,11 @@ const cancelMove = () => {
 const handleBuyUnit = (type) => {
     if (gameState.value && gameState.value.selectedBuilding) {
         const b = gameState.value.selectedBuilding;
-        const newUnit = gameState.value.buyUnit(type, b.x, b.y);
-        if (newUnit) {
-            // Sound handled by onEvent
+        
+        // Use GameManager
+        if (gameManager.value) {
+            gameManager.value.doBuyUnit(type, b.x, b.y);
+            
             if (props.multiplayer) {
                 emit('mp-action', {
                     type: 'buy',
@@ -1888,8 +1956,6 @@ const handleBuyUnit = (type) => {
                     y: b.y
                 });
             }
-        } else {
-            console.log("Not enough gold or invalid placement");
         }
     }
 };
@@ -1953,7 +2019,7 @@ const handleMouseMove = (event) => {
 const getTerrainName = (t) => TERRAIN_NAMES[t] || 'Unknown';
 const getTerrainDefense = (t) => (TERRAIN_STATS[t] ? TERRAIN_STATS[t].defense : 0);
 
-const handleOpponentAction = (action) => {
+const handleOpponentAction = async (action) => {
     if (!gameState.value) return;
     console.log("Received opponent action:", action);
 
@@ -1969,7 +2035,8 @@ const handleOpponentAction = (action) => {
             const attacker = gameState.value.getUnitAt(action.attacker.x, action.attacker.y);
             const defender = gameState.value.getUnitAt(action.defender.x, action.defender.y);
             if (attacker && defender) {
-                gameState.value.attackUnit(attacker, defender, action.damage);
+                await gameState.value.attackUnit(attacker, defender, action.damage);
+                attacker.state = 'done';
             }
             break;
         }
@@ -1978,7 +2045,11 @@ const handleOpponentAction = (action) => {
             break;
         }
         case 'buy': {
-            gameState.value.buyUnit(action.unitType, action.x, action.y);
+            // gameState.value.buyUnit(action.unitType, action.x, action.y);
+            // Use GameManager
+            if (gameManager.value) {
+                gameManager.value.doBuyUnit(action.unitType, action.x, action.y);
+            }
             break;
         }
         case 'skill': {
@@ -2705,12 +2776,14 @@ canvas {
     justify-content: center;
     align-items: center;
     margin-right: 15px;
+    /* overflow: hidden; Removed to debug 'headless' issue */
 }
 
 .unit-sprite-large {
-    width: 48px;
-    height: 48px;
+    width: 64px;
+    height: 64px;
     image-rendering: pixelated;
+    object-fit: contain;
 }
 
 .unit-basic-stats {
@@ -2779,5 +2852,15 @@ canvas {
     color: #7f8c8d;
     font-style: italic;
     font-size: 13px;
+}
+
+.value-gold {
+    color: gold;
+    font-weight: bold;
+}
+
+.value-heal {
+    color: #2ecc71;
+    font-weight: bold;
 }
 </style>
