@@ -578,11 +578,28 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
 router.get('/levels/:id/leaderboard', async (req, res) => {
   try {
     const levelId = parseInt(req.params.id);
-    // 获取前10名，按步数升序，然后按时间升序
-    const results = await SokobanResult.find({ levelId })
-      .sort({ moves: 1, timeElapsed: 1, createdAt: 1 })
-      .limit(10)
-      .select('username moves timeElapsed createdAt');
+    // Use aggregation on SokobanProgress to get unique best scores and join user info
+    const results = await SokobanProgress.aggregate([
+      { $match: { levelId } },
+      { $sort: { moves: 1, timeElapsed: 1, completedAt: 1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      {
+        $project: {
+          moves: 1,
+          timeElapsed: 1,
+          completedAt: 1,
+          username: { $arrayElemAt: ['$userInfo.uname', 0] }
+        }
+      }
+    ]);
 
     res.json({
       success: true,

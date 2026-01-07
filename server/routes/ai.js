@@ -145,6 +145,47 @@ async function loginToHydro() {
     return null
 }
 
+const HYDRO_STATUS_MAP = {
+    0: 'Waiting',
+    1: 'Accepted',
+    2: 'Wrong Answer',
+    3: 'Time Limit Exceeded',
+    4: 'Memory Limit Exceeded',
+    5: 'Output Limit Exceeded',
+    6: 'Runtime Error',
+    7: 'Compile Error',
+    8: 'System Error',
+    9: 'Canceled',
+    10: 'Etc',
+    11: 'Hacked',
+    20: 'Judging',
+    21: 'Compiling',
+    22: 'Fetched',
+    30: 'Ignored',
+    31: 'Format Error',
+    32: 'Hack Successful',
+    33: 'Hack Unsuccessful'
+}
+
+async function fetchHydroRecord(domainId, recordId) {
+    if (!HYDRO_CONFIG.API_URL) return null
+    const url = `${HYDRO_CONFIG.API_URL.replace(/\/$/, '')}/api/domain/${domainId}/record/${recordId}`
+    
+    try {
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': HYDRO_CONFIG.API_URL
+        }
+        if (currentHydroCookie) headers['Cookie'] = currentHydroCookie
+
+        const res = await axios.get(url, { headers, timeout: 3000 })
+        if (res.data && res.data.doc) return res.data.doc
+    } catch (e) {
+        console.warn(`[Hydro Record] Failed to fetch ${recordId}: ${e.message}`)
+    }
+    return null
+}
+
 async function uploadToHydro(problemId, domainId, files) {
     if (!HYDRO_CONFIG.API_URL) {
         console.warn('Hydro API URL not configured. Skipping upload.')
@@ -758,9 +799,9 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
       fixed = fixed.replace(/\n{3,}/g, '\n\n')
       fixed = fixed.replace(/```\s*(\w+)/g, '```$1')
       
-      return res.json({ result: fixed })
+      return res.json({ result: fixed, debugLog })
     } catch (e) {
-      return res.json({ result: content })
+      return res.json({ result: content, debugLog })
     }
   } catch (err) {
     console.error('Solution error:', err?.response?.data || err.message || err)
@@ -771,8 +812,55 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
 
 router.post('/checker', authenticateToken, checkModelPermission, async (req, res) => {
   try {
-    const { text, model } = req.body
+    const { model } = req.body
+    let { text } = req.body
+    let debugLog = [] // 收集调试日志
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
+
+    // [Fix] 修复 AC 代码被识别为 Unknown Status 的问题
+    if (text && text.includes('状态是: Unknown Status')) {
+      debugLog.push('Found "Unknown Status" in text.')
+      // 尝试解析 record URL 并获取真实状态
+      const recordMatch = text.match(/\/d\/([^\/]+)\/record\/([a-f0-9]{24})/)
+      let resolved = false
+      
+      if (recordMatch) {
+          debugLog.push(`Extracted URL: Domain=${recordMatch[1]}, RecordID=${recordMatch[2]}`)
+          try {
+              const record = await fetchHydroRecord(recordMatch[1], recordMatch[2])
+              debugLog.push(`Fetched record: ${record ? 'Found' : 'Null'}`)
+              if (record) debugLog.push(`Record raw status: ${record.status}, type: ${typeof record.status}`)
+              
+              if (record && typeof record.status === 'number') {
+                  const statusText = HYDRO_STATUS_MAP[record.status] || 'Unknown'
+                  let replaceText = `状态是: ${statusText}`
+                  if (record.score !== undefined) replaceText += ` (Score: ${record.score})`
+                  
+                  text = text.replace('状态是: Unknown Status', replaceText)
+                  console.log(`[Checker] Resolved record status to: ${statusText}`)
+                  debugLog.push(`Resolved status text: ${statusText}`)
+                  resolved = true
+              } else {
+                  debugLog.push('Record invalid or missing numeric status')
+              }
+          } catch (e) {
+              console.warn('[Checker] Failed to resolve status from URL', e)
+              debugLog.push(`Error fetching record: ${e.message}`)
+          }
+      } else {
+          debugLog.push('No record URL matched in text')
+      }
+      
+      // Fallback: 如果无法解析或获取失败，且依然是 Unknown Status，由于用户反馈通常是 AC 代码误判，
+      // 我们这里暂时不做自动 AC 处理，而是改为更中性的描述，或者保持原样但加上提示
+      // 但根据用户要求 "并非把unknown直接翻译为AC"，如果解析失败，我们保留 Unknown Status 或改为 "Status Check Failed"
+      if (!resolved && text.includes('状态是: Unknown Status')) {
+         text = text.replace('状态是: Unknown Status', '状态是: Unknown Status (无法获取评测详情，请检查链接)')
+         debugLog.push('Fallback: Kept Unknown Status due to resolution failure')
+      }
+    } else {
+        debugLog.push('Text does not contain "Unknown Status"')
+    }
 
     const apiUrl = YUN_API_URL
     const apiKey = YUN_API_KEY

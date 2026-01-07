@@ -82,9 +82,9 @@ const remainingCounts = computed(() => {
 
 // --- Game Logic ---
 
-const startTimer = () => {
+const startTimer = (reset = false) => {
   stopTimer();
-  timer.value = 0;
+  if (reset) timer.value = 0;
   timerInterval = setInterval(() => {
     timer.value++;
   }, 1000);
@@ -128,7 +128,7 @@ const loadGameData = (data) => {
     mistakes.value = 0;
     hintsUsed.value = 0;
     isPaused.value = false;
-    startTimer();
+    startTimer(true);
     saveProgress();
     fetchLeaderboard();
 };

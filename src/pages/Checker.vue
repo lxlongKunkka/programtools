@@ -193,6 +193,15 @@ model: this.model
 
 this.result = data.result || ''
 
+// Print debug info if available
+if (data.debugLog && Array.isArray(data.debugLog)) {
+  console.group('🔍 Checker Debug Log');
+  data.debugLog.forEach(log => console.log(log));
+  console.groupEnd();
+} else {
+  console.log('No debug log returned from server.');
+}
+
 } catch (e) {
 console.error('Checker error:', e)
 this.showToastMessage(`检查失败: ${e.message}`)
