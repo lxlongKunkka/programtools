@@ -1,83 +1,97 @@
-import { Map } from '../entity/Map.js';
-import { UnitFactory } from '../utils/UnitFactory.js';
-import { TileFactory } from '../utils/TileFactory.js';
+import Map from '../entity/Map.js';
+import UnitFactory from './UnitFactory.js';
+import TileFactory from './TileFactory.js';
+import { UNIT_TYPES } from '../constants.js';
 
-export class MapLoader {
-    static async load(url) {
+export default class MapLoader {
+    /**
+     * Loads a map from a JSON file URL.
+     * @param {string} url - The URL to the map JSON file.
+     * @returns {Promise<Map>} - A promise that resolves to the loaded Map entity.
+     */
+    static async loadMap(url) {
         const response = await fetch(url);
-        const buffer = await response.arrayBuffer();
-        const view = new DataView(buffer);
-        let offset = 0;
+        if (!response.ok) {
+            throw new Error(`Failed to load map: ${response.statusText}`);
+        }
+        const json = await response.json();
+        return MapLoader.parseMap(json);
+    }
 
-        // Helper to read UTF string (2 byte length + bytes)
-        function readUTF() {
-            const len = view.getUint16(offset, false); // Big Endian
-            offset += 2;
-            const bytes = new Uint8Array(buffer, offset, len);
-            offset += len;
-            return new TextDecoder().decode(bytes);
+    /**
+     * Parses the JSON object into a Map entity.
+     * @param {Object} json - The map data JSON.
+     * @returns {Map} - The populated Map entity.
+     */
+    static parseMap(json) {
+        // Create map with dimensions
+        const width = json.width;
+        const height = json.height;
+        const map = new Map(width, height);
+        
+        map.setAuthor(json.author || 'Unknown');
+        
+        // Handle team access if present (default to all false or true? Java defaults false)
+        if (json.teamAccess) {
+             for (let i = 0; i < 4; i++) {
+                 map.setTeamAccess(i, json.teamAccess[i]);
+             }
         }
 
-        function readBoolean() {
-            const val = view.getUint8(offset) !== 0;
-            offset += 1;
-            return val;
-        }
-
-        function readInt() {
-            const val = view.getInt32(offset, false); // Big Endian
-            offset += 4;
-            return val;
-        }
-
-        function readShort() {
-            const val = view.getInt16(offset, false); // Big Endian
-            offset += 2;
-            return val;
-        }
-
-        try {
-            const author = readUTF();
-            const teamAccess = [readBoolean(), readBoolean(), readBoolean(), readBoolean()];
-            const width = readInt();
-            const height = readInt();
-
-            const map = new Map(width, height);
-            map.setAuthor(author);
-            for(let i=0; i<4; i++) map.setTeamAccess(i, teamAccess[i]);
-
-            // Map Data
+        // Parse Tiles
+        // json.mapData is 2D array [height][width] or [width][height]?
+        // In classic 1 200.json, it looks like [row][col].
+        // row index acts as Y, col index acts as X.
+        // Map.js setTile(index, x, y)
+        const mapData = json.mapData;
+        
+        // Check orientation. Accessing mapData[0] gives a row.
+        // Typically mapData[y][x] in simple exporting.
+        for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                for (let y = 0; y < height; y++) {
-                    const tileIndex = readShort();
-                    map.setTile(tileIndex, x, y);
-                }
+                let tileIndex = mapData[y][x];
+                // Ensure tileIndex is valid
+                if (tileIndex === undefined) tileIndex = 0; // Default to water or something
+                map.setTile(tileIndex, x, y);
             }
-
-            // Units
-            const unitCount = readInt();
-            for (let i = 0; i < unitCount; i++) {
-                const team = readInt();
-                const unitIndex = readInt();
-                const x = readInt();
-                const y = readInt();
-                
-                // We need UnitFactory to create unit by index
-                // Java: UnitFactory.createUnit(index, team)
-                // We need to implement this mapping in UnitFactory
-                const unit = UnitFactory.createUnitFromIndex(unitIndex, team);
-                if (unit) {
-                    unit.x = x;
-                    unit.y = y;
-                    map.addUnit(unit);
-                }
-            }
-
-            return map;
-
-        } catch (e) {
-            console.error("Error loading map:", e);
-            throw e;
         }
+
+        // Parse Units
+        if (json.units) {
+            json.units.forEach(u => {
+                const teamId = MapLoader.resolveTeam(u.team);
+                const unitIndex = MapLoader.resolveUnitIndex(u.type);
+                
+                if (unitIndex !== -1) {
+                    // UnitFactory.createUnit(index, team)
+                    const unit = UnitFactory.createUnit(unitIndex, teamId);
+                    unit.setX(u.x);
+                    unit.setY(u.y);
+                    map.addUnit(unit);
+                } else {
+                    console.warn(`Unknown unit type: ${u.type}`);
+                }
+            });
+        }
+        
+        // Parse Tombs? (Not in sample JSON)
+        
+        return map;
+    }
+
+    static resolveTeam(teamName) {
+        switch (teamName.toLowerCase()) {
+            case 'blue': return 0;
+            case 'red': return 1;
+            case 'green': return 2;
+            case 'black': return 3;
+            default: return 0;
+        }
+    }
+
+    static resolveUnitIndex(typeName) {
+        if (!typeName) return -1;
+        const normalized = typeName.toLowerCase();
+        return UNIT_TYPES[normalized] !== undefined ? UNIT_TYPES[normalized] : -1;
     }
 }

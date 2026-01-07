@@ -1,6 +1,6 @@
-export class Position {
+export default class Position {
     constructor(x, y) {
-        if (typeof x === 'object' && x !== null) {
+        if (x instanceof Position) {
             this.x = x.x;
             this.y = x.y;
         } else {
@@ -17,14 +17,15 @@ export class Position {
         return this.y;
     }
 
-    equals(obj) {
-        if (obj instanceof Position) {
-            return this.x === obj.x && this.y === obj.y;
-        }
-        return false;
+    equals(position) {
+        return position instanceof Position && position.x === this.x && position.y === this.y;
     }
 
-    toString() {
-        return `Position[x=${this.x},y=${this.y}]`;
+    // HashCode in JS is not native, implemented for compatibility
+    hashCode() {
+        let hash = 3;
+        hash = 29 * hash + this.x;
+        hash = 29 * hash + this.y;
+        return hash;
     }
 }

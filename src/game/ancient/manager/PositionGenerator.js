@@ -1,5 +1,5 @@
-import { UnitToolkit } from '../utils/UnitToolkit.js';
-import { Position } from '../entity/Position.js';
+import UnitFactory from '../utils/UnitFactory.js';
+import UnitToolkit from '../utils/UnitToolkit.js';
 
 class Step {
     constructor(position, movementPoint) {
@@ -8,181 +8,174 @@ class Step {
     }
 }
 
-export class PositionGenerator {
-    constructor(gameCore) {
-        this.game = gameCore;
+export default class PositionGenerator {
+    constructor(manager) {
+        this.manager = manager;
         this.move_path = [];
         this.movable_positions = new Set();
-        this.move_mark_map = [];
         
         this.x_dir = [1, -1, 0, 0];
         this.y_dir = [0, 0, 1, -1];
-    }
-
-    getGame() {
-        return this.game;
+        
+        this.current_unit = null;
+        this.move_mark_map = null;
     }
 
     reset() {
         this.current_unit = null;
     }
 
+    getGame() {
+        return this.manager.getGame();
+    }
+
+    getPosition(unit) {
+        return this.getGame().getMap().getPosition(unit.getX(), unit.getY());
+    }
+
+    createStartStep(unit) {
+        // Step(position, mp)
+        const pos = this.getPosition(unit);
+        return [ new Step(pos, unit.getCurrentMovementPoint()) ];
+    }
+
     initializeMoveMarkMap() {
-        const width = this.getGame().map.getWidth();
-        const height = this.getGame().map.getHeight();
-        this.move_mark_map = Array(width).fill().map(() => Array(height).fill(Number.MIN_SAFE_INTEGER));
+        const width = this.getGame().getMap().getWidth();
+        const height = this.getGame().getMap().getHeight();
+        this.move_mark_map = Array.from({ length: width }, () => new Int32Array(height).fill(-999999));
     }
 
     createMovablePositions(unit, preview = false) {
         this.movable_positions.clear();
         if (!unit) return new Set();
 
-        this.current_unit = unit; 
+        this.current_unit = UnitFactory.cloneUnit(unit);
         this.initializeMoveMarkMap();
         
-        const startStep = new Step(new Position(unit.x, unit.y), unit.moved ? 0 : unit.moveRange); 
+        const startSteps = this.createStartStep(unit);
+        this.processSteps(startSteps, unit, preview);
         
-        const currentSteps = [startStep];
-        this.bfsMovablePositions(currentSteps, unit, preview);
-        
-        return new Set(this.movable_positions);
+        return new Set(this.movable_positions); // Return shallow copy
     }
 
-    bfsMovablePositions(currentSteps, unit, preview) {
-        // Iterative BFS
+    createAttackablePositions(unit) {
+        const attackable = new Set();
+        const map = this.getGame().getMap();
+        const minRange = unit.getMinAttackRange();
+        const maxRange = unit.getMaxAttackRange();
+        const startX = unit.getX();
+        const startY = unit.getY();
+
+        for (let x = startX - maxRange; x <= startX + maxRange; x++) {
+            for (let y = startY - maxRange; y <= startY + maxRange; y++) {
+                if (map.isWithinMap(x, y)) {
+                    const dist = Math.abs(x - startX) + Math.abs(y - startY);
+                    if (dist >= minRange && dist <= maxRange) {
+                        const targetUnit = map.getUnit(x, y);
+                         if (targetUnit && targetUnit.getTeam() !== unit.getTeam()) {
+                             attackable.add(map.getPosition(x, y));
+                        }
+                    }
+                }
+            }
+        }
+        return attackable;
+    }
+
+    processSteps(currentSteps, unit, preview) {
+        const nextSteps = []; // Not used? Java uses recursive call or loops?
+        // Java code:
+        // createMovablePositions(Queue<Step> current_steps, ...)
+        // while (!current_steps.isEmpty()) ...
+        //   recurse? No, it pushes to queue?
+        // Java uses BFS probably.
+        
+        // Wait, standard BFS would use a single queue.
+        // Java snippet read earlier:
+        /*
+        private void createMovablePositions(Queue<Step> current_steps, Unit unit, boolean preview) {
+            Queue<Step> next_steps = new LinkedList<Step>();
+            while (!current_steps.isEmpty()) {
+                 ...
+                 // logic adds to movable_positions and if remaining MP, adds to ... next_steps? maybe implied?
+                 // Wait, snippet ended at "int movement_point_cost = UnitToolkit..."
+            }
+        */
+        
+        // Typical BFS logic for turn based strategy:
+        // Queue = start
+        // while queue not empty:
+        //   pop current
+        //   check neighbors
+        //   calc cost
+        //   if cost <= remaining MP AND better path found:
+        //      push neighbor to queue
+        
         const queue = [...currentSteps];
         
         while (queue.length > 0) {
             const currentStep = queue.shift();
-            const stepX = currentStep.position.x;
-            const stepY = currentStep.position.y;
+            const stepPos = currentStep.position;
             const currentMp = currentStep.movementPoint;
-
-            if (currentMp > this.move_mark_map[stepX][stepY]) {
-                this.move_mark_map[stepX][stepY] = currentMp;
+            
+            // Note: Java uses move_mark_map to prune suboptimal paths (Dijkstra-ish)
+            if (currentMp > this.move_mark_map[stepPos.x][stepPos.y]) {
+                this.move_mark_map[stepPos.x][stepPos.y] = currentMp;
                 
-                if (preview || this.canUnitMove(unit, stepX, stepY)) {
-                    const posObj = this.getGame().map.positions[stepX][stepY];
-                    this.movable_positions.add(posObj);
+                // Can we stop (stand) here?
+                // If preview, yes (ignore unit collision).
+                // If not preview, check unit collision.
+                // canUnitMove checks occupancy?
+                if (preview || this.getGame().canUnitMove(unit, stepPos.x, stepPos.y)) {
+                     this.movable_positions.add(stepPos);
                 }
                 
+                // Neighbors
                 for (let i = 0; i < 4; i++) {
-                    const nextX = stepX + this.x_dir[i];
-                    const nextY = stepY + this.y_dir[i];
-
-                    if (this.getGame().map.isValid(nextX, nextY)) {
-                        const nextTile = this.getGame().map.getTile(nextX, nextY);
-                        const mpCost = UnitToolkit.getMovementPointCost(unit, nextTile);
-                        const mpLeft = currentMp - mpCost;
-
-                        // Optimization: Only push if this path is better
-                        if (mpCost <= currentMp && mpLeft > this.move_mark_map[nextX][nextY]) {
-                            const targetUnit = this.getGame().map.units.get(this.getGame().map.positions[nextX][nextY]);
-                            
-                            if (preview || this.canMoveThrough(unit, targetUnit)) {
-                                const nextPos = this.getGame().map.positions[nextX][nextY];
-                                queue.push(new Step(nextPos, mpLeft));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    findPath(unit, targetPos) {
-        // BFS to find path
-        const startPos = this.getGame().map.positions[unit.x][unit.y];
-        
-        this.initializeMoveMarkMap();
-        const parentMap = new Map(); // child -> parent
-        
-        const startStep = new Step(startPos, unit.moveRange);
-        const openSet = [startStep];
-        this.move_mark_map[startPos.x][startPos.y] = unit.moveRange;
-        
-        let found = false;
-        
-        while (openSet.length > 0) {
-            // Sort by MP left (Dijkstra-ish, max MP first)
-            openSet.sort((a, b) => b.movementPoint - a.movementPoint);
-            const currentStep = openSet.shift();
-            const currentPos = currentStep.position;
-            
-            if (currentPos === targetPos) {
-                found = true;
-                break;
-            }
-            
-            for (let i = 0; i < 4; i++) {
-                const nextX = currentPos.x + this.x_dir[i];
-                const nextY = currentPos.y + this.y_dir[i];
-                
-                if (this.getGame().map.isValid(nextX, nextY)) {
-                    const nextPos = this.getGame().map.positions[nextX][nextY];
-                    const nextTile = this.getGame().map.getTile(nextX, nextY);
-                    const mpCost = UnitToolkit.getMovementPointCost(unit, nextTile);
-                    const mpLeft = currentStep.movementPoint - mpCost;
+                    const nextX = stepPos.x + this.x_dir[i];
+                    const nextY = stepPos.y + this.y_dir[i];
                     
-                    if (mpCost <= currentStep.movementPoint && mpLeft > this.move_mark_map[nextX][nextY]) {
-                        const targetUnit = this.getGame().map.units.get(nextPos);
-                        if (this.canMoveThrough(unit, targetUnit)) {
-                            this.move_mark_map[nextX][nextY] = mpLeft;
-                            parentMap.set(nextPos, currentPos);
-                            openSet.push(new Step(nextPos, mpLeft));
+                    if (this.getGame().getMap().isWithinMap(nextX, nextY)) {
+                        const nextPos = this.getGame().getMap().getPosition(nextX, nextY);
+                        const nextTile = this.getGame().getMap().getTile(nextX, nextY);
+                        
+                        const cost = UnitToolkit.getMovementPointCost(unit, nextTile);
+                        
+                        // Check if passable
+                        // Usually cost < 99.
+                        // And check Enemy Unit blocking (Zone of Control or just blocked)
+                        
+                        // Check for enemy unit blocking passage?
+                        // "canPass" logic usually checks unit layer.
+                        
+                        // If tile cost large, cannot move.
+                        if (cost <= currentMp) {
+                             // Check for unit blocking?
+                             // Generally in AEII, you cannot move THROUGH enemies unless flying/stealth.
+                             // Passable check:
+                             if (this.canPass(unit, nextX, nextY)) {
+                                 queue.push(new Step(nextPos, currentMp - cost));
+                             }
                         }
                     }
                 }
             }
         }
-        
-        if (found) {
-            const path = [];
-            let curr = targetPos;
-            while (curr !== startPos) {
-                path.unshift(curr);
-                curr = parentMap.get(curr);
-            }
-            return path;
-        }
-        return [targetPos]; // Fallback
-    }
-
-    canUnitMove(unit, x, y) {
-        // Can the unit end its turn at x,y?
-        // 1. Must be valid terrain (handled by cost check usually, but cost might be 99)
-        // 2. Must not be occupied by another unit (unless it's the unit itself)
-        const targetUnit = this.getGame().map.units.get(this.getGame().map.positions[x][y]);
-        if (targetUnit && targetUnit !== unit) return false;
-        return true;
-    }
-
-    canMoveThrough(unit, targetUnit) {
-        // Can move through empty space or allies
-        if (!targetUnit) return true;
-        return !this.getGame().isEnemy(unit.team, targetUnit.team);
     }
     
-    createAttackablePositions(unit, movedPos) {
-        // Calculate attack range from the moved position (or current position)
-        const positions = new Set();
-        const minRange = unit.attackRange[0];
-        const maxRange = unit.attackRange[1];
-        const startX = movedPos ? movedPos.x : unit.x;
-        const startY = movedPos ? movedPos.y : unit.y;
+    canPass(unit, x, y) {
+        // Check unit at x,y
+        // If enemy, return false (unless special ability)
+        // If ally, return true (can pass through, but maybe not stand?)
+        const targetUnit = this.getGame().getMap().getUnit(x, y);
+        if (!targetUnit) return true;
         
-        const width = this.getGame().map.getWidth();
-        const height = this.getGame().map.getHeight();
-
-        // Simple bounding box iteration for range
-        for (let x = Math.max(0, startX - maxRange); x <= Math.min(width - 1, startX + maxRange); x++) {
-            for (let y = Math.max(0, startY - maxRange); y <= Math.min(height - 1, startY + maxRange); y++) {
-                const dist = Math.abs(x - startX) + Math.abs(y - startY);
-                if (dist >= minRange && dist <= maxRange) {
-                    positions.add(this.getGame().map.positions[x][y]);
-                }
-            }
+        if (this.getGame().isEnemy(unit.getTeam(), targetUnit.getTeam())) {
+            // Cannot pass enemy?
+            // Unless "Conqueror" or Flying?
+            // Usually blocked.
+            return false;
         }
-        return positions;
+        return true;
     }
 }

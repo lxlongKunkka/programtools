@@ -15,7 +15,7 @@ import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG, HYDRO_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
 import { debugLog } from '../utils/logger.js'
-import { getIO } from '../socket/index.js'
+// import { getIO } from '../socket/index.js'
 import { 
   TRANSLATE_PROMPT, 
   SOLUTION_PROMPT, 

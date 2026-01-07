@@ -19,7 +19,7 @@ import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
-import AncientGame from '../pages/AncientGame/index.vue'
+import AncientGame from '../pages/AncientGame.vue'
 import SpriteGallery from '../pages/SpriteGallery.vue'
 
 const routes = [
@@ -44,7 +44,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/ancient', component: AncientGame, meta: { requiresAuth: true } }
+  { path: '/ancient', component: AncientGame }
 ]
 
 const router = createRouter({
