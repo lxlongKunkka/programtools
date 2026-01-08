@@ -1,8 +1,10 @@
 import cron from 'node-cron';
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import SudokuResult from '../models/SudokuResult.js';
 import SokobanResult from '../models/SokobanResult.js';
-import { MAIL_CONFIG } from '../config.js';
+import { MAIL_CONFIG, DIRS } from '../config.js';
 
 const transporter = nodemailer.createTransport({
     host: MAIL_CONFIG.host,
@@ -49,6 +51,30 @@ export function startDailyReportJob() {
             }).sort({ createdAt: -1 });
 
             console.log(`[CRON] Found ${sudokuResults.length} Sudoku records and ${sokobanResults.length} Sokoban records.`);
+
+            // Prepare attachments
+            const attachments = [];
+            
+            // Try to find yesterday's log file
+            try {
+                const yYear = yesterday.getFullYear();
+                const yMonth = String(yesterday.getMonth() + 1).padStart(2, '0');
+                const yDay = String(yesterday.getDate()).padStart(2, '0');
+                const logFileName = `${yYear}-${yMonth}-${yDay}.log`;
+                const logFilePath = path.join(DIRS.logs, logFileName);
+
+                if (fs.existsSync(logFilePath)) {
+                    console.log(`[CRON] Found log file: ${logFilePath}`);
+                    attachments.push({
+                        filename: logFileName,
+                        path: logFilePath
+                    });
+                } else {
+                    console.log(`[CRON] Log file not found: ${logFilePath}`);
+                }
+            } catch (err) {
+                console.error('[CRON] Error preparing log attachment:', err);
+            }
 
             // Format email content
             const htmlContent = `
@@ -106,9 +132,10 @@ export function startDailyReportJob() {
             // Send email
             const mailOptions = {
                 from: MAIL_CONFIG.from,
-                to: '110076790@qq.com',
+                to: '110076790@qq.com', // Keep the hardcoded email as requested OR use MAIL_CONFIG.to
                 subject: `Daily Report - ${yesterday.toLocaleDateString()}`,
-                html: htmlContent
+                html: htmlContent,
+                attachments: attachments
             };
 
             const info = await transporter.sendMail(mailOptions);
