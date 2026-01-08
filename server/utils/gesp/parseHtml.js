@@ -20,6 +20,16 @@ function cleanKatex($, elem) {
     });
 }
 
+function processImages($, elem) {
+    if (!elem) return;
+    $(elem).find('img').each((i, el) => {
+        const src = $(el).attr('src');
+        if (src) {
+            $(el).replaceWith(` ![image](${src}) `);
+        }
+    });
+}
+
 function processQuestion($, q, index) {
     let output = '';
     const stemElem = $(q).find('.xm-markdown-displayer-wrap');
@@ -28,6 +38,7 @@ function processQuestion($, q, index) {
 
     if (stemElem.length > 0) {
         cleanKatex($, stemElem);
+        processImages($, stemElem);
         
         // Code blocks
         stemElem.find('pre').each((i, pre) => {
@@ -78,11 +89,13 @@ function processQuestion($, q, index) {
                 if (spaceItems.length >= 2) {
                     const contentDiv = spaceItems.eq(1);
                     cleanKatex($, contentDiv);
+                    processImages($, contentDiv);
                     contentText = contentDiv.text().trim();
                 } else {
                     const radioSpan = $(opt).find('.ant-radio');
                     if (radioSpan.length > 0) radioSpan.remove();
                     cleanKatex($, opt);
+                    processImages($, opt);
                     contentText = $(opt).text().trim().replace(/^[A-Z]\.\s*/, '');
                 }
                 
