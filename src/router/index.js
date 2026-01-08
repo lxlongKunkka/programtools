@@ -21,6 +21,7 @@ import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
 import AncientGame from '../pages/AncientGame.vue'
 import SpriteGallery from '../pages/SpriteGallery.vue'
+import YearEndSummary from '../pages/YearEndSummary.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -44,7 +45,8 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/ancient', component: AncientGame }
+  { path: '/ancient', component: AncientGame },
+  { path: '/summary', component: YearEndSummary }
 ]
 
 const router = createRouter({

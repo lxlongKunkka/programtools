@@ -30,7 +30,8 @@ import {
   TOPIC_PLAN_PROMPT,
   TOPIC_DESC_PROMPT,
   HYDRO_REFINE_PROMPT,
-  ANSWER_GEN_PROMPT
+  ANSWER_GEN_PROMPT,
+  SUMMARY_PROMPT
 } from '../prompts.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -799,9 +800,9 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
       fixed = fixed.replace(/\n{3,}/g, '\n\n')
       fixed = fixed.replace(/```\s*(\w+)/g, '```$1')
       
-      return res.json({ result: fixed, debugLog })
+      return res.json({ result: fixed })
     } catch (e) {
-      return res.json({ result: content, debugLog })
+      return res.json({ result: content })
     }
   } catch (err) {
     console.error('Solution error:', err?.response?.data || err.message || err)
@@ -814,23 +815,17 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
   try {
     const { model } = req.body
     let { text } = req.body
-    let debugLog = [] // 收集调试日志
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     // [Fix] 修复 AC 代码被识别为 Unknown Status 的问题
     if (text && text.includes('状态是: Unknown Status')) {
-      debugLog.push('Found "Unknown Status" in text.')
       // 尝试解析 record URL 并获取真实状态
       const recordMatch = text.match(/\/d\/([^\/]+)\/record\/([a-f0-9]{24})/)
       let resolved = false
       
       if (recordMatch) {
-          debugLog.push(`Extracted URL: Domain=${recordMatch[1]}, RecordID=${recordMatch[2]}`)
           try {
               const record = await fetchHydroRecord(recordMatch[1], recordMatch[2])
-              debugLog.push(`Fetched record: ${record ? 'Found' : 'Null'}`)
-              if (record) debugLog.push(`Record raw status: ${record.status}, type: ${typeof record.status}`)
-              
               if (record && typeof record.status === 'number') {
                   const statusText = HYDRO_STATUS_MAP[record.status] || 'Unknown'
                   let replaceText = `状态是: ${statusText}`
@@ -838,17 +833,11 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
                   
                   text = text.replace('状态是: Unknown Status', replaceText)
                   console.log(`[Checker] Resolved record status to: ${statusText}`)
-                  debugLog.push(`Resolved status text: ${statusText}`)
                   resolved = true
-              } else {
-                  debugLog.push('Record invalid or missing numeric status')
               }
           } catch (e) {
               console.warn('[Checker] Failed to resolve status from URL', e)
-              debugLog.push(`Error fetching record: ${e.message}`)
           }
-      } else {
-          debugLog.push('No record URL matched in text')
       }
       
       // Fallback: 如果无法解析或获取失败，且依然是 Unknown Status，由于用户反馈通常是 AC 代码误判，
@@ -856,10 +845,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
       // 但根据用户要求 "并非把unknown直接翻译为AC"，如果解析失败，我们保留 Unknown Status 或改为 "Status Check Failed"
       if (!resolved && text.includes('状态是: Unknown Status')) {
          text = text.replace('状态是: Unknown Status', '状态是: Unknown Status (无法获取评测详情，请检查链接)')
-         debugLog.push('Fallback: Kept Unknown Status due to resolution failure')
       }
-    } else {
-        debugLog.push('Text does not contain "Unknown Status"')
     }
 
     const apiUrl = YUN_API_URL
@@ -3089,6 +3075,76 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('Generate Report Error:', error)
     res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/summary', checkModelPermission, async (req, res) => {
+  try {
+    const { role, keywords, achievements, challenges, plans, style, length, model, temperature } = req.body
+    
+    // 构造用户输入
+    const userContent = `
+【基本信息】
+- 岗位：${role || '未填写'}
+- 年度关键词：${keywords || '无'}
+- 风格：${style || '正式严谨'}
+- 字数：${length || '800字'}左右
+
+【主要成就】
+${achievements || '（暂无具体描述）'}
+
+【遇到的挑战与反思】
+${challenges || '（暂无具体描述）'}
+
+【未来规划】
+${plans || '（暂无具体描述）'}
+`
+
+    const apiUrl = YUN_API_URL
+    const apiKey = YUN_API_KEY
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+
+    const messages = [
+      { role: 'system', content: SUMMARY_PROMPT },
+      { role: 'user', content: userContent }
+    ]
+
+    const payload = {
+      model: model || 'o4-mini',
+      messages,
+      temperature: temperature !== undefined ? Number(temperature) : 0.7, 
+      max_tokens: 32767
+    }
+    res.locals.logModel = payload.model
+
+    const resp = await axios.post(apiUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      timeout: 600000
+    })
+
+    const data = resp.data
+    let content = ''
+    try {
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        content = data.choices[0].message.content
+      } else if (data.choices && data.choices[0] && data.choices[0].text) {
+        content = data.choices[0].text
+      } else {
+        content = JSON.stringify(data)
+      }
+    } catch (e) {
+      content = JSON.stringify(data)
+    }
+
+    return res.json({ result: content })
+
+  } catch (err) {
+    console.error('Summary error:', err?.response?.data || err.message || err)
+    const message = err?.response?.data || err.message || 'unknown error'
+    return res.status(500).json({ error: 'Summary generation failed', detail: message })
   }
 })
 

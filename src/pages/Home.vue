@@ -13,6 +13,12 @@
 
     <section class="features">
       <div class="grid">
+        <router-link to="/summary" class="card">
+          <div class="card-icon">📅</div>
+          <div class="card-title">年终总结</div>
+          <div class="card-desc">一键生成专业年终总结提示词，轻松搞定汇报。</div>
+        </router-link>
+
         <router-link to="/solvedata" class="card">
           <div class="card-icon">📦</div>
           <div class="card-title">一键打包</div>
