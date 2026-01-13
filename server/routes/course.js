@@ -397,6 +397,52 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
         populatedChapter.problemIds = populatedProblems
     }
 
+    if (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0) {
+        const populatedProblems = []
+        for (const pidStr of chapter.optionalProblemIds) {
+            // pidStr can be "1001" or "system:1001" or a MongoID string
+            let query = {}
+            if (mongoose.Types.ObjectId.isValid(pidStr)) {
+                query = { _id: pidStr }
+            } else if (pidStr.includes(':')) {
+                const [domain, docId] = pidStr.split(':')
+                if (!isNaN(docId)) {
+                    query = { domainId: domain, docId: Number(docId) }
+                } else {
+                    query = { domainId: domain, pid: docId }
+                }
+            } else {
+                // Default to system domain or just search by docId
+                if (!isNaN(pidStr)) {
+                    const docId = Number(pidStr)
+                    // Try system first
+                    const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId')
+                    if (sysDoc) {
+                        populatedProblems.push(sysDoc)
+                        continue
+                    }
+                    query = { docId: docId }
+                } else {
+                    // Try system first with pid
+                    const sysDoc = await Document.findOne({ domainId: 'system', pid: pidStr }).select('title docId domainId')
+                    if (sysDoc) {
+                        populatedProblems.push(sysDoc)
+                        continue
+                    }
+                    query = { pid: pidStr }
+                }
+            }
+            
+            const doc = await Document.findOne(query).select('title docId domainId')
+            if (doc) {
+                populatedProblems.push(doc)
+            } else {
+                populatedProblems.push({ _id: pidStr, title: `Unknown Problem (${pidStr})`, docId: pidStr, domainId: 'unknown' })
+            }
+        }
+        populatedChapter.optionalProblemIds = populatedProblems
+    }
+
     res.json(populatedChapter)
 
   } catch (e) {
@@ -1480,7 +1526,7 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
 // Add a Chapter to a Topic
 router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, contentType, resourceUrl, problemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1493,6 +1539,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 
     // Store problemIds directly as strings
     const storedProblemIds = (problemIds || []).map(String)
+    const storedOptionalProblemIds = (optionalProblemIds || []).map(String)
     
     const newChapter = { 
       id, 
@@ -1500,7 +1547,8 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       content, 
       contentType: contentType || 'markdown',
       resourceUrl: resourceUrl || '',
-      problemIds: storedProblemIds, 
+      problemIds: storedProblemIds,
+      optionalProblemIds: storedOptionalProblemIds,
       optional: !!optional 
     }
 
@@ -1538,7 +1586,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 // Update a Chapter in a Topic
 router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, problemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1560,12 +1608,14 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     
     // Store problemIds directly as strings
     const storedProblemIds = (problemIds || []).map(String)
+    const storedOptionalProblemIds = (optionalProblemIds || []).map(String)
 
     targetChapter.title = title
     targetChapter.content = content
     targetChapter.contentType = contentType || 'markdown'
     targetChapter.resourceUrl = resourceUrl || ''
     targetChapter.problemIds = storedProblemIds
+    targetChapter.optionalProblemIds = storedOptionalProblemIds
     targetChapter.optional = !!optional
     
     await level.save()
@@ -1738,11 +1788,12 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateT
 // Add a Chapter (Legacy)
 router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, contentType, resourceUrl, problemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
-    
-    const resolvedIds = await resolveProblemIds(problemIds || [])
+
+    const storedProblemIds = (problemIds || []).map(String)
+    const storedOptionalProblemIds = (optionalProblemIds || []).map(String)
     
     const newChapter = { 
       id, 
@@ -1750,8 +1801,9 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'te
       content, 
       contentType: contentType || 'markdown',
       resourceUrl: resourceUrl || '',
-      problemIds: resolvedIds, 
-      optional: !!optional 
+      problemIds: storedProblemIds,
+      optionalProblemIds: storedOptionalProblemIds,
+      optional: !!optional
     }
 
     if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.chapters.length) {
@@ -1775,20 +1827,22 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'te
 // Update a Chapter
 router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, problemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     const chapter = level.chapters.find(c => c.id === req.params.chapterId)
     if (!chapter) return res.status(404).json({ error: 'Chapter not found' })
     
-    const resolvedIds = await resolveProblemIds(problemIds || [])
+    const resolvedIds = (problemIds || []).map(String)
+    const resolvedOptionalIds = (optionalProblemIds || []).map(String)
 
     chapter.title = title
     chapter.content = content
     chapter.contentType = contentType || 'markdown'
     chapter.resourceUrl = resourceUrl || ''
     chapter.problemIds = resolvedIds
+    chapter.optionalProblemIds = resolvedOptionalIds
     chapter.optional = !!optional
     
     // No renumbering needed for update unless we support moving chapters (not yet)

@@ -72,7 +72,7 @@
       <div class="problems-section">
         <div v-if="totalProblems > 0">
           <div class="problems-header">
-            <h3>本章挑战</h3>
+            <h3>必做挑战</h3>
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
             </div>
@@ -98,7 +98,31 @@
           </div>
         </div>
 
-        <div v-else class="reading-section">
+        <!-- Optional Section -->
+        <div v-if="chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0" class="optional-section" style="margin-top: 24px; border-top: 1px dashed #cbd5e1; padding-top: 16px;">
+          <div class="problems-header" style="margin-bottom: 12px;">
+            <h3>选做挑战 <span style="font-size: 12px; font-weight: normal; color: #64748b;">(额外练习，不计入进度)</span></h3>
+          </div>
+          <div class="problem-list">
+            <div v-for="problem in chapter.optionalProblemIds" :key="problem._id" class="problem-item">
+              <div class="problem-info">
+                <span class="problem-title">{{ problem.title }}</span>
+                <span v-if="isSolved(problem._id)" class="status-badge solved">已通过</span>
+                <span v-else class="status-badge unsolved">未通过</span>
+              </div>
+              <div class="problem-actions">
+                <a :href="getProblemLink(problem)" target="_blank" class="btn-action btn-challenge">
+                  <span class="icon">🚀</span> 去挑战
+                </a>
+                <button @click="checkStatus(problem)" class="btn-action btn-check" :disabled="checking === problem._id">
+                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状态' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="totalProblems === 0" class="reading-section">
           <h3>学习任务</h3>
           <p>请仔细阅读左侧教程内容，观看相关视频。</p>
           <div v-if="!isChapterCompleted" class="action-area">

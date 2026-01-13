@@ -374,10 +374,20 @@
         </div>
 
         <div class="form-group">
-          <label>关联题目 ID (逗号分隔):</label>
+          <label>关联必做题目 ID (逗号分隔):</label>
           <input v-model="editingChapter.problemIdsStr" class="form-input" placeholder="例如: system:1001, 1002">
           <div v-if="problemLinks && problemLinks.length > 0" class="problem-links-preview">
               <a v-for="(link, idx) in problemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag">
+                  {{ link.text }} ↗
+              </a>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>关联选做题目 ID (逗号分隔):</label>
+          <input v-model="editingChapter.optionalProblemIdsStr" class="form-input" placeholder="例如: system:1003, 1004">
+          <div v-if="optionalProblemLinks && optionalProblemLinks.length > 0" class="problem-links-preview">
+              <a v-for="(link, idx) in optionalProblemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;">
                   {{ link.text }} ↗
               </a>
           </div>
@@ -462,6 +472,22 @@ export default {
     problemLinks() {
         if (!this.editingChapter || !this.editingChapter.problemIdsStr) return []
         return this.editingChapter.problemIdsStr.split(/[,，]/).map(s => {
+            s = s.trim()
+            if (!s) return null
+            let domain = 'system'
+            let pid = s
+            if (s.includes(':')) {
+                [domain, pid] = s.split(':')
+            }
+            return {
+                text: s,
+                url: `https://acjudge.com/d/${domain}/p/${pid}`
+            }
+        }).filter(Boolean)
+    },
+    optionalProblemLinks() {
+        if (!this.editingChapter || !this.editingChapter.optionalProblemIdsStr) return []
+        return this.editingChapter.optionalProblemIdsStr.split(/[,，]/).map(s => {
             s = s.trim()
             if (!s) return null
             let domain = 'system'
@@ -758,9 +784,16 @@ export default {
           return p.docId
         }).join(', ')
 
+        const optionalProblemIdsStr = (chapter.optionalProblemIds || []).map(p => {
+          if (typeof p === 'string') return p
+          if (p.domainId && p.domainId !== 'system') return `${p.domainId}:${p.docId}`
+          return p.docId
+        }).join(', ')
+
         this.editingChapter = {
           ...chapter,
           problemIdsStr,
+          optionalProblemIdsStr,
           optional: !!chapter.optional,
           contentType: chapter.contentType || 'markdown',
           resourceUrl: chapter.resourceUrl || '',
@@ -1453,6 +1486,9 @@ export default {
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
+        const optionalProblemIds = (this.editingChapter.optionalProblemIdsStr || '')
+          .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+
         const chapterData = {
           id: this.editingChapter.id,
           title: this.editingChapter.title,
@@ -1460,6 +1496,7 @@ export default {
           contentType: this.editingChapter.contentType,
           resourceUrl: this.editingChapter.resourceUrl,
           problemIds: problemIds,
+          optionalProblemIds: optionalProblemIds,
           optional: this.editingChapter.optional,
           insertIndex: this.editingChapter._insertIndex
         }
