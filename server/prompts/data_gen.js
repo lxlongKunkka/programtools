@@ -31,6 +31,7 @@ ${cyaronDocs}
    - 生成随机整数需要使用 CYaRon 提供的随机数生成函数 randint
    - 生成一维数组使用 [random.randint(0, 100000) for _ in range(n)] 这种方式
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
+   - **如果需要使用 random() 生成0到1之间的随机浮点数，必须使用 \`py_random.random()\`，不能直接使用 random()**
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`
 4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
 5. **严禁使用** \`IO.comment\` 或类似不存在的方法。如果需要添加注释，请直接使用 Python 的 \`#\` 注释。

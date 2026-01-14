@@ -2804,8 +2804,12 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                       if (result.chapters && Array.isArray(result.chapters)) {
                           // Append new chapters
                           const startIdx = topicObj.chapters.length + 1;
-                          const prefix = `${courseLevel.level}-${courseLevel.topics.indexOf(topicObj) + 1}`;
-                          
+                          // Find topic index by comparing _id or id, not by object reference
+                          const topicIndex = courseLevel.topics.findIndex(t =>
+                              (t._id && t._id === topicId) || (t.id && t.id === topicId)
+                          );
+                          const prefix = `${courseLevel.level}-${topicIndex + 1}`;
+
                           result.chapters.forEach((item, idx) => {
                               // Handle both string (title only) and object (title + content) formats
                               let title = '';
