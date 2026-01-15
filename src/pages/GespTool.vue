@@ -519,6 +519,9 @@ const parseMarkdownToJson = (md) => {
   const flushProb = () => {
     if (currentProb) {
       currentProb.stem = currentStem.join('\n').trim()
+      // 提取图片 URL
+      const images = extractImageUrls(currentProb.stem)
+      currentProb.images = images
       currentProb.options = currentOptions
       problems.push(currentProb)
     }
@@ -561,6 +564,22 @@ const parseMarkdownToJson = (md) => {
   
   flushProb()
   return { problems, title }
+}
+
+// 提取 Markdown 中的图片 URL
+const extractImageUrls = (text) => {
+  if (!text) return []
+  const images = []
+  // 匹配 ![alt](url) 格式
+  const regex = /!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    images.push({
+      alt: match[1],
+      url: match[2]
+    })
+  }
+  return images
 }
 
 const downloadConfig = () => {

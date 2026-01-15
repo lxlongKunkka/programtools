@@ -647,40 +647,65 @@ router.post('/translate', checkModelPermission, async (req, res) => {
 function parseMarkdownWithImages(text) {
   const parts = []
   const imageMap = {}
-  const regex = /!\[(.*?)\]\((data:image\/.*?;base64,.*?)\)/g
+  // 匹配 Base64 图片
+  const base64Regex = /!\[(.*?)\]\((data:image\/.*?;base64,.*?)\)/g
+  // 匹配网络 URL 图片（http/https）
+  const urlRegex = /!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g
   let lastIndex = 0
   let match
   let imgCount = 0
-  
-  while ((match = regex.exec(text)) !== null) {
+
+  // 先处理 Base64 图片
+  while ((match = base64Regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: 'text', text: text.substring(lastIndex, match.index) })
     }
-    
+
     const placeholder = `[[IMG_${imgCount}]]`
     imageMap[placeholder] = match[0] // Store the full markdown image tag
-    
+
     // Insert placeholder text AND the image for the model to see
     parts.push({ type: 'text', text: placeholder })
-    parts.push({ 
-      type: 'image_url', 
-      image_url: { 
-        url: match[2] 
-      } 
+    parts.push({
+      type: 'image_url',
+      image_url: {
+        url: match[2]
+      }
     })
-    
+
     imgCount++
-    lastIndex = regex.lastIndex
+    lastIndex = base64Regex.lastIndex
   }
-  
+
+  console.log(`[图片提取] Base64 图片数量: ${imgCount}`)
+
+  // 重置正则索引，处理网络 URL 图片
+  base64Regex.lastIndex = 0
+  const baseImgCount = imgCount
+  while ((match = urlRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', text: text.substring(lastIndex, match.index) })
+    }
+
+    const placeholder = `[[IMG_${imgCount}]]`
+    imageMap[placeholder] = match[0] // Store the full markdown image tag
+
+    // Insert placeholder text (网络图片不用传给模型看，因为可能访问受限）
+    parts.push({ type: 'text', text: placeholder })
+
+    imgCount++
+    lastIndex = urlRegex.lastIndex
+  }
+  console.log(`[图片提取] 网络图片数量: ${imgCount - baseImgCount}`)
+
   if (lastIndex < text.length) {
     parts.push({ type: 'text', text: text.substring(lastIndex) })
   }
-  
+
   if (parts.length === 0) {
     return { content: text, imageMap: {} }
   }
-  
+
   return { content: parts, imageMap }
 }
 
@@ -727,12 +752,20 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     }
 
     // Restore images from placeholders
+    console.log('[AI优化] 开始恢复图片，占位符数量:', Object.keys(imageMap).length)
+    let restoreCount = 0
     for (const [placeholder, originalImage] of Object.entries(imageMap)) {
-      // Use a global replace in case the model repeated the placeholder (unlikely but possible)
+      // Use a global replace in case of model repeated the placeholder (unlikely but possible)
       // Escape the placeholder for regex (brackets)
       const escapedPlaceholder = placeholder.replace(/\[/g, '\\[').replace(/\]/g, '\\]')
-      resultText = resultText.replace(new RegExp(escapedPlaceholder, 'g'), originalImage)
+      const regex = new RegExp(escapedPlaceholder, 'g')
+      const before = resultText
+      resultText = resultText.replace(regex, originalImage)
+      if (before !== resultText) {
+        restoreCount++
+      }
     }
+    console.log('[AI优化] 成功恢复图片数量:', restoreCount)
 
     return res.json({ result: resultText })
 
