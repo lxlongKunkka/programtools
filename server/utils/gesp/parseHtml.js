@@ -21,7 +21,7 @@ function cleanKatex($, elem) {
     });
 }
 
-async function processImages($, elem) {
+async function processImages($, elem, excludeSelector = null) {
     if (!elem) return null;
 
     const imageReplacements = []; // 用于记录占位符到 Markdown 图片的替换关系
@@ -29,7 +29,12 @@ async function processImages($, elem) {
     const imageElements = [];
 
     // 收集所有图片元素
-    $(elem).find('img').each((i, el) => {
+    let imgs = $(elem).find('img');
+    if (excludeSelector) {
+        imgs = imgs.not(excludeSelector);
+    }
+    
+    imgs.each((i, el) => {
         const src = $(el).attr('src');
         if (src) {
             imageElements.push({ el, src, index: i });
@@ -63,7 +68,7 @@ async function processQuestion($, q, index) {
     if (stemElem.length > 0) {
         cleanKatex($, stemElem);
         // 处理题干图片
-        const stemImageReplacements = await processImages($, stemElem);
+        const stemImageReplacements = await processImages($, stemElem, '.ant-radio-group img');
 
         // Code blocks
         stemElem.find('pre').each((i, pre) => {
@@ -84,7 +89,11 @@ async function processQuestion($, q, index) {
             }
         });
 
-        stem = stemElem.text().trim().replace(/\s+/g, ' ');
+        // Use a clone to extract text, removing the radio group (options) so they don't appear in the stem text
+        const tempStem = stemElem.clone();
+        tempStem.find('.ant-radio-group').remove();
+        stem = tempStem.text().trim().replace(/\s+/g, ' ');
+        
         codeBlocks.forEach((item) => {
             stem = stem.replace(item.placeholder, item.block);
         });

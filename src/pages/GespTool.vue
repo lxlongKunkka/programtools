@@ -566,19 +566,36 @@ const parseMarkdownToJson = (md) => {
   return { problems, title }
 }
 
-// 提取 Markdown 中的图片 URL
+// 提取 Markdown 中的图片 URL 或占位符
 const extractImageUrls = (text) => {
   if (!text) return []
   const images = []
-  // 匹配 ![alt](url) 格式
-  const regex = /!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g
+
+  // 1. 匹配真实的网络 URL 图片
+  const urlRegex = /!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g
   let match
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = urlRegex.exec(text)) !== null) {
     images.push({
       alt: match[1],
       url: match[2]
     })
   }
+
+  // 2. 如果没有找到真实图片，检查是否有占位符（如 [[IMAGE_0]]）
+  // 这种情况通常发生在 AI 优化后，占位符没有被正确恢复
+  if (images.length === 0) {
+    const placeholderRegex = /\[\[IMAGE_\d+\]\]/g
+    let placeholderMatch
+    while ((placeholderMatch = placeholderRegex.exec(text)) !== null) {
+      // 保存占位符信息，标记为占位符类型
+      images.push({
+        alt: placeholderMatch[1],
+        url: placeholderMatch[0], // 保存原始占位符
+        isPlaceholder: true
+      })
+    }
+  }
+
   return images
 }
 
