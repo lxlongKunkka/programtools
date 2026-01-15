@@ -17,7 +17,8 @@ const cos = new COS({
  */
 export async function uploadImageToCos(imageBuffer, fileName) {
   if (!COS_CONFIG.SecretId || !COS_CONFIG.SecretKey || !COS_CONFIG.Bucket) {
-    console.warn('COS 配置不完整，跳过图片上传');
+    console.warn('[COS上传] 配置不完整，跳过图片上传');
+    console.warn('[COS上传] SecretId:', !!COS_CONFIG.SecretId, 'SecretKey:', !!COS_CONFIG.SecretKey, 'Bucket:', COS_CONFIG.Bucket);
     return null;
   }
 
@@ -29,6 +30,8 @@ export async function uploadImageToCos(imageBuffer, fileName) {
     const ext = path.extname(fileName) || '.png';
     const cosKey = `gesp-images/${dateStr}/${randomStr}${ext}`;
 
+    console.log(`[COS上传] 开始上传: ${cosKey}, 大小: ${imageBuffer.length} 字节`);
+
     // 上传到 COS
     const result = await new Promise((resolve, reject) => {
       cos.putObject({
@@ -38,16 +41,36 @@ export async function uploadImageToCos(imageBuffer, fileName) {
         Body: imageBuffer,
         ContentType: getImageContentType(ext),
       }, (err, data) => {
-        if (err) reject(err);
-        else resolve(data);
+        if (err) {
+          console.error('[COS上传] 上传失败:', err);
+          reject(err);
+        } else {
+          console.log('[COS上传] SDK 返回:', data);
+          resolve(data);
+        }
       });
     });
 
-    // 返回图片 URL（优先使用自定义域名）
-    const domain = COS_CONFIG.Domain || `https://${result.Location.split('/').slice(2).join('/')}`;
-    return domain.startsWith('http') ? domain : `https://${domain}`;
+    // 返回图片 URL
+    let finalUrl;
+    // 如果配置了自定义域名，使用自定义域名 + 文件路径
+    if (COS_CONFIG.Domain) {
+      // 移除开头的 http:// 或 https://（如果有）
+      let domain = COS_CONFIG.Domain.replace(/^https?:\/\//, '');
+      // 确保以 / 结尾
+      domain = domain.endsWith('/') ? domain : domain + '/';
+      finalUrl = `https://${domain}${cosKey}`;
+      console.log(`[COS上传] 使用自定义域名: ${finalUrl}`);
+    } else {
+      // 使用 COS SDK 返回的 Location
+      finalUrl = result.Location.startsWith('http') ? result.Location : `https://${result.Location}`;
+      console.log(`[COS上传] 使用 COS Location: ${finalUrl}`);
+    }
+
+    console.log(`[COS上传] 最终 URL: ${finalUrl}`);
+    return finalUrl;
   } catch (error) {
-    console.error('上传图片到 COS 失败:', error);
+    console.error('[COS上传] 上传图片到 COS 失败:', error);
     return null;
   }
 }
@@ -74,10 +97,13 @@ function getImageContentType(ext) {
  */
 export async function downloadImage(src) {
   try {
+    console.log(`[下载图片] 开始下载: ${src}`);
     // Base64 编码
     if (src.startsWith('data:image/')) {
       const base64Data = src.split(',')[1];
-      return Buffer.from(base64Data, 'base64');
+      const buffer = Buffer.from(base64Data, 'base64');
+      console.log(`[下载图片] Base64 图片成功，大小: ${buffer.length} 字节`);
+      return buffer;
     }
 
     // HTTP/HTTPS URL
@@ -89,13 +115,18 @@ export async function downloadImage(src) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
-      return Buffer.from(response.data);
+      const buffer = Buffer.from(response.data);
+      console.log(`[下载图片] URL 图片成功，大小: ${buffer.length} 字节`);
+      return buffer;
     }
 
-    console.warn('不支持的图片源:', src);
+    console.warn('[下载图片] 不支持的图片源:', src);
     return null;
   } catch (error) {
-    console.error('下载图片失败:', src, error.message);
+    console.error('[下载图片] 失败:', src, error.message);
+    if (error.response) {
+      console.error('[下载图片] HTTP 状态码:', error.response.status);
+    }
     return null;
   }
 }

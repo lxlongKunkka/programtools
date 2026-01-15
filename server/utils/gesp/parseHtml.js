@@ -22,7 +22,9 @@ function cleanKatex($, elem) {
 }
 
 async function processImages($, elem) {
-    if (!elem) return;
+    if (!elem) return null;
+
+    const imageReplacements = []; // 用于记录占位符到 Markdown 图片的替换关系
 
     const imageElements = [];
 
@@ -30,21 +32,26 @@ async function processImages($, elem) {
     $(elem).find('img').each((i, el) => {
         const src = $(el).attr('src');
         if (src) {
-            imageElements.push({ el, src });
+            imageElements.push({ el, src, index: i });
         }
     });
 
     // 并行上传所有图片到 COS
     if (imageElements.length > 0) {
-        console.log(`开始上传 ${imageElements.length} 张图片到 COS...`);
+        console.log(`[图片处理] 开始处理 ${imageElements.length} 张图片`);
         for (let i = 0; i < imageElements.length; i++) {
-            const { el, src } = imageElements[i];
-            const cosUrl = await processSingleImage(src, i);
-            // 替换为 Markdown 格式
-            $(el).replaceWith(` ![图片](${cosUrl}) `);
+            const { el, src, index } = imageElements[i];
+            const cosUrl = await processSingleImage(src, index);
+            const placeholder = `[[IMAGE_${index}]]`;
+            // 替换图片元素为占位符
+            $(el).replaceWith(placeholder);
+            // 记录替换关系
+            imageReplacements.push({ placeholder, markdownImage: `![图片](${cosUrl})` });
         }
-        console.log(`图片上传完成`);
+        console.log(`[图片处理] 所有图片处理完成`);
     }
+
+    return imageReplacements;
 }
 
 async function processQuestion($, q, index) {
@@ -55,8 +62,9 @@ async function processQuestion($, q, index) {
 
     if (stemElem.length > 0) {
         cleanKatex($, stemElem);
-        await processImages($, stemElem);
-        
+        // 处理题干图片
+        const stemImageReplacements = await processImages($, stemElem);
+
         // Code blocks
         stemElem.find('pre').each((i, pre) => {
             const code = $(pre).find('code');
@@ -65,7 +73,7 @@ async function processQuestion($, q, index) {
                 const classes = code.attr('class') || '';
                 const match = classes.match(/language-(\w+)/);
                 if (match) lang = match[1];
-                
+
                 const codeContent = code.text();
                 codeBlocks.push({
                     placeholder: `[[CODE_BLOCK_${i}]]`,
@@ -80,6 +88,13 @@ async function processQuestion($, q, index) {
         codeBlocks.forEach((item) => {
             stem = stem.replace(item.placeholder, item.block);
         });
+
+        // 替换题干中的图片占位符为 Markdown 格式
+        if (stemImageReplacements && stemImageReplacements.length > 0) {
+            stemImageReplacements.forEach(({ placeholder, markdownImage }) => {
+                stem = stem.replace(placeholder, markdownImage);
+            });
+        }
     }
 
     output += `\n${index}), ${stem}\n`;
@@ -107,21 +122,35 @@ async function processQuestion($, q, index) {
                 if (spaceItems.length >= 2) {
                     const contentDiv = spaceItems.eq(1);
                     cleanKatex($, contentDiv);
-                    await processImages($, contentDiv);
+                    // 处理选项中的图片
+                    const optImageReplacements = await processImages($, contentDiv);
                     contentText = contentDiv.text().trim();
+                    // 替换选项中的图片占位符
+                    if (optImageReplacements && optImageReplacements.length > 0) {
+                        optImageReplacements.forEach(({ placeholder, markdownImage }) => {
+                            contentText = contentText.replace(placeholder, markdownImage);
+                        });
+                    }
                 } else {
                     const radioSpan = $(opt).find('.ant-radio');
                     if (radioSpan.length > 0) radioSpan.remove();
                     cleanKatex($, opt);
-                    await processImages($, opt);
+                    // 处理选项中的图片
+                    const optImageReplacements = await processImages($, opt);
                     contentText = $(opt).text().trim().replace(/^[A-Z]\.\s*/, '');
+                    // 替换选项中的图片占位符
+                    if (optImageReplacements && optImageReplacements.length > 0) {
+                        optImageReplacements.forEach(({ placeholder, markdownImage }) => {
+                            contentText = contentText.replace(placeholder, markdownImage);
+                        });
+                    }
                 }
-                
+
                 // Restore code blocks in options
                 codeBlocks.forEach((item) => {
                     contentText = contentText.replace(item.placeholder, item.inline);
                 });
-                
+
                 // Trim to ensure no leading newlines (especially from code blocks)
                 contentText = contentText.trim();
 
