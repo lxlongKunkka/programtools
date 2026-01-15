@@ -1,5 +1,6 @@
 import { load } from 'cheerio';
 import fs from 'fs';
+import { processSingleImage } from '../cosUploader.js';
 
 function cleanKatex($, elem) {
     if (!elem) return;
@@ -20,17 +21,33 @@ function cleanKatex($, elem) {
     });
 }
 
-function processImages($, elem) {
+async function processImages($, elem) {
     if (!elem) return;
+
+    const imageElements = [];
+
+    // 收集所有图片元素
     $(elem).find('img').each((i, el) => {
         const src = $(el).attr('src');
         if (src) {
-            $(el).replaceWith(` ![image](${src}) `);
+            imageElements.push({ el, src });
         }
     });
+
+    // 并行上传所有图片到 COS
+    if (imageElements.length > 0) {
+        console.log(`开始上传 ${imageElements.length} 张图片到 COS...`);
+        for (let i = 0; i < imageElements.length; i++) {
+            const { el, src } = imageElements[i];
+            const cosUrl = await processSingleImage(src, i);
+            // 替换为 Markdown 格式
+            $(el).replaceWith(` ![图片](${cosUrl}) `);
+        }
+        console.log(`图片上传完成`);
+    }
 }
 
-function processQuestion($, q, index) {
+async function processQuestion($, q, index) {
     let output = '';
     const stemElem = $(q).find('.xm-markdown-displayer-wrap');
     let stem = "";
@@ -38,7 +55,7 @@ function processQuestion($, q, index) {
 
     if (stemElem.length > 0) {
         cleanKatex($, stemElem);
-        processImages($, stemElem);
+        await processImages($, stemElem);
         
         // Code blocks
         stemElem.find('pre').each((i, pre) => {
@@ -83,19 +100,20 @@ function processQuestion($, q, index) {
         if (isJudgment) {
             output += "- true\n- false\n";
         } else {
-            options.each((j, opt) => {
+            for (let j = 0; j < options.length; j++) {
+                const opt = options.eq(j);
                 let contentText = "";
                 const spaceItems = $(opt).find('.ant-space-item');
                 if (spaceItems.length >= 2) {
                     const contentDiv = spaceItems.eq(1);
                     cleanKatex($, contentDiv);
-                    processImages($, contentDiv);
+                    await processImages($, contentDiv);
                     contentText = contentDiv.text().trim();
                 } else {
                     const radioSpan = $(opt).find('.ant-radio');
                     if (radioSpan.length > 0) radioSpan.remove();
                     cleanKatex($, opt);
-                    processImages($, opt);
+                    await processImages($, opt);
                     contentText = $(opt).text().trim().replace(/^[A-Z]\.\s*/, '');
                 }
                 
@@ -109,13 +127,13 @@ function processQuestion($, q, index) {
 
                 const label = String.fromCharCode(65 + j);
                 output += `- ${label}. ${contentText}\n`;
-            });
+            }
         }
     }
     return output;
 }
 
-export function parseHtml(htmlPath) {
+export async function parseHtml(htmlPath) {
     const html = fs.readFileSync(htmlPath, 'utf-8');
     const $ = load(html);
     let output = '';
@@ -130,7 +148,8 @@ export function parseHtml(htmlPath) {
     const problemLists = $('.exam-problem-list');
 
     if (problemLists.length > 0) {
-        problemLists.each((i, pList) => {
+        for (let i = 0; i < problemLists.length; i++) {
+            const pList = problemLists.eq(i);
             const header = $(pList).find('.exam-problem-header');
             if (header.length > 0) {
                 const titleSpan = header.find('.exam-problem-title');
@@ -139,14 +158,20 @@ export function parseHtml(htmlPath) {
                 const secScore = scoreSpan.length > 0 ? scoreSpan.text().trim() : "";
                 output += `\n## ${secTitle} ${secScore}\n`;
             }
-            $(pList).find('.exam-question-item-ctn').each((j, q) => {
-                output += processQuestion($, q, globalIndex++);
-            });
-        });
+            const questions = $(pList).find('.exam-question-item-ctn');
+            for (let j = 0; j < questions.length; j++) {
+                const q = questions.eq(j);
+                const questionOutput = await processQuestion($, q, globalIndex++);
+                output += questionOutput;
+            }
+        };
     } else {
-        $('.exam-question-item-ctn').each((i, q) => {
-            output += processQuestion($, q, i + 1);
-        });
+        const questions = $('.exam-question-item-ctn');
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions.eq(i);
+            const questionOutput = await processQuestion($, q, i + 1);
+            output += questionOutput;
+        }
     }
     return { md: output, title: sectionTitle };
 }

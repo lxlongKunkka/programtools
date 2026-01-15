@@ -92,8 +92,8 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
     const htmlPath = path.join(requestDir, 'input.html')
     await fs.promises.writeFile(htmlPath, htmlContent, 'utf-8')
 
-    // Parse HTML
-    const { md, title } = parseHtml(htmlPath)
+    // Parse HTML (now async to upload images)
+    const { md, title } = await parseHtml(htmlPath)
 
     // Clean up
     fs.rmSync(requestDir, { recursive: true, force: true })
