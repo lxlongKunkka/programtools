@@ -458,11 +458,14 @@ export default {
                     let topicCount = 0
                     if (t.chapters) {
                         t.chapters.forEach(c => {
+                            let chapterCount = 0;
                             if (c.problemIds && c.problemIds.length > 0) {
-                                topicCount += c.problemIds.length
-                            } else if (c.problemIdsStr) {
-                                // Fallback
+                                chapterCount += c.problemIds.length
                             }
+                            if (c.optionalProblemIds && c.optionalProblemIds.length > 0) {
+                                chapterCount += c.optionalProblemIds.length
+                            }
+                            topicCount += chapterCount
                         })
                     }
                     t.problemCount = topicCount
@@ -654,7 +657,9 @@ export default {
       return ''
     },
     getChapterProblemCount(chapter) {
-      return chapter.problemIds ? chapter.problemIds.length : 0
+      const requiredCount = chapter.problemIds ? chapter.problemIds.length : 0
+      const optionalCount = chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0
+      return requiredCount + optionalCount
     },
     getTopicTotalProblems(topic) {
       if (!topic || !topic.chapters) return 0

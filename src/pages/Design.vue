@@ -71,8 +71,8 @@
                             <span class="meta-badge" :class="chapter.contentType === 'html' ? 'badge-html' : 'badge-md'">
                             {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
                             </span>
-                            <span v-if="chapter.problemIds && chapter.problemIds.length > 0" class="meta-count" title="题目数量">
-                            {{ chapter.problemIds.length }}题
+                            <span v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)" class="meta-count" title="题目数量">
+                            {{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题
                             </span>
                         </div>
                         <div class="tree-actions">
@@ -983,11 +983,14 @@ export default {
                         let topicCount = 0
                         if (t.chapters) {
                             t.chapters.forEach(c => {
+                                let chapterCount = 0
                                 if (c.problemIds && c.problemIds.length > 0) {
-                                    topicCount += c.problemIds.length
-                                } else if (c.problemIdsStr) {
-                                    // Fallback
+                                    chapterCount += c.problemIds.length
                                 }
+                                if (c.optionalProblemIds && c.optionalProblemIds.length > 0) {
+                                    chapterCount += c.optionalProblemIds.length
+                                }
+                                topicCount += chapterCount
                             })
                         }
                         t.problemCount = topicCount
