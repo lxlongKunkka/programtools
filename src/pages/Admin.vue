@@ -83,6 +83,23 @@
 
       <div class="system-tools">
         <h3>系统工具</h3>
+        <div v-if="isAdmin" class="settings-panel">
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-title">课堂游戏开关</div>
+              <div class="setting-desc">关闭后，学员无法进入数独 / 推箱子。</div>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                :checked="gamesEnabled"
+                :disabled="settingsLoading || settingsSaving"
+                @change="toggleGames"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
         <div class="tool-group">
           <button @click="sendTestEmail" class="btn-tool">发送测试邮件</button>
           <button @click="sendDailyReport" class="btn-tool">发送昨日日报</button>
@@ -117,7 +134,11 @@ export default {
       total: 0,
       totalPages: 1,
       
-      isInitialLoad: true
+      isInitialLoad: true,
+
+      gamesEnabled: true,
+      settingsLoading: false,
+      settingsSaving: false
     }
   },
   computed: {
@@ -138,6 +159,9 @@ export default {
     }
 
     this.fetchUsers()
+    if (this.isAdmin) {
+      this.fetchSettings()
+    }
   },
   methods: {
     restoreScrollPosition() {
@@ -241,6 +265,33 @@ export default {
       } catch (e) {
         this.showToastMessage('触发失败: ' + e.message)
       }
+    },
+    async fetchSettings() {
+      this.settingsLoading = true
+      try {
+        const data = await request('/api/admin/settings')
+        this.gamesEnabled = data?.gamesEnabled !== false
+      } catch (e) {
+        this.showToastMessage('加载设置失败: ' + e.message)
+      } finally {
+        this.settingsLoading = false
+      }
+    },
+    async toggleGames() {
+      const nextValue = !this.gamesEnabled
+      this.settingsSaving = true
+      try {
+        const data = await request('/api/admin/settings', {
+          method: 'POST',
+          body: JSON.stringify({ gamesEnabled: nextValue })
+        })
+        this.gamesEnabled = data?.gamesEnabled !== false
+        this.showToastMessage(this.gamesEnabled ? '已开启游戏入口' : '已关闭游戏入口')
+      } catch (e) {
+        this.showToastMessage('更新失败: ' + e.message)
+      } finally {
+        this.settingsSaving = false
+      }
     }
   }
 }
@@ -336,6 +387,76 @@ export default {
   border-color: #f39c12;
   font-weight: bold;
   box-shadow: 0 2px 5px rgba(241, 196, 15, 0.2);
+}
+.settings-panel {
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.setting-title {
+  font-weight: 600;
+  color: #2c3e50;
+}
+.setting-desc {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cfd8dc;
+  transition: 0.2s;
+  border-radius: 28px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.switch input:checked + .slider {
+  background-color: #27ae60;
+}
+.switch input:checked + .slider:before {
+  transform: translateX(24px);
+}
+.switch input:disabled + .slider {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .user-table {
   width: 100%;

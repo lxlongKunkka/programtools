@@ -7,6 +7,7 @@ import { MAIL_CONFIG, DIRS } from '../config.js'
 import { debugLog, ensureLogsDir } from '../utils/logger.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
+import AppSetting from '../models/AppSetting.js'
 
 const router = express.Router()
 
@@ -105,6 +106,37 @@ router.post('/users/:id/role', async (req, res) => {
     res.json({ message: 'Role updated' })
   } catch (e) {
     console.error('Update role error:', e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Get app settings (admin)
+router.get('/settings', async (req, res) => {
+  try {
+    let settings = await AppSetting.findById('global').lean()
+    if (!settings) {
+      settings = await AppSetting.create({ _id: 'global', gamesEnabled: true, updatedAt: new Date() })
+    }
+    res.json({ gamesEnabled: settings.gamesEnabled !== false })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Update app settings (admin)
+router.post('/settings', async (req, res) => {
+  try {
+    const { gamesEnabled } = req.body || {}
+    if (typeof gamesEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'gamesEnabled must be boolean' })
+    }
+    const settings = await AppSetting.findByIdAndUpdate(
+      'global',
+      { gamesEnabled, updatedAt: new Date() },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean()
+    res.json({ gamesEnabled: settings.gamesEnabled !== false })
+  } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })

@@ -17,6 +17,7 @@ import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
 import sokobanRoutes from './routes/sokoban.js'
+import settingsRoutes from './routes/settings.js'
 // import ancientRoutes from './routes/ancient.js'
 import { startDailyReportJob } from './cron/dailyReport.js'
 
@@ -65,6 +66,7 @@ app.use('/api/course', courseRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/daily', dailyRoutes)
 app.use('/api/gesp', gespRoutes)
+app.use('/api', settingsRoutes)
 app.use('/api', sudokuRoutes)
 app.use('/api/sokoban', sokobanRoutes)
 // app.use('/api/ancient', ancientRoutes)

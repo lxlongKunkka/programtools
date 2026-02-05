@@ -55,13 +55,13 @@
           <div class="card-desc">PDF 试卷转 Hydro 题库，自动提取图片。</div>
         </router-link>
 
-        <router-link to="/sudoku" class="card">
+        <router-link v-if="showGames" to="/sudoku" class="card">
           <div class="card-icon">🧩</div>
           <div class="card-title">数独游戏</div>
           <div class="card-desc">经典数独与变体，锻炼逻辑思维。</div>
         </router-link>
 
-        <router-link v-if="user" to="/sokoban" class="card">
+        <router-link v-if="showGames && user" to="/sokoban" class="card">
           <div class="card-icon">🐹</div>
           <div class="card-title">推箱子</div>
           <div class="card-desc">经典益智游戏，支持自定义关卡。</div>
@@ -81,11 +81,22 @@
 </template>
 
 <script>
+import request from '../utils/request'
+
 export default {
   name: 'HomePage',
   data() {
     return {
-      user: null
+      user: null,
+      gamesEnabled: true
+    }
+  },
+  computed: {
+    isStaff() {
+      return this.user && (this.user.role === 'admin' || this.user.role === 'teacher' || this.user.priv === -1)
+    },
+    showGames() {
+      return this.gamesEnabled || this.isStaff
     }
   },
   mounted() {
@@ -95,6 +106,17 @@ export default {
         this.user = JSON.parse(u)
       } catch (e) {
         this.user = null
+      }
+    }
+    this.loadSettings()
+  },
+  methods: {
+    async loadSettings() {
+      try {
+        const data = await request('/api/settings')
+        this.gamesEnabled = data?.gamesEnabled !== false
+      } catch (e) {
+        this.gamesEnabled = true
       }
     }
   }

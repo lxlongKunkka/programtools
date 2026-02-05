@@ -22,6 +22,7 @@ import SokobanGame from '../pages/SokobanGame.vue'
 import AncientGame from '../pages/AncientGame.vue'
 import SpriteGallery from '../pages/SpriteGallery.vue'
 import YearEndSummary from '../pages/YearEndSummary.vue'
+import request from '../utils/request'
 
 const routes = [
   { path: '/', component: Home },
@@ -54,7 +55,35 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+const GAME_PATHS = new Set(['/sudoku', '/sokoban'])
+let cachedSettings = null
+let settingsPromise = null
+let settingsFetchedAt = 0
+const SETTINGS_TTL = 60 * 1000
+
+async function getSettings() {
+  const now = Date.now()
+  if (cachedSettings && (now - settingsFetchedAt) < SETTINGS_TTL) return cachedSettings
+  if (settingsPromise) return settingsPromise
+
+  settingsPromise = request('/api/settings')
+    .then((data) => {
+      cachedSettings = { gamesEnabled: data?.gamesEnabled !== false }
+      settingsFetchedAt = Date.now()
+      return cachedSettings
+    })
+    .catch((e) => {
+      console.warn('Failed to load settings:', e)
+      return { gamesEnabled: true }
+    })
+    .finally(() => {
+      settingsPromise = null
+    })
+
+  return settingsPromise
+}
+
+router.beforeEach(async (to, from, next) => {
   const userStr = localStorage.getItem('user_info')
   let user = null
   try {
@@ -87,6 +116,17 @@ router.beforeEach((to, from, next) => {
       // Better to redirect to home or stay put.
       // I'll redirect to home for now.
       return next('/')
+    }
+  }
+
+  if (GAME_PATHS.has(to.path)) {
+    const isStaff = user && (user.role === 'admin' || user.role === 'teacher' || user.priv === -1)
+    if (!isStaff) {
+      const settings = await getSettings()
+      if (settings && settings.gamesEnabled === false) {
+        alert('游戏已被管理员关闭')
+        return next('/')
+      }
     }
   }
 
