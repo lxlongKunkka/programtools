@@ -10,6 +10,16 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// ============ Helper: Calculate sort value (matches Hydro's sortable function) ============
+function calculateSort(pid, namespaces = {}) {
+  if (!pid) return ''
+  const [namespace, pidVal] = pid.includes('-') ? pid.split('-') : ['default', pid]
+  const prefix = namespaces?.[namespace] ? `${namespaces[namespace]}-` : ''
+  return (prefix + pidVal).replace(/(\d+)/g, (str) => 
+    str.length >= 6 ? str : ('0'.repeat(6 - str.length) + str)
+  )
+}
+
 // --- Document Management Routes ---
 
 // Get all unique domainIds
@@ -104,6 +114,9 @@ router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req
     const ops = { $set: update }
     if (removePid) {
       ops.$unset = { pid: "" }
+      // ✅ FIX: When removing PID, recalculate sort using docId
+      // This matches Hydro's behavior: sort = calculateSort(`P${docId}`, namespaces)
+      update.sort = calculateSort(`P${doc.docId}`)
     }
     
     const updatedDoc = await Document.findByIdAndUpdate(id, ops, { new: true })

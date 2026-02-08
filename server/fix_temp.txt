@@ -1,0 +1,49 @@
+// 临时文件：修复后的恢复逻辑
+    // Restore images from placeholders
+    console.log('[AI优化] 开始恢复图片，占位符数量:', Object.keys(imageMap).length)
+    let restoreCount = 0
+    const failedRestores = []
+
+    for (const [placeholder, originalImage] of Object.entries(imageMap)) {
+      // 尝试直接匹配占位符
+      const escapedPlaceholder = placeholder.replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+      let regex = new RegExp(escapedPlaceholder, 'g')
+      const before = resultText
+      resultText = resultText.replace(regex, originalImage)
+
+      if (before !== resultText) {
+        restoreCount++
+      } else {
+        // 如果直接匹配失败，尝试匹配原始占位符中的索引
+        // AI 可能修改了占位符格式，如 [[IMG_0]] -> [[IMAGE_0]]
+        const indexMatch = placeholder.match(/\d+/)
+        if (indexMatch) {
+          const index = indexMatch[0]
+          // 尝试多种可能的格式
+          const variants = [
+            `\\[\\[IMG_${index}\\]\\]`,     // 原始格式
+            `\\[\\[IMAGE_${index}\\]\\]`,  // AI 可能修改的格式
+            `\\[IMAGE_${index}\\]`,          // 无外括号
+            `\\[IMG_${index}\\]`            // 无外括号
+          ]
+          for (const variant of variants) {
+            const variantRegex = new RegExp(variant, 'g')
+            const before = resultText
+            resultText = resultText.replace(variantRegex, originalImage)
+            if (before !== resultText) {
+              restoreCount++
+              console.log(`[AI优化] 恢复占位符 ${index}，使用格式: ${variant}`)
+              break
+            }
+          }
+        }
+        if (resultText === before) {
+          failedRestores.push(placeholder)
+        }
+      }
+    }
+
+    console.log('[AI优化] 成功恢复图片数量:', restoreCount)
+    if (failedRestores.length > 0) {
+      console.log('[AI优化] 恢复失败的占位符:', failedRestores.join(', '))
+    }
