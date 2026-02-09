@@ -890,18 +890,34 @@ export default {
       const task = this.tasks[index]
       if (!task.problemText) return
       
-      // 提取纯代码
-      let pureCode = task.manualCode || task.codeOutput || ''
-      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
-      const matches = [...pureCode.matchAll(codeBlockRegex)]
-      if (matches.length > 0) {
-        pureCode = matches[0][1].trim()
-      }
-      
       try {
+        // 使用与单个生成相同的完整逻辑
+        let codeContent = (task.codeOutput && task.codeOutput.trim()) ? task.codeOutput : task.manualCode;
+        let pureCode = '';
+        let solutionPlan = '';
+        
+        // 检查是否为 AI 生成的完整 Markdown 题解
+        const isMarkdownSolution = codeContent && (
+          codeContent.includes('## 算法思路') || 
+          codeContent.includes('## 代码实现') || 
+          codeContent.includes('**算法思路**')
+        );
+
+        if (isMarkdownSolution) {
+          solutionPlan = codeContent;
+          // 使用统一的代码提取逻辑
+          pureCode = this.extractPureCode(codeContent) || '';
+        } else if (codeContent) {
+          // 使用统一的代码提取函数
+          pureCode = this.extractPureCode(codeContent) || codeContent;
+        } else {
+          pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码，并添加详细中文注释。";
+        }
+        
         const res = await request.post('/api/solution-report', {
           problem: task.translationText || task.problemText,
           code: pureCode,
+          solutionPlan: solutionPlan,  // ✅ 传递完整题解
           model: this.selectedModel,
           language: this.language
         })
