@@ -377,7 +377,9 @@ export default {
         return this.extractPureCode(this.codeOutput)
       }
       if (this.manualCode && this.manualCode.trim()) {
-        return this.manualCode.trim()
+        // 也对 manualCode 进行提取，以防用户粘贴了包含 Markdown 格式的代码
+        const extracted = this.extractPureCode(this.manualCode)
+        return extracted || this.manualCode.trim()
       }
       return ''
     },
@@ -441,46 +443,60 @@ export default {
       }
 
       if (!code) {
-          // 其次：优先寻找 "代码实现" 部分后的代码块
-          const codeSectionIndex = content.indexOf('## 代码实现')
-          if (codeSectionIndex !== -1) {
-             const afterSection = content.substring(codeSectionIndex)
-             const codePatterns = [
-                /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                /```java\s*\n([\s\S]*?)```/i,
-                /```\s*\n([\s\S]*?)```/
-             ]
-             for (const pattern of codePatterns) {
-                const match = afterSection.match(pattern)
-                if (match && match[1]) {
-                    code = match[1].trim()
-                    break
-                }
-             }
+          // 其次：优先寻找 "代码实现"、"完整代码"、"AC代码" 等部分后的代码块
+          const sectionTitles = ['## 代码实现', '## 完整代码', '## AC代码', '## 参考代码', '## 标准代码', '### 代码实现', '### 完整代码']
+          for (const title of sectionTitles) {
+              const codeSectionIndex = content.indexOf(title)
+              if (codeSectionIndex !== -1) {
+                 const afterSection = content.substring(codeSectionIndex)
+                 const codePatterns = [
+                    /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+                    /```(?:python|py)\s*\n([\s\S]*?)```/i,
+                    /```java\s*\n([\s\S]*?)```/i,
+                    /```\s*\n([\s\S]*?)```/
+                 ]
+                 for (const pattern of codePatterns) {
+                    const match = afterSection.match(pattern)
+                    if (match && match[1]) {
+                        code = match[1].trim()
+                        break
+                    }
+                 }
+                 if (code) break
+              }
           }
       }
       
       if (!code) {
-          // 兜底：通用匹配
+          // 兜底：通用匹配，选择最长的代码块（避免提取到示例代码）
           const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-            /```cpp([\s\S]*?)```/i,
-            /```c\+\+([\s\S]*?)```/i,
-            /```(?:python|py)\s*\n([\s\S]*?)```/i,
-            /```python([\s\S]*?)```/i,
-            /```py([\s\S]*?)```/i,
-            /```java\s*\n([\s\S]*?)```/i,
-            /```java([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
+            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/ig,
+            /```(?:python|py)\s*\n([\s\S]*?)```/ig,
+            /```java\s*\n([\s\S]*?)```/ig,
+            /```\s*\n([\s\S]*?)```/g
           ]
           
+          let allMatches = []
           for (const pattern of codePatterns) {
-            const match = content.match(pattern)
-            if (match && match[1]) {
-              code = match[1].trim()
+            const matches = [...content.matchAll(pattern)]
+            if (matches.length > 0) {
+              allMatches = matches
               break
             }
+          }
+          
+          // 选择最长的代码块
+          if (allMatches.length > 0) {
+            let longestMatch = allMatches[0]
+            let maxLength = allMatches[0][1].trim().length
+            for (const match of allMatches) {
+              const currentLength = match[1].trim().length
+              if (currentLength > maxLength) {
+                maxLength = currentLength
+                longestMatch = match
+              }
+            }
+            code = longestMatch[1].trim()
           }
       }
       
@@ -493,8 +509,14 @@ export default {
       if (code) {
           // 移除 <!-- AC_CODE -->
           code = code.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
-          // 移除开头的语言标识 (如果提取时没处理干净)
-          code = code.replace(/^(?:c\+\+|cpp|python|py|java)\s+/i, '')
+          
+          // 移除开头的语言标识（只处理单独一行的情况，避免误删变量名）
+          // 匹配：行首 + 语言标识 + 行尾，然后是换行符
+          const lines = code.split('\n')
+          if (lines.length > 0 && /^(c\+\+|cpp|python|py|java|javascript|js)$/i.test(lines[0].trim())) {
+              code = lines.slice(1).join('\n').trim()
+          }
+          
           return code
       }
       
@@ -506,25 +528,44 @@ export default {
         // 移除 <!-- AC_CODE -->
         let cleaned = content.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
         
-        // 检查是否是 Markdown 代码块
+        // 检查是否是 Markdown 代码块（```python 或 ```py）
+        const codeBlockMatch = cleaned.match(/^```(python|py)?\s*\n([\s\S]*?)```$/)
+        if (codeBlockMatch) {
+            // 提取代码块内容
+            let codeContent = codeBlockMatch[2]
+            const lang = codeBlockMatch[1] || 'python'
+            
+            // 移除代码块内部第一行的语言标识（如果存在）
+            const lines = codeContent.split('\n')
+            if (lines.length > 0 && /^(python|py)$/i.test(lines[0].trim())) {
+                codeContent = lines.slice(1).join('\n')
+            }
+            
+            // 重新包装为干净的代码块
+            return '```' + lang + '\n' + codeContent.trim() + '\n```'
+        }
+        
+        // 非标准代码块格式，尝试清理前缀
         if (cleaned.startsWith('```')) {
-            const firstLineEnd = cleaned.indexOf('\n');
+            const firstLineEnd = cleaned.indexOf('\n')
             if (firstLineEnd !== -1) {
-                const firstLine = cleaned.substring(0, firstLineEnd).trim(); // e.g. ```python
-                let rest = cleaned.substring(firstLineEnd + 1);
+                const firstLine = cleaned.substring(0, firstLineEnd).trim()
+                let rest = cleaned.substring(firstLineEnd + 1)
                 
-                // 检查代码块内容的第一行是否是多余的语言标识
-                // 匹配: 可能的空白 + python/py + 换行
-                if (/^\s*(python|py)\s*\n/i.test(rest)) {
-                    rest = rest.replace(/^\s*(python|py)\s*\n/i, '');
-                    return firstLine + '\n' + rest;
+                // 移除内容第一行的语言标识
+                const restLines = rest.split('\n')
+                if (restLines.length > 0 && /^(python|py)$/i.test(restLines[0].trim())) {
+                    rest = restLines.slice(1).join('\n')
                 }
+                
+                return firstLine + '\n' + rest
             }
-        } else {
-            // 纯文本情况，或者前面有多余的文本
-            if (/^\s*(python|py)\s*\n/i.test(cleaned)) {
-                cleaned = cleaned.replace(/^\s*(python|py)\s*\n/i, '');
-            }
+        }
+        
+        // 纯文本情况：移除开头的独立语言标识行
+        const lines = cleaned.split('\n')
+        if (lines.length > 0 && /^(python|py)$/i.test(lines[0].trim())) {
+            cleaned = lines.slice(1).join('\n').trim()
         }
         
         return cleaned
@@ -1222,17 +1263,28 @@ pause
         
         let requests = []
         
-        // 1. 请求生成代码
+        // 1. 请求生成代码 - 优化 Prompt 构建
         let promptText = this.problemText
+        let hasReference = false
         
-        // 如果 manualCode 存在，将其作为参考代码加入 Prompt
+        // 如果 manualCode 存在，提取纯代码并作为参考
         if (this.manualCode && this.manualCode.trim()) {
-             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${this.manualCode.trim()}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。请注意：\n1. 即使提供了参考代码，也请你重新生成一份风格优良、注释详细的标准 AC 代码，不要直接复制参考代码。\n2. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等）。\n3. 请优化代码风格，确保变量命名规范、逻辑清晰。`
+             const pureCode = this.extractPureCode(this.manualCode)
+             if (pureCode) {
+                 promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${pureCode}\n\`\`\`\n\n`
+                 hasReference = true
+             }
         }
         
         // 如果 referenceText 存在，则将其加入 Prompt
         if (this.referenceText && this.referenceText.trim()) {
-             promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写详细的解题教案。`
+             promptText += `\n\n【解题思路提示】\n${this.referenceText.trim()}\n\n`
+             hasReference = true
+        }
+        
+        // 统一添加生成要求
+        if (hasReference) {
+             promptText += `请基于上述参考内容编写详细的解题教案。要求：\n1. 不要直接复制参考代码，请重新编写一份代码风格优良、注释详尽的标准 AC 代码\n2. 生成完整的 Markdown 格式解题报告（算法分析、代码实现、复杂度分析等）\n3. 代码应具有良好的可读性：变量命名规范、逻辑清晰、适当添加注释\n4. 在代码实现部分前添加 <!-- AC_CODE --> 标记以便提取`
         }
 
         requests.push(
@@ -1534,11 +1586,10 @@ pause
         
         let requests = []
         
-        // 1. 请求生成数据
-        // 尝试提取代码
+        // 1. 请求生成数据 - 统一使用 extractPureCode 提取代码
         let codeForData = ''
         if (hasManualCode) {
-            codeForData = this.manualCode
+            codeForData = this.extractPureCode(this.manualCode)
         } else if (this.codeOutput) {
             codeForData = this.extractPureCode(this.codeOutput)
         }
