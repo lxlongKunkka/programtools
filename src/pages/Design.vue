@@ -2415,12 +2415,20 @@ export default {
                 if (subRes && subRes.code) userCode = subRes.code
             } catch (e) {}
 
+            // Check if chapter already has a solution plan (markdown content)
+            let solutionPlan = ''
+            if (chapter.contentType === 'markdown' && chapter.content && chapter.content.length > 100) {
+                solutionPlan = chapter.content
+                console.log(`[Batch] Using existing solution plan for chapter: ${chapterTitle}`)
+            }
+
             await request('/api/solution-report/background', {
                 method: 'POST',
                 body: JSON.stringify({
                     problem: problemText,
                     code: userCode,
                     reference: '',
+                    solutionPlan: solutionPlan,
                     level: levelNum,
                     topicTitle: topicTitle,
                     chapterTitle: chapterTitle,
