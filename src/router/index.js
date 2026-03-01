@@ -19,7 +19,6 @@ import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
-import AtCoder from '../pages/AtCoder.vue'
 import YearEndSummary from '../pages/YearEndSummary.vue'
 import request from '../utils/request'
 
@@ -44,7 +43,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/atcoder', component: AtCoder, meta: { requiresAuth: true, requiresPremium: true } },
+  { path: '/atcoder', redirect: '/solvedata' },
   { path: '/summary', component: YearEndSummary }
 ]
 

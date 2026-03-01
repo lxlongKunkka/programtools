@@ -77,6 +77,32 @@
       <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h3>题目描述</h3>
       </div>
+
+      <!-- URL 获取题目 -->
+      <div class="url-fetch-section">
+        <div class="url-fetch-bar">
+          <input
+            v-model="fetchUrl"
+            class="url-fetch-input"
+            placeholder="从 URL 获取题目：AtCoder / Codeforces / 洛谷"
+            @keydown.enter="fetchFromUrl"
+            :disabled="isFetchingUrl"
+          />
+          <button class="btn-fetch" @click="fetchFromUrl" :disabled="isFetchingUrl || !fetchUrl.trim()">
+            {{ isFetchingUrl ? '获取中...' : '获取' }}
+          </button>
+        </div>
+        <div v-if="fetchUrlError" class="fetch-error">❌ {{ fetchUrlError }}</div>
+        <div v-if="contestProblems.length" class="contest-picker">
+          <select v-model="selectedContestProblemIdx" @change="loadSelectedContestProblem" class="contest-select">
+            <option value="">── 选择题目 ──</option>
+            <option v-for="(p, i) in contestProblems" :key="p.taskId" :value="i">
+              {{ p.label }}. {{ p.title }}
+            </option>
+          </select>
+        </div>
+      </div>
+
       <textarea 
         v-model="problemText" 
         placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
@@ -283,6 +309,13 @@ export default {
       isTranslationStale: false, // 标记翻译是否过期
       problemMeta: null,
       reportHtml: '',
+
+      // URL 抓取相关
+      fetchUrl: '',
+      isFetchingUrl: false,
+      contestProblems: [],
+      selectedContestProblemIdx: '',
+      fetchUrlError: '',
       
       // 批量模式相关数据
       isBatchMode: false,
@@ -1196,6 +1229,65 @@ pause
       } catch (e) {
         // 加载失败时保持内置备选项
       }
+    },
+
+    // ─── URL 抓取题目 ─────────────────────────────────────────────────────────
+    async fetchFromUrl() {
+      if (!this.fetchUrl.trim()) return
+      this.isFetchingUrl = true
+      this.fetchUrlError = ''
+      this.contestProblems = []
+      this.selectedContestProblemIdx = ''
+      try {
+        // 先尝试作为比赛链接
+        const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(this.fetchUrl)}`)
+        if (contestData.problems?.length === 1) {
+          // 只有一道题，直接加载
+          await this.loadProblemFromUrl(contestData.problems[0].url, contestData.problems[0].title)
+        } else {
+          this.contestProblems = contestData.problems || []
+        }
+      } catch {
+        // 比赛链接失败，尝试作为单题链接
+        try {
+          await this.loadProblemFromUrl(this.fetchUrl)
+        } catch (e) {
+          this.fetchUrlError = e.message || '获取失败，请检查链接是否正确'
+        }
+      } finally {
+        this.isFetchingUrl = false
+      }
+    },
+
+    async loadSelectedContestProblem() {
+      const idx = this.selectedContestProblemIdx
+      if (idx === '' || idx === null) return
+      const p = this.contestProblems[idx]
+      if (!p) return
+      this.isFetchingUrl = true
+      try {
+        await this.loadProblemFromUrl(p.url, p.title)
+        this.contestProblems = []
+        this.selectedContestProblemIdx = ''
+        this.fetchUrl = ''
+      } catch (e) {
+        this.fetchUrlError = e.message || '加载题目失败'
+      } finally {
+        this.isFetchingUrl = false
+      }
+    },
+
+    async loadProblemFromUrl(url, title) {
+      const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
+      this.problemText = data.content || ''
+      if (data.title && (!this.problemMeta || !this.problemMeta.title)) {
+        this.problemMeta = { ...(this.problemMeta || {}), title: data.title }
+      } else if (title && (!this.problemMeta || !this.problemMeta.title)) {
+        this.problemMeta = { ...(this.problemMeta || {}), title }
+      }
+      this.translationText = ''
+      this.codeOutput = ''
+      this.dataOutput = ''
     },
 
         async autoTranslate() {
@@ -3440,6 +3532,45 @@ python data_generator.py
   border-top: 1px solid #e9ecef;
 }
 
+/* ── URL 抓取题目 ─────────────────────────────────────── */
+.url-fetch-section {
+  padding: 6px 12px 2px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.url-fetch-bar {
+  display: flex;
+  gap: 6px;
+}
+.url-fetch-input {
+  flex: 1;
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+.url-fetch-input:focus { border-color: #4f46e5; }
+.btn-fetch {
+  padding: 5px 14px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; }
+.fetch-error { color: #dc2626; font-size: 12px; margin-top: 4px; }
+.contest-picker { margin-top: 6px; }
+.contest-select {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .problem-input {
   flex: 1;
   padding: 20px;
@@ -3450,7 +3581,6 @@ python data_generator.py
   line-height: 1.6;
   outline: none;
 }
-
 .button-group {
   padding: 15px 20px;
   background: #f8f9fa;
