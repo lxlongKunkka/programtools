@@ -202,6 +202,7 @@ if (!this.prompt.trim()) return
 
 this.loading = true
 this.result = ''
+this.englishResult = ''
 
 try {
 const data = await request('/api/translate', {
