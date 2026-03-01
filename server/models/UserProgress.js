@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const userProgressSchema = new mongoose.Schema({
   userId: { type: Number, required: true, unique: true },
@@ -34,4 +35,4 @@ const userProgressSchema = new mongoose.Schema({
   }
 })
 
-export default mongoose.model('UserProgress', userProgressSchema)
+export default appConn.model('UserProgress', userProgressSchema)

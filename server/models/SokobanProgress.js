@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { appConn } from '../db.js';
 
 const sokobanProgressSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
@@ -11,4 +12,4 @@ const sokobanProgressSchema = new mongoose.Schema({
 // Compound index for unique user+level
 sokobanProgressSchema.index({ userId: 1, levelId: 1 }, { unique: true });
 
-export default mongoose.model('SokobanProgress', sokobanProgressSchema);
+export default appConn.model('SokobanProgress', sokobanProgressSchema);

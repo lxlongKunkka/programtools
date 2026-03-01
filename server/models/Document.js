@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { hydroConn } from '../db.js'
 
 const documentSchema = new mongoose.Schema({
   docId: Number, // Explicitly define docId as Number
@@ -12,4 +13,4 @@ const documentSchema = new mongoose.Schema({
   // but for now let's define what we know.
 }, { collection: 'document', strict: false }) 
 
-export default mongoose.model('Document', documentSchema)
+export default hydroConn.model('Document', documentSchema)

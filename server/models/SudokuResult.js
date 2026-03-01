@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const sudokuResultSchema = new mongoose.Schema({
   userId: { type: Number, ref: 'User', required: true },
@@ -15,4 +16,4 @@ const sudokuResultSchema = new mongoose.Schema({
 sudokuResultSchema.index({ size: 1, difficulty: 1, timeElapsed: 1 })
 sudokuResultSchema.index({ isDaily: 1, createdAt: 1 })
 
-export default mongoose.model('SudokuResult', sudokuResultSchema)
+export default appConn.model('SudokuResult', sudokuResultSchema)

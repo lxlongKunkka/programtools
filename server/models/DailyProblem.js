@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const dailyProblemSchema = new mongoose.Schema({
   date: { type: String, required: true }, // YYYY-MM-DD
@@ -14,4 +15,4 @@ const dailyProblemSchema = new mongoose.Schema({
 // Compound index to ensure one problem per camp per day
 dailyProblemSchema.index({ date: 1, camp: 1 }, { unique: true })
 
-export default mongoose.model('DailyProblem', dailyProblemSchema)
+export default appConn.model('DailyProblem', dailyProblemSchema)

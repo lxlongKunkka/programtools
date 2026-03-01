@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const dailySudokuSchema = new mongoose.Schema({
   date: { type: String, required: true, unique: true }, // YYYY-MM-DD
@@ -8,4 +9,4 @@ const dailySudokuSchema = new mongoose.Schema({
   size: { type: Number, default: 9 }
 })
 
-export default mongoose.model('DailySudoku', dailySudokuSchema)
+export default appConn.model('DailySudoku', dailySudokuSchema)

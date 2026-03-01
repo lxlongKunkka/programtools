@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { hydroConn } from '../db.js'
 
 const userSchema = new mongoose.Schema({
   _id: Number, // 对应数据库中的整数 ID
@@ -20,6 +21,6 @@ const userSchema = new mongoose.Schema({
   strict: false // 允许 schema 中未定义的字段存在于文档中
 })
 
-const User = mongoose.model('User', userSchema)
+const User = hydroConn.model('User', userSchema)
 
 export default User

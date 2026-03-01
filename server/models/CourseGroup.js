@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const courseGroupSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
@@ -9,4 +10,4 @@ const courseGroupSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
-export default mongoose.model('CourseGroup', courseGroupSchema)
+export default appConn.model('CourseGroup', courseGroupSchema)

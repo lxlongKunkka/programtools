@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { appConn } from '../db.js';
 
 const sokobanLevelSchema = new mongoose.Schema({
   levelId: { type: Number, unique: true }, // 用于前端显示的简短ID，区别于 _id
@@ -27,4 +28,4 @@ const sokobanLevelSchema = new mongoose.Schema({
 // 自动生成 levelId 的中间件逻辑可以在路由中处理，或者使用计数器集合
 // 这里为了简单，我们在路由中查询最大ID并+1
 
-export default mongoose.model('SokobanLevel', sokobanLevelSchema);
+export default appConn.model('SokobanLevel', sokobanLevelSchema);

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const typingResultSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -9,4 +10,4 @@ const typingResultSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
-export default mongoose.model('TypingResult', typingResultSchema)
+export default appConn.model('TypingResult', typingResultSchema)

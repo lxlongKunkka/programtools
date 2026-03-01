@@ -1,7 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import mongoose from 'mongoose'
-import { PORT, MONGODB_URI, YUN_API_KEY, DEBUG_LOG } from './config.js'
+import { PORT, YUN_API_KEY, DEBUG_LOG } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
 import { createServer } from 'http'
 // import { setupSocket } from './socket/index.js'
@@ -18,7 +17,7 @@ import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
 import sokobanRoutes from './routes/sokoban.js'
 import settingsRoutes from './routes/settings.js'
-// import ancientRoutes from './routes/ancient.js'
+import atcoderRoutes from './routes/atcoder.js'
 import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
@@ -32,8 +31,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // --- MongoDB Connection ---
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
+import './db.js' // Establishes hydroConn and appConn
 const app = express()
 const httpServer = createServer(app)
 // setupSocket(httpServer)
@@ -69,7 +67,7 @@ app.use('/api/gesp', gespRoutes)
 app.use('/api', settingsRoutes)
 app.use('/api', sudokuRoutes)
 app.use('/api/sokoban', sokobanRoutes)
-// app.use('/api/ancient', ancientRoutes)
+app.use('/api/atcoder', atcoderRoutes)
 
 // 简单的日志上报接口，用于前端统计页面访问
 app.post('/api/log/visit', (req, res) => {

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const chapterSchema = new mongoose.Schema({
   id: { type: String, required: true }, // e.g., '1-1'
@@ -33,4 +34,4 @@ const courseLevelSchema = new mongoose.Schema({
 // Compound index to ensure level is unique per group
 courseLevelSchema.index({ level: 1, group: 1 }, { unique: true })
 
-export default mongoose.model('CourseLevel', courseLevelSchema)
+export default appConn.model('CourseLevel', courseLevelSchema)

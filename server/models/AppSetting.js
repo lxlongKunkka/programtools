@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { appConn } from '../db.js'
 
 const appSettingSchema = new mongoose.Schema({
   _id: { type: String, default: 'global' },
@@ -9,6 +10,6 @@ const appSettingSchema = new mongoose.Schema({
   versionKey: false
 })
 
-const AppSetting = mongoose.model('AppSetting', appSettingSchema)
+const AppSetting = appConn.model('AppSetting', appSettingSchema)
 
 export default AppSetting

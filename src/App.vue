@@ -17,6 +17,7 @@
         <router-link v-if="user" to="/solution">Solution</router-link>
         <router-link v-if="isPremium" to="/solution-report">Report</router-link>
         <router-link v-if="isPremium" to="/solvedata">Data</router-link>
+        <router-link v-if="isPremium" to="/atcoder">AtCoder</router-link>
         <router-link v-if="isPremium" to="/chat">Chat</router-link>
         <router-link v-if="isAdmin" to="/admin">Admin</router-link>
         <router-link v-if="isAdmin || isTeacher" to="/design">Design</router-link>

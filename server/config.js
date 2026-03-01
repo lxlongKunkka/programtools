@@ -10,6 +10,8 @@ dotenv.config({ path: path.join(__dirname, '.env') })
 
 export const PORT = process.env.PORT || 3000
 export const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/programtools'
+export const HYDRO_MONGODB_URI = process.env.HYDRO_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/hydro'
+export const APP_MONGODB_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools'
 export const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_this'
 export const YUN_API_KEY = process.env.YUN_API_KEY
 export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'

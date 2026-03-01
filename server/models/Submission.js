@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { hydroConn } from '../db.js'
 
 const submissionSchema = new mongoose.Schema({
   uid: Number,
@@ -8,4 +9,4 @@ const submissionSchema = new mongoose.Schema({
   // Other fields...
 }, { collection: 'record', strict: false })
 
-export default mongoose.model('Submission', submissionSchema)
+export default hydroConn.model('Submission', submissionSchema)

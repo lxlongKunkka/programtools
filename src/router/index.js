@@ -19,14 +19,12 @@ import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
-import AncientGame from '../pages/AncientGame.vue'
-import SpriteGallery from '../pages/SpriteGallery.vue'
+import AtCoder from '../pages/AtCoder.vue'
 import YearEndSummary from '../pages/YearEndSummary.vue'
 import request from '../utils/request'
 
 const routes = [
   { path: '/', component: Home },
-  { path: '/sprites', component: SpriteGallery, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
@@ -46,7 +44,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/ancient', component: AncientGame },
+  { path: '/atcoder', component: AtCoder, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/summary', component: YearEndSummary }
 ]
 
