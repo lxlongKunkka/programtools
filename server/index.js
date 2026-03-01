@@ -3,7 +3,7 @@ import cors from 'cors'
 import { PORT, YUN_API_KEY, DEBUG_LOG } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
 import { createServer } from 'http'
-// import { setupSocket } from './socket/index.js'
+import { setupSocket } from './socket/index.js'
 
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
@@ -34,7 +34,7 @@ const __dirname = path.dirname(__filename)
 import './db.js' // Establishes hydroConn and appConn
 const app = express()
 const httpServer = createServer(app)
-// setupSocket(httpServer)
+setupSocket(httpServer)
 
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
