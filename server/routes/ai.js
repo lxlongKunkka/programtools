@@ -527,6 +527,21 @@ router.post('/translate', checkModelPermission, async (req, res) => {
                         meta.tags = tagsMatch[1].split(',').map(t => t.trim().replace(/^"|"$/g, ''))
                     }
                 }
+
+                // 提取 english 字段
+                const englishMatch = content.match(/"english"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
+                if (englishMatch) {
+                    try {
+                        meta.english = JSON.parse(`"${englishMatch[1]}"`)
+                    } catch (e4) {
+                        meta.english = englishMatch[1]
+                            .replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\\/g, '\\')
+                            .replace(/\\t/g, '\t')
+                    }
+                }
+
                 console.log('Recovered from JSON error using regex extraction')
             }
         } catch (regexErr) {
