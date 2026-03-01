@@ -2901,31 +2901,43 @@ python data_generator.py
 /* 标签页按钮样式 */
 .output-tabs {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid #ede9fe;
+  padding: 0 14px;
+  flex-shrink: 0;
 }
 .tab-btn {
   flex: 1;
-  background: #f5f7fa;
-  color: #2d3a4b;
+  background: transparent;
+  color: #6b7280;
   border: none;
-  border-radius: 8px 8px 0 0;
-  padding: 10px 0;
-  font-size: 16px;
-  font-weight: 600;
+  border-bottom: 2.5px solid transparent;
+  margin-bottom: -2px;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  border-radius: 6px 6px 0 0;
+  white-space: nowrap;
 }
 .tab-btn.active {
-  background: #fff;
-  color: #4f8cff;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  background: #faf8ff;
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+  font-weight: 700;
+  box-shadow: none;
+}
+.tab-btn:hover:not(.active) {
+  color: #374151;
+  background: #f5f3ff;
 }
 .output-tab-content {
-  background: #fff;
-  border-radius: 0 0 10px 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 16px 12px 12px 12px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 12px 14px 12px 14px;
   height: 100%;
   min-height: 0;
   overflow-y: auto;
@@ -2939,10 +2951,10 @@ python data_generator.py
 }
 .new-input-panel {
   /* flex: 0 0 380px; */ /* Removed fixed width */
-  background: #f8fafc;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 24px 18px 18px 18px;
+  background: #fefefe;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
+  padding: 16px 14px 14px 14px;
   min-width: 0; /* Allow shrinking */
 }
 /* 响应式调整左侧面板宽度 */
@@ -3139,7 +3151,7 @@ python data_generator.py
   height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #f0f2f8;
 }
 
 .top-bar {
@@ -3147,34 +3159,49 @@ python data_generator.py
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #ffffff 0%, #fafafe 100%);
+  border-bottom: 1px solid #e0e0f0;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.06);
 }
 
 .top-bar h2 {
   margin: 0;
-  color: #1a1a2e;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
+  background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.3px;
 }
 
 .model-selector {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .model-selector label {
-  font-weight: bold;
-  color: #333;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .model-selector select {
   padding: 5px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.model-selector select:focus {
+  border-color: #7c3aed;
 }
 
 .main-layout {
@@ -3187,21 +3214,22 @@ python data_generator.py
 
 /* 批量模式侧边栏样式 */
 .batch-sidebar {
-  width: 250px;
+  width: 260px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 14px;
   margin-right: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.12);
   overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid #ede9fe;
 }
 
 .batch-header {
-  padding: 15px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  padding: 13px 15px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3209,8 +3237,10 @@ python data_generator.py
 
 .batch-header h3 {
   margin: 0;
-  font-size: 16px;
-  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 0.3px;
 }
 
 .batch-actions {
@@ -3219,16 +3249,18 @@ python data_generator.py
 }
 
 .btn-icon {
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
   cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  border-radius: 4px;
+  font-size: 14px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  transition: background 0.2s;
 }
 
 .btn-icon:hover {
-  background: #e9ecef;
+  background: rgba(255,255,255,0.32);
 }
 
 .task-list {
@@ -3240,21 +3272,23 @@ python data_generator.py
 .task-item {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 9px 10px;
   border-radius: 6px;
   cursor: pointer;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   border: 1px solid transparent;
+  border-left: 3px solid transparent;
   transition: all 0.2s;
 }
 
 .task-item:hover {
-  background: #f8f9fa;
+  background: #f5f3ff;
 }
 
 .task-item.active {
-  background: #e6f7ff;
-  border-color: #91d5ff;
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  border-left-color: #7c3aed;
 }
 
 .task-status-dot {
@@ -3282,17 +3316,22 @@ python data_generator.py
 }
 
 .task-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #333;
+  color: #2d2d4a;
+}
+
+.task-item.active .task-title {
+  color: #4f46e5;
 }
 
 .task-meta {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
 }
 
 .btn-icon-small {
@@ -3324,50 +3363,71 @@ python data_generator.py
 
 .btn-batch-run {
   width: 100%;
-  padding: 8px;
-  background: #1890ff;
+  padding: 9px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13px;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.2px;
+}
+
+.btn-batch-run:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .btn-batch-run:disabled {
-  background: #bae7ff;
+  background: #c4b5fd;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-batch-download {
   width: 100%;
-  padding: 8px;
-  background: #52c41a;
+  padding: 9px;
+  background: linear-gradient(90deg, #0891b2, #0e7490);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-batch-download:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .btn-batch-download:disabled {
-  background: #b7eb8f;
+  background: #a5f3fc;
+  color: #0891b2;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-batch {
-  padding: 6px 12px;
+  padding: 5px 14px;
   background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  transition: all 0.2s;
 }
 
 .btn-batch.active {
-  background: #1890ff;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
   color: white;
-  border-color: #1890ff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
 /* 调整原有布局以适应 flex */
@@ -3416,25 +3476,32 @@ python data_generator.py
 .input-panel, .output-panel {
   /* flex: 1; Removed to avoid conflict with specific width settings */
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
+  border: 1px solid #ede9fe;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .panel-header {
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 8px 14px 6px;
+  background: transparent;
+  color: inherit;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1.5px solid #ede9fe;
+  margin-bottom: 2px;
 }
 
 .panel-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .header-controls {
@@ -3545,33 +3612,46 @@ python data_generator.py
 
 /* ── URL 抓取题目 ─────────────────────────────────────── */
 .url-fetch-section {
-  padding: 6px 12px 2px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 12px 6px;
+  background: linear-gradient(90deg, #faf8ff, #f5f3ff50);
+  border-bottom: 1px solid #ede9fe;
 }
 .url-fetch-bar {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  align-items: center;
 }
 .url-fetch-input {
   flex: 1;
-  padding: 5px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 7px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 20px;
   font-size: 13px;
   outline: none;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.url-fetch-input:focus { border-color: #4f46e5; }
+.url-fetch-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
 .btn-fetch {
-  padding: 5px 14px;
-  background: #4f46e5;
+  padding: 7px 18px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 20px;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: opacity 0.2s, transform 0.1s;
 }
-.btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-fetch:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .fetch-error { color: #dc2626; font-size: 12px; margin-top: 4px; }
 .contest-picker { margin-top: 6px; }
 .contest-select {
@@ -3750,9 +3830,9 @@ button:disabled {
 }
 
 .problem-meta-display {
-  padding: 15px 20px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  padding: 12px 16px;
+  background: #faf8ff;
+  border-bottom: 1px solid #ede9fe;
 }
 .meta-title {
   font-size: 18px;
@@ -3766,12 +3846,23 @@ button:disabled {
   gap: 6px;
 }
 .meta-tag {
-  background: #eef2f7;
-  color: #5c7cfa;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  background: #ede9fe;
+  color: #5b21b6;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.meta-title-input {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.meta-title-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 .btn-text-action:hover {
   text-decoration: underline;
