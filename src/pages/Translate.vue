@@ -14,12 +14,11 @@
 {{ loading ? '⏳ 翻译中...' : '🌐 开始翻译' }}
 </button>
 <button @click="clear" class="btn-secondary">🧹 清空</button>
-<button @click="copyResult" :disabled="!result" class="btn-secondary">📋 复制结果</button>
-<button @click="saveResult" :disabled="!result" class="btn-secondary">💾 保存 Markdown</button>
 </div>
 </div>
 
     <div class="content-area" ref="contentArea">
+      <!-- 输入栏 -->
       <div class="input-panel" :style="{ width: leftWidth + '%' }">
         <div class="panel-header">
           <h3>输入原文</h3>
@@ -38,35 +37,58 @@
 
       <div class="resizer" @mousedown="startResize"></div>
 
-      <div class="output-panel">
-        <div class="panel-header">
-          <div class="header-left">
-            <h3>翻译结果</h3>
-            <div class="lang-tabs">
-              <button :class="['lang-btn', { active: lang === 'zh' }]" @click="lang = 'zh'">🇨🇳 中文</button>
-              <button :class="['lang-btn', { active: lang === 'en' }]" @click="lang = 'en'" :disabled="!englishResult">🇺🇸 英文</button>
+      <!-- 右侧两栏 -->
+      <div class="output-columns">
+        <!-- 中文栏 -->
+        <div class="output-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <h3>🇨🇳 中文翻译</h3>
+            </div>
+            <div class="header-right">
+              <div class="header-tabs">
+                <button :class="['tab-btn', { active: activeTabZh === 'preview' }]" @click="activeTabZh = 'preview'">预览</button>
+                <button :class="['tab-btn', { active: activeTabZh === 'raw' }]" @click="activeTabZh = 'raw'">源码</button>
+              </div>
+              <button @click="copyText(result)" :disabled="!result" class="btn-icon" title="复制">📋</button>
+              <button @click="saveText(result, 'zh')" :disabled="!result" class="btn-icon" title="保存">💾</button>
             </div>
           </div>
-          <div class="header-tabs">
-            <button 
-              :class="['tab-btn', { active: activeTab === 'preview' }]" 
-              @click="activeTab = 'preview'"
-            >预览</button>
-            <button 
-              :class="['tab-btn', { active: activeTab === 'raw' }]" 
-              @click="activeTab = 'raw'"
-            >源码</button>
+          <div class="result-area" v-if="result">
+            <MarkdownViewer v-if="activeTabZh === 'preview'" :content="result" />
+            <textarea v-else class="raw-output" readonly :value="result"></textarea>
+          </div>
+          <div class="result-area empty" v-else>
+            <p>🇨🇳 中文翻译结果</p>
+            <p class="tip">点击"开始翻译"后显示</p>
           </div>
         </div>
-        
-        <div class="result-area" v-if="currentResult">
-          <MarkdownViewer v-if="activeTab === 'preview'" :content="currentResult" />
-          <textarea v-else class="raw-output" readonly :value="currentResult"></textarea>
-        </div>
 
-        <div class="result-area empty" v-else>
-          <p>✨ 翻译结果将显示在这里</p>
-          <p class="tip">AI 会自动识别源语言并翻译成流畅的中文及英文</p>
+        <div class="col-resizer"></div>
+
+        <!-- 英文栏 -->
+        <div class="output-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <h3>🇺🇸 英文题面</h3>
+            </div>
+            <div class="header-right">
+              <div class="header-tabs">
+                <button :class="['tab-btn', { active: activeTabEn === 'preview' }]" @click="activeTabEn = 'preview'">预览</button>
+                <button :class="['tab-btn', { active: activeTabEn === 'raw' }]" @click="activeTabEn = 'raw'">源码</button>
+              </div>
+              <button @click="copyText(englishResult)" :disabled="!englishResult" class="btn-icon" title="复制">📋</button>
+              <button @click="saveText(englishResult, 'en')" :disabled="!englishResult" class="btn-icon" title="保存">💾</button>
+            </div>
+          </div>
+          <div class="result-area" v-if="englishResult">
+            <MarkdownViewer v-if="activeTabEn === 'preview'" :content="englishResult" />
+            <textarea v-else class="raw-output" readonly :value="englishResult"></textarea>
+          </div>
+          <div class="result-area empty" v-else>
+            <p>🇺🇸 英文题面结果</p>
+            <p class="tip">点击"开始翻译"后显示</p>
+          </div>
         </div>
       </div>
     </div>
@@ -85,8 +107,8 @@ data() {
 return {
       leftWidth: 40,
       isDragging: false,
-      activeTab: 'preview',
-      lang: 'zh',
+      activeTabZh: 'preview',
+      activeTabEn: 'preview',
 prompt: '',
 result: '',
 englishResult: '',
@@ -109,16 +131,12 @@ computed: {
       if (this.isPremium) return all
       return all.filter(m => m.id === 'gemini-2.5-flash')
     },
-    currentResult() {
-      return this.lang === 'en' ? this.englishResult : this.result
-    }
 },
 watch: {
     prompt(val) { this.saveState() },
     result(val) { this.saveState() },
     englishResult(val) { this.saveState() },
-    model(val) { this.saveState() },
-    lang(val) { this.saveState() }
+    model(val) { this.saveState() }
 },
 async mounted() {
 try {
@@ -130,7 +148,6 @@ try {
         if (data.result) this.result = data.result
         if (data.englishResult) this.englishResult = data.englishResult
         if (data.model) this.model = data.model
-        if (data.lang) this.lang = data.lang
     }
 
 const list = await getModels()
@@ -153,8 +170,7 @@ methods: {
             prompt: this.prompt,
             result: this.result,
             englishResult: this.englishResult,
-            model: this.model,
-            lang: this.lang
+            model: this.model
         }))
     },
     startResize() {
@@ -264,21 +280,14 @@ this.prompt = ''
 this.result = ''
 this.englishResult = ''
 },
-copyResult() {
-const content = this.currentResult
+copyText(content) {
 if (!content) return
 navigator.clipboard.writeText(content)
-.then(() => this.showToastMessage('✅ 结果已复制到剪贴板'))
-.catch(err => {
-console.error('copy failed', err)
-this.showToastMessage('复制失败: ' + err.message)
-})
+.then(() => this.showToastMessage('✅ 已复制到剪贴板'))
+.catch(err => this.showToastMessage('复制失败: ' + err.message))
 },
-saveResult() {
-const content = this.currentResult
+saveText(content, lang) {
 if (!content) return
-
-const lang = this.lang === 'en' ? 'en' : 'zh'
 const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
 const url = URL.createObjectURL(blob)
 const a = document.createElement('a')
@@ -414,6 +423,28 @@ button {
   overflow: hidden;
 }
 
+.output-columns {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.col-resizer {
+  width: 5px;
+  background-color: #f0f0f0;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.col-resizer:hover, .col-resizer:active {
+  background-color: #3498db;
+}
+
 .input-panel {
   display: flex;
   flex-direction: column;
@@ -443,6 +474,7 @@ button {
   padding: 20px;
   background-color: #fff;
   min-width: 200px;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -452,6 +484,7 @@ button {
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
 
 .header-left h3 {
@@ -464,40 +497,31 @@ button {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.lang-tabs {
+.header-right {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon {
+  padding: 4px 8px;
+  font-size: 14px;
   background: #f0f2f5;
-  padding: 3px;
-  border-radius: 6px;
-}
-
-.lang-btn {
-  padding: 3px 10px;
-  font-size: 12px;
-  border-radius: 4px;
-  background: transparent;
   border: none;
-  color: #666;
-  font-weight: 500;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
+  line-height: 1;
 }
 
-.lang-btn:hover:not(:disabled) {
-  color: #333;
+.btn-icon:hover:not(:disabled) {
+  background: #dde1e7;
 }
 
-.lang-btn.active {
-  background: white;
-  color: #3498db;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.lang-btn:disabled {
+.btn-icon:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -703,7 +727,7 @@ textarea:focus {
   border-radius: 4px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .translate-root {
     height: auto;
     min-height: 100vh;
@@ -712,11 +736,18 @@ textarea:focus {
     flex-direction: column;
     height: auto;
   }
-  .input-panel, .output-panel {
+  .input-panel {
     width: 100% !important;
-    height: 600px;
+    height: 300px;
   }
-  .resizer {
+  .output-columns {
+    flex-direction: column;
+  }
+  .output-panel {
+    width: 100% !important;
+    height: 500px;
+  }
+  .resizer, .col-resizer {
     display: none;
   }
 }
