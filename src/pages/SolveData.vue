@@ -309,7 +309,7 @@ export default {
       contestProblems: [],
       selectedContestProblemIdx: '',
       fetchUrlError: '',
-      fetchProgress: ''
+      fetchProgress: '',
       
       // 批量模式相关数据
       isBatchMode: true,
