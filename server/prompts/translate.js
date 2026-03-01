@@ -19,8 +19,6 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
    - 姜饼老师 → 大马
    - 雪球老师 → 卡卡
    - 麋鹿老师 → 妙妙
-   - Takahashi → kunkka
-   - Aoki → Elsa
    - 小Z → 聪聪
    - 其他老师角色 → 根据性别和特征选择岐岐或麦麦或妙妙或璨璨
 
@@ -49,8 +47,8 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
      - # 标题
      - ## 题目背景 (如果有)
      - ## 题目描述
-     - ## 输入格式
-     - ## 输出格式
+     - ## 输入格式（用引用块 "> " 展示输入变量格式，不要用代码块）
+     - ## 输出格式（用引用块 "> " 展示输出变量格式，不要用代码块）
      - ## 样例 (使用 \`\`\`input1, \`\`\`output1 格式)
      - ## 数据范围
      (注意：请保持 Markdown 格式的整洁)
@@ -58,6 +56,7 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
      - 标题使用英文（角色名用 kunkka/Elsa 等替换后的英文名）
      - 章节标题使用：# Title / ## Background / ## Problem Description / ## Input Format / ## Output Format / ## Sample / ## Constraints
      - 数学公式保持 $...$ / $$...$$ 的 LaTeX 格式不变
+     - Input Format / Output Format 同样使用引用块 "> " 展示变量格式
      - 样例与中文版完全相同（\`\`\`input1 \`\`\`output1 格式）
      - 使用简洁、规范的竞赛级英文，不要加中文
 
@@ -88,11 +87,17 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
 
     ## 输入格式
 
-    [输入格式]
+    输入以如下格式从标准输入中给出。
+
+    > [第一行变量]
+    > [第二行变量]
+    > ...
 
     ## 输出格式
 
-    [输出格式]
+    输出以如下格式输出到标准输出中。
+
+    > [输出变量]
 
     ## 样例
 
