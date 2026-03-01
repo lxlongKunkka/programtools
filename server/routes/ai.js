@@ -660,6 +660,155 @@ router.post('/translate', checkModelPermission, async (req, res) => {
   }
 })
 
+// ── 翻译辅助函数 ──────────────────────────────────────────────────────────────
+
+function parseTranslationContent(content) {
+  let resultText = '', meta = { title: '', tags: [] }, isJson = false
+  try {
+    let jsonStr = content.trim()
+    const jb = content.match(/```json\s*([\s\S]*?)\s*```/i)
+    if (jb) { jsonStr = jb[1].trim() } else {
+      const f = content.indexOf('{'), l = content.lastIndexOf('}')
+      if (f !== -1 && l > f) jsonStr = content.substring(f, l + 1)
+    }
+    const obj = JSON.parse(jsonStr)
+    if (obj.translation) {
+      resultText = obj.translation; isJson = true
+      if (obj.title) meta.title = obj.title
+      if (Array.isArray(obj.tags)) meta.tags = obj.tags
+      if (obj.english) meta.english = obj.english
+    } else { resultText = content }
+  } catch {
+    let recovered = false
+    try {
+      const tm = content.match(/"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
+      if (tm) {
+        try { resultText = JSON.parse(`"${tm[1]}"`) }
+        catch { resultText = tm[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\t/g,'\t') }
+        isJson = true; recovered = true
+        const tit = content.match(/"title"\s*:\s*"([^"]*?)"/)
+        if (tit) meta.title = tit[1]
+        const tag = content.match(/"tags"\s*:\s*\[([\s\S]*?)\]/)
+        if (tag) { try { meta.tags = JSON.parse(`[${tag[1]}]`) } catch { meta.tags = tag[1].split(',').map(t=>t.trim().replace(/^"|"$/g,'')) } }
+        const eng = content.match(/"english"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
+        if (eng) { try { meta.english = JSON.parse(`"${eng[1]}"`) } catch { meta.english = eng[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\t/g,'\t') } }
+      }
+    } catch {}
+    if (!recovered) resultText = content.replace(/^```json\s*/i,'').replace(/\s*```$/i,'')
+  }
+  let fixed = resultText
+  if (!isJson) fixed = wrapLatexIfNeeded(fixed)
+  fixed = fixed.replace(/(```)\s*(#+\s+)/g,'$1\n\n$2').replace(/([^\n])\s*(##+\s+)/g,'$1\n\n$2')
+  if (!isJson || (!meta.title && !meta.tags.length)) {
+    try {
+      const tm = fixed.match(/^#\s+(.+)$/m)
+      if (tm) {
+        let t = tm[1].trim()
+        if (t === '题目标题' || t === 'Title') { const nl = fixed.substring(tm.index+tm[0].length).match(/^\s*([^#\s].*)$/m); t = nl ? nl[1].trim() : '' }
+        if (/^题目标题[:：]/.test(t)) t = t.replace(/^题目标题[:：]\s*/,'')
+        if (t === '题目标题') t = ''
+        meta.title = t
+      }
+      const tagM = fixed.match(/(?:###|\*\*|)\s*算法标签(?:\*\*|)\s*\n+([\s\S]*?)(?:\n#|\n\n|$)/)
+      if (tagM) meta.tags = tagM[1].trim().split(/[\s,，、]+/).map(t=>t.trim()).filter(t=>t&&!t.startsWith('**')&&t!=='无')
+    } catch {}
+  }
+  return { result: fixed, meta }
+}
+
+function htmlToText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'')
+    .replace(/<br\s*\/?>/gi,'\n').replace(/<\/?(p|div|li|tr|h[1-6])\b[^>]*>/gi,'\n')
+    .replace(/<[^>]+>/g,'')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ')
+    .replace(/\n{3,}/g,'\n\n').trim()
+}
+
+// 流式翻译接口（SSE）
+router.post('/translate/stream', checkModelPermission, async (req, res) => {
+  const { text, model } = req.body
+  if (!text) { res.status(400).end(); return }
+  const apiKey = YUN_API_KEY
+  if (!apiKey) { res.status(500).end(); return }
+
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const send = (obj) => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`) } catch {} }
+
+  try {
+    const resp = await axios.post(YUN_API_URL, {
+      model: model || 'o4-mini',
+      messages: [{ role: 'system', content: TRANSLATE_PROMPT }, { role: 'user', content: String(text) }],
+      temperature: 0.1, max_tokens: 32767, stream: true
+    }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      responseType: 'stream', timeout: 600000
+    })
+
+    let fullContent = '', sseBuffer = ''
+    resp.data.on('data', (chunk) => {
+      sseBuffer += chunk.toString()
+      const lines = sseBuffer.split('\n'); sseBuffer = lines.pop()
+      for (const line of lines) {
+        const t = line.trim()
+        if (!t.startsWith('data: ')) continue
+        const d = t.slice(6).trim()
+        if (d === '[DONE]') continue
+        try {
+          const parsed = JSON.parse(d)
+          const delta = parsed.choices?.[0]?.delta?.content || ''
+          if (delta) { fullContent += delta; send({ type: 'chunk', text: delta }) }
+        } catch {}
+      }
+    })
+    resp.data.on('end', () => {
+      try {
+        const { result, meta } = parseTranslationContent(fullContent)
+        send({ type: 'result', result, english: meta.english || '', meta })
+      } catch (e) { send({ type: 'error', message: e.message }) }
+      res.write('data: [DONE]\n\n'); res.end()
+    })
+    resp.data.on('error', (err) => { send({ type: 'error', message: err.message }); res.end() })
+    req.on('close', () => { try { resp.data.destroy() } catch {} })
+  } catch (err) {
+    send({ type: 'error', message: err.message || 'Translation failed' }); res.end()
+  }
+})
+
+// 从 URL 抓取题目内容（Codeforces / AtCoder）
+router.get('/translate/fetch-url', checkModelPermission, async (req, res) => {
+  const { url } = req.query
+  if (!url) return res.status(400).json({ error: '缺少 url 参数' })
+  const isCodeforces = /codeforces\.com/i.test(url)
+  const isAtCoder = /atcoder\.jp/i.test(url)
+  if (!isCodeforces && !isAtCoder) return res.status(400).json({ error: '仅支持 Codeforces 和 AtCoder 链接' })
+
+  try {
+    const resp = await axios.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      timeout: 15000
+    })
+    const html = resp.data
+    let startIdx = -1
+    if (isCodeforces) {
+      startIdx = html.indexOf('class="problem-statement"')
+      if (startIdx !== -1) startIdx = html.lastIndexOf('<div', startIdx)
+    } else {
+      startIdx = html.indexOf('id="task-statement"')
+      if (startIdx !== -1) startIdx = html.lastIndexOf('<div', startIdx)
+    }
+    const chunk = startIdx !== -1 ? html.substring(startIdx, startIdx + 100000) : html
+    const text = htmlToText(chunk).substring(0, 10000)
+    return res.json({ text })
+  } catch (err) {
+    return res.status(500).json({ error: '抓取失败: ' + (err.message || '未知错误') })
+  }
+})
+
 function parseMarkdownWithImages(text) {
   const parts = []
   const imageMap = {}
