@@ -1204,33 +1204,55 @@ pause
           this.generationStatus = '正在自动翻译题目...'
           this.translationText = '';
           try {
-            const data = await request('/api/translate', {
-              method: 'POST',
+            const token = localStorage.getItem('auth_token')
+            const headers = { 'Content-Type': 'application/json' }
+            if (token) headers['Authorization'] = `Bearer ${token}`
+            const response = await fetch('/api/translate/stream', {
+              method: 'POST', headers,
               body: JSON.stringify({ text: this.problemText, model: this.selectedModel })
-            });
-            
-            if (data && data.result) {
-              this.translationText = data.result;
-              // 如果翻译接口返回了元数据，直接使用，避免再次调用 generate-problem-meta
-              if (data.meta && (data.meta.title || (data.meta.tags && data.meta.tags.length))) {
-                this.problemMeta = data.meta;
-                console.log('从翻译结果中提取到元数据:', this.problemMeta);
+            })
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            const reader = response.body.getReader()
+            const decoder = new TextDecoder()
+            let buf = ''
+            let charsReceived = 0
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              buf += decoder.decode(value, { stream: true })
+              const lines = buf.split('\n'); buf = lines.pop()
+              for (const line of lines) {
+                if (!line.startsWith('data: ')) continue
+                const d = line.slice(6).trim()
+                if (!d || d === '[DONE]') continue
+                try {
+                  const ev = JSON.parse(d)
+                  if (ev.type === 'chunk') {
+                    charsReceived += ev.text.length
+                    this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
+                  } else if (ev.type === 'result') {
+                    this.translationText = ev.result || ''
+                    if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
+                      this.problemMeta = ev.meta
+                      console.log('从翻译结果中提取到元数据:', this.problemMeta)
+                    }
+                    this.isTranslationStale = false
+                  } else if (ev.type === 'error') {
+                    throw new Error(ev.message)
+                  }
+                } catch (pe) {
+                  if (pe.message && !pe.message.includes('JSON') && !pe.message.includes('Unexpected')) throw pe
+                }
               }
             }
-            else if (data && data.rawText) this.translationText = data.rawText || '(空响应)';
-            else this.translationText = '(无返回内容)';
-            
-            // 如果不是在 generateAll 流程中（即单独点击翻译），则显示完成状态
             if (this.isGenerating !== 'all' && this.isGenerating !== 'code' && this.isGenerating !== 'data') {
-                this.generationStatus = '✅ 翻译完成'
-                setTimeout(() => { if(this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
+              this.generationStatus = '✅ 翻译完成'
+              setTimeout(() => { if (this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
             }
-            
-            // 翻译成功，标记为不过期
-            this.isTranslationStale = false
           } catch (e) {
             this.translationText = '请求错误: ' + e.message;
             this.generationStatus = '❌ 翻译失败: ' + e.message
+            throw e
           } finally {
             this.isTranslating = false;
           }
@@ -1939,6 +1961,7 @@ pause
         console.error('Generate report error:', e)
         this.generationStatus = '❌ 生成报告失败: ' + e.message
         this.showToastMessage('生成报告失败: ' + e.message)
+        throw e
       } finally {
         this.isGeneratingReport = false
         // 如果没有其他生成任务在运行，清除状态
