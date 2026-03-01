@@ -2,7 +2,7 @@
   <div class="atcoder-root">
     <!-- Top bar -->
     <div class="top-bar">
-      <h2>AtCoder 题目搬运</h2>
+      <h2>题目搬运</h2>
       <div class="top-controls">
         <label>模型:</label>
         <select v-model="model">
@@ -21,7 +21,7 @@
       <input
         v-model="contestUrl"
         class="url-input"
-        placeholder="输入 AtCoder 比赛链接，例如 https://atcoder.jp/contests/abc445"
+        placeholder="输入比赛/题目链接，支持 AtCoder / Codeforces / 洛谷 / Hydro"
         @keydown.enter="fetchContest"
         :disabled="fetchingContest"
       />
@@ -206,13 +206,14 @@
     <!-- Initial empty state -->
     <div v-if="!contestInfo && !fetchingContest" class="welcome">
       <div class="welcome-icon">🏆</div>
-      <p>输入 AtCoder 比赛链接，自动抓取题目并完成：</p>
+      <p>输入比赛或题目链接，自动抓取并完成：</p>
       <ul>
-        <li>📥 抓取英文原题</li>
+        <li>📥 抓取题目原文</li>
         <li>🌐 AI 翻译成中文</li>
         <li>💡 生成 AC 解题代码</li>
         <li>🔧 生成数据生成脚本 (cyaron)</li>
       </ul>
+      <p class="welcome-platforms">支持平台：AtCoder · Codeforces · 洛谷 · Hydro OJ</p>
     </div>
   </div>
 </template>
@@ -764,6 +765,7 @@ export default {
 }
 .welcome-icon { font-size: 48px; }
 .welcome ul { text-align: left; line-height: 2; }
+.welcome-platforms { font-size: 12px; color: #9ca3af; margin-top: 8px; }
 
 /* ── MarkdownViewer area ────────────────────────────────────────────── */
 :deep(.markdown-viewer) {
