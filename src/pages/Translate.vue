@@ -13,11 +13,122 @@
 <button @click="translate" :disabled="loading || !prompt.trim()" class="btn-primary">
 {{ loading ? '⏳ 翻译中...' : '🌐 开始翻译' }}
 </button>
+<button @click="showHistory = !showHistory" class="btn-secondary">📋 历史{{ history.length ? ` (${history.length})` : '' }}</button>
 <button @click="clear" class="btn-secondary">🧹 清空</button>
 </div>
 </div>
 
+<!-- 历史记录面板 -->
+<div v-if="showHistory" class="history-panel">
+  <div class="history-header"><span>最近翻译记录（点击恢复）</span><button @click="clearHistory" class="btn-clear-history">🗑 清空</button></div>
+  <div v-if="!history.length" class="history-empty">暂无历史记录</div>
+  <div v-for="item in history" :key="item.id" class="history-item" @click="restoreHistory(item)">
+    <div class="history-meta">
+      <span class="history-title">{{ item.title || '无标题' }}</span>
+      <span class="history-time">{{ formatTime(item.ts) }}</span>
+    </div>
+    <div class="history-preview">{{ item.prompt.slice(0, 80) }}{{ item.prompt.length > 80 ? '...' : '' }}</div>
+  </div>
+</div>
+
+<!-- URL 抓取栏 -->
+<div class="url-bar">
+  <span class="url-label">🔗</span>
+  <input v-model="urlInput" class="url-input" placeholder="支持 Codeforces / AtCoder 题目链接，自动抓取题面" @keydown.enter="fetchUrl" :disabled="urlLoading" />
+  <button @click="fetchUrl" :disabled="!urlInput.trim() || urlLoading" class="btn-fetch">
+    {{ urlLoading ? '⏳' : '抓取' }}
+  </button>
+</div>
+
     <div class="content-area" ref="contentArea">
+      <!-- 输入栏 -->
+      <div class="input-panel" :style="{ width: leftWidth + '%' }">
+        <div class="panel-header">
+          <h3>输入原文</h3>
+          <span class="hint">支持各种语言的题目或文本</span>
+        </div>
+        <div class="input-group">
+          <div class="input-section">
+            <textarea 
+              v-model="prompt" 
+              placeholder="在此输入需要翻译的题面或文本...&#10;&#10;示例：&#10;You are given an array of integers..."
+              :disabled="loading"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer" @mousedown="startResize"></div>
+
+      <!-- 右侧两栏 -->
+      <div class="output-columns">
+        <!-- 中文栏 -->
+        <div class="output-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <h3>🇨🇳 中文翻译</h3>
+            </div>
+            <div class="header-right">
+              <div class="header-tabs">
+                <button :class="['tab-btn', { active: activeTabZh === 'preview' }]" @click="activeTabZh = 'preview'">预览</button>
+                <button :class="['tab-btn', { active: activeTabZh === 'raw' }]" @click="activeTabZh = 'raw'">源码</button>
+              </div>
+              <button @click="copyText(result)" :disabled="!result" class="btn-icon" title="复制">📋</button>
+              <button @click="saveText(result, 'zh')" :disabled="!result" class="btn-icon" title="保存">💾</button>
+            </div>
+          </div>
+          <div class="result-area" v-if="result">
+            <MarkdownViewer v-if="activeTabZh === 'preview'" :content="result" />
+            <textarea v-else class="raw-output" readonly :value="result"></textarea>
+          </div>
+          <div class="result-area streaming-area" v-else-if="loading">
+            <div class="streaming-indicator">
+              <div class="dot-pulse"></div>
+              <span>AI 正在生成... 已收到 {{ streamCharsCount }} 字</span>
+            </div>
+          </div>
+          <div class="result-area empty" v-else>
+            <p>🇨🇳 中文翻译结果</p>
+            <p class="tip">点击"开始翻译"后显示</p>
+          </div>
+        </div>
+
+        <div class="col-resizer"></div>
+
+        <!-- 英文栏 -->
+        <div class="output-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <h3>🇺🇸 英文题面</h3>
+            </div>
+            <div class="header-right">
+              <div class="header-tabs">
+                <button :class="['tab-btn', { active: activeTabEn === 'preview' }]" @click="activeTabEn = 'preview'">预览</button>
+                <button :class="['tab-btn', { active: activeTabEn === 'raw' }]" @click="activeTabEn = 'raw'">源码</button>
+              </div>
+              <button @click="copyText(englishResult)" :disabled="!englishResult" class="btn-icon" title="复制">📋</button>
+              <button @click="saveText(englishResult, 'en')" :disabled="!englishResult" class="btn-icon" title="保存">💾</button>
+            </div>
+          </div>
+          <div class="result-area" v-if="englishResult">
+            <MarkdownViewer v-if="activeTabEn === 'preview'" :content="englishResult" />
+            <textarea v-else class="raw-output" readonly :value="englishResult"></textarea>
+          </div>
+          <div class="result-area streaming-area" v-else-if="loading">
+            <div class="streaming-indicator">
+              <div class="dot-pulse"></div>
+              <span>等待生成...</span>
+            </div>
+          </div>
+          <div class="result-area empty" v-else>
+            <p>🇺🇸 英文题面结果</p>
+            <p class="tip">点击"开始翻译"后显示</p>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+</template>
       <!-- 输入栏 -->
       <div class="input-panel" :style="{ width: leftWidth + '%' }">
         <div class="panel-header">
@@ -113,8 +224,13 @@ prompt: '',
 result: '',
 englishResult: '',
 loading: false,
+streamCharsCount: 0,
 model: 'gemini-2.5-flash',
-rawModelOptions: []
+rawModelOptions: [],
+urlInput: '',
+urlLoading: false,
+showHistory: false,
+history: []
 }
 },
 computed: {
@@ -149,6 +265,7 @@ try {
         if (data.englishResult) this.englishResult = data.englishResult
         if (data.model) this.model = data.model
     }
+    this.history = JSON.parse(localStorage.getItem('translate_history') || '[]')
 
 const list = await getModels()
 if (Array.isArray(list)) this.rawModelOptions = list
@@ -199,76 +316,48 @@ methods: {
     },
 async translate() {
 if (!this.prompt.trim()) return
-
 this.loading = true
 this.result = ''
 this.englishResult = ''
-
+this.streamCharsCount = 0
 try {
-const data = await request('/api/translate', {
-method: 'POST',
-body: JSON.stringify({
-text: this.prompt,
-model: this.model
-})
-})
-
-let finalResult = data.result || data.rawText || ''
-
-// 尝试解析可能存在的 JSON 格式（兜底后端解析失败的情况）
-try {
-    let jsonStr = finalResult.trim()
-    // 1. 尝试提取 Markdown 代码块中的 JSON
-    const jsonBlockMatch = jsonStr.match(/```json\s*([\s\S]*?)\s*```/i)
-    if (jsonBlockMatch) {
-        jsonStr = jsonBlockMatch[1].trim()
+  const token = localStorage.getItem('auth_token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const response = await fetch('/api/translate/stream', {
+    method: 'POST', headers,
+    body: JSON.stringify({ text: this.prompt, model: this.model })
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split('\n'); buf = lines.pop()
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const d = line.slice(6).trim()
+      if (!d || d === '[DONE]') continue
+      try {
+        const ev = JSON.parse(d)
+        if (ev.type === 'chunk') {
+          this.streamCharsCount += ev.text.length
+        } else if (ev.type === 'result') {
+          this.result = ev.result
+          this.englishResult = ev.english || ''
+          this.saveState()
+          this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '' })
+        } else if (ev.type === 'error') {
+          throw new Error(ev.message)
+        }
+      } catch (pe) {
+        if (pe.message && !pe.message.includes('JSON') && !pe.message.includes('Unexpected')) throw pe
+      }
     }
-    
-    // 2. 尝试寻找最外层的 {}
-    const firstBrace = jsonStr.indexOf('{')
-    const lastBrace = jsonStr.lastIndexOf('}')
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            const potentialJson = jsonStr.substring(firstBrace, lastBrace + 1)
-            
-            try {
-                const jsonObj = JSON.parse(potentialJson)
-                if (jsonObj.translation) {
-                    finalResult = jsonObj.translation
-                }
-            } catch (parseErr) {
-                // JSON.parse 失败，尝试使用正则提取 translation 字段
-                // 匹配 "translation": "..." 结构，支持转义字符
-                // 使用 [\s\S]*? 非贪婪匹配直到遇到引号后跟逗号或大括号
-                const regex = /"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/
-                const match = potentialJson.match(regex)
-                if (match) {
-                    try {
-                        // 尝试用 JSON.parse 解码字符串值
-                        finalResult = JSON.parse(`"${match[1]}"`)
-                    } catch (e) {
-                        // 如果解码失败，手动处理常见的转义符
-                        finalResult = match[1]
-                            .replace(/\\n/g, '\n')
-                            .replace(/\\"/g, '"')
-                            .replace(/\\\\/g, '\\')
-                            .replace(/\\t/g, '\t')
-                    }
-                }
-            }
-    }
-} catch (e) {
-    // ignore
-}
-
-this.result = finalResult
-
-// 提取英文题面
-if (data.meta && data.meta.english) {
-  this.englishResult = data.meta.english
-} else {
-  this.englishResult = ''
-}
-
+  }
 } catch (e) {
 console.error('Translate error:', e)
 this.showToastMessage(`翻译失败: ${e.message}`)
@@ -280,6 +369,45 @@ clear() {
 this.prompt = ''
 this.result = ''
 this.englishResult = ''
+this.urlInput = ''
+},
+async fetchUrl() {
+if (!this.urlInput.trim()) return
+this.urlLoading = true
+try {
+const data = await request(`/api/translate/fetch-url?url=${encodeURIComponent(this.urlInput.trim())}`)
+if (data.text) {
+this.prompt = data.text
+this.showToastMessage('✅ 题面抓取成功，可以开始翻译')
+this.urlInput = ''
+} else if (data.error) {
+this.showToastMessage('抓取失败: ' + data.error)
+}
+} catch (e) {
+this.showToastMessage('抓取失败: ' + e.message)
+} finally {
+this.urlLoading = false
+}
+},
+saveHistory({ prompt, result, englishResult, title }) {
+const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title }
+this.history = [item, ...this.history.filter(h => h.prompt !== prompt)].slice(0, 10)
+localStorage.setItem('translate_history', JSON.stringify(this.history))
+},
+restoreHistory(item) {
+this.prompt = item.prompt
+this.result = item.result
+this.englishResult = item.englishResult || ''
+this.showHistory = false
+this.showToastMessage('已恢复历史记录')
+},
+clearHistory() {
+this.history = []
+localStorage.removeItem('translate_history')
+},
+formatTime(ts) {
+const d = new Date(ts)
+return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 },
 copyText(content) {
 if (!content) return
@@ -751,5 +879,136 @@ textarea:focus {
   .resizer, .col-resizer {
     display: none;
   }
+}
+
+/* URL bar */
+.url-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.url-input {
+  flex: 1;
+  padding: 7px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.url-input:focus {
+  border-color: #667eea;
+}
+.btn-fetch {
+  padding: 7px 14px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-fetch:hover:not(:disabled) {
+  background: #5a6fd6;
+}
+.btn-fetch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* History panel */
+.history-panel {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: #f5f6fa;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+.btn-clear-history {
+  font-size: 12px;
+  padding: 3px 8px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #888;
+}
+.btn-clear-history:hover {
+  background: #fee;
+  border-color: #f88;
+  color: #c00;
+}
+.history-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: #f0f4ff; }
+.history-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.history-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #667eea;
+}
+.history-time {
+  font-size: 11px;
+  color: #aaa;
+}
+.history-preview {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Streaming indicator */
+.streaming-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: #667eea;
+  font-size: 13px;
+}
+.dot-pulse {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.dot-pulse span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #667eea;
+  display: inline-block;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+.dot-pulse span:nth-child(2) { animation-delay: .2s; }
+.dot-pulse span:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
 }
 </style>
