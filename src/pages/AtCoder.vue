@@ -597,7 +597,7 @@ export default {
 .atcoder-root {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 52px);
   overflow: hidden;
   font-size: 14px;
   background: #f5f7fa;

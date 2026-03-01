@@ -2778,7 +2778,7 @@ export default {
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
   overflow: hidden;
   background: var(--bg-color);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

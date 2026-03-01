@@ -3033,25 +3033,27 @@ python data_generator.py
 }
 
 .solve-data-container {
-  height: 100vh;
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f7fa;
 }
 
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .top-bar h2 {
   margin: 0;
-  color: #667eea;
-  font-size: 24px;
+  color: #1a1a2e;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .model-selector {

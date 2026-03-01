@@ -232,12 +232,12 @@ this.showToastMessage('已下载文件')
 
 <style scoped>
 .checker-root {
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 16px 20px;
   box-sizing: border-box;
-  background-color: #f8f9fa;
+  background-color: #f5f7fa;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -285,8 +285,9 @@ select {
 }
 
 select:focus {
-  border-color: #3498db;
+  border-color: #4f46e5;
   outline: none;
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.1);
 }
 
 .toolbar-right {
@@ -308,21 +309,18 @@ button {
 }
 
 .btn-primary {
-  background-color: #3498db;
+  background-color: #4f46e5;
   color: white;
-  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.2);
+  box-shadow: 0 1px 3px rgba(79,70,229,0.25);
 }
 
 .btn-primary:hover {
-  background-color: #2980b9;
-  transform: translateY(-1px);
+  background-color: #4338ca;
 }
 
 .btn-primary:disabled {
-  background-color: #bdc3c7;
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 .btn-secondary {

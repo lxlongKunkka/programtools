@@ -1,15 +1,18 @@
 :root {
   --bg-panel: #f9fafb;
   --bg-surface: #ffffff;
-  --bg-page: #f3f4f6;
+  --bg-page: #f5f7fa;
   --border: #e5e7eb;
-  --border-hover: #4299e1;
-  --title: #2d3748;
-  --text: #4a5568;
-  --muted: #718096;
-  --primary: #4299e1;
+  --border-hover: #4f46e5;
+  --title: #1a1a2e;
+  --text: #374151;
+  --muted: #6b7280;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: rgba(79,70,229,0.1);
   --radius: 8px;
-  --shadow-panel: 0 1px 3px rgba(0,0,0,0.05);
+  --radius-sm: 6px;
+  --shadow-panel: 0 1px 3px rgba(0,0,0,0.06);
   --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.03);
 }
 
@@ -51,8 +54,8 @@ button.primary {
 }
 
 button.primary:hover:not(:disabled) {
-  background: #3182ce;
-  border-color: #3182ce;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
   color: white;
 }
 
@@ -70,7 +73,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--border-hover);
-  box-shadow: 0 0 0 2px rgba(66,153,225,0.15);
+  box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 /* Common Layout */

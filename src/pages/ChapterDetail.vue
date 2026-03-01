@@ -728,7 +728,7 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  height: calc(100vh - 60px); /* Adjust based on navbar */
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
 }

@@ -260,10 +260,10 @@ export default {
 
 <style scoped>
 .solution-report-root {
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 16px 20px;
   box-sizing: border-box;
 }
 

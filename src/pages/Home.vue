@@ -128,6 +128,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  padding: 20px;
 }
 
 .hero {

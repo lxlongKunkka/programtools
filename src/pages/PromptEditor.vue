@@ -124,8 +124,8 @@ onMounted(() => {
 
 <style scoped>
 .prompt-editor-container {
-  padding: 20px;
-  height: calc(100vh - 60px);
+  padding: 16px 20px;
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;

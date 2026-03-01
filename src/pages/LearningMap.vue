@@ -784,7 +784,7 @@ export default {
 
 <style scoped>
 .learning-map-container {
-  height: calc(100vh - 60px); /* Adjust based on navbar height */
+  height: calc(100vh - 52px);
   overflow: hidden;
   background: #f5f7fa;
 }

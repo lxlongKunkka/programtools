@@ -116,22 +116,63 @@ export default {
 </script>
 
 <style>
-body { font-family: Arial, Helvetica, sans-serif; margin: 0; }
-.header { background: #2b9af3; color: white; padding: 12px 18px; display:flex; align-items:center; justify-content:space-between }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif; margin: 0; }
+.header {
+  background: #1a1a2e;
+  color: white;
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
 .branding { display: flex; align-items: center; }
-.branding-link { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
-.app-logo { height: 32px; width: auto; border-radius: 6px; background: white; padding: 2px; }
-.header h1 { margin: 0; font-size: 20px; }
-.header nav { display: flex; align-items: center; }
-.header nav a { color: rgba(255,255,255,0.8); margin-left:12px; text-decoration:none; transition: color 0.2s; white-space: nowrap; }
-.header nav a:hover { color: white; }
-.header nav a.router-link-active { color: white; font-weight: bold; border-bottom: 2px solid white; padding-bottom: 2px; }
-.user-menu { display: flex; align-items: center; gap: 10px; margin-left: 12px; color: white; }
-.username-link { color: white !important; font-weight: bold; border-bottom: 1px dashed rgba(255,255,255,0.6); padding-bottom: 1px; }
-.username-link:hover { border-bottom-style: solid; }
-.btn-logout { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; }
-.btn-logout:hover { background: rgba(255,255,255,0.3); }
-main { padding: 18px }
+.branding-link { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.app-logo { height: 28px; width: auto; border-radius: 6px; background: white; padding: 2px; }
+.header h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.2px; color: #fff; }
+.header nav { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; }
+.header nav a {
+  color: rgba(255,255,255,0.6);
+  padding: 5px 9px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.header nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.header nav a.router-link-active {
+  color: #fff;
+  font-weight: 600;
+  background: rgba(79,70,229,0.4);
+}
+.user-menu { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+.username-link {
+  color: rgba(255,255,255,0.85) !important;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.08);
+  text-decoration: none;
+}
+.username-link:hover { background: rgba(255,255,255,0.14); color: #fff !important; }
+.btn-logout {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: rgba(255,120,120,0.9);
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(239,68,68,0.28); color: #fff; }
+main { padding: 0; }
 
 /* 全局 Toast 样式 */
 .global-toast {

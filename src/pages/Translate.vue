@@ -356,12 +356,12 @@ this.showToastMessage('已下载文件')
 
 <style scoped>
 .translate-root {
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 16px 20px;
   box-sizing: border-box;
-  background-color: #f8f9fa;
+  background-color: #f5f7fa;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
