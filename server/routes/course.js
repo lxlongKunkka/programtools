@@ -73,8 +73,19 @@ async function resolveProblemIds(problemIdStrings) {
 // Get all groups
 router.get('/groups', async (req, res) => {
   try {
-    const groups = await CourseGroup.find().sort({ order: 1 }).populate('editors', 'uname _id')
-    res.json(groups)
+    const groups = await CourseGroup.find().sort({ order: 1 }).lean()
+    // Manually populate editors from hydroConn (cross-connection populate is not supported)
+    const allEditorIds = [...new Set(groups.flatMap(g => g.editors || []))]
+    const editorMap = {}
+    if (allEditorIds.length > 0) {
+      const users = await User.find({ _id: { $in: allEditorIds } }, 'uname _id').lean()
+      users.forEach(u => { editorMap[u._id] = u })
+    }
+    const result = groups.map(g => ({
+      ...g,
+      editors: (g.editors || []).map(uid => editorMap[uid] || { _id: uid })
+    }))
+    res.json(result)
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
