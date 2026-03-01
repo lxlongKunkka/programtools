@@ -21,7 +21,7 @@
       <input
         v-model="contestUrl"
         class="url-input"
-        placeholder="输入比赛/题目链接，支持 AtCoder / Codeforces / 洛谷 / Hydro"
+        placeholder="输入比赛/题目链接，支持 AtCoder / Codeforces / 洛谷"
         @keydown.enter="fetchContest"
         :disabled="fetchingContest"
       />
@@ -213,7 +213,7 @@
         <li>💡 生成 AC 解题代码</li>
         <li>🔧 生成数据生成脚本 (cyaron)</li>
       </ul>
-      <p class="welcome-platforms">支持平台：AtCoder · Codeforces · 洛谷 · Hydro OJ</p>
+      <p class="welcome-platforms">支持平台：AtCoder · Codeforces · 洛谷</p>
     </div>
   </div>
 </template>
