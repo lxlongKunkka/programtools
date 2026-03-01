@@ -491,6 +491,7 @@ router.post('/translate', checkModelPermission, async (req, res) => {
             resultText = jsonObj.translation
             if (jsonObj.title) meta.title = jsonObj.title
             if (jsonObj.tags && Array.isArray(jsonObj.tags)) meta.tags = jsonObj.tags
+            if (jsonObj.english) meta.english = jsonObj.english
             isJson = true
         } else {
             resultText = content

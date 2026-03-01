@@ -42,6 +42,10 @@
         <div class="panel-header">
           <div class="header-left">
             <h3>翻译结果</h3>
+            <div class="lang-tabs">
+              <button :class="['lang-btn', { active: lang === 'zh' }]" @click="lang = 'zh'">🇨🇳 中文</button>
+              <button :class="['lang-btn', { active: lang === 'en' }]" @click="lang = 'en'" :disabled="!englishResult">🇺🇸 英文</button>
+            </div>
           </div>
           <div class="header-tabs">
             <button 
@@ -55,14 +59,14 @@
           </div>
         </div>
         
-        <div class="result-area" v-if="result">
-          <MarkdownViewer v-if="activeTab === 'preview'" :content="result" />
-          <textarea v-else class="raw-output" readonly :value="result"></textarea>
+        <div class="result-area" v-if="currentResult">
+          <MarkdownViewer v-if="activeTab === 'preview'" :content="currentResult" />
+          <textarea v-else class="raw-output" readonly :value="currentResult"></textarea>
         </div>
 
         <div class="result-area empty" v-else>
           <p>✨ 翻译结果将显示在这里</p>
-          <p class="tip">AI 会自动识别源语言并翻译成流畅的中文</p>
+          <p class="tip">AI 会自动识别源语言并翻译成流畅的中文及英文</p>
         </div>
       </div>
     </div>
@@ -82,8 +86,10 @@ return {
       leftWidth: 40,
       isDragging: false,
       activeTab: 'preview',
+      lang: 'zh',
 prompt: '',
 result: '',
+englishResult: '',
 loading: false,
 model: 'gemini-2.5-flash',
 rawModelOptions: []
@@ -102,12 +108,17 @@ computed: {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
       return all.filter(m => m.id === 'gemini-2.5-flash')
+    },
+    currentResult() {
+      return this.lang === 'en' ? this.englishResult : this.result
     }
 },
 watch: {
     prompt(val) { this.saveState() },
     result(val) { this.saveState() },
-    model(val) { this.saveState() }
+    englishResult(val) { this.saveState() },
+    model(val) { this.saveState() },
+    lang(val) { this.saveState() }
 },
 async mounted() {
 try {
@@ -117,7 +128,9 @@ try {
         const data = JSON.parse(saved)
         if (data.prompt) this.prompt = data.prompt
         if (data.result) this.result = data.result
+        if (data.englishResult) this.englishResult = data.englishResult
         if (data.model) this.model = data.model
+        if (data.lang) this.lang = data.lang
     }
 
 const list = await getModels()
@@ -139,7 +152,9 @@ methods: {
         localStorage.setItem('translate_storage', JSON.stringify({
             prompt: this.prompt,
             result: this.result,
-            model: this.model
+            englishResult: this.englishResult,
+            model: this.model,
+            lang: this.lang
         }))
     },
     startResize() {
@@ -230,6 +245,13 @@ try {
 
 this.result = finalResult
 
+// 提取英文题面
+if (data.meta && data.meta.english) {
+  this.englishResult = data.meta.english
+} else {
+  this.englishResult = ''
+}
+
 } catch (e) {
 console.error('Translate error:', e)
 this.showToastMessage(`翻译失败: ${e.message}`)
@@ -240,10 +262,12 @@ this.loading = false
 clear() {
 this.prompt = ''
 this.result = ''
+this.englishResult = ''
 },
 copyResult() {
-if (!this.result) return
-navigator.clipboard.writeText(this.result)
+const content = this.currentResult
+if (!content) return
+navigator.clipboard.writeText(content)
 .then(() => this.showToastMessage('✅ 结果已复制到剪贴板'))
 .catch(err => {
 console.error('copy failed', err)
@@ -251,13 +275,15 @@ this.showToastMessage('复制失败: ' + err.message)
 })
 },
 saveResult() {
-if (!this.result) return
+const content = this.currentResult
+if (!content) return
 
-const blob = new Blob([this.result], { type: 'text/markdown;charset=utf-8' })
+const lang = this.lang === 'en' ? 'en' : 'zh'
+const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
 const url = URL.createObjectURL(blob)
 const a = document.createElement('a')
 a.href = url
-a.download = `translation_${Date.now()}.md`
+a.download = `translation_${lang}_${Date.now()}.md`
 a.click()
 URL.revokeObjectURL(url)
 this.showToastMessage('已下载文件')
@@ -433,6 +459,47 @@ button {
   font-size: 16px;
   color: #2c3e50;
   font-weight: 600;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f0f2f5;
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.lang-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-btn:hover:not(:disabled) {
+  color: #333;
+}
+
+.lang-btn.active {
+  background: white;
+  color: #3498db;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.lang-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .header-tabs {

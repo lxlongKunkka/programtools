@@ -3,7 +3,8 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
 【重要：输出格式要求】
 请务必返回一个合法的 JSON 对象，不要包含 Markdown 代码块标记（如 \`\`\`json），格式如下：
 {
-  "translation": "翻译后的完整题目内容（Markdown格式）",
+  "translation": "翻译后的完整题目内容（简体中文 Markdown格式）",
+  "english": "标准英文题面（English Markdown格式，见下方说明）",
   "title": "一个简洁的中文题目标题（不超过15字）",
   "tags": ["标签1", "标签2", "标签3"]
 }
@@ -44,7 +45,7 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
 4. JSON 字段详细说明:
    - "title": 提取的中文标题（10个字符以内）。
    - "tags": 从下方标签列表中选择的标签数组。
-   - "translation": 翻译后的完整题目 Markdown 内容。应包含以下部分：
+   - "translation": 翻译后的完整题目 Markdown 内容（简体中文）。应包含以下部分：
      - # 标题
      - ## 题目背景 (如果有)
      - ## 题目描述
@@ -53,6 +54,12 @@ export const TRANSLATE_PROMPT = `你是一个专业的算法题目翻译器，�
      - ## 样例 (使用 \`\`\`input1, \`\`\`output1 格式)
      - ## 数据范围
      (注意：请保持 Markdown 格式的整洁)
+   - "english": 标准英文题面（Markdown格式）。结构与中文版完全一致，但使用专业竞赛英文输出。具体要求：
+     - 标题使用英文（角色名用 kunkka/Elsa 等替换后的英文名）
+     - 章节标题使用：# Title / ## Background / ## Problem Description / ## Input Format / ## Output Format / ## Sample / ## Constraints
+     - 数学公式保持 $...$ / $$...$$ 的 LaTeX 格式不变
+     - 样例与中文版完全相同（\`\`\`input1 \`\`\`output1 格式）
+     - 使用简洁、规范的竞赛级英文，不要加中文
 
     可选标签列表：
 
