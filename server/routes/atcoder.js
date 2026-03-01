@@ -2,6 +2,7 @@ import express from 'express'
 import axios from 'axios'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
+import { HYDRO_CONFIG } from '../config.js'
 
 const router = express.Router()
 
@@ -9,6 +10,26 @@ const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9,ja;q=0.8'
+}
+
+// ─── Hydro Auth Helpers ──────────────────────────────────────────────────────
+// Returns true when the URL points to this server's own Hydro instance
+function isOwnHydro(url) {
+  if (!HYDRO_CONFIG?.API_URL) return false
+  try {
+    const target = new URL(url)
+    const own = new URL(HYDRO_CONFIG.API_URL)
+    return target.host === own.host
+  } catch { return false }
+}
+
+// Build request headers for a Hydro OJ URL, injecting auth when available
+function buildHydroHeaders(url) {
+  const h = { ...HEADERS, Accept: 'application/json' }
+  if (isOwnHydro(url) && HYDRO_CONFIG.API_TOKEN) {
+    h['Authorization'] = `Bearer ${HYDRO_CONFIG.API_TOKEN}`
+  }
+  return h
 }
 
 // ─── Platform Detection ───────────────────────────────────────────────────────
@@ -279,29 +300,44 @@ function parseHydroOrigin(url) {
 
 async function fetchHydroProblem(url) {
   const origin = parseHydroOrigin(url)
-  // Extract problem id: /p/P1001 or /p/1001
+  // Extract problem id from paths like /p/P1001 or /d/domain/p/P1001
   const match = url.match(/\/p\/([A-Za-z0-9_-]+)/)
-  if (!match) throw new Error('无法解析 Hydro 题目 ID')
+  if (!match) throw new Error('无法解析 Hydro 题目 ID（路径中找不到 /p/{id}）')
   const pid = match[1]
 
-  const resp = await axios.get(`${origin}/p/${pid}`, {
-    headers: { ...HEADERS, Accept: 'application/json' },
-    params: { raw: 1 },
-    timeout: 20000
-  })
+  const headers = buildHydroHeaders(url)
+  let resp
+  try {
+    // Hydro: ?_contentOnly=1 returns JSON including pdoc.content
+    resp = await axios.get(`${origin}/p/${pid}`, {
+      headers,
+      params: { _contentOnly: 1 },
+      timeout: 20000
+    })
+  } catch (err) {
+    const code = err.response?.status
+    if (code === 401 || code === 403) {
+      const hint = isOwnHydro(url)
+        ? '获取失败（401/403），请检查 HYDRO_API_TOKEN 是否正确配置'
+        : '该 Hydro OJ 题目需要登录才能访问'
+      throw Object.assign(new Error(hint), { response: err.response })
+    }
+    throw err
+  }
 
-  // Hydro returns JSON when raw=1 or Accept: application/json
   const data = resp.data
+  // JSON response from _contentOnly
   if (data?.pdoc) {
     const doc = data.pdoc
     const title = doc.title || pid
     let md = `# ${title}\n\n`
-    if (doc.content) md += typeof doc.content === 'string' ? doc.content : JSON.stringify(doc.content)
+    const body = doc.content
+    if (body) md += typeof body === 'string' ? body : JSON.stringify(body, null, 2)
     return { title, content: md.trim() }
   }
 
-  // Fallback: parse HTML
-  const $ = load(typeof resp.data === 'string' ? resp.data : '')
+  // Fallback: HTML (should not reach here with _contentOnly, but just in case)
+  const $ = load(typeof data === 'string' ? data : '')
   const title = $('h1').first().text().trim() || pid
   const content = `# ${title}\n\n` + $('.problem-content, .typo').text().trim()
   return { title, content }
@@ -310,15 +346,46 @@ async function fetchHydroProblem(url) {
 async function fetchHydroContest(url) {
   const origin = parseHydroOrigin(url)
   const match = url.match(/\/(contest|homework|training)\/([A-Za-z0-9_-]+)/)
-  if (!match) throw new Error('无法解析 Hydro 比赛链接')
+  if (!match) throw new Error('无法解析 Hydro 比赛链接（需包含 /contest/{id}）')
   const [, type, cid] = match
 
-  const resp = await axios.get(`${origin}/${type}/${cid}/problems`, {
-    headers: HEADERS, timeout: 20000
-  })
-  const $ = load(typeof resp.data === 'string' ? resp.data : '')
-  const problems = []
+  const headers = buildHydroHeaders(url)
+  let resp
+  try {
+    resp = await axios.get(`${origin}/${type}/${cid}/problems`, {
+      headers: { ...headers, Accept: 'text/html,application/json' },
+      params: { _contentOnly: 1 },
+      timeout: 20000
+    })
+  } catch (err) {
+    const code = err.response?.status
+    if (code === 401 || code === 403) {
+      const hint = isOwnHydro(url)
+        ? '获取比赛失败（401/403），请检查 HYDRO_API_TOKEN 是否正确配置'
+        : '该 Hydro OJ 比赛需要登录才能访问'
+      throw Object.assign(new Error(hint), { response: err.response })
+    }
+    throw err
+  }
 
+  const data = resp.data
+
+  // JSON response from _contentOnly (Hydro contest returns pdict)
+  if (data?.pdocs || data?.pdict) {
+    const list = data.pdocs || Object.values(data.pdict || {})
+    const problems = list.map((p, i) => ({
+      label: String.fromCharCode(65 + i),
+      title: p.title || p.docId,
+      taskId: String(p.docId),
+      url: `${origin}/p/${p.docId}`
+    }))
+    const contestTitle = data?.tdoc?.title || `Hydro ${type} ${cid}`
+    return { contestId: `hydro_${cid}`, contestTitle, problems }
+  }
+
+  // Fallback: HTML
+  const $ = load(typeof data === 'string' ? data : '')
+  const problems = []
   $('table tbody tr').each((i, row) => {
     const cells = $(row).find('td')
     if (cells.length < 2) return
