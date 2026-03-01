@@ -118,14 +118,14 @@ export default {
 <style>
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif; margin: 0; }
 .header {
-  background: #1a1a2e;
+  background: #2b9af3;
   color: white;
   padding: 0 20px;
   height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
   flex-shrink: 0;
 }
 .branding { display: flex; align-items: center; }
@@ -147,7 +147,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 .header nav a.router-link-active {
   color: #fff;
   font-weight: 600;
-  background: rgba(79,70,229,0.4);
+  background: rgba(255,255,255,0.2);
 }
 .user-menu { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
 .username-link {
