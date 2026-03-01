@@ -93,14 +93,7 @@
           </button>
         </div>
         <div v-if="fetchUrlError" class="fetch-error">❌ {{ fetchUrlError }}</div>
-        <div v-if="contestProblems.length" class="contest-picker">
-          <select v-model="selectedContestProblemIdx" @change="loadSelectedContestProblem" class="contest-select">
-            <option value="">── 选择题目 ──</option>
-            <option v-for="(p, i) in contestProblems" :key="p.taskId" :value="i">
-              {{ p.label }}. {{ p.title }}
-            </option>
-          </select>
-        </div>
+        <div v-if="isFetchingUrl && fetchProgress" class="fetch-error" style="color:#4f46e5">⏳ {{ fetchProgress }}</div>
       </div>
 
       <textarea 
@@ -316,9 +309,10 @@ export default {
       contestProblems: [],
       selectedContestProblemIdx: '',
       fetchUrlError: '',
+      fetchProgress: ''
       
       // 批量模式相关数据
-      isBatchMode: false,
+      isBatchMode: true,
       isBatchRunning: false,
       batchMode: 'code_data', // code_data, code_data_report, report_only
       showBatchImport: false,
@@ -1236,58 +1230,75 @@ pause
       if (!this.fetchUrl.trim()) return
       this.isFetchingUrl = true
       this.fetchUrlError = ''
-      this.contestProblems = []
-      this.selectedContestProblemIdx = ''
+      this.fetchProgress = ''
+      const url = this.fetchUrl.trim()
       try {
         // 先尝试作为比赛链接
-        const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(this.fetchUrl)}`)
-        if (contestData.problems?.length === 1) {
-          // 只有一道题，直接加载
-          await this.loadProblemFromUrl(contestData.problems[0].url, contestData.problems[0].title)
-        } else {
-          this.contestProblems = contestData.problems || []
+        this.fetchProgress = '获取比赛题目列表...'
+        const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
+        const problems = contestData.problems || []
+        if (problems.length === 0) throw new Error('比赛中没有找到题目')
+        // 都加入任务列表
+        let added = 0
+        for (const p of problems) {
+          this.fetchProgress = `正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`
+          try {
+            await this.addProblemAsTask(p.url, p.label + '. ' + p.title)
+            added++
+          } catch { /* 单题失败不阻断 */ }
         }
-      } catch {
-        // 比赛链接失败，尝试作为单题链接
+        this.fetchUrl = ''
+        this.fetchProgress = ''
+        this.showToastMessage(`✅ 已添加 ${added} 道题目到任务列表`)
+      } catch (contestErr) {
+        // 试为单题链接
+        this.fetchProgress = '获取题目内容...'
         try {
-          await this.loadProblemFromUrl(this.fetchUrl)
+          await this.addProblemAsTask(url)
+          this.fetchUrl = ''
+          this.fetchProgress = ''
         } catch (e) {
           this.fetchUrlError = e.message || '获取失败，请检查链接是否正确'
+          this.fetchProgress = ''
         }
       } finally {
         this.isFetchingUrl = false
       }
     },
 
-    async loadSelectedContestProblem() {
-      const idx = this.selectedContestProblemIdx
-      if (idx === '' || idx === null) return
-      const p = this.contestProblems[idx]
-      if (!p) return
-      this.isFetchingUrl = true
-      try {
-        await this.loadProblemFromUrl(p.url, p.title)
-        this.contestProblems = []
-        this.selectedContestProblemIdx = ''
-        this.fetchUrl = ''
-      } catch (e) {
-        this.fetchUrlError = e.message || '加载题目失败'
-      } finally {
-        this.isFetchingUrl = false
-      }
-    },
-
-    async loadProblemFromUrl(url, title) {
+    async addProblemAsTask(url, fallbackTitle) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-      this.problemText = data.content || ''
-      if (data.title && (!this.problemMeta || !this.problemMeta.title)) {
-        this.problemMeta = { ...(this.problemMeta || {}), title: data.title }
-      } else if (title && (!this.problemMeta || !this.problemMeta.title)) {
-        this.problemMeta = { ...(this.problemMeta || {}), title }
+      const title = data.title || fallbackTitle || url
+      // 如果当前唯一一个任务且是空的，直接填充而不是新增
+      const cur = this.tasks[this.currentTaskIndex]
+      if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
+        this.tasks[this.currentTaskIndex] = {
+          ...cur,
+          problemText: data.content || '',
+          translationText: '',
+          codeOutput: '',
+          dataOutput: '',
+          problemMeta: { title },
+          status: 'pending'
+        }
+        this.loadTask(this.currentTaskIndex)
+        return
       }
-      this.translationText = ''
-      this.codeOutput = ''
-      this.dataOutput = ''
+      // 否则新增一个任务
+      const newTask = {
+        id: Date.now() + Math.random(),
+        status: 'pending',
+        problemText: data.content || '',
+        manualCode: '',
+        referenceText: '',
+        codeOutput: '',
+        dataOutput: '',
+        translationText: '',
+        problemMeta: { title },
+        reportHtml: ''
+      }
+      this.tasks.push(newTask)
+      this.switchTask(this.tasks.length - 1)
     },
 
         async autoTranslate() {
