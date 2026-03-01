@@ -941,6 +941,63 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
   }
 })
 
+// 从 Markdown 题解中提取纯净 AC 代码（与前端 extractPureCode 保持同步）
+function extractPureCode(content) {
+  if (!content) return ''
+  let code = ''
+  const codeBlockPatterns = [
+    /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+    /```(?:python|py)\s*\n([\s\S]*?)```/i,
+    /```java\s*\n([\s\S]*?)```/i,
+    /```\s*\n([\s\S]*?)```/
+  ]
+  // 优先级1：起止双标记
+  const startMarker = '<!-- AC_CODE_START -->'
+  const endMarker = '<!-- AC_CODE_END -->'
+  const si = content.indexOf(startMarker)
+  const ei = content.indexOf(endMarker)
+  if (si !== -1) {
+    const region = (ei !== -1 && ei > si) ? content.substring(si + startMarker.length, ei) : content.substring(si + startMarker.length)
+    for (const p of codeBlockPatterns) { const m = region.match(p); if (m?.[1]) { code = m[1].trim(); break } }
+  }
+  // 优先级2：旧式单标记
+  if (!code) {
+    const mi = content.indexOf('<!-- AC_CODE -->')
+    if (mi !== -1) {
+      const after = content.substring(mi)
+      for (const p of codeBlockPatterns) { const m = after.match(p); if (m?.[1]) { code = m[1].trim(); break } }
+    }
+  }
+  // 优先级3：固定节标题
+  if (!code) {
+    for (const title of ['## 4. 核心代码', '## 核心代码', '## 代码实现', '## 完整代码', '## AC代码', '## 参考代码', '## 标准代码', '### 代码实现', '### 完整代码']) {
+      const idx = content.indexOf(title)
+      if (idx !== -1) {
+        const next = content.indexOf('\n## ', idx + title.length)
+        const region = next !== -1 ? content.substring(idx, next) : content.substring(idx)
+        for (const p of codeBlockPatterns) { const m = region.match(p); if (m?.[1]) { code = m[1].trim(); break } }
+        if (code) break
+      }
+    }
+  }
+  // 优先级4（兜底）：最后一个代码块
+  if (!code) {
+    for (const p of [/```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/ig, /```(?:python|py)\s*\n([\s\S]*?)```/ig, /```java\s*\n([\s\S]*?)```/ig, /```\s*\n([\s\S]*?)```/g]) {
+      const matches = [...content.matchAll(p)]
+      if (matches.length > 0) { code = matches[matches.length - 1][1].trim(); break }
+    }
+  }
+  if (!code && content.trim() && !content.includes('```')) code = content.trim()
+  if (code) {
+    code = code.replace(/<!--\s*AC_CODE(?:_START|_END)?\s*-->/g, '').trim()
+    const lines = code.split('\n')
+    if (lines.length > 0 && /^(c\+\+|cpp|python|py|java|javascript|js)$/i.test(lines[0].trim())) {
+      code = lines.slice(1).join('\n').trim()
+    }
+  }
+  return code
+}
+
 router.post('/solution', authenticateToken, checkModelPermission, async (req, res) => {
   try {
     const { text, model, language, requireAC } = req.body
@@ -998,9 +1055,10 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
       fixed = fixed.replace(/\n{3,}/g, '\n\n')
       fixed = fixed.replace(/```\s*(\w+)/g, '```$1')
       
-      return res.json({ result: fixed })
+      const pureCode = extractPureCode(fixed)
+      return res.json({ result: fixed, pureCode })
     } catch (e) {
-      return res.json({ result: content })
+      return res.json({ result: content, pureCode: extractPureCode(content) })
     }
   } catch (err) {
     console.error('Solution error:', err?.response?.data || err.message || err)
@@ -1529,7 +1587,7 @@ router.post('/generate-problem-meta', checkModelPermission, async (req, res) => 
     }
 
     return res.json({ 
-      title: result.title || '未命名题目', 
+      title: result.title || '', 
       tags: Array.isArray(result.tags) ? result.tags : [], 
       rawContent: content 
     })

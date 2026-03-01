@@ -1,47 +1,79 @@
-<template>
+﻿<template>
 <div class="solve-data-container">
+
+  <!-- ── Top bar ────────────────────────────────────────── -->
   <div class="top-bar">
     <h2>Solve + Data 生成器</h2>
-    <div class="top-controls" style="display:flex; align-items:center; gap:15px;">
-      <button @click="toggleBatchMode" :class="['btn-batch', {active: isBatchMode}]">
-        {{ isBatchMode ? '退出批量模式' : '进入批量模式' }}
-      </button>
-      <div class="model-selector">
-        <label for="model-select">模型:</label>
-        <select id="model-select" v-model="selectedModel">
-          <option v-for="m in (models && models.length ? models : [
-            { id: 'o4-mini', name: 'o4-mini' },
-            { id: 'o3-mini', name: 'o3-mini' },
-            { id: 'o2-mini', name: 'o2-mini' },
-            { id: 'o1-mini', name: 'o1-mini' },
-            { id: 'grok-4-fast', name: 'grok-4-fast' },
-            { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
-          ])" :key="m.id" :value="m.id">{{ m.name }}</option>
-        </select>
-      </div>
-      <div class="language-selector" style="margin-left: 15px;">
-        <label for="lang-select">语言:</label>
-        <select id="lang-select" v-model="language">
-          <option value="C++">C++</option>
-          <option value="Python">Python</option>
-        </select>
-      </div>
+    <div class="top-controls">
+      <label>模型:</label>
+      <select v-model="selectedModel">
+        <option v-for="m in (models && models.length ? models : [
+          { id: 'o4-mini', name: 'o4-mini' },
+          { id: 'o3-mini', name: 'o3-mini' },
+          { id: 'o2-mini', name: 'o2-mini' },
+          { id: 'o1-mini', name: 'o1-mini' },
+          { id: 'grok-4-fast', name: 'grok-4-fast' },
+          { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
+        ])" :key="m.id" :value="m.id">{{ m.name }}</option>
+      </select>
+      <label style="margin-left:12px;">语言:</label>
+      <select v-model="language">
+        <option value="C++">C++</option>
+        <option value="Python">Python</option>
+      </select>
     </div>
   </div>
-  
-  <div class="main-layout new-layout" :style="{ '--left-width': leftWidth + '%' }">
-    
-    <!-- 批量任务列表侧边栏 -->
-    <div v-if="isBatchMode" class="batch-sidebar">
-      <div class="batch-header">
-        <h3>任务列表 ({{ tasks.length }})</h3>
-        <div class="batch-actions">
+
+  <!-- ── URL bar ─────────────────────────────────────────── -->
+  <div class="url-bar">
+    <input
+      v-model="fetchUrl"
+      class="url-input"
+      placeholder="输入题目/比赛链接：AtCoder / Codeforces / 洛谷"
+      @keydown.enter="fetchFromUrl"
+      :disabled="isFetchingUrl"
+    />
+    <button class="btn-primary btn-fetch-top" @click="fetchFromUrl" :disabled="isFetchingUrl || !fetchUrl.trim()">
+      {{ isFetchingUrl ? '⏳ 获取中...' : '🔍 获取题目' }}
+    </button>
+    <span v-if="fetchUrlError" class="url-hint url-error">❌ {{ fetchUrlError }}</span>
+    <span v-else-if="isFetchingUrl && fetchProgress" class="url-hint url-progress">⏳ {{ fetchProgress }}</span>
+  </div>
+
+  <!-- ── Task info bar ────────────────────────────────────── -->
+  <div class="task-info-bar">
+    <span class="task-count-label">共 {{ tasks.length }} 个任务</span>
+    <div class="task-bulk-right">
+      <label class="mode-label">生成模式:</label>
+      <select v-model="batchMode" class="mode-select">
+        <option value="code_data">仅代码和数据</option>
+        <option value="code_data_report">代码、数据和报告</option>
+        <option value="report_only">仅解题报告</option>
+      </select>
+      <button class="btn-primary btn-sm" @click="runBatch" :disabled="isBatchRunning">
+        {{ isBatchRunning ? '⏳ 处理中...' : '🚀 批量生成' }}
+      </button>
+      <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
+        📦 批量下载
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main layout ──────────────────────────────────────── -->
+  <div class="main-layout">
+
+    <!-- Task list (260px) -->
+    <div class="task-list-panel">
+      <div class="task-list-header">
+        <span>任务列表</span>
+        <div style="display:flex;gap:4px">
           <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
+          <button @click="clearAllTasks" class="btn-icon" title="清空任务列表" style="color:#ef4444">🗑️</button>
         </div>
       </div>
       <div class="task-list">
-        <div 
-          v-for="(task, index) in tasks" 
+        <div
+          v-for="(task, index) in tasks"
           :key="index"
           :class="['task-item', { active: currentTaskIndex === index }]"
           @click="switchTask(index)"
@@ -51,224 +83,227 @@
             <div class="task-title">{{ getTaskTitle(task) }}</div>
             <div class="task-meta">{{ getTaskStatusText(task) }}</div>
           </div>
+          <div class="step-dots">
+            <span class="dot" :class="{ done: !!task.translationText }" title="翻译"></span>
+            <span class="dot" :class="{ done: !!task.codeOutput }" title="题解"></span>
+            <span class="dot" :class="{ done: !!task.dataOutput }" title="数据"></span>
+            <span class="dot" :class="{ done: !!task.reportHtml }" title="报告"></span>
+          </div>
+          <button @click.stop="resetTaskStatus(index)" v-if="task.status === 'completed'" class="btn-icon-small" title="重置为等待中">↺</button>
           <button @click.stop="removeTask(index)" class="btn-icon-small">✕</button>
         </div>
       </div>
-      <div class="batch-footer">
-        <div class="batch-options" style="margin-bottom: 10px;">
-          <label style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">生成模式:</label>
-          <select v-model="batchMode" style="width: 100%; padding: 4px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
-            <option value="code_data">仅代码和数据</option>
-            <option value="code_data_report">代码、数据和报告</option>
-            <option value="report_only">仅解题报告</option>
-          </select>
-        </div>
-        <button @click="runBatch" :disabled="isBatchRunning" class="btn-batch-run">
-          {{ isBatchRunning ? '正在处理...' : '批量生成' }}
-        </button>
-        <button @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks" class="btn-batch-download">
-          批量下载
-        </button>
-      </div>
     </div>
 
-    <!-- 左侧输入区域，仅题目描述和手动代码 -->
-    <div class="input-panel new-input-panel">
-      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <h3>题目描述</h3>
-      </div>
+    <!-- Detail panel -->
+    <div class="detail-panel">
 
-      <!-- URL 获取题目 -->
-      <div class="url-fetch-section">
-        <div class="url-fetch-bar">
+      <!-- Detail header -->
+      <div class="detail-header">
+        <div class="detail-title-area">
           <input
-            v-model="fetchUrl"
-            class="url-fetch-input"
-            placeholder="从 URL 获取题目：AtCoder / Codeforces / 洛谷"
-            @keydown.enter="fetchFromUrl"
-            :disabled="isFetchingUrl"
+            v-if="problemMeta"
+            v-model="problemMeta.title"
+            class="meta-title-input"
+            placeholder="题目标题"
           />
-          <button class="btn-fetch" @click="fetchFromUrl" :disabled="isFetchingUrl || !fetchUrl.trim()">
-            {{ isFetchingUrl ? '获取中...' : '获取' }}
+          <span v-else class="detail-title-placeholder">暂无标题 — 请输入题目或从 URL 获取</span>
+          <button @click="generateTitle" :disabled="isGeneratingTitle || !problemText" class="btn-outline btn-sm">
+            {{ isGeneratingTitle ? '生成中...' : '✨ 总结标题' }}
           </button>
-        </div>
-        <div v-if="fetchUrlError" class="fetch-error">❌ {{ fetchUrlError }}</div>
-        <div v-if="isFetchingUrl && fetchProgress" class="fetch-error" style="color:#4f46e5">⏳ {{ fetchProgress }}</div>
-      </div>
-
-      <textarea 
-        v-model="problemText" 
-        placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
-        class="problem-input"
-        style="flex: 2;"
-      ></textarea>
-
-      <div class="panel-header" style="margin-top:10px;">
-        <h3>参考思路 (可选)</h3>
-      </div>
-      <textarea 
-        v-model="referenceText" 
-        placeholder="在此输入解题思路、算法提示或参考文本，AI 将参考此内容生成代码..."
-        class="reference-input"
-        style="flex: 1; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; resize: none; font-family: inherit;"
-      ></textarea>
-
-      <div class="panel-header" style="margin-top:10px; display:flex; justify-content:space-between;">
-        <h3>手动 AC 代码 (可选)</h3>
-        <button @click="clearManualCode" class="btn-small-clear">清空</button>
-      </div>
-      <textarea 
-        v-model="manualCode" 
-        placeholder="在此输入标准 AC 代码。如果提供，将直接使用此代码生成数据和报告..."
-        class="manual-code-input"
-        style="flex: 1; min-height: 100px;"
-      ></textarea>
-
-          <div class="input-actions-bar">
-            <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-success" style="background: linear-gradient(90deg,#667eea,#764ba2);">{{ isGenerating ? '生成中...' : '一键生成全部' }}</button>
-            <div 
-              :class="['btn-translate', {disabled: isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()}]"
-              @click="!(isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()) && autoTranslate()"
-              style="display:inline-block; text-align:center;"
-            >
-              {{ isTranslating ? '翻译中...' : '生成翻译' }}
-            </div>
-            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary">{{ isGenerating === 'code' ? '生成中...' : '生成题解代码' }}</button>
-            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary">{{ isGenerating === 'data' ? '生成中...' : '生成数据脚本' }}</button>
-            <button @click="goToReport" :disabled="!problemText.trim() || isBatchRunning || isGenerating === 'all' || isGeneratingReport" class="btn-info" style="background: linear-gradient(90deg, #17a2b8, #138496); color: white;">{{ isGeneratingReport ? '生成中...' : '生成解题报告' }}</button>
-            <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-success">下载完整项目包</button>
-            <button @click="clearAll" :disabled="isBatchRunning" class="btn-clear">清空</button>
+          <div class="meta-tags" v-if="problemMeta && problemMeta.tags && problemMeta.tags.length">
+            <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
           </div>
-    </div>
-
-    <div class="resizer" @mousedown="startResize"></div>
-
-    <!-- 右侧分栏输出区域 -->
-    <div class="output-panel new-output-panel">
-      <div class="problem-meta-display">
-        <div class="meta-row" style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-           <input 
-             v-if="problemMeta" 
-             v-model="problemMeta.title" 
-             class="meta-title-input" 
-             placeholder="题目标题"
-             style="flex:1; font-size:16px; font-weight:bold; padding:4px 8px; border:1px solid #ddd; border-radius:4px;"
-           />
-           <div v-else style="flex:1; color:#888; font-style:italic;">暂无标题信息</div>
-           
-           <button 
-             @click="generateTitle" 
-             :disabled="isGeneratingTitle || !problemText" 
-             class="btn-small" 
-             style="white-space:nowrap;"
-             title="AI 自动总结标题"
-           >
-             {{ isGeneratingTitle ? '生成中...' : '✨ 总结标题' }}
-           </button>
         </div>
-        <div class="meta-tags" v-if="problemMeta && problemMeta.tags && problemMeta.tags.length">
-          <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
+        <div class="detail-actions">
+          <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
+            {{ isGenerating ? '⏳ 生成中...' : '⚡ 一键生成' }}
+          </button>
+          <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-secondary btn-sm">
+            📦 下载项目包
+          </button>
+          <button @click="clearAll" :disabled="isBatchRunning" class="btn-ghost btn-sm">🗑️ 清空</button>
         </div>
       </div>
-      
-      <!-- 生成进度状态显示 -->
-      <div v-if="generationStatus || showStepIndicators" class="generation-status-bar" style="background:#e6f7ff; border:1px solid #91d5ff; padding:8px 12px; margin-bottom:8px; border-radius:4px; color:#0050b3; font-size:14px; display:flex; flex-direction:column; gap:8px;">
-        <div v-if="generationStatus" style="display:flex; align-items:center;">
-            <span class="loading-spinner" v-if="isGenerating || isTranslating || isGeneratingReport || isGeneratingTitle" style="margin-right:8px;">⏳</span>
-            {{ generationStatus }}
+
+      <!-- Generation status bar -->
+      <div v-if="generationStatus || showStepIndicators" class="generation-status-bar">
+        <div v-if="generationStatus" class="status-text">
+          <span v-if="isGenerating || isTranslating || isGeneratingReport || isGeneratingTitle">⏳</span>
+          {{ generationStatus }}
         </div>
-        
-        <!-- 5步进度指示器 -->
         <div v-if="showStepIndicators" class="generation-steps">
-           <div class="step-item" :class="generationSteps.translate">
-              <div class="step-dot"></div>
-              <span>翻译</span>
-           </div>
-           <div class="step-item" :class="generationSteps.solution">
-              <div class="step-dot"></div>
-              <span>题解</span>
-           </div>
-           <div class="step-item" :class="generationSteps.report">
-              <div class="step-dot"></div>
-              <span>报告</span>
-           </div>
-           <div class="step-item" :class="generationSteps.data">
-              <div class="step-dot"></div>
-              <span>数据</span>
-           </div>
-           <div class="step-item" :class="generationSteps.meta">
-              <div class="step-dot"></div>
-              <span>元数据</span>
-           </div>
+          <div class="step-item" :class="generationSteps.translate"><div class="step-dot"></div><span>翻译</span></div>
+          <div class="step-item" :class="generationSteps.solution"><div class="step-dot"></div><span>题解</span></div>
+          <div class="step-item" :class="generationSteps.report"><div class="step-dot"></div><span>报告</span></div>
+          <div class="step-item" :class="generationSteps.data"><div class="step-dot"></div><span>数据</span></div>
+          <div class="step-item" :class="generationSteps.meta"><div class="step-dot"></div><span>元数据</span></div>
         </div>
       </div>
 
-      <div class="output-tabs">
-        <button :class="['tab-btn', {active: activeTab === 'translate'}]" @click="activeTab = 'translate'">🌐 翻译内容</button>
-        <button :class="['tab-btn', {active: activeTab === 'code'}]" @click="activeTab = 'code'">📝 解题代码</button>
-        <button :class="['tab-btn', {active: activeTab === 'pure_code'}]" @click="activeTab = 'pure_code'">💻 纯净代码</button>
-        <button :class="['tab-btn', {active: activeTab === 'data'}]" @click="activeTab = 'data'">📊 数据脚本</button>
-        <button :class="['tab-btn', {active: activeTab === 'report'}]" @click="activeTab = 'report'">📽️ 解题报告</button>
+      <!-- Step tabs -->
+      <div class="step-tabs">
+        <button :class="['step-tab', { active: activeTab === 'problem' }]" @click="activeTab = 'problem'">📋 题目</button>
+        <button :class="['step-tab', { active: activeTab === 'reference' }]" @click="activeTab = 'reference'">💡 参考</button>
+        <button :class="['step-tab', { active: activeTab === 'translate' }]" @click="activeTab = 'translate'">
+          🌐 翻译<span v-if="translationText" class="tab-done">✓</span>
+        </button>
+        <button :class="['step-tab', { active: activeTab === 'code' }]" @click="activeTab = 'code'">
+          📝 解题代码<span v-if="codeOutput" class="tab-done">✓</span>
+        </button>
+        <button :class="['step-tab', { active: activeTab === 'pure_code' }]" @click="activeTab = 'pure_code'">💻 纯净代码</button>
+        <button :class="['step-tab', { active: activeTab === 'data' }]" @click="activeTab = 'data'">
+          📊 数据脚本<span v-if="dataOutput" class="tab-done">✓</span>
+        </button>
+        <button :class="['step-tab', { active: activeTab === 'report' }]" @click="activeTab = 'report'">
+          📽️ 报告<span v-if="reportHtml" class="tab-done">✓</span>
+        </button>
       </div>
-      <div class="output-tab-content">
-        <div v-show="activeTab === 'translate'" class="output-block">
-          <div class="output-block-header">🌐 翻译内容
-            <button @click="copyTranslation" :disabled="!translationText" class="btn-small" style="float:right;">📋 复制翻译</button>
-            <button @click="downloadTranslation" :disabled="!translationText" class="btn-download" style="float:right; margin-right:8px;">💾 下载</button>
+
+      <!-- Step content -->
+      <div class="step-content">
+
+        <!-- 题目描述 -->
+        <template v-if="activeTab === 'problem'">
+          <textarea
+            v-model="problemText"
+            placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
+            class="content-textarea"
+          ></textarea>
+        </template>
+
+        <!-- 参考思路 + 手动代码 -->
+        <template v-else-if="activeTab === 'reference'">
+          <div class="reference-pane">
+            <div class="ref-section-label">💡 参考思路 / 算法提示（可选）</div>
+            <textarea
+              v-model="referenceText"
+              placeholder="在此输入解题思路、算法提示或参考文本，AI 将参考此内容生成代码..."
+              class="content-textarea ref-textarea"
+            ></textarea>
+            <div class="ref-section-label" style="margin-top:10px;">
+              🔧 手动 AC 代码（可选）
+              <button @click="clearManualCode" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
+            </div>
+            <textarea
+              v-model="manualCode"
+              placeholder="在此输入标准 AC 代码。如果提供，将直接使用此代码生成数据和报告..."
+              class="content-textarea ref-textarea"
+            ></textarea>
+            <div class="ref-quick-actions">
+              <button @click="autoTranslate" :disabled="isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()" class="btn-primary btn-sm">
+                {{ isTranslating ? '⏳ 翻译中...' : '🌐 生成翻译' }}
+              </button>
+              <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
+                {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成题解代码' }}
+              </button>
+              <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary btn-sm">
+                {{ isGenerating === 'data' ? '⏳ 生成中...' : '📊 生成数据脚本' }}
+              </button>
+            </div>
           </div>
-          <div v-if="translationText" class="translation-preview">
-            <MarkdownViewer :content="translationText" class="translation-content" />
+        </template>
+
+        <!-- 翻译 -->
+        <template v-else-if="activeTab === 'translate'">
+          <div class="tab-action-bar">
+            <button @click="autoTranslate" :disabled="isTranslating || !problemText.trim()" class="btn-primary btn-sm">
+              {{ isTranslating ? '⏳ 翻译中...' : '🌐 生成翻译' }}
+            </button>
+            <button @click="copyTranslation" :disabled="!translationText" class="btn-secondary btn-sm">📋 复制中文</button>
+            <button @click="copyTranslationEnglish" :disabled="!translationEnglish" class="btn-secondary btn-sm">📋 复制英文</button>
+            <button @click="downloadTranslation" :disabled="!translationText" class="btn-secondary btn-sm">💾 下载</button>
           </div>
-          <div v-else class="translation-preview-empty">暂无翻译内容</div>
-        </div>
-        <div v-show="activeTab === 'code'" class="output-block">
-          <div class="output-block-header">📝 解题代码
-            <button @click="copyPureCode" class="btn-small" style="float:right;">📋 复制代码</button>
-            <button @click="copyCode" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
-            <button @click="saveCode" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
+          <div v-if="translationText || translationEnglish" class="translation-dual-pane">
+            <div v-if="translationText" class="translation-pane">
+              <div class="translation-pane-header">🌐 中文版</div>
+              <div class="scroll-content">
+                <MarkdownViewer :content="translationText" />
+              </div>
+            </div>
+            <div v-if="translationEnglish" class="translation-pane">
+              <div class="translation-pane-header">🇺🇸 English</div>
+              <div class="scroll-content">
+                <MarkdownViewer :content="translationEnglish" />
+              </div>
+            </div>
           </div>
-          <div class="rendered-output" v-if="manualCode || codeOutput">
+          <div v-else class="empty-hint">
+            <span v-if="isTranslating">⏳ 正在翻译...</span>
+            <span v-else>暂无翻译内容，点击上方"生成翻译"</span>
+          </div>
+        </template>
+
+        <!-- 解题代码 -->
+        <template v-else-if="activeTab === 'code'">
+          <div class="tab-action-bar">
+            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
+              {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成题解代码' }}
+            </button>
+            <button @click="copyPureCode" class="btn-secondary btn-sm">📋 复制代码</button>
+            <button @click="copyCode" class="btn-secondary btn-sm">📋 全部</button>
+            <button @click="saveCode" class="btn-secondary btn-sm">💾 保存</button>
+          </div>
+          <div v-if="manualCode || codeOutput" class="scroll-content">
             <MarkdownViewer :content="displayCode" />
           </div>
-          <div v-else class="translation-preview-empty">暂无解题代码</div>
-        </div>
-        <div v-show="activeTab === 'pure_code'" class="output-block">
-          <div class="output-block-header">💻 纯净代码
-            <button @click="copyPureCode" :disabled="!pureAcCode" class="btn-small" style="float:right;">📋 复制</button>
+          <div v-else class="empty-hint">
+            <span v-if="isGenerating === 'code'">⏳ 正在生成...</span>
+            <span v-else>暂无解题代码</span>
           </div>
-          <div class="rendered-output" v-if="pureAcCode">
+        </template>
+
+        <!-- 纯净代码 -->
+        <template v-else-if="activeTab === 'pure_code'">
+          <div class="tab-action-bar">
+            <button @click="copyPureCode" :disabled="!pureAcCode" class="btn-secondary btn-sm">📋 复制</button>
+          </div>
+          <div v-if="pureAcCode" class="scroll-content">
             <MarkdownViewer :content="formattedPureCode" />
           </div>
-          <div v-else class="translation-preview-empty">暂无提取到的代码</div>
-        </div>
-        <div v-show="activeTab === 'data'" class="output-block">
-          <div class="output-block-header">📊 数据脚本
-            <button @click="copyDataCode" class="btn-small" style="float:right;">📋 复制代码</button>
-            <button @click="copyData" class="btn-small" style="float:right; margin-right:8px;">📋 全部</button>
-            <button @click="saveData" class="btn-small" style="float:right; margin-right:8px;">💾 保存</button>
+          <div v-else class="empty-hint">暂无提取到的代码，请先生成解题代码</div>
+        </template>
+
+        <!-- 数据脚本 -->
+        <template v-else-if="activeTab === 'data'">
+          <div class="tab-action-bar">
+            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
+              {{ isGenerating === 'data' ? '⏳ 生成中...' : '📊 生成数据脚本' }}
+            </button>
+            <button @click="copyDataCode" class="btn-secondary btn-sm">📋 复制代码</button>
+            <button @click="copyData" class="btn-secondary btn-sm">📋 全部</button>
+            <button @click="saveData" class="btn-secondary btn-sm">💾 保存</button>
           </div>
-          <div class="rendered-output" v-if="dataOutput">
+          <div v-if="dataOutput" class="scroll-content">
             <MarkdownViewer :content="dataOutput" />
           </div>
-          <div v-else class="translation-preview-empty">暂无数据脚本</div>
-        </div>
-        <div v-show="activeTab === 'report'" class="output-block">
-          <div class="output-block-header">📽️ 解题报告
-            <button @click="generateReportInline" :disabled="isGeneratingReport" class="btn-small" style="float:right;">⚡ 生成报告</button>
-            <button @click="openReportNewWindow" :disabled="!reportHtml" class="btn-small" style="float:right; margin-right:8px;">↗️ 新窗口</button>
-            <button @click="downloadReport" :disabled="!reportHtml" class="btn-small" style="float:right; margin-right:8px;">💾 下载</button>
+          <div v-else class="empty-hint">
+            <span v-if="isGenerating === 'data'">⏳ 正在生成...</span>
+            <span v-else>暂无数据脚本</span>
           </div>
-          <div v-if="reportHtml" class="report-preview" style="height: 100%; width: 100%;">
-            <iframe :srcdoc="reportHtml" style="width:100%; height:100%; border:none;" :style="{ 'pointer-events': isDragging ? 'none' : 'auto' }"></iframe>
+        </template>
+
+        <!-- 解题报告 -->
+        <template v-else-if="activeTab === 'report'">
+          <div class="tab-action-bar">
+            <button @click="generateReportInline" :disabled="isGeneratingReport" class="btn-primary btn-sm">
+              {{ isGeneratingReport ? '⏳ 生成中...' : '⚡ 生成报告' }}
+            </button>
+            <button @click="openReportNewWindow" :disabled="!reportHtml" class="btn-secondary btn-sm">↗️ 新窗口</button>
+            <button @click="downloadReport" :disabled="!reportHtml" class="btn-secondary btn-sm">💾 下载</button>
           </div>
-          <div v-else class="translation-preview-empty">暂无解题报告，请点击右上角生成</div>
-        </div>
-      </div>
-      <div class="output-actions-bar">
-        <!-- 操作按钮已移至左侧 -->
-      </div>
-    </div>
-  </div>
+          <div v-if="reportHtml" class="report-frame">
+            <iframe :srcdoc="reportHtml" style="width:100%;height:100%;border:none;" :style="{ 'pointer-events': isDragging ? 'none' : 'auto' }"></iframe>
+          </div>
+          <div v-else class="empty-hint">
+            <span v-if="isGeneratingReport">⏳ 正在生成报告...</span>
+            <span v-else>暂无解题报告，请点击上方"生成报告"</span>
+          </div>
+        </template>
+
+      </div><!-- /step-content -->
+    </div><!-- /detail-panel -->
+  </div><!-- /main-layout -->
 </div>
 </template>
 
@@ -294,11 +329,13 @@ export default {
       generationStatus: '', // 用于显示详细的生成进度
       isGeneratingTitle: false,
       isGeneratingReport: false,
-      activeTab: 'code',
+      activeTab: 'problem',
       manualCode: '',
       referenceText: '',
       isTranslating: false,
       translationText: '',
+      translationEnglish: '',
+      serverPureCode: '',
       isTranslationStale: false, // 标记翻译是否过期
       problemMeta: null,
       reportHtml: '',
@@ -338,6 +375,8 @@ export default {
           codeOutput: '',
           dataOutput: '',
           translationText: '',
+          translationEnglish: '',
+          serverPureCode: '',
           problemMeta: null,
           reportHtml: ''
         }
@@ -376,6 +415,8 @@ export default {
     codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
     dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
     translationText(val) { this.updateCurrentTask('translationText', val) },
+    translationEnglish(val) { this.updateCurrentTask('translationEnglish', val) },
+    serverPureCode(val) { this.updateCurrentTask('serverPureCode', val) },
     reportHtml(val) { this.updateCurrentTask('reportHtml', val) },
     problemMeta: {
       handler(val) { this.updateCurrentTask('problemMeta', val) },
@@ -400,6 +441,10 @@ export default {
       return ''
     },
     pureAcCode() {
+      // 优先使用服务端直接返回的纯净代码（最可靠，无需二次提取）
+      if (this.serverPureCode && this.serverPureCode.trim()) {
+        return this.serverPureCode
+      }
       if (this.codeOutput && this.codeOutput.trim()) {
         return this.extractPureCode(this.codeOutput)
       }
@@ -413,6 +458,10 @@ export default {
     formattedPureCode() {
       const lang = this.language === 'C++' ? 'cpp' : 'python'
       return '```' + lang + '\n' + this.pureAcCode + '\n```'
+    },
+    // 翻译完成后就应该有 title + tags，此后不需要再单独调用 /api/generate-problem-meta
+    hasValidMeta() {
+      return !!(this.problemMeta && this.problemMeta.tags && this.problemMeta.tags.length > 0)
     },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
@@ -449,82 +498,82 @@ export default {
       if (!content) return ''
       
       let code = ''
-      
-      // 顶级优先：寻找 <!-- AC_CODE --> 标记
-      const markerIndex = content.indexOf('<!-- AC_CODE -->')
-      if (markerIndex !== -1) {
-         const afterMarker = content.substring(markerIndex)
-         const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-            /```(?:python|py)\s*\n([\s\S]*?)```/i,
-            /```java\s*\n([\s\S]*?)```/i,
-            /```\s*\n([\s\S]*?)```/
-         ]
-         for (const pattern of codePatterns) {
-            const match = afterMarker.match(pattern)
-            if (match && match[1]) {
-                code = match[1].trim()
-                break
-            }
-         }
+      const codeBlockPatterns = [
+        /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
+        /```(?:python|py)\s*\n([\s\S]*?)```/i,
+        /```java\s*\n([\s\S]*?)```/i,
+        /```\s*\n([\s\S]*?)```/
+      ]
+
+      // ── 优先级 1：起止双标记（最可靠）
+      const startMarker = '<!-- AC_CODE_START -->'
+      const endMarker = '<!-- AC_CODE_END -->'
+      const startIdx = content.indexOf(startMarker)
+      const endIdx = content.indexOf(endMarker)
+      if (startIdx !== -1) {
+        // 截取起止标记之间的区域；若无结束标记则取到末尾
+        const region = endIdx !== -1 && endIdx > startIdx
+          ? content.substring(startIdx + startMarker.length, endIdx)
+          : content.substring(startIdx + startMarker.length)
+        for (const pattern of codeBlockPatterns) {
+          const match = region.match(pattern)
+          if (match && match[1]) { code = match[1].trim(); break }
+        }
       }
 
+      // ── 优先级 2：旧式单标记 <!-- AC_CODE -->（代码块在标记之前，标记在块外）
       if (!code) {
-          // 其次：优先寻找 "代码实现"、"完整代码"、"AC代码" 等部分后的代码块
-          const sectionTitles = ['## 代码实现', '## 完整代码', '## AC代码', '## 参考代码', '## 标准代码', '### 代码实现', '### 完整代码']
-          for (const title of sectionTitles) {
-              const codeSectionIndex = content.indexOf(title)
-              if (codeSectionIndex !== -1) {
-                 const afterSection = content.substring(codeSectionIndex)
-                 const codePatterns = [
-                    /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/i,
-                    /```(?:python|py)\s*\n([\s\S]*?)```/i,
-                    /```java\s*\n([\s\S]*?)```/i,
-                    /```\s*\n([\s\S]*?)```/
-                 ]
-                 for (const pattern of codePatterns) {
-                    const match = afterSection.match(pattern)
-                    if (match && match[1]) {
-                        code = match[1].trim()
-                        break
-                    }
-                 }
-                 if (code) break
-              }
+        const markerIndex = content.indexOf('<!-- AC_CODE -->')
+        if (markerIndex !== -1) {
+          const afterMarker = content.substring(markerIndex)
+          for (const pattern of codeBlockPatterns) {
+            const match = afterMarker.match(pattern)
+            if (match && match[1]) { code = match[1].trim(); break }
           }
+        }
       }
-      
+
+      // ── 优先级 3：固定节标题（## 4. 核心代码讲解 及其他常见标题）
       if (!code) {
-          // 兜底：通用匹配，选择最长的代码块（避免提取到示例代码）
-          const codePatterns = [
-            /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/ig,
-            /```(?:python|py)\s*\n([\s\S]*?)```/ig,
-            /```java\s*\n([\s\S]*?)```/ig,
-            /```\s*\n([\s\S]*?)```/g
-          ]
-          
-          let allMatches = []
-          for (const pattern of codePatterns) {
-            const matches = [...content.matchAll(pattern)]
-            if (matches.length > 0) {
-              allMatches = matches
-              break
+        const sectionTitles = [
+          '## 4. 核心代码', '## 核心代码',
+          '## 代码实现', '## 完整代码', '## AC代码',
+          '## 参考代码', '## 标准代码',
+          '### 代码实现', '### 完整代码'
+        ]
+        for (const title of sectionTitles) {
+          const secIdx = content.indexOf(title)
+          if (secIdx !== -1) {
+            // 只搜索到下一个同级标题为止，避免跨节匹配
+            const nextH2 = content.indexOf('\n## ', secIdx + title.length)
+            const region = nextH2 !== -1
+              ? content.substring(secIdx, nextH2)
+              : content.substring(secIdx)
+            for (const pattern of codeBlockPatterns) {
+              const match = region.match(pattern)
+              if (match && match[1]) { code = match[1].trim(); break }
             }
+            if (code) break
           }
-          
-          // 选择最长的代码块
-          if (allMatches.length > 0) {
-            let longestMatch = allMatches[0]
-            let maxLength = allMatches[0][1].trim().length
-            for (const match of allMatches) {
-              const currentLength = match[1].trim().length
-              if (currentLength > maxLength) {
-                maxLength = currentLength
-                longestMatch = match
-              }
-            }
-            code = longestMatch[1].trim()
+        }
+      }
+
+      // ── 优先级 4（兜底）：取最后一个代码块（AC代码通常在教案末尾）
+      if (!code) {
+        const codeBlockPatternsGlobal = [
+          /```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/ig,
+          /```(?:python|py)\s*\n([\s\S]*?)```/ig,
+          /```java\s*\n([\s\S]*?)```/ig,
+          /```\s*\n([\s\S]*?)```/g
+        ]
+        for (const pattern of codeBlockPatternsGlobal) {
+          const matches = [...content.matchAll(pattern)]
+          if (matches.length > 0) {
+            // 取最后一个（教案结构：暴力→优化→最终AC，最终AC在末尾）
+            code = matches[matches.length - 1][1].trim()
+            break
           }
+        }
       }
       
       // 如果没有 Markdown 标记且不为空，视为纯代码
@@ -534,8 +583,8 @@ export default {
       
       // 统一清理逻辑
       if (code) {
-          // 移除 <!-- AC_CODE -->
-          code = code.replace(/<!--\s*AC_CODE\s*-->/g, '').trim()
+          // 移除所有标记（兼容新旧两种格式）
+          code = code.replace(/<!--\s*AC_CODE(?:_START|_END)?\s*-->/g, '').trim()
           
           // 移除开头的语言标识（只处理单独一行的情况，避免误删变量名）
           // 匹配：行首 + 语言标识 + 行尾，然后是换行符
@@ -772,8 +821,10 @@ export default {
         manualCode: '',
         referenceText: '',
         codeOutput: '',
+        serverPureCode: '',
         dataOutput: '',
         translationText: '',
+        translationEnglish: '',
         problemMeta: null,
         reportHtml: ''
       }
@@ -784,7 +835,7 @@ export default {
     removeTask(index) {
       if (this.tasks.length <= 1) {
         // 如果只剩一个，清空内容而不是删除
-        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', referenceText: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '' }
+        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', referenceText: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '', translationEnglish: '', serverPureCode: '' }
         this.loadTask(0)
         return
       }
@@ -796,6 +847,26 @@ export default {
         this.loadTask(this.currentTaskIndex)
       } else if (index < this.currentTaskIndex) {
         this.currentTaskIndex--
+      }
+    },
+
+    clearAllTasks() {
+      if (!confirm('确认清空所有任务？此操作不可撤销。')) return
+      const emptyTask = {
+        id: Date.now(), status: 'pending',
+        problemText: '', manualCode: '', referenceText: '',
+        codeOutput: '', serverPureCode: '', dataOutput: '',
+        translationText: '', translationEnglish: '',
+        problemMeta: null, reportHtml: ''
+      }
+      this.tasks = [emptyTask]
+      this.currentTaskIndex = 0
+      this.loadTask(0)
+    },
+
+    resetTaskStatus(index) {
+      if (this.tasks[index]) {
+        this.tasks[index].status = 'pending'
       }
     },
     
@@ -818,24 +889,28 @@ export default {
       this.codeOutput = task.codeOutput || ''
       this.dataOutput = task.dataOutput || ''
       this.translationText = task.translationText || ''
+      this.translationEnglish = task.translationEnglish || ''
+      this.serverPureCode = task.serverPureCode || ''
       this.problemMeta = task.problemMeta || null
       this.reportHtml = task.reportHtml || ''
     },
     
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
-        this.tasks[this.currentTaskIndex][field] = value
-        // 如果修改了输入，重置状态为 pending (除非正在运行)
+        // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
         if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
             this.tasks[this.currentTaskIndex].status === 'completed' && 
-            !this.isBatchRunning) {
+            !this.isBatchRunning &&
+            value !== this.tasks[this.currentTaskIndex][field]) {
           this.tasks[this.currentTaskIndex].status = 'pending'
         }
+        this.tasks[this.currentTaskIndex][field] = value
       }
     },
     
     getTaskTitle(task) {
       if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') return task.problemMeta.title
+      if (task.problemMeta && task.problemMeta.rawTitle) return task.problemMeta.rawTitle
       if (task.problemText) {
         const lines = task.problemText.split('\n').filter(l => l.trim())
         if (lines.length > 0) return lines[0].slice(0, 20) + (lines[0].length > 20 ? '...' : '')
@@ -878,7 +953,7 @@ export default {
              // 仅生成报告模式：跳过 generateAll，直接生成报告
              // 注意：如果需要元数据（标题），可能需要单独请求，或者依赖报告生成时的逻辑
              // 这里我们尝试先生成元数据（如果缺失），以便下载时有正确的文件名
-             if (!this.problemMeta || !this.problemMeta.title) {
+             if (!this.hasValidMeta) {
                 try {
                   const metaRes = await request('/api/generate-problem-meta', {
                     method: 'POST',
@@ -887,7 +962,7 @@ export default {
                       model: this.selectedModel
                     })
                   })
-                  if (metaRes) this.problemMeta = metaRes
+                  if (metaRes) this.problemMeta = { ...(this.problemMeta || {}), ...metaRes }
                 } catch (e) { console.warn('Meta generation failed in report-only mode', e) }
              }
              
@@ -1233,7 +1308,15 @@ pause
       this.fetchProgress = ''
       const url = this.fetchUrl.trim()
       try {
-        // 先尝试作为比赛链接
+        // 判断是否为单题链接，若是则跳过比赛列表获取
+        const isSingleProblem = (
+          /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
+          /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
+          /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url)
+        )
+        if (isSingleProblem) throw new Error('single_problem')
+
+        // 尝试作为比赛链接
         this.fetchProgress = '获取比赛题目列表...'
         const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
         const problems = contestData.problems || []
@@ -1269,16 +1352,23 @@ pause
     async addProblemAsTask(url, fallbackTitle) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const title = data.title || fallbackTitle || url
+      const editorial = data.editorial || ''
+      if (editorial) {
+        this.showToastMessage('✅ 已自动抓取 AtCoder 解题思路')
+      }
       // 如果当前唯一一个任务且是空的，直接填充而不是新增
       const cur = this.tasks[this.currentTaskIndex]
       if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
         this.tasks[this.currentTaskIndex] = {
           ...cur,
           problemText: data.content || '',
+          referenceText: editorial,
           translationText: '',
+          translationEnglish: '',
           codeOutput: '',
+          serverPureCode: '',
           dataOutput: '',
-          problemMeta: { title },
+          problemMeta: { title: '题目标题', rawTitle: title },
           status: 'pending'
         }
         this.loadTask(this.currentTaskIndex)
@@ -1290,11 +1380,13 @@ pause
         status: 'pending',
         problemText: data.content || '',
         manualCode: '',
-        referenceText: '',
+        referenceText: editorial,
         codeOutput: '',
+        serverPureCode: '',
         dataOutput: '',
         translationText: '',
-        problemMeta: { title },
+        translationEnglish: '',
+        problemMeta: { title: '题目标题', rawTitle: title },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -1306,6 +1398,7 @@ pause
           this.isTranslating = true;
           this.generationStatus = '正在自动翻译题目...'
           this.translationText = '';
+          this.translationEnglish = '';
           try {
             const token = localStorage.getItem('auth_token')
             const headers = { 'Content-Type': 'application/json' }
@@ -1335,8 +1428,16 @@ pause
                     this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
                   } else if (ev.type === 'result') {
                     this.translationText = ev.result || ''
+                    this.translationEnglish = ev.english || ''
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
-                      this.problemMeta = ev.meta
+                      // 合并策略：tags 始终用最新的；title 只在当前为空或占位符时才更新
+                      const existingTitle = this.problemMeta && this.problemMeta.title
+                      const isPlaceholder = !existingTitle || existingTitle === '题目标题'
+                      this.problemMeta = {
+                        ...(this.problemMeta || {}),
+                        tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (this.problemMeta?.tags || []),
+                        title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle
+                      }
                       console.log('从翻译结果中提取到元数据:', this.problemMeta)
                     }
                     this.isTranslationStale = false
@@ -1378,6 +1479,13 @@ pause
             this.showToastMessage('✅ 已复制翻译到剪贴板');
           });
         },
+
+        copyTranslationEnglish() {
+          if (!this.translationEnglish) return;
+          navigator.clipboard.writeText(this.translationEnglish).then(() => {
+            this.showToastMessage('✅ 已复制英文版到剪贴板');
+          });
+        },
     
     clearManualCode() {
       this.manualCode = ''
@@ -1392,6 +1500,7 @@ pause
       this.isGenerating = 'code'
       this.generationStatus = '正在生成题解代码...'
       this.codeOutput = ''
+      this.serverPureCode = ''
       this.activeTab = 'code'
       
       try {
@@ -1439,8 +1548,8 @@ pause
         }).then(res => ({ type: 'code', data: res }))
         )
         
-        // 2. 如果元数据尚未生成，则请求生成元数据
-        if (!this.problemMeta || !this.problemMeta.title) {
+        // 2. 如果元数据尚未完整（翻译完成后通常已有），则请求生成元数据
+        if (!this.hasValidMeta) {
            requests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
@@ -1458,8 +1567,9 @@ pause
            if (!res || !res.data) continue
            if (res.type === 'code' && res.data.result) {
               this.codeOutput = res.data.result
+              if (res.data.pureCode) this.serverPureCode = res.data.pureCode
            } else if (res.type === 'meta') {
-              this.problemMeta = res.data
+              this.problemMeta = { ...(this.problemMeta || {}), ...res.data }
               console.log('题目元数据:', this.problemMeta)
            }
         }
@@ -1502,6 +1612,7 @@ pause
       const manualContent = this.manualCode.trim()
       
       this.codeOutput = ''
+      this.serverPureCode = ''
       this.activeTab = 'code'
       
       try {
@@ -1553,6 +1664,7 @@ pause
         // 处理题解结果
         if (solutionRes && solutionRes.result) {
             this.codeOutput = solutionRes.result
+            if (solutionRes.pureCode) this.serverPureCode = solutionRes.pureCode
             
             // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
             if (this.isTranslating) {
@@ -1617,8 +1729,8 @@ pause
         )
         
         // 3b. 元数据生成
-        // 只有当 problemMeta 为空，或者 title 为空时才生成
-        const shouldGenerateMeta = !this.problemMeta || !this.problemMeta.title || this.problemMeta.title === '题目标题'
+        // 翻译完成后 problemMeta 通常已有 tags，此时跳过；仅在缺失时补充
+        const shouldGenerateMeta = !this.hasValidMeta
         if (shouldGenerateMeta) {
             this.generationSteps.meta = 'processing'
             parallelRequests.push(
@@ -1746,8 +1858,8 @@ pause
           }).then(res => ({ type: 'data', data: res }))
         )
         
-        // 2. 如果元数据尚未生成，则请求生成元数据
-        if (!this.problemMeta || !this.problemMeta.title) {
+        // 2. 如果元数据尚未完整（翻译完成后通常已有），则请求生成元数据
+        if (!this.hasValidMeta) {
            requests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
@@ -1767,7 +1879,7 @@ pause
            if (res.type === 'data' && res.data.result) {
               this.dataOutput = this.cleanDataOutput(res.data.result)
            } else if (res.type === 'meta') {
-              this.problemMeta = res.data
+              this.problemMeta = { ...(this.problemMeta || {}), ...res.data }
               console.log('题目元数据:', this.problemMeta)
            }
         }
@@ -1789,8 +1901,19 @@ pause
       }
       
       this.isGeneratingTitle = true
+      this.generationStatus = '正在生成标题...'
       try {
-        // 优先使用翻译后的文本，如果没有则使用原文
+        // 优先方案：直接调用翻译接口，翻译结果自带 title 和 tags
+        // 这样即使原题是日文/英文也能正确处理
+        await this.autoTranslate()
+        // autoTranslate 内部已将 ev.meta.title/tags 写入 this.problemMeta
+        if (this.problemMeta && this.problemMeta.title && this.problemMeta.title !== '题目标题') {
+          this.showToastMessage('✅ 标题已更新: ' + this.problemMeta.title)
+          this.generationStatus = ''
+          return
+        }
+        
+        // 备选：翻译没有返回标题时，再调用 generate-problem-meta
         const textToUse = (this.translationText && this.translationText.trim()) 
           ? this.translationText 
           : this.problemText
@@ -1804,17 +1927,19 @@ pause
           })
         })
         
-        if (res && res.title) {
-          this.problemMeta = res
-          this.showToastMessage('✅ 标题已更新')
+        if (res && res.title && res.title.trim()) {
+          this.problemMeta = { ...(this.problemMeta || {}), ...res }
+          this.showToastMessage('✅ 标题已更新: ' + res.title)
         } else {
-          this.showToastMessage('未能生成有效标题')
+          console.warn('[generateTitle] AI 未返回标题，原始内容:', res?.rawContent)
+          this.showToastMessage('❌ 未能生成有效标题，请确认题目描述是否充分')
         }
       } catch (e) {
         console.error('Generate title error:', e)
         this.showToastMessage('生成标题失败: ' + e.message)
       } finally {
         this.isGeneratingTitle = false
+        if (this.generationStatus === '正在生成标题...') this.generationStatus = ''
       }
     },
     
@@ -1918,6 +2043,7 @@ pause
     clearAll() {
       this.problemText = ''
       this.codeOutput = ''
+      this.serverPureCode = ''
       this.dataOutput = ''
       this.manualCode = ''
       this.referenceText = ''
@@ -1961,6 +2087,7 @@ pause
                 })
                 if (solutionRes && solutionRes.result) {
                     this.codeOutput = solutionRes.result
+                    if (solutionRes.pureCode) this.serverPureCode = solutionRes.pureCode
                     codeContent = this.codeOutput
                 }
             } catch (err) {
@@ -2761,845 +2888,338 @@ python data_generator.py
 </script>
 
 <style scoped>
-/* 进度条样式 */
-.generation-steps {
-  display: flex;
-  gap: 15px;
-  margin-top: 5px;
-  padding-top: 5px;
-  border-top: 1px solid rgba(145, 213, 255, 0.3);
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #666;
-  opacity: 0.7;
-  transition: all 0.3s;
-}
-
-.step-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #d9d9d9; /* 默认灰色/未开始 */
-  transition: all 0.3s;
-}
-
-/* 状态颜色 */
-.step-item.pending .step-dot {
-  background-color: #d9d9d9; /* 灰色：未开始 */
-  box-shadow: none;
-}
-
-.step-item.processing {
-  opacity: 1;
-  font-weight: bold;
-  color: #faad14;
-}
-
-.step-item.processing .step-dot {
-  background-color: #faad14; /* 黄色：进行中 */
-  box-shadow: 0 0 6px rgba(250, 173, 20, 0.6);
-  animation: pulse 1.5s infinite;
-}
-
-.step-item.success {
-  opacity: 1;
-  color: #52c41a;
-}
-
-.step-item.success .step-dot {
-  background-color: #52c41a; /* 绿色：成功 */
-}
-
-.step-item.failed {
-  opacity: 1;
-  color: #ff4d4f;
-}
-
-.step-item.failed .step-dot {
-  background-color: #ff4d4f; /* 红色：失败 */
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* 生成翻译按钮美化及禁用彩色样式 */
-.btn-translate {
-  background: linear-gradient(90deg,#4f8cff,#6edfff);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 18px;
-  font-size: 15px;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-  transition: background 0.2s, color 0.2s;
-  font-weight: 600;
-  text-align: center;
-  min-width: 110px;
-  margin-right: 0;
-}
-.btn-translate.disabled {
-  background: linear-gradient(90deg,#b3c6e2,#d0e6f7) !important;
-  color: #fff !important;
-  cursor: not-allowed !important;
-  opacity: 1 !important;
-  border: none !important;
-  pointer-events: none !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
-  text-align: center !important;
-}
-/* 左侧操作按钮区域美化 */
-.input-actions-bar {
-  display: flex;
-  gap: 8px;
-  margin-top: 18px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.input-actions-bar button,
-.input-actions-bar .btn-translate {
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-size: 14px;
-  padding: 8px 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.input-actions-bar button:not(.btn-clear),
-.input-actions-bar .btn-translate {
-  flex: 1;
-  min-width: 120px;
-}
-/* 在较小屏幕上调整按钮 */
-@media (max-width: 1600px) {
-  .input-actions-bar button,
-  .input-actions-bar .btn-translate {
-    font-size: 13px;
-    padding: 7px 10px;
-  }
-}
-@media (max-width: 1400px) {
-  .input-actions-bar {
-    gap: 6px;
-  }
-  .input-actions-bar button,
-  .input-actions-bar .btn-translate {
-    font-size: 12px;
-    padding: 6px 8px;
-  }
-}
-/* 标签页按钮样式 */
-.output-tabs {
-  display: flex;
-  gap: 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid #ede9fe;
-  padding: 0 14px;
-  flex-shrink: 0;
-}
-.tab-btn {
-  flex: 1;
-  background: transparent;
-  color: #6b7280;
-  border: none;
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -2px;
-  padding: 10px 4px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
-  border-radius: 6px 6px 0 0;
-  white-space: nowrap;
-}
-.tab-btn.active {
-  background: #faf8ff;
-  color: #4f46e5;
-  border-bottom-color: #4f46e5;
-  font-weight: 700;
-  box-shadow: none;
-}
-.tab-btn:hover:not(.active) {
-  color: #374151;
-  background: #f5f3ff;
-}
-.output-tab-content {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 12px 14px 12px 14px;
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  flex: 1;
-}
-/* 新布局样式 */
-.new-layout {
-  /* display: flex; */ /* Removed to use grid from main-layout */
-  /* gap: 32px; */ /* Removed */
-  margin-top: 18px;
-}
-.new-input-panel {
-  /* flex: 0 0 380px; */ /* Removed fixed width */
-  background: #fefefe;
-  border-radius: 14px;
-  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
-  padding: 16px 14px 14px 14px;
-  min-width: 0; /* Allow shrinking */
-}
-/* 响应式调整左侧面板宽度 */
-/* @media (max-width: 1600px) {
-  .new-input-panel {
-    flex: 0 0 350px;
-    min-width: 300px;
-  }
-} */
-@media (max-width: 1400px) {
-  .new-input-panel {
-    /* flex: 0 0 320px; */
-    /* min-width: 280px; */
-    padding: 20px 14px 14px 14px;
-  }
-}
-@media (max-width: 768px) {
-  .main-layout {
-    display: flex;
-    flex-direction: column;
-  }
-  .resizer {
-    display: none;
-  }
-  /* .new-layout {
-    flex-direction: column;
-  } */
-  .new-input-panel {
-    flex: 0 0 auto;
-    width: 100%;
-    min-width: auto;
-  }
-  .input-actions-bar {
-    flex-wrap: wrap;
-  }
-}
-.new-output-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-.output-columns {
-  display: flex;
-  flex-direction: row;
-  gap: 18px;
-  align-items: flex-start;
-}
-.output-block {
-  flex: 1 1 0;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 16px 12px 12px 12px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  min-height: 0;
-  height: 100%;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-.output-block-header {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2d3a4b;
-  margin-bottom: 8px;
-  position: relative;
-  min-height: 32px;
-}
-.translation-preview {
-  margin-top: 6px;
-}
-.translation-content {
-  background: #f8f8f8;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 15px;
-  margin: 0;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* 紧凑模式样式 */
-.translation-content :deep(p) {
-  margin: 0.5em 0;
-  line-height: 1.5;
-}
-.translation-content :deep(h1),
-.translation-content :deep(h2),
-.translation-content :deep(h3),
-.translation-content :deep(h4) {
-  margin-top: 0.8em;
-  margin-bottom: 0.4em;
-  line-height: 1.3;
-}
-.translation-content :deep(ul),
-.translation-content :deep(ol) {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
-}
-.translation-content :deep(li) {
-  margin: 0.2em 0;
-}
-.translation-content :deep(pre) {
-  margin: 0.5em 0;
-  padding: 0.5em;
-}
-.translation-content :deep(blockquote) {
-  margin: 0.5em 0;
-  padding-left: 1em;
-}
-
-.translation-preview-empty {
-  color: #bbb;
-  font-size: 14px;
-  margin-top: 10px;
-}
-.rendered-output {
-  background: #f8f8f8;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 15px;
-  min-height: 48px;
-  margin-top: 6px;
-  word-break: break-word;
-  overflow-y: auto;
-  flex: 1;
-}
-.output-actions-bar {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
-  justify-content: flex-end;
-}
-/* 自动翻译区域美化 */
-.translate-section {
-  margin-top: 18px;
-  padding: 16px 18px 12px 18px;
-  background: #f5f7fa;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-.translate-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-.translate-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2d3a4b;
-}
-.btn-translate:disabled {
-  background-image: linear-gradient(90deg,#b3c6e2,#d0e6f7) !important;
-  color: #fff !important;
-  cursor: not-allowed !important;
-  opacity: 1 !important;
-  filter: grayscale(0.3) brightness(1.08);
-  border: none !important;
-}
-.btn-download {
-  background: #fff;
-  color: #4f8cff;
-  border: 1px solid #4f8cff;
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 15px;
-  cursor: pointer;
-  margin-left: 4px;
-  transition: background 0.2s;
-}
-.btn-download:disabled {
-  color: #b3c6e2;
-  border-color: #b3c6e2;
-  cursor: not-allowed;
-}
-.translation-label {
-  font-size: 15px;
-  color: #666;
-  margin-bottom: 4px;
-}
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter, .fade-leave-to {
-  opacity: 0;
-}
+/* 
+   SolveData  AtCoder-style layout
+   Primary #4f46e5  BG #f5f7fa  Border #e5e7eb
+    */
 
 .solve-data-container {
-  height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  background: #f0f2f8;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+  font-size: 14px;
+  background: #f5f7fa;
 }
 
+/*  Top bar  */
 .top-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #ffffff 0%, #fafafe 100%);
-  border-bottom: 1px solid #e0e0f0;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.06);
 }
-
-.top-bar h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 800;
-  background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.3px;
+.top-bar h2 { margin: 0; font-size: 18px; font-weight: 700; color: #1a1a2e; }
+.top-controls { display: flex; align-items: center; gap: 8px; }
+.top-controls label { font-size: 13px; color: #6b7280; font-weight: 500; }
+.top-controls select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #374151;
+  outline: none;
+  cursor: pointer;
 }
+.top-controls select:focus { border-color: #4f46e5; }
 
-.model-selector {
+/*  URL bar  */
+.url-bar {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
-
-.model-selector label {
-  font-weight: 600;
-  color: #6b7280;
+.url-input {
+  flex: 1;
+  padding: 7px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
   font-size: 13px;
-}
-
-.model-selector select {
-  padding: 5px 10px;
-  border: 1.5px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #374151;
-  background: white;
-  cursor: pointer;
   outline: none;
-  transition: border-color 0.2s;
+  background: #fafaff;
+  transition: border-color .2s;
+}
+.url-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.1); }
+.btn-fetch-top {
+  border-radius: 20px !important;
+  padding: 7px 18px !important;
+}
+.url-hint { font-size: 12px; }
+.url-error { color: #ef4444; }
+.url-progress { color: #4f46e5; }
+
+/*  Task info bar  */
+.task-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.task-count-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+.task-bulk-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.mode-label { font-size: 12px; color: #6b7280; }
+.mode-select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #fff;
+  outline: none;
 }
 
-.model-selector select:focus {
-  border-color: #7c3aed;
-}
-
+/*  Main layout  */
 .main-layout {
   flex: 1;
-  display: flex; /* Changed from grid to flex to support sidebar */
-  gap: 0;
-  padding: 20px;
+  display: flex;
   overflow: hidden;
+  padding: 12px;
+  gap: 10px;
 }
 
-/* 批量模式侧边栏样式 */
-.batch-sidebar {
+/*  Task list panel  */
+.task-list-panel {
   width: 260px;
+  min-width: 220px;
   background: #fff;
-  border-radius: 14px;
-  margin-right: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.12);
   overflow: hidden;
   flex-shrink: 0;
-  border: 1px solid #ede9fe;
 }
-
-.batch-header {
-  padding: 13px 15px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-bottom: none;
+.task-list-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.batch-header h3 {
-  margin: 0;
-  font-size: 14px;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
   font-weight: 600;
-  color: rgba(255,255,255,0.95);
-  letter-spacing: 0.3px;
+  color: #374151;
+  background: #fafaff;
 }
-
-.batch-actions {
-  display: flex;
-  gap: 5px;
-}
-
 .btn-icon {
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.25);
-  color: white;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
   cursor: pointer;
-  font-size: 14px;
-  padding: 4px 7px;
-  border-radius: 6px;
-  transition: background 0.2s;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  transition: background .15s;
+  line-height: 1.5;
 }
+.btn-icon:hover { background: #e5e7eb; }
 
-.btn-icon:hover {
-  background: rgba(255,255,255,0.32);
-}
-
-.task-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-}
-
+.task-list { flex: 1; overflow-y: auto; }
 .task-item {
   display: flex;
   align-items: center;
-  padding: 9px 10px;
-  border-radius: 6px;
+  gap: 7px;
+  padding: 8px 10px;
   cursor: pointer;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
-  border-left: 3px solid transparent;
-  transition: all 0.2s;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background .1s;
 }
+.task-item:hover { background: #f9fafb; }
+.task-item.active { background: #eef2ff; border-left: 3px solid #4f46e5; padding-left: 7px; }
 
-.task-item:hover {
-  background: #f5f3ff;
-}
+.task-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.task-status-dot.pending    { background: #d1d5db; }
+.task-status-dot.processing { background: #f59e0b; animation: pulse 1.5s infinite; }
+.task-status-dot.completed  { background: #10b981; }
+.task-status-dot.failed     { background: #ef4444; }
 
-.task-item.active {
-  background: #ede9fe;
-  border-color: #c4b5fd;
-  border-left-color: #7c3aed;
-}
-
-.task-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 10px;
-  flex-shrink: 0;
-}
-
-.task-status-dot.pending { background: #d9d9d9; }
-.task-status-dot.processing { background: #1890ff; animation: pulse 1.5s infinite; }
-.task-status-dot.completed { background: #52c41a; }
-.task-status-dot.failed { background: #f5222d; }
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
-.task-info {
-  flex: 1;
-  min-width: 0;
-}
-
+.task-info { flex: 1; min-width: 0; }
 .task-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #2d2d4a;
+  white-space: nowrap;
+  color: #374151;
 }
+.task-item.active .task-title { color: #4f46e5; }
+.task-meta { font-size: 10px; color: #9ca3af; margin-top: 1px; }
 
-.task-item.active .task-title {
-  color: #4f46e5;
-}
-
-.task-meta {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
-}
+.step-dots { display: flex; gap: 3px; flex-shrink: 0; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #e5e7eb; }
+.dot.done { background: #10b981; }
 
 .btn-icon-small {
   background: none;
   border: none;
-  color: #999;
+  color: #9ca3af;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 6px;
+  font-size: 12px;
+  padding: 2px 4px;
   opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.task-item:hover .btn-icon-small {
-  opacity: 1;
-}
-
-.btn-icon-small:hover {
-  color: #f5222d;
-}
-
-.batch-footer {
-  padding: 15px;
-  border-top: 1px solid #eee;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.btn-batch-run {
-  width: 100%;
-  padding: 9px;
-  background: linear-gradient(90deg, #4f46e5, #7c3aed);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: opacity 0.2s, transform 0.1s;
-  letter-spacing: 0.2px;
-}
-
-.btn-batch-run:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn-batch-run:disabled {
-  background: #c4b5fd;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-batch-download {
-  width: 100%;
-  padding: 9px;
-  background: linear-gradient(90deg, #0891b2, #0e7490);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: opacity 0.2s, transform 0.1s;
-}
-
-.btn-batch-download:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn-batch-download:disabled {
-  background: #a5f3fc;
-  color: #0891b2;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-batch {
-  padding: 5px 14px;
-  background: #fff;
-  border: 1.5px solid #d1d5db;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4b5563;
-  transition: all 0.2s;
-}
-
-.btn-batch.active {
-  background: linear-gradient(90deg, #4f46e5, #7c3aed);
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-/* 调整原有布局以适应 flex */
-.input-panel {
-  width: var(--left-width, 40%); 
-  flex: 0 0 auto; /* 明确禁止 flex-grow/shrink 干扰 width */
-}
-
-.resizer {
+  transition: opacity .15s;
   flex-shrink: 0;
 }
+.task-item:hover .btn-icon-small { opacity: 1; }
+.btn-icon-small:hover { color: #ef4444; }
 
-.output-panel {
+/*  Detail panel  */
+.detail-panel {
   flex: 1;
-  min-width: 0; /* Prevent flex item from overflowing */
-}
-
-.resizer {
-  width: 16px; /* 增加宽度以便更容易点击 */
-  margin: 0 -2px; /* 负 margin 保持视觉平衡 */
-  cursor: col-resize;
-  background: rgba(255, 255, 255, 0.3);
-  border-left: 1px solid rgba(255, 255, 255, 0.4);
-  border-right: 1px solid rgba(255, 255, 255, 0.4);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100; /* 确保在最上层 */
-  position: relative;
-}
-
-.resizer:hover, .resizer:active {
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-
-.resizer::after {
-  content: '||';
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 10px;
-  letter-spacing: 1px;
-  user-select: none;
-}
-
-.input-panel, .output-panel {
-  /* flex: 1; Removed to avoid conflict with specific width settings */
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
-  border: 1px solid #ede9fe;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.panel-header {
-  padding: 8px 14px 6px;
-  background: transparent;
-  color: inherit;
+.detail-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1.5px solid #ede9fe;
-  margin-bottom: 2px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafaff;
+  flex-shrink: 0;
 }
-
-.panel-header h3 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  color: #7c3aed;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.header-controls {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.lang-selector {
+.detail-title-area {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
-
-.lang-selector label {
-  font-size: 14px;
-}
-
-.lang-selector select {
-  padding: 4px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-}
-
-.mode-selector {
-  display: flex;
-  align-items: center;
-}
-
-.mode-selector label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.mode-selector input[type="checkbox"] {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-}
-
-.manual-code-section {
+.meta-title-input {
   flex: 1;
+  min-width: 180px;
+  padding: 5px 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  background: #fff;
+  transition: border-color .2s;
+}
+.meta-title-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.1); }
+.detail-title-placeholder { color: #9ca3af; font-style: italic; font-size: 14px; }
+.meta-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.meta-tag {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.detail-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Generation status bar */
+.generation-status-bar {
+  padding: 7px 14px;
+  background: #e6f7ff;
+  border-bottom: 1px solid #91d5ff;
+  color: #0050b3;
+  font-size: 13px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid #e9ecef;
+  gap: 5px;
 }
-
-.code-input-header {
-  padding: 10px 20px;
-  background: #f8f9fa;
+.status-text { display: flex; align-items: center; gap: 6px; }
+.generation-steps {
   display: flex;
-  justify-content: space-between;
+  gap: 12px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(145,213,255,.3);
+}
+.step-item {
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.code-input-header span {
-  font-weight: bold;
-  color: #495057;
-}
-
-.btn-small-clear {
-  padding: 4px 10px;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  color: #6c757d;
+  gap: 4px;
   font-size: 12px;
+  color: #6b7280;
+  opacity: .7;
+  transition: all .3s;
+}
+.step-item .step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: all .3s;
+}
+.step-item.processing { opacity: 1; font-weight: 600; color: #f59e0b; }
+.step-item.processing .step-dot { background: #f59e0b; animation: pulse 1.5s infinite; }
+.step-item.success { opacity: 1; color: #10b981; }
+.step-item.success .step-dot { background: #10b981; }
+.step-item.failed { opacity: 1; color: #ef4444; }
+.step-item.failed .step-dot { background: #ef4444; }
+
+/*  Step tabs  */
+.step-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.step-tab {
+  padding: 5px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  background: #fff;
   cursor: pointer;
-  transition: all 0.2s;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  transition: all .15s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
+.step-tab:hover:not(.active) { background: #f3f4f6; }
+.step-tab.active { background: #4f46e5; color: #fff; border-color: #4f46e5; font-weight: 600; }
+.tab-done { font-size: 10px; color: #10b981; }
+.step-tab.active .tab-done { color: #a5f3d0; }
 
-.btn-small-clear:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
-}
-
-.manual-code-input {
+/*  Step content  */
+.step-content {
   flex: 1;
-  padding: 15px 20px;
-  border: none;
-  resize: none;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  outline: none;
-  background: #f8f9fa;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.problem-input-small {
-  height: 120px;
-  padding: 15px 20px;
+.tab-action-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafaff;
+  flex-shrink: 0;
+}
+
+.content-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 12px 14px;
   border: none;
   resize: none;
   font-family: 'Consolas', 'Monaco', monospace;
@@ -3607,265 +3227,117 @@ python data_generator.py
   line-height: 1.6;
   outline: none;
   background: #fff;
-  border-top: 1px solid #e9ecef;
+  box-sizing: border-box;
 }
+.content-textarea:focus { background: #fafeff; }
 
-/* ── URL 抓取题目 ─────────────────────────────────────── */
-.url-fetch-section {
-  padding: 8px 12px 6px;
-  background: linear-gradient(90deg, #faf8ff, #f5f3ff50);
-  border-bottom: 1px solid #ede9fe;
-}
-.url-fetch-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.url-fetch-input {
+.reference-pane {
   flex: 1;
-  padding: 7px 14px;
-  border: 1.5px solid #d1d5db;
-  border-radius: 20px;
-  font-size: 13px;
-  outline: none;
-  background: white;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.url-fetch-input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-}
-.btn-fetch {
-  padding: 7px 18px;
-  background: linear-gradient(90deg, #4f46e5, #7c3aed);
-  color: #fff;
-  border: none;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.2s, transform 0.1s;
-}
-.btn-fetch:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-.btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.fetch-error { color: #dc2626; font-size: 12px; margin-top: 4px; }
-.contest-picker { margin-top: 6px; }
-.contest-select {
-  width: 100%;
-  padding: 5px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.problem-input {
-  flex: 1;
-  padding: 20px;
-  border: none;
-  resize: none;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  outline: none;
-}
-.button-group {
-  padding: 15px 20px;
-  background: #f8f9fa;
-  display: flex;
-  gap: 10px;
-  border-top: 1px solid #e9ecef;
-}
-
-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  color: white;
-}
-
-.btn-success:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
-}
-
-.btn-clear {
-  background: #6c757d;
-  color: white;
-  margin-left: auto;
-}
-
-.btn-clear:hover {
-  background: #5a6268;
-}
-
-.tabs {
-  display: flex;
-  background: #f8f9fa;
-  border-bottom: 2px solid #e9ecef;
-}
-
-.tab {
-  flex: 1;
-  padding: 15px;
-  text-align: center;
-  cursor: pointer;
-  font-weight: bold;
-  color: #6c757d;
-  transition: all 0.3s;
-}
-
-.tab.active {
-  background: white;
-  color: #667eea;
-  border-bottom: 3px solid #667eea;
-}
-
-.tab:hover {
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.output-content {
-  flex: 1;
-  overflow-y: auto;
-  position: relative;
-}
-
-.output-wrapper {
-  height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.output-actions {
-  padding: 10px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  display: flex;
-  gap: 10px;
-}
-
-.btn-small {
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #667eea;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.btn-small:hover {
-  background: #667eea;
-  color: white;
-}
-
-.btn-small-clear {
-  padding: 6px 12px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.btn-small-clear:hover {
-  background: #c82333;
-}
-
-.rendered-output pre, .rendered-output code {
-  max-height: 100%;
+  padding: 10px 12px;
+  gap: 4px;
   overflow-y: auto;
-  box-sizing: border-box;
-  width: 100%;
-  display: block;
 }
-
-.btn-text-action {
-  background: none;
-  border: none;
-  color: #1890ff;
-  cursor: pointer;
+.ref-section-label {
   font-size: 12px;
-  padding: 0;
-  margin-left: auto;
-}
-
-.problem-meta-display {
-  padding: 12px 16px;
-  background: #faf8ff;
-  border-bottom: 1px solid #ede9fe;
-}
-.meta-title {
-  font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 8px;
-}
-.meta-tags {
+  color: #4f46e5;
+  text-transform: uppercase;
+  letter-spacing: .05em;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
-.meta-tag {
-  background: #ede9fe;
-  color: #5b21b6;
-  padding: 2px 9px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+.ref-textarea { height: 130px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
+.ref-quick-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+.scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
+
+.translation-dual-pane { flex: 1; display: flex; flex-direction: row; gap: 0; overflow: hidden; }
+.translation-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; border-right: 1px solid #e5e7eb; }
+.translation-pane:last-child { border-right: none; }
+.translation-pane-header { padding: 4px 14px; font-size: 12px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+.translation-pane .scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
+
+.empty-hint {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
 }
-.meta-title-input {
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+
+.report-frame { flex: 1; min-height: 0; }
+
+/*  Buttons  */
+.btn-primary {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .15s;
+  white-space: nowrap;
 }
-.meta-title-input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+.btn-primary:hover:not(:disabled) { background: #4338ca; }
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .15s;
+  white-space: nowrap;
 }
-.btn-text-action:hover {
-  text-decoration: underline;
-  color: #40a9ff;
+.btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
+.btn-ghost {
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover:not(:disabled) { background: #f3f4f6; }
+.btn-outline {
+  background: #fff;
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-outline:hover:not(:disabled) { background: #eef2ff; }
+.btn-sm { padding: 5px 12px !important; font-size: 12px !important; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/*  Animations & utils  */
+@keyframes pulse {
+  0%   { transform: scale(1); opacity: 1; }
+  50%  { transform: scale(1.25); opacity: .7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+:deep(.markdown-viewer) { overflow-y: auto; padding: 0 2px; }
+
+@media (max-width: 768px) {
+  .main-layout { flex-direction: column; padding: 8px; }
+  .task-list-panel { width: 100%; min-width: auto; max-height: 180px; }
 }
 </style>
