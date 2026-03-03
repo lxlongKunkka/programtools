@@ -260,7 +260,12 @@ computed: {
     }
 },
 watch: {
-    prompt(val) { this.updateCurrentTask('prompt', val); this.saveState() },
+    prompt(val) {
+      this.updateCurrentTask('prompt', val)
+      const t = this.tasks[this.currentTaskIndex]
+      if (t && (t.status === 'completed' || t.status === 'failed')) this.updateCurrentTask('status', 'pending')
+      this.saveState()
+    },
     result(val) { this.updateCurrentTask('result', val); this.saveState() },
     englishResult(val) { this.updateCurrentTask('englishResult', val); this.saveState() },
     model(val) { this.saveState() },
@@ -350,6 +355,7 @@ this.resultTitle = ''
 this.resultTags = []
 this.streamCharsCount = 0
 let success = false
+if (!skipHistory) this.updateCurrentTask('status', 'processing')
 try {
   const token = localStorage.getItem('auth_token')
   const headers = { 'Content-Type': 'application/json' }
@@ -382,6 +388,7 @@ try {
           this.resultTags = ev.meta?.tags || []
           this.updateCurrentTask('aiTitle', this.resultTitle)
           this.updateCurrentTask('aiTags', this.resultTags)
+          if (!skipHistory) this.updateCurrentTask('status', 'completed')
           this.saveState()
           this.mirrorImages()
           if (!skipHistory) {
@@ -399,6 +406,7 @@ try {
 } catch (e) {
 console.error('Translate error:', e)
 this.showToastMessage(`翻译失败: ${e.message}`)
+if (!skipHistory) this.updateCurrentTask('status', 'failed')
 } finally {
 this.loading = false
 }
