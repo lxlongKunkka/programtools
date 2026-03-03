@@ -399,31 +399,35 @@ async fetchUrl() {
       }))
 
       // 替换或追加到任务列表
-      if (this.tasks.length === 1 && !this.tasks[0].prompt && !this.tasks[0].result) {
+      const startIdx = (this.tasks.length === 1 && !this.tasks[0].prompt && !this.tasks[0].result)
+        ? 0
+        : this.tasks.length
+      if (startIdx === 0) {
         this.tasks = newTasks
       } else {
         this.tasks.push(...newTasks)
       }
-      this.switchTask(this.tasks.length - newTasks.length)
+      this.switchTask(startIdx)
 
-      // 逐个抓取题面（串行，避免被 ban）
-      for (const task of newTasks) {
+      // 逐个抓取题面（通过 this.tasks[i] 走 Vue 3 响应式代理）
+      for (let i = 0; i < newTasks.length; i++) {
+        const reactiveTask = this.tasks[startIdx + i]
         try {
-          const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
+          const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(reactiveTask.taskUrl)}`)
           if (pData.content) {
-            task.prompt = pData.content
-            task.status = 'pending'
+            reactiveTask.prompt = pData.content
+            reactiveTask.status = 'pending'
           } else {
-            task.status = 'failed'
+            reactiveTask.status = 'failed'
           }
         } catch (e) {
-          task.status = 'failed'
+          console.error('[translate fetchUrl] 题面抓取失败:', reactiveTask.taskUrl, e.message)
+          reactiveTask.status = 'failed'
         }
       }
-      const ok = newTasks.filter(t => t.status === 'pending').length
+      const ok = this.tasks.slice(startIdx).filter(t => t.status === 'pending').length
       this.showToastMessage(`✅ 已抓取 ${ok}/${newTasks.length} 道题面，可批量翻译`)
-      // 切换到第一道有内容的题
-      const firstOk = this.tasks.findIndex(t => newTasks.includes(t) && t.status === 'pending')
+      const firstOk = this.tasks.findIndex((t, i) => i >= startIdx && t.status === 'pending')
       if (firstOk !== -1) this.switchTask(firstOk)
     } else {
       // ── 单题链接：放入当前任务 ───────────────────────────────────
@@ -520,13 +524,16 @@ clearAllTasks() {
   this.switchTask(0)
 },
 async runBatch() {
-  const toRun = this.tasks.filter(t =>
-    (t.status === 'pending' || t.status === 'failed' || (t.status === 'fetching' && t.taskUrl))
-  )
-  if (!toRun.length) { this.showToastMessage('没有待翻译的任务'); return }
+  // 收集待处理任务的索引（用索引而非引用，避免 Vue 3 鏈式 Proxy 问题）
+  const toRunIndices = this.tasks.reduce((acc, t, i) => {
+    if ((t.status === 'pending' || t.status === 'failed' || (t.status === 'fetching' && t.taskUrl)))
+      acc.push(i)
+    return acc
+  }, [])
+  if (!toRunIndices.length) { this.showToastMessage('没有待翻译的任务'); return }
   this.isBatchRunning = true
-  for (const task of toRun) {
-    const idx = this.tasks.indexOf(task)
+  for (const idx of toRunIndices) {
+    const task = this.tasks[idx]  // 通过 Vue 3 响应式代理访问
     this.switchTask(idx)
     // 若题面未抓取，先抓取
     if (!task.prompt.trim() && task.taskUrl) {
