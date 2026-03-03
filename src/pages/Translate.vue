@@ -221,6 +221,7 @@ import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { marked } from 'marked'
 
 export default {
+  name: 'Translate',
   components: { MarkdownViewer },
   inject: ['showToastMessage'],
 data() {
