@@ -756,10 +756,27 @@ router.post('/translate/stream', checkModelPermission, async (req, res) => {
 
   const send = (obj) => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`) } catch {} }
 
+  // 提取图片占位符，避免 AI 删除图片链接
+  const imageMap = {}
+  let imgCount = 0
+  const textWithPlaceholders = String(text).replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (m, alt, url) => {
+    const key = `[[IMG_${imgCount++}]]`
+    imageMap[key] = m
+    return key
+  })
+
+  const restoreImages = (str) => {
+    let result = str
+    for (const [key, original] of Object.entries(imageMap)) {
+      result = result.split(key).join(original)
+    }
+    return result
+  }
+
   try {
     const resp = await axios.post(YUN_API_URL, {
       model: model || 'o4-mini',
-      messages: [{ role: 'system', content: TRANSLATE_PROMPT }, { role: 'user', content: String(text) }],
+      messages: [{ role: 'system', content: TRANSLATE_PROMPT }, { role: 'user', content: textWithPlaceholders }],
       temperature: 0.1, max_tokens: 32767, stream: true
     }, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -785,7 +802,13 @@ router.post('/translate/stream', checkModelPermission, async (req, res) => {
     resp.data.on('end', () => {
       try {
         const { result, meta } = parseTranslationContent(fullContent)
-        send({ type: 'result', result, english: meta.english || '', meta })
+        // 恢复图片占位符
+        const restoredResult = restoreImages(result)
+        const restoredEnglish = restoreImages(meta.english || '')
+        if (imgCount > 0) {
+          console.log(`[翻译] 恢复 ${imgCount} 张图片占位符`)
+        }
+        send({ type: 'result', result: restoredResult, english: restoredEnglish, meta: { ...meta, english: restoredEnglish } })
       } catch (e) { send({ type: 'error', message: e.message }) }
       res.write('data: [DONE]\n\n'); res.end()
     })
