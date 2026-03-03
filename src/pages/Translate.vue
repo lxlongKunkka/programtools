@@ -262,8 +262,6 @@ computed: {
 watch: {
     prompt(val) {
       this.updateCurrentTask('prompt', val)
-      const t = this.tasks[this.currentTaskIndex]
-      if (t && (t.status === 'completed' || t.status === 'failed')) this.updateCurrentTask('status', 'pending')
       this.saveState()
     },
     result(val) { this.updateCurrentTask('result', val); this.saveState() },
