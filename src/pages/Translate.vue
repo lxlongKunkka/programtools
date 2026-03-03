@@ -410,8 +410,8 @@ async fetchUrl() {
       for (const task of newTasks) {
         try {
           const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
-          if (pData.statement) {
-            task.prompt = pData.statement
+          if (pData.content) {
+            task.prompt = pData.content
             task.status = 'pending'
           } else {
             task.status = 'failed'
@@ -428,8 +428,8 @@ async fetchUrl() {
     } else {
       // ── 单题链接：放入当前任务 ───────────────────────────────────
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-      if (data.statement) {
-        this.prompt = data.statement
+      if (data.content) {
+        this.prompt = data.content
         this.showToastMessage(`✅ 题面抓取成功：${data.title || url}`)
         this.urlInput = ''
       } else {
@@ -533,7 +533,7 @@ async runBatch() {
       task.status = 'fetching'
       try {
         const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
-        if (pData.statement) { task.prompt = pData.statement } else { task.status = 'failed'; continue }
+        if (pData.content) { task.prompt = pData.content } else { task.status = 'failed'; continue }
       } catch (e) { task.status = 'failed'; continue }
     }
     if (!task.prompt.trim()) { task.status = 'failed'; continue }
