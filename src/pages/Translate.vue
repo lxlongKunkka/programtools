@@ -365,80 +365,70 @@ this.englishResult = ''
 this.urlInput = ''
 },
 isContestUrl(url) {
-  // AtCoder: /contests/xxx  (not /tasks/)
-  if (/atcoder\.jp\/contests\/[^/]+$/.test(url)) return true
-  if (/atcoder\.jp\/contests\/[^/]+\/$/.test(url)) return true
-  // Codeforces: /contest/xxx  (not /problem/)
-  if (/codeforces\.com\/contest(s)?\/\d+$/.test(url)) return true
-  if (/codeforces\.com\/gym\/\d+$/.test(url)) return true
+  if (/atcoder\.jp\/contests\/[^/]+\/?$/.test(url)) return true
+  if (/codeforces\.com\/contest(s)?\/\d+\/?$/.test(url)) return true
+  if (/codeforces\.com\/gym\/\d+\/?$/.test(url)) return true
   return false
 },
+
+// 单题抓取 + 入任务列表（与 SolveData.addProblemAsTask 相同模式）
+async addTranslationTask(url, fallbackTitle) {
+  const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
+  const title = data.title || fallbackTitle || url
+  const content = data.content || ''
+  // 第一个任务且为空，直接填充而不新增
+  const cur = this.tasks[this.currentTaskIndex]
+  if (this.tasks.length === 1 && cur && !cur.prompt.trim()) {
+    this.tasks[this.currentTaskIndex] = {
+      ...cur,
+      status: 'pending',
+      taskTitle: title,
+      taskUrl: url,
+      prompt: content,
+      result: '',
+      englishResult: ''
+    }
+    this.loadTask(this.currentTaskIndex)
+    return
+  }
+  const newTask = {
+    id: Date.now() + Math.random(),
+    status: 'pending',
+    taskTitle: title,
+    taskUrl: url,
+    prompt: content,
+    result: '',
+    englishResult: ''
+  }
+  this.tasks.push(newTask)
+  this.switchTask(this.tasks.length - 1)
+},
+
 async fetchUrl() {
   if (!this.urlInput.trim()) return
   this.urlLoading = true
   const url = this.urlInput.trim()
   try {
     if (this.isContestUrl(url)) {
-      // ── 比赛链接：批量抓取所有题目 ──────────────────────────────
-      const data = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
-      if (!data.problems || !data.problems.length) {
-        this.showToastMessage('未找到题目列表'); return
-      }
+      // ── 比赛链接：串行抓取每道题 ───────────────────────
+      const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
+      const problems = contestData.problems || []
+      if (!problems.length) { this.showToastMessage('未找到题目列表'); return }
       this.urlInput = ''
-      this.showToastMessage(`✅ 找到 ${data.problems.length} 道题目，正在抓取题面...`)
-
-      // 建占位任务
-      const newTasks = data.problems.map(p => ({
-        id: Date.now() + Math.random(),
-        status: 'fetching',
-        taskTitle: `${p.label}. ${p.title}`,
-        taskUrl: p.url,
-        prompt: '',
-        result: '',
-        englishResult: ''
-      }))
-
-      // 替换或追加到任务列表
-      const startIdx = (this.tasks.length === 1 && !this.tasks[0].prompt && !this.tasks[0].result)
-        ? 0
-        : this.tasks.length
-      if (startIdx === 0) {
-        this.tasks = newTasks
-      } else {
-        this.tasks.push(...newTasks)
-      }
-      this.switchTask(startIdx)
-
-      // 逐个抓取题面（通过 this.tasks[i] 走 Vue 3 响应式代理）
-      for (let i = 0; i < newTasks.length; i++) {
-        const reactiveTask = this.tasks[startIdx + i]
+      let added = 0
+      for (const p of problems) {
+        this.showToastMessage(`抓取 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`)
         try {
-          const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(reactiveTask.taskUrl)}`)
-          if (pData.content) {
-            reactiveTask.prompt = pData.content
-            reactiveTask.status = 'pending'
-          } else {
-            reactiveTask.status = 'failed'
-          }
-        } catch (e) {
-          console.error('[translate fetchUrl] 题面抓取失败:', reactiveTask.taskUrl, e.message)
-          reactiveTask.status = 'failed'
-        }
+          await this.addTranslationTask(p.url, `${p.label}. ${p.title}`)
+          added++
+        } catch { /* 单题失败不阻断 */ }
       }
-      const ok = this.tasks.slice(startIdx).filter(t => t.status === 'pending').length
-      this.showToastMessage(`✅ 已抓取 ${ok}/${newTasks.length} 道题面，可批量翻译`)
-      const firstOk = this.tasks.findIndex((t, i) => i >= startIdx && t.status === 'pending')
-      if (firstOk !== -1) this.switchTask(firstOk)
+      this.showToastMessage(`✅ 已添加 ${added} 道题目，可批量翻译`)
     } else {
-      // ── 单题链接：放入当前任务 ───────────────────────────────────
-      const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-      if (data.content) {
-        this.prompt = data.content
-        this.showToastMessage(`✅ 题面抓取成功：${data.title || url}`)
-        this.urlInput = ''
-      } else {
-        this.showToastMessage('抓取失败：未找到题目内容')
-      }
+      // ── 单题链接 ────────────────────────────────────────
+      await this.addTranslationTask(url)
+      this.urlInput = ''
+      this.showToastMessage('✅ 题面抓取成功')
     }
   } catch (e) {
     this.showToastMessage('抓取失败: ' + e.message)
@@ -524,29 +514,17 @@ clearAllTasks() {
   this.switchTask(0)
 },
 async runBatch() {
-  // 收集待处理任务的索引（用索引而非引用，避免 Vue 3 鏈式 Proxy 问题）
   const toRunIndices = this.tasks.reduce((acc, t, i) => {
-    if ((t.status === 'pending' || t.status === 'failed' || (t.status === 'fetching' && t.taskUrl)))
-      acc.push(i)
+    if (t.status === 'pending' || t.status === 'failed') acc.push(i)
     return acc
   }, [])
   if (!toRunIndices.length) { this.showToastMessage('没有待翻译的任务'); return }
   this.isBatchRunning = true
   for (const idx of toRunIndices) {
-    const task = this.tasks[idx]  // 通过 Vue 3 响应式代理访问
     this.switchTask(idx)
-    // 若题面未抓取，先抓取
-    if (!task.prompt.trim() && task.taskUrl) {
-      task.status = 'fetching'
-      try {
-        const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
-        if (pData.content) { task.prompt = pData.content } else { task.status = 'failed'; continue }
-      } catch (e) { task.status = 'failed'; continue }
-    }
-    if (!task.prompt.trim()) { task.status = 'failed'; continue }
-    task.status = 'processing'
+    this.tasks[idx].status = 'processing'
     const ok = await this.translate()
-    task.status = ok ? 'completed' : 'failed'
+    this.tasks[idx].status = ok ? 'completed' : 'failed'
   }
   this.isBatchRunning = false
   this.showToastMessage('批量翻译完成')
