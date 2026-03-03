@@ -211,7 +211,7 @@ function findEditorialLinkFromIndex($, labelUpper, taskId) {
 
 async function fetchAtCoderEditorial(contestId, label, taskId) {
   const labelUpper = label.toUpperCase()
-  const indexUrl = `https://atcoder.jp/contests/${contestId}/editorial?lang=en`
+  const indexUrl = `https://atcoder.jp/contests/${contestId}/editorial?editorialLang=en`
   let resp
   try {
     resp = await axios.get(indexUrl, { headers: HEADERS, timeout: 20000 })
@@ -230,7 +230,7 @@ async function fetchAtCoderEditorial(contestId, label, taskId) {
 
   // ── 英文版没有题解时，回退到日文版页面重新查找 ──────────────────────────
   if (!editorialLink) {
-    const jaUrl = `https://atcoder.jp/contests/${contestId}/editorial?lang=ja`
+    const jaUrl = `https://atcoder.jp/contests/${contestId}/editorial?editorialLang=ja`
     try {
       const jaResp = await axios.get(jaUrl, { headers: HEADERS, timeout: 20000 })
       const $ja = load(jaResp.data)
