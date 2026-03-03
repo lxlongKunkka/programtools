@@ -65,6 +65,9 @@
     <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
       📦 批量下载
     </button>
+    <button class="btn-secondary btn-sm" @click="downloadCombinedMd" :disabled="isBatchRunning || !hasCompletedTasks">
+      📋 合并MD
+    </button>
     <button class="btn-secondary btn-sm btn-pdf" @click="downloadBatchPdf" :disabled="isBatchRunning || !hasCompletedTasks">
       📄 批量PDF
     </button>
@@ -678,6 +681,32 @@ async runBatch() {
   }
   this.isBatchRunning = false
   this.showToastMessage('批量翻译完成')
+},
+downloadCombinedMd() {
+  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
+  if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
+  const parts = []
+  completed.forEach((task, i) => {
+    const title = this.getTaskTitle(task)
+    parts.push(`# ${String(i + 1).padStart(2, '0')}. ${title}\n`)
+    if (task.result) {
+      parts.push(`## 中文翻译\n\n${task.result}\n`)
+    }
+    if (task.englishResult) {
+      parts.push(`## English\n\n${task.englishResult}\n`)
+    }
+    parts.push('\n---\n')
+  })
+  const content = parts.join('\n')
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
+  a.download = `translations_${ds}.md`
+  a.click()
+  URL.revokeObjectURL(url)
+  this.showToastMessage(`已下载合并 MD（${completed.length} 题）`)
 },
 async downloadBatch() {
   const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
