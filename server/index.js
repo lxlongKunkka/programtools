@@ -103,5 +103,5 @@ process.on('unhandledRejection', (reason, promise) => {
 })
 
 httpServer.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`)
+  console.log(`Server listening at http://localhost:${PORT} [deployed ${new Date().toLocaleString('zh-CN')}]`)
 })
