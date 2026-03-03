@@ -1370,7 +1370,7 @@ pause
           codeOutput: '',
           serverPureCode: '',
           dataOutput: '',
-          problemMeta: { title: '题目标题', rawTitle: title },
+          problemMeta: { title: title, rawTitle: title },
           status: 'pending'
         }
         this.loadTask(this.currentTaskIndex)
@@ -1388,7 +1388,7 @@ pause
         dataOutput: '',
         translationText: '',
         translationEnglish: '',
-        problemMeta: { title: '题目标题', rawTitle: title },
+        problemMeta: { title: title, rawTitle: title },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -1432,9 +1432,10 @@ pause
                     this.translationText = ev.result || ''
                     this.translationEnglish = ev.english || ''
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
-                      // 合并策略：tags 始终用最新的；title 只在当前为空或占位符时才更新
+                      // 合并策略：tags 始终用最新的；title 只在当前为空/占位符/与rawTitle相同（未翻译）时才更新
                       const existingTitle = this.problemMeta && this.problemMeta.title
-                      const isPlaceholder = !existingTitle || existingTitle === '题目标题'
+                      const rawTitle = this.problemMeta && this.problemMeta.rawTitle
+                      const isPlaceholder = !existingTitle || existingTitle === '题目标题' || existingTitle === rawTitle
                       this.problemMeta = {
                         ...(this.problemMeta || {}),
                         tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (this.problemMeta?.tags || []),
