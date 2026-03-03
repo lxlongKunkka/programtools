@@ -690,8 +690,9 @@ downloadCombinedMd(lang) {
   if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
   const parts = []
   completed.forEach((task, i) => {
-    const zhTitle = task.aiTitle || this.getTaskTitle(task)
-    const origTitle = task.taskTitle || ''
+    const cleanTitle = t => (t || '').replace(/[\s\-–—]*\bEditorial\b[\s\-–—]*/gi, '').trim()
+    const zhTitle = cleanTitle(task.aiTitle || this.getTaskTitle(task))
+    const origTitle = cleanTitle(task.taskTitle || '')
     const num = String(i + 1).padStart(2, '0')
     if (lang === 'zh') {
       parts.push(`# ${num}. ${zhTitle}\n`)
