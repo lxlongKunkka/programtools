@@ -731,6 +731,11 @@ function parseTranslationContent(content) {
 function htmlToText(html) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'')
+    .replace(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi, (m, src) => {
+      const altM = m.match(/alt=["']([^"']*)["']/i)
+      const alt = altM ? altM[1] : ''
+      return `\n![${alt}](${src})\n`
+    })
     .replace(/<br\s*\/?>/gi,'\n').replace(/<\/?(p|div|li|tr|h[1-6])\b[^>]*>/gi,'\n')
     .replace(/<[^>]+>/g,'')
     .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ')
