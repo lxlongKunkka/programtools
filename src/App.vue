@@ -29,7 +29,7 @@
     </header>
     <main>
       <router-view v-slot="{ Component }">
-        <keep-alive include="Design,SolutionReport,Translate">
+        <keep-alive include="Design,SolutionReport,Translate,SolveData">
           <component :is="Component" />
         </keep-alive>
       </router-view>

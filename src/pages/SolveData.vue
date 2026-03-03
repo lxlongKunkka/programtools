@@ -394,6 +394,8 @@ export default {
       const savedTasks = localStorage.getItem('solve_data_tasks')
       if (savedTasks) {
         this.tasks = JSON.parse(savedTasks)
+        // 重置上次未完成的 processing 任务（页面刷新导致流中断）
+        this.tasks.forEach(t => { if (t.status === 'processing') t.status = 'pending' })
         if (this.tasks.length > 0) {
           this.loadTask(0)
         }
