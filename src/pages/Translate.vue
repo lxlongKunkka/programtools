@@ -493,15 +493,13 @@ async fetchUrl() {
 },
 exportPdf(content, title, lang) {
   if (!content) return
-  const taskTitle = title || (lang === 'zh' ? '中文翻译' : 'English')
-  const tasks = [{ title: taskTitle, zhHtml: lang === 'zh' ? marked.parse(content, { mangle: false, headerIds: false, breaks: true }) : '', enHtml: lang === 'en' ? marked.parse(content, { mangle: false, headerIds: false, breaks: true }) : '', lang }]
-  const safeName = taskTitle.replace(/[\\/:*?"<>|]/g, '_')
-  this._openPdfWindow(tasks, `${safeName}_${lang}.pdf`, false)
+  const html = marked.parse(content, { mangle: false, headerIds: false, breaks: true })
+  const safeName = (title || (lang === 'zh' ? '中文翻译' : 'English')).replace(/[\\/:*?"<>|]/g, '_')
+  this._openPdfWindow(html, `${safeName}_${lang}.pdf`)
 },
-_pdfPageCss() {
-  return `
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; background: #fff; }
+_pdfCss() {
+  return `* { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; background: #fff; }
   #overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.93); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; font-family: sans-serif; color: #4f46e5; font-size: 15px; z-index: 9999; }
   .spinner { width: 36px; height: 36px; border: 3px solid #ede9fe; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; }
   .progress-bar-wrap { width: 240px; height: 6px; background: #ede9fe; border-radius: 3px; overflow: hidden; }
@@ -513,94 +511,69 @@ _pdfPageCss() {
   #page h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
   #page p { margin: 6px 0 10px; }
   #page blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
-  #page pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas', monospace; font-size: 13px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
-  #page code { font-family: 'Consolas', monospace; font-size: 13px; }
+  #page pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas',monospace; font-size: 13px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+  #page code { font-family: 'Consolas',monospace; font-size: 13px; }
   #page table { border-collapse: collapse; width: 100%; margin: 10px 0; }
   #page th, #page td { border: 1px solid #e5e7eb; padding: 6px 10px; }
   #page th { background: #f5f3ff; font-weight: 600; }
-  `
+  .page-break { page-break-after: always; height: 0; }`
 },
-_openPdfWindow(tasks, zipName, isZip) {
+_openPdfWindow(html, filename) {
   const win = window.open('', '_blank', 'width=860,height=600')
   if (!win) { this.showToastMessage('请允许弹出窗口以导出 PDF'); return }
-  const css = this._pdfPageCss()
-  const tasksJson = JSON.stringify(tasks)
-  const pdfOpt = JSON.stringify({ margin: [12, 14, 12, 14], image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
-  win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>正在生成 PDF...</title>
+  const css = this._pdfCss()
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>生成中...</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<style>${css}</style></head>
-<body>
-<div id="overlay"><div class="spinner"></div><div id="msg">正在准备...</div><div class="progress-bar-wrap"><div class="progress-bar" id="pb" style="width:0%"></div></div></div>
-<div id="page"></div>
+<style>${css}</style></head><body>
+<div id="overlay"><div class="spinner"></div><div id="msg">正在生成 PDF...</div><div class="progress-bar-wrap"><div class="progress-bar" id="pb" style="width:5%"></div></div></div>
+<div id="page">${html}</div>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>
 <script>
-var TASKS = ${tasksJson}
-var OPT_BASE = ${pdfOpt}
-var IS_ZIP = ${isZip}
-var ZIP_NAME = ${JSON.stringify(zipName)}
-function setMsg(t) { document.getElementById('msg').textContent = t }
-function setPb(v) { document.getElementById('pb').style.width = v + '%' }
-function renderKatex(el) {
-  renderMathInElement(el, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false })
-}
-function makePdf(html, filename) {
-  var el = document.getElementById('page')
-  el.innerHTML = html
-  renderKatex(el)
-  var opt = Object.assign({}, OPT_BASE, { filename: filename })
-  if (IS_ZIP) return html2pdf().set(opt).from(el).outputPdf('blob')
-  return html2pdf().set(opt).from(el).save().then(function() { return null })
-}
 window.onload = function() {
+  var el = document.getElementById('page')
+  renderMathInElement(el, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false })
+  document.getElementById('pb').style.width = '40%'
   setTimeout(function() {
-    var blobs = []
-    var items = []
-    TASKS.forEach(function(t) {
-      var safe = (t.title||'untitled').replace(/[\\\/:\*\?"<>|]/g,'_')
-      if (t.zhHtml) items.push({ html: t.zhHtml, filename: safe + '_zh.pdf', label: safe + '_zh' })
-      if (t.enHtml) items.push({ html: t.enHtml, filename: safe + '_en.pdf', label: safe + '_en' })
+    document.getElementById('pb').style.width = '70%'
+    html2pdf().set({
+      margin: [12, 14, 12, 14],
+      filename: ${JSON.stringify(filename)},
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(el).save().then(function() {
+      document.getElementById('overlay').innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
+    }).catch(function(e) {
+      document.getElementById('overlay').innerHTML = '<div style="color:#dc2626">生成失败: ' + e.message + '</div>'
     })
-    if (!items.length) { setMsg('没有内容可生成'); return }
-    var i = 0
-    function next() {
-      if (i >= items.length) {
-        if (IS_ZIP) {
-          setMsg('正在打包 ZIP...')
-          setPb(99)
-          var zip = new JSZip()
-          blobs.forEach(function(b) { zip.file(b.label + '.pdf', b.blob) })
-          zip.generateAsync({ type: 'blob' }).then(function(z) {
-            var a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = ZIP_NAME; a.click()
-            setPb(100)
-            document.getElementById('overlay').innerHTML = '<div style="font-size:32px">✅</div><div>已下载 ' + blobs.length + ' 个 PDF 压缩包，可关闭此窗口</div>'
-          })
-        } else {
-          document.getElementById('overlay').innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
-        }
-        return
-      }
-      var item = items[i]
-      setMsg('正在生成 ' + (i+1) + ' / ' + items.length + ': ' + item.label)
-      setPb(Math.round(i / items.length * 95))
-      makePdf(item.html, item.filename).then(function(blob) {
-        if (IS_ZIP && blob) blobs.push({ label: item.label, blob: blob })
-        i++; setTimeout(next, 200)
-      }).catch(function(e) { setMsg('失败: ' + e.message) })
-    }
-    next()
   }, 600)
 }
-<\/script>
-</body></html>`)
+<\/script></body></html>`)
   win.document.close()
 },
+downloadBatchPdf() {
+  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
+  if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
+  const parts = []
+  completed.forEach((task, i) => {
+    const title = `${String(i + 1).padStart(2, '0')}. ${this.getTaskTitle(task)}`
+    if (task.result) {
+      if (parts.length) parts.push('<div class="page-break"></div>')
+      parts.push(`<div class="task-section"><p style="font-size:11px;color:#9ca3af;margin-bottom:4px">中文翻译</p>${marked.parse(task.result, { mangle: false, headerIds: false, breaks: true })}</div>`)
+    }
+    if (task.englishResult) {
+      if (parts.length) parts.push('<div class="page-break"></div>')
+      parts.push(`<div class="task-section"><p style="font-size:11px;color:#9ca3af;margin-bottom:4px">English</p>${marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true })}</div>`)
+    }
+  })
+  const combinedHtml = parts.join('\n')
+  const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
+  this._openPdfWindow(combinedHtml, `translations_${ds}.pdf`)
 },
 saveHistory({ prompt, result, englishResult, title, tags }) {
-const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
+  const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
 this.history = [item, ...this.history.filter(h => h.prompt !== prompt)].slice(0, 10)
 localStorage.setItem('translate_history', JSON.stringify(this.history))
 },
@@ -725,19 +698,6 @@ async downloadBatch() {
     this.showToastMessage('下载失败: ' + e.message)
   }
 },
-async downloadBatchPdf() {
-  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
-  if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
-  const tasks = completed.map((task, i) => {
-    const title = `${String(i + 1).padStart(2, '0')}_${this.getTaskTitle(task)}`
-    return {
-      title,
-      zhHtml: task.result ? marked.parse(task.result, { mangle: false, headerIds: false, breaks: true }) : '',
-      enHtml: task.englishResult ? marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true }) : ''
-    }
-  })
-  this._openPdfWindow(tasks, `translations_pdf_${Date.now()}.zip`, true)
-}
 }
 }
 </script>
