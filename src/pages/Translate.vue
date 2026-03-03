@@ -696,7 +696,6 @@ downloadCombinedMd(lang) {
     const num = String(i + 1).padStart(2, '0')
     if (lang === 'zh') {
       parts.push(`# ${num}. ${zhTitle}\n`)
-      if (origTitle && origTitle !== zhTitle) parts.push(`> ${origTitle}\n`)
       parts.push(`\n${task.result}\n`)
     } else {
       parts.push(`# ${num}. ${origTitle || zhTitle}\n`)
