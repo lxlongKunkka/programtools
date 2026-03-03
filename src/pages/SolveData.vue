@@ -1087,6 +1087,7 @@ export default {
           // 3. 添加题目描述
           folder.file('problem.md', task.problemText, zipOptions)
           if (task.translationText) folder.file('problem_zh.md', task.translationText, zipOptions)
+          if (task.translationEnglish) folder.file('problem_en.md', task.translationEnglish, zipOptions)
           
           // 4. 添加解题报告
           if (task.reportHtml) {
@@ -2330,6 +2331,9 @@ pause
           zip.file('problem_zh.md', this.translationText, zipOptions)
         } else if (this.problemText && this.problemText.trim()) {
           zip.file('problem_zh.md', this.problemText, zipOptions)
+        }
+        if (this.translationEnglish && this.translationEnglish.trim()) {
+          zip.file('problem_en.md', this.translationEnglish, zipOptions)
         }
 
         // 智能获取标题
