@@ -537,23 +537,21 @@ window.onload = function() {
   document.getElementById('pb').style.width = '40%'
   setTimeout(function() {
     document.getElementById('pb').style.width = '70%'
+    var overlay = document.getElementById('overlay')
+    overlay.style.display = 'none'
     html2pdf().set({
       margin: [12, 14, 12, 14],
       filename: ${JSON.stringify(filename)},
       image: { type: 'jpeg', quality: 0.98 },
       pagebreak: { mode: 'css', before: '.page-break' },
-      html2canvas: {
-        scale: 2, useCORS: true, logging: false, windowWidth: 860,
-        onclone: function(doc) {
-          var ov = doc.getElementById('overlay')
-          if (ov) ov.style.display = 'none'
-        }
-      },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(el).save().then(function() {
-      document.getElementById('overlay').innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
+      overlay.style.display = 'flex'
+      overlay.innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
     }).catch(function(e) {
-      document.getElementById('overlay').innerHTML = '<div style="color:#dc2626">生成失败: ' + e.message + '</div>'
+      overlay.style.display = 'flex'
+      overlay.innerHTML = '<div style="color:#dc2626">生成失败: ' + e.message + '</div>'
     })
   }, 600)
 }
