@@ -930,6 +930,16 @@ export default {
         this.tasks[this.currentTaskIndex][field] = value
       }
     },
+
+    // 将某个字段值写入指定任务。若该任务正是当前正在查看的任务，
+    // 则写入响应式属性（触发 watcher → UI 刷新）；否则直接写 tasks[] 避免污染当前视图。
+    saveToTask(taskIndex, field, value) {
+      if (taskIndex === this.currentTaskIndex) {
+        this[field] = value
+      } else if (this.tasks[taskIndex]) {
+        this.tasks[taskIndex][field] = value
+      }
+    },
     
     getTaskTitle(task) {
       if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') return task.problemMeta.title
@@ -1417,19 +1427,24 @@ pause
       this.switchTask(this.tasks.length - 1)
     },
 
-        async autoTranslate() {
-          if (!this.problemText.trim()) return;
+        async autoTranslate(forcedTargetIndex = null) {
+          const taskIndex = (forcedTargetIndex !== null && forcedTargetIndex !== undefined) ? forcedTargetIndex : this.currentTaskIndex
+          const isOnTask = () => this.currentTaskIndex === taskIndex
+          const problemText = this.tasks[taskIndex]?.problemText ?? this.problemText
+          if (!problemText.trim()) return;
           this.isTranslating = true;
-          this.generationStatus = '正在自动翻译题目...'
-          this.translationText = '';
-          this.translationEnglish = '';
+          if (isOnTask()) {
+            this.generationStatus = '正在自动翻译题目...'
+            this.translationText = '';
+            this.translationEnglish = '';
+          }
           try {
             const token = localStorage.getItem('auth_token')
             const headers = { 'Content-Type': 'application/json' }
             if (token) headers['Authorization'] = `Bearer ${token}`
             const response = await fetch('/api/translate/stream', {
               method: 'POST', headers,
-              body: JSON.stringify({ text: this.problemText, model: this.selectedModel })
+              body: JSON.stringify({ text: problemText, model: this.selectedModel })
             })
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
             const reader = response.body.getReader()
@@ -1451,14 +1466,14 @@ pause
                   const ev = JSON.parse(d)
                   if (ev.type === 'chunk') {
                     charsReceived += ev.text.length
-                    this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
+                    if (isOnTask()) this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
                     rawBuffer += ev.text
-                    // 流式提取 translation 字段内容
+                    // 流式提取 translation 字段内容（仅当前任务显示预览）
                     if (translationStart === -1) {
                       const m = rawBuffer.match(/"translation"\s*:\s*"/)
                       if (m) translationStart = m.index + m[0].length
                     }
-                    if (translationStart !== -1) {
+                    if (translationStart !== -1 && isOnTask()) {
                       const partial = rawBuffer.slice(translationStart)
                       // 逐字符解析 JSON 字符串，遇到未转义的 " 为止
                       let i = 0, preview = ''
@@ -1480,21 +1495,23 @@ pause
                       if (preview) this.translationText = preview
                     }
                   } else if (ev.type === 'result') {
-                    this.translationText = ev.result || ''
-                    this.translationEnglish = ev.english || ''
+                    this.saveToTask(taskIndex, 'translationText', ev.result || '')
+                    this.saveToTask(taskIndex, 'translationEnglish', ev.english || '')
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
                       // 合并策略：tags 始终用最新的；title 只在当前为空/占位符/与rawTitle相同（未翻译）时才更新
-                      const existingTitle = this.problemMeta && this.problemMeta.title
-                      const rawTitle = this.problemMeta && this.problemMeta.rawTitle
+                      const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
+                      const existingTitle = existingMeta.title
+                      const rawTitle = existingMeta.rawTitle
                       const isPlaceholder = !existingTitle || existingTitle === '题目标题' || existingTitle === rawTitle
-                      this.problemMeta = {
-                        ...(this.problemMeta || {}),
-                        tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (this.problemMeta?.tags || []),
+                      const newMeta = {
+                        ...existingMeta,
+                        tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || []),
                         title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle
                       }
-                      console.log('从翻译结果中提取到元数据:', this.problemMeta)
+                      this.saveToTask(taskIndex, 'problemMeta', newMeta)
+                      if (isOnTask()) console.log('从翻译结果中提取到元数据:', newMeta)
                     }
-                    this.isTranslationStale = false
+                    if (isOnTask()) this.isTranslationStale = false
                   } else if (ev.type === 'error') {
                     throw new Error(ev.message)
                   }
@@ -1503,13 +1520,13 @@ pause
                 }
               }
             }
-            if (this.isGenerating !== 'all' && this.isGenerating !== 'code' && this.isGenerating !== 'data') {
+            if (isOnTask() && this.isGenerating !== 'all' && this.isGenerating !== 'code' && this.isGenerating !== 'data') {
               this.generationStatus = '✅ 翻译完成'
               setTimeout(() => { if (this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
             }
           } catch (e) {
-            this.translationText = '请求错误: ' + e.message;
-            this.generationStatus = '❌ 翻译失败: ' + e.message
+            if (isOnTask()) this.translationText = '请求错误: ' + e.message;
+            if (isOnTask()) this.generationStatus = '❌ 翻译失败: ' + e.message
             throw e
           } finally {
             this.isTranslating = false;
@@ -1562,6 +1579,7 @@ pause
         this.showToastMessage('请先输入题目描述')
         return
       }
+      const targetIndex = this.currentTaskIndex
       
       this.isGenerating = 'code'
       this.generationStatus = '正在生成题解代码...'
@@ -1571,9 +1589,9 @@ pause
       
       try {
         // 确保有翻译文本，保证后续的元数据基于译文
-        if (!(this.translationText && this.translationText.trim())) {
+        if (!(this.tasks[targetIndex]?.translationText?.trim())) {
           this.generationStatus = '正在自动翻译题目...'
-          await this.autoTranslate()
+          await this.autoTranslate(targetIndex)
           this.generationStatus = '翻译完成，正在生成题解代码...'
         }
         
@@ -1620,7 +1638,7 @@ pause
             request('/api/generate-problem-meta', {
               method: 'POST',
               body: JSON.stringify({
-                text: (this.translationText && this.translationText.trim()) ? this.translationText : this.problemText,
+                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : this.problemText,
                 model: this.selectedModel
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
@@ -1632,11 +1650,11 @@ pause
         for (const res of responses) {
            if (!res || !res.data) continue
            if (res.type === 'code' && res.data.result) {
-              this.codeOutput = res.data.result
-              if (res.data.pureCode) this.serverPureCode = res.data.pureCode
+              this.saveToTask(targetIndex, 'codeOutput', res.data.result)
+              if (res.data.pureCode) this.saveToTask(targetIndex, 'serverPureCode', res.data.pureCode)
            } else if (res.type === 'meta') {
-              this.problemMeta = { ...(this.problemMeta || {}), ...res.data }
-              console.log('题目元数据:', this.problemMeta)
+              const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
            }
         }
         this.generationStatus = '✅ 题解代码生成完成'
@@ -1656,6 +1674,7 @@ pause
         return
       }
       
+      const targetIndex = this.currentTaskIndex
       this.isGenerating = 'all'
       this.generationStatus = '正在初始化生成任务...'
       this.dataOutput = ''
@@ -1663,8 +1682,8 @@ pause
       this.showStepIndicators = true
       
       // 更新当前任务状态为处理中
-      if (this.tasks[this.currentTaskIndex]) {
-        this.tasks[this.currentTaskIndex].status = 'processing'
+      if (this.tasks[targetIndex]) {
+        this.tasks[targetIndex].status = 'processing'
       }
       
       // 重置所有步骤状态
@@ -1689,9 +1708,9 @@ pause
       try {
         // 1. 准备翻译任务 (如果需要，并行执行)
         let translationPromise = Promise.resolve()
-        if (!(this.translationText && this.translationText.trim()) || this.isTranslationStale) {
+        if (!(this.tasks[targetIndex]?.translationText?.trim()) || this.isTranslationStale) {
           this.generationSteps.translate = 'processing'
-          translationPromise = this.autoTranslate().then(() => {
+          translationPromise = this.autoTranslate(targetIndex).then(() => {
             this.generationSteps.translate = 'success'
           }).catch(() => {
             this.generationSteps.translate = 'failed'
@@ -1734,8 +1753,8 @@ pause
         
         // 处理题解结果
         if (solutionRes && solutionRes.result) {
-            this.codeOutput = solutionRes.result
-            if (solutionRes.pureCode) this.serverPureCode = solutionRes.pureCode
+            this.saveToTask(targetIndex, 'codeOutput', solutionRes.result)
+            if (solutionRes.pureCode) this.saveToTask(targetIndex, 'serverPureCode', solutionRes.pureCode)
             
             // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
             if (this.isTranslating) {
@@ -1790,7 +1809,7 @@ pause
               this.generationSteps.data = 'success'
               // 立即更新数据脚本显示
               if (res && res.result) {
-                  this.dataOutput = this.cleanDataOutput(res.result)
+                  this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.result))
               }
               return { type: 'data', data: res }
           }).catch(() => {
@@ -1818,11 +1837,12 @@ pause
                   if (res) {
                       try {
                           const meta = res
-                          if (!this.problemMeta.title || this.problemMeta.title === '题目标题') {
-                              this.problemMeta = { ...this.problemMeta, ...meta }
+                          const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+                          if (!existingMeta.title || existingMeta.title === '题目标题') {
+                              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
                           } else {
                               const { title, ...rest } = meta
-                              this.problemMeta = { ...this.problemMeta, ...rest }
+                              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...rest })
                           }
                       } catch (e) { console.error('Meta update error', e) }
                   }
@@ -1847,21 +1867,18 @@ pause
             
             if (res.type === 'data') {
                 if (res.data && res.data.result) {
-                    this.dataOutput = this.cleanDataOutput(res.data.result)
+                    this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
                 }
             } else if (res.type === 'meta') {
-                // 修正：generate-problem-meta 直接返回对象 { title: "...", tags: [...] }
-                // 不需要 JSON.parse(res.data.result)
                 if (res.data) {
                     try {
                         const meta = res.data
-                        // 只有当现有标题为空或默认值时才覆盖
-                        if (!this.problemMeta.title || this.problemMeta.title === '题目标题') {
-                            this.problemMeta = { ...this.problemMeta, ...meta }
+                        const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+                        if (!existingMeta.title || existingMeta.title === '题目标题') {
+                            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
                         } else {
-                            // 否则只合并其他字段
                             const { title, ...rest } = meta
-                            this.problemMeta = { ...this.problemMeta, ...rest }
+                            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...rest })
                         }
                     } catch (e) {
                         console.error('解析元数据失败', e)
@@ -1872,9 +1889,9 @@ pause
         
         this.generationStatus = '全部生成完成！'
         this.showToastMessage('一键生成全部完成')
-        // 更新当前任务状态为已完成
-        if (this.tasks[this.currentTaskIndex]) {
-          this.tasks[this.currentTaskIndex].status = 'completed'
+        // 更新任务状态为已完成
+        if (this.tasks[targetIndex]) {
+          this.tasks[targetIndex].status = 'completed'
         }
         return true
         
@@ -1882,9 +1899,9 @@ pause
         console.error('Generate all failed:', error)
         this.generationStatus = '❌ 生成出错: ' + error.message
         this.showToastMessage('一键生成失败: ' + error.message)
-        // 更新当前任务状态为失败
-        if (this.tasks[this.currentTaskIndex]) {
-          this.tasks[this.currentTaskIndex].status = 'failed'
+        // 更新任务状态为失败
+        if (this.tasks[targetIndex]) {
+          this.tasks[targetIndex].status = 'failed'
         }
         return false
       } finally {
@@ -1902,6 +1919,7 @@ pause
         this.showToastMessage('请先输入题目描述')
         return
       }
+      const targetIndex = this.currentTaskIndex
       
       this.isGenerating = 'data'
       this.generationStatus = '正在生成数据脚本...'
@@ -1910,9 +1928,9 @@ pause
       
       try {
         // 确保有翻译文本，保证元数据基于译文
-        if (!(this.translationText && this.translationText.trim())) {
+        if (!(this.tasks[targetIndex]?.translationText?.trim())) {
           this.generationStatus = '正在自动翻译题目...'
-          await this.autoTranslate()
+          await this.autoTranslate(targetIndex)
           this.generationStatus = '翻译完成，正在生成数据脚本...'
         }
         
@@ -1943,8 +1961,8 @@ pause
             request('/api/generate-problem-meta', {
               method: 'POST',
               body: JSON.stringify({
-                text: (this.translationText && this.translationText.trim()) ? this.translationText : textForData,
-                solution: this.codeOutput,
+                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : textForData,
+                solution: this.tasks[targetIndex]?.codeOutput || this.codeOutput,
                 model: this.selectedModel
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
@@ -1956,10 +1974,10 @@ pause
         for (const res of responses) {
            if (!res || !res.data) continue
            if (res.type === 'data' && res.data.result) {
-              this.dataOutput = this.cleanDataOutput(res.data.result)
+              this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
            } else if (res.type === 'meta') {
-              this.problemMeta = { ...(this.problemMeta || {}), ...res.data }
-              console.log('题目元数据:', this.problemMeta)
+              const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
            }
         }
         this.generationStatus = '✅ 数据脚本生成完成'
