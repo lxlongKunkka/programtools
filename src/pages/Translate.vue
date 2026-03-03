@@ -619,7 +619,7 @@ downloadBatchPdfZh() {
   completed.forEach((task, i) => {
     const title = `${String(i + 1).padStart(2, '0')}. ${this.getTaskTitle(task)}`
     if (parts.length) parts.push('<div class="page-break"></div>')
-    parts.push(`<div class="task-section"><h2 style="font-size:13px;color:#6b7280;margin-bottom:8px">${title}</h2>${marked.parse(task.result, { mangle: false, headerIds: false, breaks: true })}</div>`)
+    parts.push(`<div class="task-section">${marked.parse(task.result, { mangle: false, headerIds: false, breaks: true })}</div>`)
   })
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
   this._openPdfWindow(parts.join('\n'), `批量中文_${ds}`)
@@ -631,7 +631,7 @@ downloadBatchPdfEn() {
   completed.forEach((task, i) => {
     const title = `${String(i + 1).padStart(2, '0')}. ${this.getTaskTitle(task)}`
     if (parts.length) parts.push('<div class="page-break"></div>')
-    parts.push(`<div class="task-section"><h2 style="font-size:13px;color:#6b7280;margin-bottom:8px">${title}</h2>${marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true })}</div>`)
+    parts.push(`<div class="task-section">${marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true })}</div>`)
   })
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
   this._openPdfWindow(parts.join('\n'), `批量英文_${ds}`)
