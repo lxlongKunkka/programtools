@@ -104,11 +104,16 @@
           <div class="task-meta">{{ getTaskStatusText(task) }}</div>
         </div>
         <button
-          v-if="task.status === 'completed' || task.status === 'failed'"
+          v-if="task.status === 'completed' || task.status === 'failed' || task.status === 'processing'"
           class="btn-icon-small"
           @click.stop="resetTaskToPending(index)"
           title="重置为待翻译"
         >↺</button>
+        <button
+          class="btn-icon-small btn-icon-delete"
+          @click.stop="removeTask(index)"
+          title="删除任务"
+        >✕</button>
       </div>
     </div>
   </div>
@@ -680,9 +685,23 @@ getTaskStatusText(task) {
 resetTaskToPending(index) {
   const t = this.tasks[index]
   if (!t) return
-  if (t.status === 'completed' || t.status === 'failed') {
+  if (t.status !== 'pending') {
     t.status = 'pending'
   }
+},
+removeTask(index) {
+  if (this.tasks.length === 1) {
+    // 最后一个任务：清空内容而不删除
+    const empty = { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }
+    this.tasks.splice(0, 1, empty)
+    this.currentTaskIndex = 0
+    this.loadTask(0)
+    return
+  }
+  this.tasks.splice(index, 1)
+  const newIndex = Math.min(this.currentTaskIndex, this.tasks.length - 1)
+  this.currentTaskIndex = newIndex
+  this.loadTask(newIndex)
 },
 resetAllToPending() {
   let count = 0
@@ -1637,6 +1656,7 @@ textarea:focus {
 }
 .task-item:hover .btn-icon-small { opacity: 1; }
 .btn-icon-small:hover { color: #6366f1; }
+.btn-icon-small.btn-icon-delete:hover { color: #ef4444; }
 .task-status-dot {
   width: 8px;
   height: 8px;

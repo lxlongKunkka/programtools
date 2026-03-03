@@ -757,10 +757,11 @@ router.post('/translate/stream', checkModelPermission, async (req, res) => {
   const send = (obj) => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`) } catch {} }
 
   // 提取图片占位符，避免 AI 删除图片链接
+  // 故意用 AI 不可能误识别为 markdown 语法的格式
   const imageMap = {}
   let imgCount = 0
   const textWithPlaceholders = String(text).replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (m, alt, url) => {
-    const key = `[[IMG_${imgCount++}]]`
+    const key = `IMGPH${imgCount++}IMGPH`
     imageMap[key] = m
     return key
   })
