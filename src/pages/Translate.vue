@@ -384,6 +384,8 @@ try {
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
+  let rawBuffer = ''
+  let translationStart = -1
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
@@ -397,6 +399,31 @@ try {
         const ev = JSON.parse(d)
         if (ev.type === 'chunk') {
           this.streamCharsCount += ev.text.length
+          rawBuffer += ev.text
+          if (translationStart === -1) {
+            const m = rawBuffer.match(/"translation"\s*:\s*"/)
+            if (m) translationStart = m.index + m[0].length
+          }
+          if (translationStart !== -1) {
+            const partial = rawBuffer.slice(translationStart)
+            let i = 0, preview = ''
+            while (i < partial.length) {
+              if (partial[i] === '\\' && i + 1 < partial.length) {
+                const next = partial[i + 1]
+                if (next === 'n') preview += '\n'
+                else if (next === '"') preview += '"'
+                else if (next === '\\') preview += '\\'
+                else if (next === 't') preview += '\t'
+                else preview += next
+                i += 2
+              } else if (partial[i] === '"') {
+                break
+              } else {
+                preview += partial[i++]
+              }
+            }
+            if (preview) this.result = preview
+          }
         } else if (ev.type === 'result') {
           this.result = ev.result
           this.englishResult = ev.english || ''
