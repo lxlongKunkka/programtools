@@ -200,7 +200,7 @@ history: [],
 isBatchRunning: false,
 currentTaskIndex: 0,
 tasks: [
-  { id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }
+  { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }
 ]
 }
 },
@@ -364,19 +364,77 @@ this.result = ''
 this.englishResult = ''
 this.urlInput = ''
 },
+isContestUrl(url) {
+  // AtCoder: /contests/xxx  (not /tasks/)
+  if (/atcoder\.jp\/contests\/[^/]+$/.test(url)) return true
+  if (/atcoder\.jp\/contests\/[^/]+\/$/.test(url)) return true
+  // Codeforces: /contest/xxx  (not /problem/)
+  if (/codeforces\.com\/contest(s)?\/\d+$/.test(url)) return true
+  if (/codeforces\.com\/gym\/\d+$/.test(url)) return true
+  return false
+},
 async fetchUrl() {
   if (!this.urlInput.trim()) return
   this.urlLoading = true
   const url = this.urlInput.trim()
   try {
-    // 复用 SolveData 的 /api/atcoder/problem 接口（支持 AtCoder / Codeforces / 洛谷，输出结构化 Markdown）
-    const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-    if (data.statement) {
-      this.prompt = data.statement
-      this.showToastMessage(`✅ 题面抓取成功：${data.title || url}`)
+    if (this.isContestUrl(url)) {
+      // ── 比赛链接：批量抓取所有题目 ──────────────────────────────
+      const data = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
+      if (!data.problems || !data.problems.length) {
+        this.showToastMessage('未找到题目列表'); return
+      }
       this.urlInput = ''
+      this.showToastMessage(`✅ 找到 ${data.problems.length} 道题目，正在抓取题面...`)
+
+      // 建占位任务
+      const newTasks = data.problems.map(p => ({
+        id: Date.now() + Math.random(),
+        status: 'fetching',
+        taskTitle: `${p.label}. ${p.title}`,
+        taskUrl: p.url,
+        prompt: '',
+        result: '',
+        englishResult: ''
+      }))
+
+      // 替换或追加到任务列表
+      if (this.tasks.length === 1 && !this.tasks[0].prompt && !this.tasks[0].result) {
+        this.tasks = newTasks
+      } else {
+        this.tasks.push(...newTasks)
+      }
+      this.switchTask(this.tasks.length - newTasks.length)
+
+      // 逐个抓取题面（串行，避免被 ban）
+      for (const task of newTasks) {
+        try {
+          const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
+          if (pData.statement) {
+            task.prompt = pData.statement
+            task.status = 'pending'
+          } else {
+            task.status = 'failed'
+          }
+        } catch (e) {
+          task.status = 'failed'
+        }
+      }
+      const ok = newTasks.filter(t => t.status === 'pending').length
+      this.showToastMessage(`✅ 已抓取 ${ok}/${newTasks.length} 道题面，可批量翻译`)
+      // 切换到第一道有内容的题
+      const firstOk = this.tasks.findIndex(t => newTasks.includes(t) && t.status === 'pending')
+      if (firstOk !== -1) this.switchTask(firstOk)
     } else {
-      this.showToastMessage('抓取失败：未找到题目内容')
+      // ── 单题链接：放入当前任务 ───────────────────────────────────
+      const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
+      if (data.statement) {
+        this.prompt = data.statement
+        this.showToastMessage(`✅ 题面抓取成功：${data.title || url}`)
+        this.urlInput = ''
+      } else {
+        this.showToastMessage('抓取失败：未找到题目内容')
+      }
     }
   } catch (e) {
     this.showToastMessage('抓取失败: ' + e.message)
@@ -424,14 +482,15 @@ this.showToastMessage('已下载文件')
 
 // ── Batch methods ────────────────────────────────────────────────────────────────────
 getTaskTitle(task) {
+  if (task.taskTitle) return task.taskTitle
   if (task.prompt && task.prompt.trim()) {
     const firstLine = task.prompt.split('\n').find(l => l.trim())
-    return firstLine ? firstLine.trim().slice(0, 28) : '未命名任务'
+    return firstLine ? firstLine.trim().replace(/^#+\s*/, '').slice(0, 28) : '未命名任务'
   }
   return '未命名任务'
 },
 getTaskStatusText(task) {
-  const m = { pending: '待翻译', processing: '翻译中...', completed: '已完成', failed: '失败' }
+  const m = { pending: '待翻译', fetching: '抓取题面...', processing: '翻译中...', completed: '已完成', failed: '失败' }
   return m[task.status] || task.status
 },
 updateCurrentTask(key, val) {
@@ -450,23 +509,34 @@ switchTask(index) {
   this.loadTask(index)
 },
 addNewTask() {
-  const task = { id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }
+  const task = { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }
   this.tasks.push(task)
   this.switchTask(this.tasks.length - 1)
 },
 clearAllTasks() {
   if (this.isBatchRunning) return
   if (!confirm('确定清空所有任务？')) return
-  this.tasks = [{ id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }]
+  this.tasks = [{ id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }]
   this.switchTask(0)
 },
 async runBatch() {
-  const toRun = this.tasks.filter(t => (t.status === 'pending' || t.status === 'failed') && t.prompt.trim())
+  const toRun = this.tasks.filter(t =>
+    (t.status === 'pending' || t.status === 'failed' || (t.status === 'fetching' && t.taskUrl))
+  )
   if (!toRun.length) { this.showToastMessage('没有待翻译的任务'); return }
   this.isBatchRunning = true
   for (const task of toRun) {
     const idx = this.tasks.indexOf(task)
     this.switchTask(idx)
+    // 若题面未抓取，先抓取
+    if (!task.prompt.trim() && task.taskUrl) {
+      task.status = 'fetching'
+      try {
+        const pData = await request(`/api/atcoder/problem?url=${encodeURIComponent(task.taskUrl)}`)
+        if (pData.statement) { task.prompt = pData.statement } else { task.status = 'failed'; continue }
+      } catch (e) { task.status = 'failed'; continue }
+    }
+    if (!task.prompt.trim()) { task.status = 'failed'; continue }
     task.status = 'processing'
     const ok = await this.translate()
     task.status = ok ? 'completed' : 'failed'
@@ -1222,6 +1292,7 @@ textarea:focus {
   background: #d1d5db;
 }
 .task-status-dot.pending    { background: #d1d5db; }
+.task-status-dot.fetching   { background: #818cf8; animation: pulse-dot 1s infinite; }
 .task-status-dot.processing { background: #f59e0b; animation: pulse-dot 1s infinite; }
 .task-status-dot.completed  { background: #10b981; }
 .task-status-dot.failed     { background: #ef4444; }
