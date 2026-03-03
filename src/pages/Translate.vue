@@ -587,11 +587,12 @@ _openPdfWindow(html, title) {
 <style>
   body { padding: 20mm 18mm; }
   ${css}
-  #hint { position: fixed; bottom: 20px; right: 20px; background: #4f46e5; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; z-index: 9999; }
+  #hint { position: fixed; bottom: 20px; right: 20px; background: #4f46e5; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; z-index: 9999; line-height: 1.6; }
+  #hint-sub { font-size: 11px; opacity: 0.85; margin-top: 3px; }
   @media print { #hint { display: none; } body { padding: 0; } }
 </style>
 </head><body>
-<div id="hint" onclick="window.print()">🖨️ 点击打印 / 另存为 PDF</div>
+<div id="hint" onclick="window.print()">🖨️ 点击打印 / 另存为 PDF<div id="hint-sub">去掉页眉页脚：展开「更多设置」→ 取消「页眉和页脚」</div></div>
 <div id="page">${html}</div>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
