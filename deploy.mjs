@@ -29,8 +29,11 @@ function ssh(cmd, label) {
 
 const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/:]/g, '-').replace(',', '')
 
-// 1. 本地 git push
-run('git add -A', '暂存所有变更')
+// 1. 本地构建前端
+run('npx vite build', '本地构建前端 (vite build)')
+
+// 2. 本地 git push
+run('git add -A', '暂存所有变更（含 dist/）')
 run('git diff --cached --quiet || git commit -m "deploy ' + now + '"', '提交变更')
 run('git push', 'Push 到 GitHub')
 
