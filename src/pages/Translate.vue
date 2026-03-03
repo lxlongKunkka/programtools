@@ -62,6 +62,9 @@
     <button class="btn-primary btn-sm" @click="runBatch" :disabled="isBatchRunning || loading">
       {{ isBatchRunning ? '⏳ 翻译中...' : '🚀 批量翻译' }}
     </button>
+    <button class="btn-secondary btn-sm" @click="resetAllToPending" :disabled="isBatchRunning" title="将所有已完成/失败任务重置为待翻译">
+      🔄 全部重置
+    </button>
     <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
       📦 批量下载
     </button>
@@ -95,7 +98,12 @@
         :class="['task-item', { active: currentTaskIndex === index }]"
         @click="switchTask(index)"
       >
-        <div class="task-status-dot" :class="task.status"></div>
+        <div
+          class="task-status-dot"
+          :class="task.status"
+          :title="task.status === 'completed' || task.status === 'failed' ? '点击重置为待翻译' : getTaskStatusText(task)"
+          @click.stop="resetTaskToPending(index)"
+        ></div>
         <div class="task-info-col">
           <div class="task-title">{{ getTaskTitle(task) }}</div>
           <div class="task-meta">{{ getTaskStatusText(task) }}</div>
@@ -666,6 +674,24 @@ getTaskTitle(task) {
 getTaskStatusText(task) {
   const m = { pending: '待翻译', fetching: '抓取题面...', processing: '翻译中...', completed: '已完成', failed: '失败' }
   return m[task.status] || task.status
+},
+resetTaskToPending(index) {
+  const t = this.tasks[index]
+  if (!t) return
+  if (t.status === 'completed' || t.status === 'failed') {
+    t.status = 'pending'
+  }
+},
+resetAllToPending() {
+  let count = 0
+  this.tasks.forEach(t => {
+    if (t.status === 'completed' || t.status === 'failed') {
+      t.status = 'pending'
+      count++
+    }
+  })
+  if (count > 0) this.showToastMessage(`🔄 已重置 ${count} 个任务为待翻译`)
+  else this.showToastMessage('没有需要重置的任务')
 },
 updateCurrentTask(key, val) {
   const t = this.tasks[this.currentTaskIndex]
@@ -1597,6 +1623,7 @@ textarea:focus {
 }
 
 .task-status-dot {
+  cursor: pointer;
   width: 8px;
   height: 8px;
   border-radius: 50%;
