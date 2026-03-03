@@ -45,4 +45,17 @@ ${cyaronDocs}
    - 如果起点 s 已从候选节点列表中移除，确保选择的节点数 k <= n-1
    - 在调用 \`py_random.sample(nodes, k)\` 前，添加安全检查：\`k = min(k, len(nodes))\`
    - 避免出现 "Sample larger than population" 错误
+13. **【randint 安全约束】** CYaRon 的 \`randint(a, b)\` 要求 \`a <= b\`，违反时会抛出 \`ValueError: empty range\`：
+   - 凡是调用 \`randint(1, X - 1)\` 的地方，必须先确保 \`X >= 2\`，否则会崩溃
+   - 对矩形/线段进行分割时，水平切割要求 \`H >= 2\`，垂直切割要求 \`W >= 2\`；若两个维度都为 1（1×1）则无法分割，需提前 \`break\`
+   - 方向判断应使用 \`<= 1\` 而非 \`== 1\`，更安全：
+     \`\`\`python
+     if hold_H <= 1:
+         orient = 'V'
+     elif hold_W <= 1:
+         orient = 'H'
+     else:
+         orient = py_random.choice(['H', 'V'])
+     \`\`\`
+   - 需要生成 N 个分块时，必须保证初始总量 \`>= N\`；若某维度可能取到 1，则另一维度必须 \`>= N\`，防止根本切不出 N 块
 `
