@@ -40,6 +40,46 @@
   </button>
 </div>
 
+<!-- ── Task info bar ─────────────────────────────────────────── -->
+<div class="task-info-bar">
+  <span class="task-count-label">共 {{ tasks.length }} 个任务</span>
+  <div class="task-bulk-right">
+    <button class="btn-primary btn-sm" @click="runBatch" :disabled="isBatchRunning || loading">
+      {{ isBatchRunning ? '⏳ 翻译中...' : '🚀 批量翻译' }}
+    </button>
+    <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
+      📦 批量下载
+    </button>
+  </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────────── -->
+<div class="main-layout">
+  <!-- Task list panel (220px) -->
+  <div class="task-list-panel">
+    <div class="task-list-header">
+      <span>任务列表</span>
+      <div style="display:flex;gap:4px">
+        <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
+        <button @click="clearAllTasks" class="btn-icon" title="清空" style="color:#ef4444">🗑️</button>
+      </div>
+    </div>
+    <div class="task-list">
+      <div
+        v-for="(task, index) in tasks"
+        :key="task.id"
+        :class="['task-item', { active: currentTaskIndex === index }]"
+        @click="switchTask(index)"
+      >
+        <div class="task-status-dot" :class="task.status"></div>
+        <div class="task-info-col">
+          <div class="task-title">{{ getTaskTitle(task) }}</div>
+          <div class="task-meta">{{ getTaskStatusText(task) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
     <div class="content-area" ref="contentArea">
       <!-- 输入栏 -->
       <div class="input-panel" :style="{ width: leftWidth + '%' }">
@@ -127,6 +167,7 @@
         </div>
       </div>
     </div>
+</div><!-- /main-layout -->
 </div>
 </template>
 
@@ -154,7 +195,13 @@ rawModelOptions: [],
 urlInput: '',
 urlLoading: false,
 showHistory: false,
-history: []
+history: [],
+// 批量模式
+isBatchRunning: false,
+currentTaskIndex: 0,
+tasks: [
+  { id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }
+]
 }
 },
 computed: {
@@ -171,12 +218,19 @@ computed: {
       if (this.isPremium) return all
       return all.filter(m => m.id === 'gemini-2.5-flash')
     },
+    hasCompletedTasks() {
+      return this.tasks.some(t => t.status === 'completed')
+    }
 },
 watch: {
-    prompt(val) { this.saveState() },
-    result(val) { this.saveState() },
-    englishResult(val) { this.saveState() },
-    model(val) { this.saveState() }
+    prompt(val) { this.updateCurrentTask('prompt', val); this.saveState() },
+    result(val) { this.updateCurrentTask('result', val); this.saveState() },
+    englishResult(val) { this.updateCurrentTask('englishResult', val); this.saveState() },
+    model(val) { this.saveState() },
+    tasks: {
+      handler(val) { localStorage.setItem('translate_tasks', JSON.stringify(val)) },
+      deep: true
+    }
 },
 async mounted() {
 try {
@@ -190,6 +244,18 @@ try {
         if (data.model) this.model = data.model
     }
     this.history = JSON.parse(localStorage.getItem('translate_history') || '[]')
+
+    // Restore tasks
+    try {
+      const savedTasks = localStorage.getItem('translate_tasks')
+      if (savedTasks) {
+        const parsed = JSON.parse(savedTasks)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.tasks = parsed
+          this.loadTask(0)
+        }
+      }
+    } catch (e) { console.error('Failed to load tasks', e) }
 
 const list = await getModels()
 if (Array.isArray(list)) this.rawModelOptions = list
@@ -239,11 +305,12 @@ methods: {
       document.body.style.cursor = ''
     },
 async translate() {
-if (!this.prompt.trim()) return
+if (!this.prompt.trim()) return false
 this.loading = true
 this.result = ''
 this.englishResult = ''
 this.streamCharsCount = 0
+let success = false
 try {
   const token = localStorage.getItem('auth_token')
   const headers = { 'Content-Type': 'application/json' }
@@ -274,6 +341,7 @@ try {
           this.englishResult = ev.english || ''
           this.saveState()
           this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '' })
+          success = true
         } else if (ev.type === 'error') {
           throw new Error(ev.message)
         }
@@ -288,6 +356,7 @@ this.showToastMessage(`翻译失败: ${e.message}`)
 } finally {
 this.loading = false
 }
+return success
 },
 clear() {
 this.prompt = ''
@@ -351,6 +420,83 @@ a.download = `translation_${lang}_${Date.now()}.md`
 a.click()
 URL.revokeObjectURL(url)
 this.showToastMessage('已下载文件')
+},
+
+// ── Batch methods ────────────────────────────────────────────────────────────────────
+getTaskTitle(task) {
+  if (task.prompt && task.prompt.trim()) {
+    const firstLine = task.prompt.split('\n').find(l => l.trim())
+    return firstLine ? firstLine.trim().slice(0, 28) : '未命名任务'
+  }
+  return '未命名任务'
+},
+getTaskStatusText(task) {
+  const m = { pending: '待翻译', processing: '翻译中...', completed: '已完成', failed: '失败' }
+  return m[task.status] || task.status
+},
+updateCurrentTask(key, val) {
+  const t = this.tasks[this.currentTaskIndex]
+  if (t) t[key] = val
+},
+loadTask(index) {
+  const t = this.tasks[index]
+  if (!t) return
+  this.prompt = t.prompt || ''
+  this.result = t.result || ''
+  this.englishResult = t.englishResult || ''
+},
+switchTask(index) {
+  this.currentTaskIndex = index
+  this.loadTask(index)
+},
+addNewTask() {
+  const task = { id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }
+  this.tasks.push(task)
+  this.switchTask(this.tasks.length - 1)
+},
+clearAllTasks() {
+  if (this.isBatchRunning) return
+  if (!confirm('确定清空所有任务？')) return
+  this.tasks = [{ id: Date.now(), status: 'pending', prompt: '', result: '', englishResult: '' }]
+  this.switchTask(0)
+},
+async runBatch() {
+  const toRun = this.tasks.filter(t => (t.status === 'pending' || t.status === 'failed') && t.prompt.trim())
+  if (!toRun.length) { this.showToastMessage('没有待翻译的任务'); return }
+  this.isBatchRunning = true
+  for (const task of toRun) {
+    const idx = this.tasks.indexOf(task)
+    this.switchTask(idx)
+    task.status = 'processing'
+    const ok = await this.translate()
+    task.status = ok ? 'completed' : 'failed'
+  }
+  this.isBatchRunning = false
+  this.showToastMessage('批量翻译完成')
+},
+async downloadBatch() {
+  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
+  if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
+  try {
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+    completed.forEach((task, i) => {
+      const title = this.getTaskTitle(task).replace(/[\/\\?%*:|"<>]/g, '_')
+      const label = `${String(i + 1).padStart(2, '0')}_${title}`
+      if (task.result) zip.file(`${label}_zh.md`, task.result)
+      if (task.englishResult) zip.file(`${label}_en.md`, task.englishResult)
+    })
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `translations_${Date.now()}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+    this.showToastMessage(`已下载 ${completed.length} 个翻译`)
+  } catch (e) {
+    this.showToastMessage('下载失败: ' + e.message)
+  }
 }
 }
 }
@@ -970,5 +1116,140 @@ textarea:focus {
 @keyframes pulse {
   0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
   40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Batch mode ─────────────────────────────────────────────── */
+.task-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #ede9fe;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(79, 70, 229, 0.06);
+}
+.task-count-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.task-bulk-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn-sm {
+  padding: 5px 14px !important;
+  font-size: 12px !important;
+}
+
+.main-layout {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+}
+
+.task-list-panel {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #ede9fe;
+  border-radius: 12px 0 0 12px;
+  overflow: hidden;
+  margin-right: 0;
+}
+
+.task-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.task-list-header .btn-icon {
+  padding: 2px 6px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  border-radius: 5px;
+}
+.task-list-header .btn-icon:hover {
+  background: rgba(255,255,255,0.28);
+}
+
+.task-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.task-list::-webkit-scrollbar { width: 4px; }
+.task-list::-webkit-scrollbar-track { background: transparent; }
+.task-list::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 2px; }
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f3ff;
+  transition: background 0.15s;
+}
+.task-item:last-child { border-bottom: none; }
+.task-item:hover { background: #f5f3ff; }
+.task-item.active {
+  background: #ede9fe;
+  border-left: 3px solid #7c3aed;
+  padding-left: 7px;
+}
+
+.task-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #d1d5db;
+}
+.task-status-dot.pending    { background: #d1d5db; }
+.task-status-dot.processing { background: #f59e0b; animation: pulse-dot 1s infinite; }
+.task-status-dot.completed  { background: #10b981; }
+.task-status-dot.failed     { background: #ef4444; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+}
+
+.task-info-col {
+  flex: 1;
+  min-width: 0;
+}
+.task-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-meta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.main-layout > .content-area {
+  flex: 1;
+  border-radius: 0 14px 14px 0;
+  border-left: none;
 }
 </style>
