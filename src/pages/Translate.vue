@@ -11,7 +11,7 @@
 </select>
 </div>
 <div class="toolbar-right">
-<button @click="translate" :disabled="loading || !prompt.trim()" class="btn-primary">
+<button @click="translate()" :disabled="loading || !prompt.trim()" class="btn-primary">
 {{ loading ? '⏳ 翻译中...' : '🌐 开始翻译' }}
 </button>
 <button @click="showHistory = !showHistory" class="btn-secondary">📋 历史{{ history.length ? ` (${history.length})` : '' }}</button>
