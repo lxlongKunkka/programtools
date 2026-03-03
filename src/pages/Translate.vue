@@ -98,16 +98,17 @@
         :class="['task-item', { active: currentTaskIndex === index }]"
         @click="switchTask(index)"
       >
-        <div
-          class="task-status-dot"
-          :class="task.status"
-          :title="task.status === 'completed' || task.status === 'failed' ? '点击重置为待翻译' : getTaskStatusText(task)"
-          @click.stop="resetTaskToPending(index)"
-        ></div>
+        <div class="task-status-dot" :class="task.status"></div>
         <div class="task-info-col">
           <div class="task-title">{{ getTaskTitle(task) }}</div>
           <div class="task-meta">{{ getTaskStatusText(task) }}</div>
         </div>
+        <button
+          v-if="task.status === 'completed' || task.status === 'failed'"
+          class="btn-icon-small"
+          @click.stop="resetTaskToPending(index)"
+          title="重置为待翻译"
+        >↺</button>
       </div>
     </div>
   </div>
@@ -1622,8 +1623,20 @@ textarea:focus {
   padding-left: 7px;
 }
 
-.task-status-dot {
+.btn-icon-small {
+  background: none;
+  border: none;
+  color: #9ca3af;
   cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  opacity: 0;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+.task-item:hover .btn-icon-small { opacity: 1; }
+.btn-icon-small:hover { color: #6366f1; }
+.task-status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
