@@ -65,8 +65,11 @@
     <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
       📦 批量下载
     </button>
-    <button class="btn-secondary btn-sm" @click="downloadCombinedMd" :disabled="isBatchRunning || !hasCompletedTasks">
-      📋 合并MD
+    <button class="btn-secondary btn-sm" @click="downloadCombinedMd('zh')" :disabled="isBatchRunning || !hasCompletedTasks">
+      📋 中文MD
+    </button>
+    <button class="btn-secondary btn-sm" @click="downloadCombinedMd('en')" :disabled="isBatchRunning || !hasCompletedTasks">
+      📋 英文MD
     </button>
     <button class="btn-secondary btn-sm btn-pdf" @click="downloadBatchPdf" :disabled="isBatchRunning || !hasCompletedTasks">
       📄 批量PDF
@@ -682,23 +685,21 @@ async runBatch() {
   this.isBatchRunning = false
   this.showToastMessage('批量翻译完成')
 },
-downloadCombinedMd() {
-  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
+downloadCombinedMd(lang) {
+  const completed = this.tasks.filter(t => t.status === 'completed' && (lang === 'zh' ? t.result : t.englishResult))
   if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
   const parts = []
   completed.forEach((task, i) => {
     const zhTitle = task.aiTitle || this.getTaskTitle(task)
     const origTitle = task.taskTitle || ''
     const num = String(i + 1).padStart(2, '0')
-    parts.push(`# ${num}. ${zhTitle}\n`)
-    if (origTitle && origTitle !== zhTitle) {
-      parts.push(`> **原标题：** ${origTitle}\n`)
-    }
-    if (task.result) {
-      parts.push(`## 中文翻译\n\n${task.result}\n`)
-    }
-    if (task.englishResult) {
-      parts.push(`## English\n\n${task.englishResult}\n`)
+    if (lang === 'zh') {
+      parts.push(`# ${num}. ${zhTitle}\n`)
+      if (origTitle && origTitle !== zhTitle) parts.push(`> ${origTitle}\n`)
+      parts.push(`\n${task.result}\n`)
+    } else {
+      parts.push(`# ${num}. ${origTitle || zhTitle}\n`)
+      parts.push(`\n${task.englishResult}\n`)
     }
     parts.push('\n---\n')
   })
@@ -708,10 +709,10 @@ downloadCombinedMd() {
   const a = document.createElement('a')
   a.href = url
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
-  a.download = `translations_${ds}.md`
+  a.download = `translations_${lang}_${ds}.md`
   a.click()
   URL.revokeObjectURL(url)
-  this.showToastMessage(`已下载合并 MD（${completed.length} 题）`)
+  this.showToastMessage(`已下载${lang === 'zh' ? '中文' : '英文'} MD（${completed.length} 题）`)
 },
 async downloadBatch() {
   const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
