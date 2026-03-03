@@ -130,6 +130,7 @@
               </div>
               <button @click="copyText(result)" :disabled="!result" class="btn-icon" title="复制">📋</button>
               <button @click="saveText(result, 'zh')" :disabled="!result" class="btn-icon" title="保存">💾</button>
+              <button @click="exportPdf(result, resultTitle, 'zh')" :disabled="!result" class="btn-icon btn-pdf" title="导出PDF">📄</button>
             </div>
           </div>
           <div v-if="resultTitle || resultTags.length" class="title-tags-bar">
@@ -167,6 +168,7 @@
               </div>
               <button @click="copyText(englishResult)" :disabled="!englishResult" class="btn-icon" title="复制">📋</button>
               <button @click="saveText(englishResult, 'en')" :disabled="!englishResult" class="btn-icon" title="保存">💾</button>
+              <button @click="exportPdf(englishResult, resultTitle, 'en')" :disabled="!englishResult" class="btn-icon btn-pdf" title="导出PDF">📄</button>
             </div>
           </div>
           <div v-if="resultTitle || resultTags.length" class="title-tags-bar">
@@ -198,6 +200,7 @@
 import request from '../utils/request'
 import { getModels } from '../utils/models'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
+import { marked } from 'marked'
 
 export default {
   components: { MarkdownViewer },
@@ -484,6 +487,58 @@ async fetchUrl() {
   } finally {
     this.urlLoading = false
   }
+},
+exportPdf(content, title, lang) {
+  if (!content) return
+  const html = marked.parse(content, { mangle: false, headerIds: false, breaks: true })
+  const win = window.open('', '_blank')
+  if (!win) { this.showToastMessage('请允许弹出窗口以导出 PDF'); return }
+  const langLabel = lang === 'zh' ? '中文翻译' : 'English'
+  const docTitle = title ? `${title} - ${langLabel}` : langLabel
+  win.document.write(`<!DOCTYPE html>
+<html lang="${lang === 'zh' ? 'zh-CN' : 'en'}">
+<head>
+<meta charset="UTF-8">
+<title>${docTitle}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; padding: 40px 52px; max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 800; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #4f46e5; color: #3730a3; }
+  h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; color: #4f46e5; }
+  h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
+  p { margin: 6px 0 10px; }
+  blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 13px; margin: 10px 0; }
+  code { font-family: 'Consolas', monospace; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #e5e7eb; padding: 6px 10px; }
+  th { background: #f5f3ff; font-weight: 600; }
+  .katex-display { overflow-x: auto; }
+  @media print {
+    body { padding: 20px 28px; }
+    @page { margin: 18mm 16mm; }
+  }
+</style>
+</head>
+<body>
+${html}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
+<script>
+window.onload = function() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false}
+    ],
+    throwOnError: false
+  })
+  setTimeout(function() { window.print() }, 600)
+}
+<\/script>
+</body></html>`)
+  win.document.close()
 },
 saveHistory({ prompt, result, englishResult, title, tags }) {
 const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
@@ -850,6 +905,16 @@ button {
 .btn-icon:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.btn-pdf {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+.btn-pdf:hover:not(:disabled) {
+  background: #ffedd5;
+  border-color: #fb923c;
 }
 
 .header-tabs {
