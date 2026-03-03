@@ -212,7 +212,8 @@
             </button>
             <button @click="copyTranslation" :disabled="!translationText" class="btn-secondary btn-sm">📋 复制中文</button>
             <button @click="copyTranslationEnglish" :disabled="!translationEnglish" class="btn-secondary btn-sm">📋 复制英文</button>
-            <button @click="downloadTranslation" :disabled="!translationText" class="btn-secondary btn-sm">💾 下载</button>
+            <button @click="downloadTranslation" :disabled="!translationText" class="btn-secondary btn-sm">💾 中文MD</button>
+            <button @click="downloadTranslationEnglish" :disabled="!translationEnglish" class="btn-secondary btn-sm">💾 英文MD</button>
           </div>
           <div v-if="translationText || translationEnglish" class="translation-dual-pane">
             <div v-if="translationText" class="translation-pane">
@@ -1468,7 +1469,19 @@ pause
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'problem_zh.md';
+          const name = (this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          a.download = `${name}_zh.md`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        downloadTranslationEnglish() {
+          if (!this.translationEnglish) return;
+          const blob = new Blob([this.translationEnglish], { type: 'text/markdown' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const name = (this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          a.download = `${name}_en.md`;
           a.click();
           URL.revokeObjectURL(url);
         },
