@@ -807,9 +807,9 @@ async downloadBatch() {
     const zip = new JSZip()
     completed.forEach((task, i) => {
       const title = this.getTaskTitle(task).replace(/[\/\\?%*:|"<>]/g, '_')
-      const label = `${String(i + 1).padStart(2, '0')}_${title}`
-      if (task.result) zip.file(`${label}_zh.md`, task.result)
-      if (task.englishResult) zip.file(`${label}_en.md`, task.englishResult)
+      const folder = `${String(i + 1).padStart(2, '0')}_${title}`
+      if (task.result) zip.file(`${folder}/problem_zh.md`, task.result)
+      if (task.englishResult) zip.file(`${folder}/problem_en.md`, task.englishResult)
     })
     const blob = await zip.generateAsync({ type: 'blob' })
     const url = URL.createObjectURL(blob)
