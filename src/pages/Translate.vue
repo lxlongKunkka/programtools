@@ -408,12 +408,17 @@ async fetchUrl() {
   if (!this.urlInput.trim()) return
   this.urlLoading = true
   const url = this.urlInput.trim()
+  // 明确的单题链接，直接跳过比赛流程（与 SolveData.isSingleProblem 逻辑一致）
+  const isSingleProblem = (
+    /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
+    /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url)
+  )
   try {
-    if (this.isContestUrl(url)) {
+    if (!isSingleProblem && this.isContestUrl(url)) {
       // ── 比赛链接：串行抓取每道题 ───────────────────────
       const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
       const problems = contestData.problems || []
-      if (!problems.length) { this.showToastMessage('未找到题目列表'); return }
+      if (!problems.length) throw new Error('未找到题目列表')
       this.urlInput = ''
       let added = 0
       for (const p of problems) {
@@ -431,6 +436,15 @@ async fetchUrl() {
       this.showToastMessage('✅ 题面抓取成功')
     }
   } catch (e) {
+    // 比赛接口失败时回退为单题（与 SolveData 容错逻辑一致）
+    if (!isSingleProblem && this.isContestUrl(url)) {
+      try {
+        await this.addTranslationTask(url)
+        this.urlInput = ''
+        this.showToastMessage('✅ 题面抓取成功')
+        return
+      } catch { /* fallback 也失败则继续报原始错误 */ }
+    }
     this.showToastMessage('抓取失败: ' + e.message)
   } finally {
     this.urlLoading = false
