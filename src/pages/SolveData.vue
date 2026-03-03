@@ -1414,6 +1414,8 @@ pause
             const decoder = new TextDecoder()
             let buf = ''
             let charsReceived = 0
+            let rawBuffer = ''       // 累积 AI 原始输出，用于流式提取 translation 字段
+            let translationStart = -1 // rawBuffer 中 translation 字符串内容的起始偏移
             while (true) {
               const { done, value } = await reader.read()
               if (done) break
@@ -1428,6 +1430,33 @@ pause
                   if (ev.type === 'chunk') {
                     charsReceived += ev.text.length
                     this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
+                    rawBuffer += ev.text
+                    // 流式提取 translation 字段内容
+                    if (translationStart === -1) {
+                      const m = rawBuffer.match(/"translation"\s*:\s*"/)
+                      if (m) translationStart = m.index + m[0].length
+                    }
+                    if (translationStart !== -1) {
+                      const partial = rawBuffer.slice(translationStart)
+                      // 逐字符解析 JSON 字符串，遇到未转义的 " 为止
+                      let i = 0, preview = ''
+                      while (i < partial.length) {
+                        if (partial[i] === '\\' && i + 1 < partial.length) {
+                          const next = partial[i + 1]
+                          if (next === 'n') preview += '\n'
+                          else if (next === '"') preview += '"'
+                          else if (next === '\\') preview += '\\'
+                          else if (next === 't') preview += '\t'
+                          else preview += next
+                          i += 2
+                        } else if (partial[i] === '"') {
+                          break
+                        } else {
+                          preview += partial[i++]
+                        }
+                      }
+                      if (preview) this.translationText = preview
+                    }
                   } else if (ev.type === 'result') {
                     this.translationText = ev.result || ''
                     this.translationEnglish = ev.english || ''
