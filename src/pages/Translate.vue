@@ -547,67 +547,65 @@ exportPdf(content, title, lang) {
   if (!content) return
   const html = marked.parse(content, { mangle: false, headerIds: false, breaks: true })
   const safeName = (title || (lang === 'zh' ? '中文翻译' : 'English')).replace(/[\\/:*?"<>|]/g, '_')
-  this._openPdfWindow(html, `${safeName}_${lang}.pdf`)
+  this._openPdfWindow(html, `${safeName}_${lang}`)
 },
 _pdfCss() {
-  return `* { box-sizing: border-box; margin: 0; padding: 0; }
+  return `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; background: #fff; }
-  #overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.93); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; font-family: sans-serif; color: #4f46e5; font-size: 15px; z-index: 9999; }
-  .spinner { width: 36px; height: 36px; border: 3px solid #ede9fe; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  .progress-bar-wrap { width: 240px; height: 6px; background: #ede9fe; border-radius: 3px; overflow: hidden; }
-  .progress-bar { height: 100%; background: #4f46e5; border-radius: 3px; transition: width 0.3s; }
-  @keyframes spin { to { transform: rotate(360deg) } }
-  #page { width: 750px; margin: 0 auto; padding: 40px 48px; }
-  #page h1 { font-size: 22px; font-weight: 800; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #4f46e5; color: #3730a3; }
-  #page h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; color: #4f46e5; }
-  #page h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
-  #page p { margin: 6px 0 10px; }
-  #page blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
-  #page pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas',monospace; font-size: 13px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
-  #page code { font-family: 'Consolas',monospace; font-size: 13px; }
-  #page table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-  #page th, #page td { border: 1px solid #e5e7eb; padding: 6px 10px; }
-  #page th { background: #f5f3ff; font-weight: 600; }
-  .page-break { page-break-after: always; height: 0; }`
+  #page { width: 100%; padding: 0; }
+  h1 { font-size: 22px; font-weight: 800; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #4f46e5; color: #3730a3; }
+  h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; color: #4f46e5; }
+  h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
+  p { margin: 6px 0 10px; }
+  blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas',monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+  code { font-family: 'Consolas',monospace; font-size: 12px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #e5e7eb; padding: 6px 10px; }
+  th { background: #f5f3ff; font-weight: 600; }
+  .page-break { page-break-after: always; }
+  @media print {
+    body { padding: 0; }
+    pre { page-break-inside: avoid; }
+    h1, h2, h3 { page-break-after: avoid; }
+    blockquote { page-break-inside: avoid; }
+    .katex-display { page-break-inside: avoid; }
+  }`
 },
-_openPdfWindow(html, filename) {
-  const win = window.open('', '_blank', 'width=860,height=600')
+_openPdfWindow(html, title) {
+  const win = window.open('', '_blank', 'width=860,height=900')
   if (!win) { this.showToastMessage('请允许弹出窗口以导出 PDF'); return }
   const css = this._pdfCss()
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>生成中...</title>
+  win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>${title}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<style>${css}</style></head><body>
-<div id="overlay"><div class="spinner"></div><div id="msg">正在生成 PDF...</div><div class="progress-bar-wrap"><div class="progress-bar" id="pb" style="width:5%"></div></div></div>
+<style>
+  body { padding: 20mm 18mm; }
+  ${css}
+  #hint { position: fixed; bottom: 20px; right: 20px; background: #4f46e5; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; z-index: 9999; }
+  @media print { #hint { display: none; } body { padding: 0; } }
+</style>
+</head><body>
+<div id="hint" onclick="window.print()">🖨️ 点击打印 / 另存为 PDF</div>
 <div id="page">${html}</div>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
 <script>
 window.onload = function() {
-  var el = document.getElementById('page')
-  renderMathInElement(el, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false })
-  document.getElementById('pb').style.width = '40%'
-  setTimeout(function() {
-    document.getElementById('pb').style.width = '70%'
-    var overlay = document.getElementById('overlay')
-    overlay.style.display = 'none'
-    html2pdf().set({
-      margin: [12, 14, 12, 14],
-      filename: ${JSON.stringify(filename)},
-      image: { type: 'jpeg', quality: 0.98 },
-      pagebreak: { mode: 'css', before: '.page-break' },
-      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(el).save().then(function() {
-      overlay.style.display = 'flex'
-      overlay.innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
-    }).catch(function(e) {
-      overlay.style.display = 'flex'
-      overlay.innerHTML = '<div style="color:#dc2626">生成失败: ' + e.message + '</div>'
-    })
-  }, 600)
+  renderMathInElement(document.getElementById('page'), {
+    delimiters: [
+      {left:'$$', right:'$$', display:true},
+      {left:'$', right:'$', display:false}
+    ],
+    throwOnError: false
+  })
+  // 公式渲染完成后自动触发打印对话框
+  setTimeout(function() { window.print() }, 400)
 }
 <\/script></body></html>`)
+
   win.document.close()
 },
 downloadBatchPdf() {
@@ -627,7 +625,7 @@ downloadBatchPdf() {
   })
   const combinedHtml = parts.join('\n')
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
-  this._openPdfWindow(combinedHtml, `translations_${ds}.pdf`)
+  this._openPdfWindow(combinedHtml, `批量翻译_${ds}`)
 },
 saveHistory({ prompt, result, englishResult, title, tags }) {
   const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
