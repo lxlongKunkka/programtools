@@ -6,7 +6,7 @@ server/.env
 .env
 
 # build outputs
-# dist/ is committed for deployment
+dist/
 .vite/
 
 # logs (do not push request logs)

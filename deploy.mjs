@@ -29,17 +29,15 @@ function ssh(cmd, label) {
 
 const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/:]/g, '-').replace(',', '')
 
-// 1. 本地构建前端
-run('npx vite build', '本地构建前端 (vite build)')
-
-// 2. 本地 git push
-run('git add -A', '暂存所有变更（含 dist/）')
+// 1. 本地 git push（仅源码，不含 dist）
+run('git add -A', '暂存所有变更')
 run('git diff --cached --quiet || git commit -m "deploy ' + now + '"', '提交变更')
 run('git push', 'Push 到 GitHub')
 
-// 2. 远程 pull + 安装依赖 + 重启
+// 2. 远程 pull + 安装依赖 + 构建前端 + 重启
 ssh(`cd ${REMOTE_DIR} && git pull`, '远程 git pull')
-ssh(`cd ${REMOTE_DIR} && npm install --omit=dev --silent`, '安装依赖')
+ssh(`cd ${REMOTE_DIR} && npm install --silent`, '安装依赖（含 devDependencies）')
+ssh(`cd ${REMOTE_DIR} && npm run build`, '服务器端构建前端 (vite build)')
 ssh(`cd ${REMOTE_DIR} && pm2 restart all --update-env`, 'PM2 重启服务')
 ssh(`pm2 list`, '查看服务状态')
 
