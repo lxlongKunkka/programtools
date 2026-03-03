@@ -15,7 +15,6 @@ const HEADERS = {
 function detectPlatform(url) {
   if (/atcoder\.jp/i.test(url)) return 'atcoder'
   if (/codeforces\.com/i.test(url)) return 'codeforces'
-  if (/luogu\.com\.cn/i.test(url)) return 'luogu'
   return 'unknown'
 }
 
@@ -25,7 +24,7 @@ function parseAtCoderContestId(url) {
 }
 
 // GET /api/atcoder/contest?url=...
-// Returns the list of problems in a contest (supports AtCoder / Codeforces / Luogu)
+// Returns the list of problems in a contest (supports AtCoder / Codeforces)
 router.get('/contest', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
@@ -34,8 +33,7 @@ router.get('/contest', authenticateToken, async (req, res) => {
   try {
     if (platform === 'atcoder') return res.json(await fetchAtCoderContest(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesContest(url))
-    if (platform === 'luogu') return res.json(await fetchLuoguContest(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 洛谷' })
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
     const code = err.response?.status
@@ -46,7 +44,7 @@ router.get('/contest', authenticateToken, async (req, res) => {
 })
 
 // GET /api/atcoder/problem?url=...
-// Returns parsed problem content as markdown (supports AtCoder / Codeforces / Luogu)
+// Returns parsed problem content as markdown (supports AtCoder / Codeforces)
 router.get('/problem', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
@@ -55,8 +53,7 @@ router.get('/problem', authenticateToken, async (req, res) => {
   try {
     if (platform === 'atcoder') return res.json(await fetchAtCoderProblem(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesProblem(url))
-    if (platform === 'luogu') return res.json(await fetchLuoguProblem(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 洛谷' })
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces' })
   } catch (err) {
     console.error(`[${platform}] problem fetch error:`, err.message)
     const code = err.response?.status
@@ -442,17 +439,10 @@ async function fetchCodeforcesProblem(url) {
   return { title, content: md.trim() }
 }
 
-// ─── 洛谷 (Luogu) ─────────────────────────────────────────────────────────────
+// ─── HTML → Markdown converter ───────────────────────────────────────────────
 
-const LUOGU_HEADERS = {
-  ...HEADERS,
-  'x-luogu-type': 'content-only',
-  'Referer': 'https://www.luogu.com.cn/'
-}
-
-async function fetchLuoguProblem(url) {
-  const match = url.match(/luogu\.com\.cn\/problem\/([A-Z0-9]+)/i)
-  if (!match) throw new Error('无法解析洛谷题目编号')
+function parseStatement($, $root, title, limitsRow) {
+  let md = `# ${title}\n\n`
   const pid = match[1].toUpperCase()
 
   // 洛谷使用 Nuxt，题目数据直接嵌入 HTML 中，无需第二次请求
@@ -615,13 +605,6 @@ async function fetchLuoguContest(url) {
     taskId: p.pid,
     url: `https://www.luogu.com.cn/problem/${p.pid}`
   }))
-
-  return {
-    contestId: `lg_${cid}`,
-    contestTitle: data?.name || `洛谷比赛 ${cid}`,
-    problems
-  }
-}
 
 // ─── HTML → Markdown converter ───────────────────────────────────────────────
 

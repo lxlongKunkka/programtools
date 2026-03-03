@@ -29,7 +29,7 @@
     <input
       v-model="fetchUrl"
       class="url-input"
-      placeholder="输入题目/比赛链接：AtCoder / Codeforces / 洛谷"
+      placeholder="输入题目/比赛链接：AtCoder / Codeforces"
       @keydown.enter="fetchFromUrl"
       :disabled="isFetchingUrl"
     />

@@ -34,7 +34,7 @@
 <!-- URL 抓取栏 -->
 <div class="url-bar">
   <span class="url-label">🔗</span>
-  <input v-model="urlInput" class="url-input" placeholder="支持 AtCoder / Codeforces / 洛谷 题目链接，自动抓取格式化题面" @keydown.enter="fetchUrl" :disabled="urlLoading" />
+  <input v-model="urlInput" class="url-input" placeholder="支持 AtCoder / Codeforces 题目链接，自动抓取格式化题面" @keydown.enter="fetchUrl" :disabled="urlLoading" />
   <button @click="fetchUrl" :disabled="!urlInput.trim() || urlLoading" class="btn-fetch">
     {{ urlLoading ? '⏳' : '抓取' }}
   </button>
