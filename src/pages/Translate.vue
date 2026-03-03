@@ -687,8 +687,13 @@ downloadCombinedMd() {
   if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
   const parts = []
   completed.forEach((task, i) => {
-    const title = this.getTaskTitle(task)
-    parts.push(`# ${String(i + 1).padStart(2, '0')}. ${title}\n`)
+    const zhTitle = task.aiTitle || this.getTaskTitle(task)
+    const origTitle = task.taskTitle || ''
+    const num = String(i + 1).padStart(2, '0')
+    parts.push(`# ${num}. ${zhTitle}\n`)
+    if (origTitle && origTitle !== zhTitle) {
+      parts.push(`> **原标题：** ${origTitle}\n`)
+    }
     if (task.result) {
       parts.push(`## 中文翻译\n\n${task.result}\n`)
     }
