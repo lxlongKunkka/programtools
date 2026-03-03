@@ -383,6 +383,7 @@ try {
           this.updateCurrentTask('aiTitle', this.resultTitle)
           this.updateCurrentTask('aiTags', this.resultTags)
           this.saveState()
+          this.mirrorImages()
           if (!skipHistory) {
             this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '', tags: ev.meta?.tags || [] })
           }
@@ -496,6 +497,30 @@ async fetchUrl() {
   } finally {
     this.urlLoading = false
   }
+},
+async mirrorImages() {
+  const IMG_RE = /!\[([^\]]*)\]\((https?:\/\/(?![^)]*myqcloud\.com)[^)]+)\)/g
+  const urls = new Set()
+  const scan = md => { let m; IMG_RE.lastIndex = 0; while ((m = IMG_RE.exec(md)) !== null) urls.add(m[2]) }
+  if (this.result) scan(this.result)
+  if (this.englishResult) scan(this.englishResult)
+  if (!urls.size) return
+  const token = localStorage.getItem('auth_token')
+  const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  const urlMap = {}
+  await Promise.all([...urls].map(async url => {
+    try {
+      const r = await fetch('/api/proxy-image', { method: 'POST', headers, body: JSON.stringify({ url }) })
+      const d = await r.json()
+      if (d.cosUrl) urlMap[url] = d.cosUrl
+    } catch {}
+  }))
+  if (!Object.keys(urlMap).length) return
+  const replace = md => md.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (m, alt, url) => urlMap[url] ? `![${alt}](${urlMap[url]})` : m)
+  if (this.result) { this.result = replace(this.result); this.updateCurrentTask('result', this.result) }
+  if (this.englishResult) { this.englishResult = replace(this.englishResult); this.updateCurrentTask('englishResult', this.englishResult) }
+  this.saveState()
+  this.showToastMessage(`✅ 已将 ${Object.keys(urlMap).length} 张图片镜像到 COS`)
 },
 exportPdf(content, title, lang) {
   if (!content) return

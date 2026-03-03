@@ -160,6 +160,46 @@ export async function processSingleImage(src, index) {
 }
 
 /**
+ * 将外部图片 URL 下载后上传到 COS，返回 COS URL
+ * 失败时返回 null
+ * @param {string} url - 原始图片 URL
+ * @returns {Promise<string|null>}
+ */
+export async function proxyImageToCos(url) {
+  if (!COS_CONFIG.SecretId || !COS_CONFIG.SecretKey || !COS_CONFIG.Bucket) return null
+  const imageBuffer = await downloadImage(url)
+  if (!imageBuffer) return null
+  const ext = getImageExtension(url)
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`
+  const randomStr = Math.random().toString(36).substring(2, 13)
+  const cosKey = `translate-images/${dateStr}/${randomStr}${ext}`
+  try {
+    const result = await new Promise((resolve, reject) => {
+      cos.putObject({
+        Bucket: COS_CONFIG.Bucket,
+        Region: COS_CONFIG.Region,
+        Key: cosKey,
+        Body: imageBuffer,
+        ContentType: getImageContentType(ext),
+      }, (err, data) => err ? reject(err) : resolve(data))
+    })
+    let finalUrl
+    if (COS_CONFIG.Domain) {
+      const domain = COS_CONFIG.Domain.replace(/^https?:\/\//, '').replace(/\/$/, '')
+      finalUrl = `https://${domain}/${cosKey}`
+    } else {
+      finalUrl = result.Location.startsWith('http') ? result.Location : `https://${result.Location}`
+    }
+    console.log(`[proxy-image] ${url} → ${finalUrl}`)
+    return finalUrl
+  } catch (e) {
+    console.error('[proxy-image] 上传失败:', e.message)
+    return null
+  }
+}
+
+/**
  * 获取图片扩展名
  */
 function getImageExtension(src) {

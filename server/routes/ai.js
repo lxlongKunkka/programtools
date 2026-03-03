@@ -14,6 +14,7 @@ import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG, HYDRO_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
+import { proxyImageToCos } from '../utils/cosUploader.js'
 import { debugLog } from '../utils/logger.js'
 import { getIO } from '../socket/index.js'
 import { 
@@ -414,6 +415,17 @@ function wrapLatexIfNeeded(text) {
   text = text.replace(new RegExp(placeholder + '(\\d+)___', 'g'), (_, idx) => codeBlocks[Number(idx)] || '')
   return text
 }
+
+router.post('/proxy-image', async (req, res) => {
+  const { url } = req.body
+  if (!url || !/^https?:\/\//.test(url)) return res.status(400).json({ error: 'invalid url' })
+  try {
+    const cosUrl = await proxyImageToCos(url)
+    res.json({ cosUrl: cosUrl || null })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
 
 router.post('/translate', checkModelPermission, async (req, res) => {
   try {
