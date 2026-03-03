@@ -794,7 +794,7 @@ downloadCombinedMd(lang) {
   const a = document.createElement('a')
   a.href = url
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
-  a.download = `translations_${lang}_${ds}.md`
+  a.download = lang === 'zh' ? `批量中文_${ds}.md` : `批量英文_${ds}.md`
   a.click()
   URL.revokeObjectURL(url)
   this.showToastMessage(`已下载${lang === 'zh' ? '中文' : '英文'} MD（${completed.length} 题）`)

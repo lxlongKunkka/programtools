@@ -1480,7 +1480,7 @@ pause
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          const name = (this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          const name = (this.problemMeta?.rawTitle || this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
           a.download = `${name}_en.md`;
           a.click();
           URL.revokeObjectURL(url);
