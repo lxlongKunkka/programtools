@@ -1640,6 +1640,11 @@ pause
       this.reportHtml = '' // 清空旧的解题报告
       this.showStepIndicators = true
       
+      // 更新当前任务状态为处理中
+      if (this.tasks[this.currentTaskIndex]) {
+        this.tasks[this.currentTaskIndex].status = 'processing'
+      }
+      
       // 重置所有步骤状态
       this.generationSteps = {
         translate: 'pending',
@@ -1845,12 +1850,20 @@ pause
         
         this.generationStatus = '全部生成完成！'
         this.showToastMessage('一键生成全部完成')
+        // 更新当前任务状态为已完成
+        if (this.tasks[this.currentTaskIndex]) {
+          this.tasks[this.currentTaskIndex].status = 'completed'
+        }
         return true
         
       } catch (error) {
         console.error('Generate all failed:', error)
         this.generationStatus = '❌ 生成出错: ' + error.message
         this.showToastMessage('一键生成失败: ' + error.message)
+        // 更新当前任务状态为失败
+        if (this.tasks[this.currentTaskIndex]) {
+          this.tasks[this.currentTaskIndex].status = 'failed'
+        }
         return false
       } finally {
         this.isGenerating = false
