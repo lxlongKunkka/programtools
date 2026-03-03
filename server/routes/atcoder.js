@@ -478,6 +478,13 @@ function nodeToMd($, node) {
   const tag = node.tagName?.toLowerCase()
   if (!tag) return ''
 
+  if (tag === 'img') {
+    const src = $(node).attr('src') || ''
+    const alt = $(node).attr('alt') || ''
+    if (!src) return ''
+    const fullSrc = src.startsWith('//') ? 'https:' + src : src
+    return `\n![${alt}](${fullSrc})\n\n`
+  }
   if (tag === 'p') {
     const text = getNodeText($, node).trim()
     return text ? text + '\n\n' : ''
@@ -513,6 +520,15 @@ function nodeToMd($, node) {
 function getNodeText($, node) {
   if (node.type === 'text') return node.data || ''
   if (!node.children) return $(node).text()
+
+  const tag = node.tagName?.toLowerCase()
+  if (tag === 'img') {
+    const src = $(node).attr('src') || ''
+    const alt = $(node).attr('alt') || ''
+    if (!src) return ''
+    const fullSrc = src.startsWith('//') ? 'https:' + src : src
+    return `\n![${alt}](${fullSrc})\n`
+  }
 
   let result = ''
   node.children.forEach(child => {
