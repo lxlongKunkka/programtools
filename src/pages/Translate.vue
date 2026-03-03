@@ -2,6 +2,7 @@
 <div class="translate-root">
 <h2>AI 智能翻译助手</h2>
 
+<div class="toolbar-container">
 <div class="toolbar">
 <div class="toolbar-left">
 <label class="label">模型:</label>
@@ -30,6 +31,7 @@
     <div class="history-preview">{{ item.prompt.slice(0, 80) }}{{ item.prompt.length > 80 ? '...' : '' }}</div>
   </div>
 </div>
+</div><!-- end toolbar-container -->
 
 <!-- URL 抓取栏 -->
 <div class="url-bar">
@@ -304,7 +306,7 @@ methods: {
       document.body.style.userSelect = ''
       document.body.style.cursor = ''
     },
-async translate() {
+async translate(skipHistory = false) {
 if (!this.prompt.trim()) return false
 this.loading = true
 this.result = ''
@@ -340,7 +342,9 @@ try {
           this.result = ev.result
           this.englishResult = ev.english || ''
           this.saveState()
-          this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '' })
+          if (!skipHistory) {
+            this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '' })
+          }
           success = true
         } else if (ev.type === 'error') {
           throw new Error(ev.message)
@@ -537,8 +541,13 @@ async runBatch() {
   for (const idx of toRunIndices) {
     this.switchTask(idx)
     this.tasks[idx].status = 'processing'
-    const ok = await this.translate()
+    const ok = await this.translate(true)
+    await this.$nextTick()
     this.tasks[idx].status = ok ? 'completed' : 'failed'
+    if (ok) {
+      const t = this.tasks[idx]
+      this.saveHistory({ prompt: t.prompt, result: t.result, englishResult: t.englishResult, title: t.taskTitle || this.getTaskTitle(t) })
+    }
   }
   this.isBatchRunning = false
   this.showToastMessage('批量翻译完成')
@@ -1089,13 +1098,21 @@ textarea:focus {
 }
 
 /* History panel */
+.toolbar-container {
+  position: relative;
+}
 .history-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  width: min(700px, calc(100vw - 40px));
+  max-height: 420px;
+  overflow-y: auto;
   background: white;
   border: 1px solid #ede9fe;
   border-radius: 12px;
-  margin-bottom: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.06);
+  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.18);
 }
 .history-header {
   display: flex;
