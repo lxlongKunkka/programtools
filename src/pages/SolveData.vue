@@ -68,6 +68,7 @@
         <span>任务列表</span>
         <div style="display:flex;gap:4px">
           <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
+          <button @click="clearCompletedTasks" class="btn-icon" title="清除已完成" style="color:#10b981">✅</button>
           <button @click="clearAllTasks" class="btn-icon" title="清空任务列表" style="color:#ef4444">🗑️</button>
         </div>
       </div>
@@ -849,6 +850,27 @@ export default {
       } else if (index < this.currentTaskIndex) {
         this.currentTaskIndex--
       }
+    },
+
+    clearCompletedTasks() {
+      const completedCount = this.tasks.filter(t => t.status === 'completed').length
+      if (completedCount === 0) { this.showToastMessage('没有已完成的任务'); return }
+      if (!confirm(`确认清除 ${completedCount} 个已完成的任务？`)) return
+      const remaining = this.tasks.filter(t => t.status !== 'completed')
+      if (remaining.length === 0) {
+        // 全都是已完成，保留一个空任务
+        this.tasks = [{ id: Date.now(), status: 'pending', problemText: '', manualCode: '', referenceText: '', codeOutput: '', serverPureCode: '', dataOutput: '', translationText: '', translationEnglish: '', problemMeta: null, reportHtml: '' }]
+        this.currentTaskIndex = 0
+        this.loadTask(0)
+      } else {
+        this.tasks = remaining
+        // 保证 currentTaskIndex 有效
+        if (this.currentTaskIndex >= this.tasks.length) {
+          this.currentTaskIndex = this.tasks.length - 1
+        }
+        this.loadTask(this.currentTaskIndex)
+      }
+      this.showToastMessage(`已清除 ${completedCount} 个已完成任务`)
     },
 
     clearAllTasks() {
