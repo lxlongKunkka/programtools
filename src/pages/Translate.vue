@@ -491,7 +491,7 @@ async fetchUrl() {
 exportPdf(content, title, lang) {
   if (!content) return
   const html = marked.parse(content, { mangle: false, headerIds: false, breaks: true })
-  const win = window.open('', '_blank', 'width=480,height=240')
+  const win = window.open('', '_blank', 'width=860,height=600')
   if (!win) { this.showToastMessage('请允许弹出窗口以导出 PDF'); return }
   const langLabel = lang === 'zh' ? '中文翻译' : 'English'
   const safeName = (title || langLabel).replace(/[\\/:*?"<>|]/g, '_')
@@ -503,31 +503,33 @@ exportPdf(content, title, lang) {
 <title>正在生成 PDF...</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <style>
-  #status { font-family: sans-serif; text-align: center; padding: 60px 20px; color: #4f46e5; font-size: 15px; }
-  #status .spinner { width: 32px; height: 32px; border: 3px solid #ede9fe; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; background: #fff; }
+  #overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; font-family: sans-serif; color: #4f46e5; font-size: 15px; z-index: 9999; }
+  .spinner { width: 36px; height: 36px; border: 3px solid #ede9fe; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg) } }
-  #render-target { position: absolute; left: -9999px; top: 0; width: 794px; background: white; padding: 40px 52px; font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 1.8; color: #1a1a2e; }
-  #render-target h1 { font-size: 22px; font-weight: 800; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #4f46e5; color: #3730a3; }
-  #render-target h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; color: #4f46e5; }
-  #render-target h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
-  #render-target p { margin: 6px 0 10px; }
-  #render-target blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
-  #render-target pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas', monospace; font-size: 13px; margin: 10px 0; }
-  #render-target code { font-family: 'Consolas', monospace; font-size: 13px; }
-  #render-target table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-  #render-target th, #render-target td { border: 1px solid #e5e7eb; padding: 6px 10px; }
-  #render-target th { background: #f5f3ff; font-weight: 600; }
+  #page { width: 750px; margin: 0 auto; padding: 40px 48px; }
+  #page h1 { font-size: 22px; font-weight: 800; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 2px solid #4f46e5; color: #3730a3; }
+  #page h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; color: #4f46e5; }
+  #page h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; }
+  #page p { margin: 6px 0 10px; }
+  #page blockquote { border-left: 3px solid #a5b4fc; margin: 8px 0; padding: 4px 12px; color: #374151; background: #f5f3ff; border-radius: 0 6px 6px 0; }
+  #page pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas', monospace; font-size: 13px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+  #page code { font-family: 'Consolas', monospace; font-size: 13px; }
+  #page table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  #page th, #page td { border: 1px solid #e5e7eb; padding: 6px 10px; }
+  #page th { background: #f5f3ff; font-weight: 600; }
 </style>
 </head>
 <body>
-<div id="status"><div class="spinner"></div>正在生成 PDF，请稍候...</div>
-<div id="render-target">${html}</div>
+<div id="overlay"><div class="spinner"></div><span>正在生成 PDF，请稍候...</span></div>
+<div id="page">${html}</div>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
 <script>
 window.onload = function() {
-  var el = document.getElementById('render-target')
+  var el = document.getElementById('page')
   renderMathInElement(el, {
     delimiters: [
       {left: '$$', right: '$$', display: true},
@@ -539,14 +541,18 @@ window.onload = function() {
     var opt = {
       margin: [12, 14, 12, 14],
       filename: ${JSON.stringify(filename)},
-      image: { type: 'jpeg', quality: 0.97 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }
     html2pdf().set(opt).from(el).save().then(function() {
-      document.getElementById('status').innerHTML = '<div style="color:#16a34a;font-size:22px">✅</div><div style="margin-top:8px">PDF 已下载，可关闭此窗口</div>'
+      var ov = document.getElementById('overlay')
+      ov.innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
+    }).catch(function(e) {
+      var ov = document.getElementById('overlay')
+      ov.innerHTML = '<div style="color:#dc2626">生成失败: ' + e.message + '</div>'
     })
-  }, 800)
+  }, 600)
 }
 <\/script>
 </body></html>`)
