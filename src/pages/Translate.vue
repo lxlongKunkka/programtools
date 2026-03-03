@@ -34,7 +34,7 @@
 <!-- URL 抓取栏 -->
 <div class="url-bar">
   <span class="url-label">🔗</span>
-  <input v-model="urlInput" class="url-input" placeholder="支持 Codeforces / AtCoder 题目链接，自动抓取题面" @keydown.enter="fetchUrl" :disabled="urlLoading" />
+  <input v-model="urlInput" class="url-input" placeholder="支持 AtCoder / Codeforces / 洛谷 题目链接，自动抓取格式化题面" @keydown.enter="fetchUrl" :disabled="urlLoading" />
   <button @click="fetchUrl" :disabled="!urlInput.trim() || urlLoading" class="btn-fetch">
     {{ urlLoading ? '⏳' : '抓取' }}
   </button>
@@ -296,22 +296,24 @@ this.englishResult = ''
 this.urlInput = ''
 },
 async fetchUrl() {
-if (!this.urlInput.trim()) return
-this.urlLoading = true
-try {
-const data = await request(`/api/translate/fetch-url?url=${encodeURIComponent(this.urlInput.trim())}`)
-if (data.text) {
-this.prompt = data.text
-this.showToastMessage('✅ 题面抓取成功，可以开始翻译')
-this.urlInput = ''
-} else if (data.error) {
-this.showToastMessage('抓取失败: ' + data.error)
-}
-} catch (e) {
-this.showToastMessage('抓取失败: ' + e.message)
-} finally {
-this.urlLoading = false
-}
+  if (!this.urlInput.trim()) return
+  this.urlLoading = true
+  const url = this.urlInput.trim()
+  try {
+    // 复用 SolveData 的 /api/atcoder/problem 接口（支持 AtCoder / Codeforces / 洛谷，输出结构化 Markdown）
+    const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
+    if (data.statement) {
+      this.prompt = data.statement
+      this.showToastMessage(`✅ 题面抓取成功：${data.title || url}`)
+      this.urlInput = ''
+    } else {
+      this.showToastMessage('抓取失败：未找到题目内容')
+    }
+  } catch (e) {
+    this.showToastMessage('抓取失败: ' + e.message)
+  } finally {
+    this.urlLoading = false
+  }
 },
 saveHistory({ prompt, result, englishResult, title }) {
 const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title }
