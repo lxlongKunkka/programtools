@@ -20,15 +20,28 @@
 </div>
 
 <!-- 历史记录面板 -->
-<div v-if="showHistory" class="history-panel">
-  <div class="history-header"><span>最近翻译记录（点击恢复）</span><button @click="clearHistory" class="btn-clear-history">🗑 清空</button></div>
-  <div v-if="!history.length" class="history-empty">暂无历史记录</div>
-  <div v-for="item in history" :key="item.id" class="history-item" @click="restoreHistory(item)">
-    <div class="history-meta">
-      <span class="history-title">{{ item.title || '无标题' }}</span>
-      <span class="history-time">{{ formatTime(item.ts) }}</span>
+<div v-if="showHistory" class="history-mask" @click="showHistory = false"></div>
+<div v-if="showHistory" class="history-panel" @click.stop>
+  <div class="history-header">
+    <span class="history-header-title">🕘 最近翻译记录</span>
+    <div class="history-header-actions">
+      <button v-if="history.length" @click="clearHistory" class="btn-history-clear">清空</button>
+      <button @click="showHistory = false" class="btn-history-close">✕</button>
     </div>
-    <div class="history-preview">{{ item.prompt.slice(0, 80) }}{{ item.prompt.length > 80 ? '...' : '' }}</div>
+  </div>
+  <div v-if="!history.length" class="history-empty">
+    <span class="history-empty-icon">📭</span>
+    <span>暂无历史记录</span>
+  </div>
+  <div v-for="item in history" :key="item.id" class="history-item" @click="restoreHistory(item)">
+    <div class="history-item-top">
+      <span class="history-item-title">{{ item.title || '无标题' }}</span>
+      <span class="history-item-time">{{ formatTime(item.ts) }}</span>
+    </div>
+    <div v-if="item.tags && item.tags.length" class="history-item-tags">
+      <span v-for="tag in item.tags.slice(0, 4)" :key="tag" class="history-tag">{{ tag }}</span>
+    </div>
+    <div class="history-item-preview">{{ item.prompt.slice(0, 60) }}{{ item.prompt.length > 60 ? '...' : '' }}</div>
   </div>
 </div>
 </div><!-- end toolbar-container -->
@@ -1151,72 +1164,137 @@ textarea:focus {
 .toolbar-container {
   position: relative;
 }
+.history-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+}
 .history-panel {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
   z-index: 200;
-  width: min(700px, calc(100vw - 40px));
-  max-height: 420px;
+  width: min(560px, calc(100vw - 40px));
+  max-height: 440px;
   overflow-y: auto;
-  background: white;
-  border: 1px solid #ede9fe;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.18);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.13), 0 2px 8px rgba(79, 70, 229, 0.08);
+  scrollbar-width: thin;
 }
+.history-panel::-webkit-scrollbar { width: 4px; }
+.history-panel::-webkit-scrollbar-track { background: transparent; }
+.history-panel::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
 .history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-bottom: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
 }
-.btn-clear-history {
+.history-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.1px;
+}
+.history-header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.btn-history-clear {
   font-size: 12px;
-  padding: 3px 9px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.25);
+  padding: 2px 9px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
   border-radius: 6px;
   cursor: pointer;
-  color: white;
-  font-weight: 600;
+  color: #9ca3af;
+  font-weight: 500;
+  transition: all 0.15s;
 }
-.btn-clear-history:hover {
-  background: rgba(255,255,255,0.3);
-}
-.history-item {
-  padding: 10px 14px;
+.btn-history-clear:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.btn-history-close {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
-  border-bottom: 1px solid #f5f3ff;
-  transition: background 0.15s;
+  color: #9ca3af;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.btn-history-close:hover { background: #f3f4f6; color: #374151; }
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+.history-empty-icon { font-size: 28px; }
+.history-item {
+  padding: 11px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f9fafb;
+  transition: background 0.12s;
 }
 .history-item:last-child { border-bottom: none; }
 .history-item:hover { background: #f5f3ff; }
-.history-meta {
+.history-item-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
 }
-.history-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #7c3aed;
+.history-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4f46e5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 68%;
 }
-.history-time {
+.history-item-time {
   font-size: 11px;
   color: #9ca3af;
+  flex-shrink: 0;
 }
-.history-preview {
+.history-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.history-tag {
+  font-size: 11px;
+  padding: 1px 7px;
+  background: #ede9fe;
+  color: #7c3aed;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.history-item-preview {
   font-size: 12px;
   color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.5;
 }
 
 /* Streaming indicator */
