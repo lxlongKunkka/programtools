@@ -23,7 +23,8 @@ function run(cmd, label) {
 }
 
 function ssh(cmd, label) {
-  run(`ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "${cmd}"`, label)
+  // bash -lc 确保加载 nix profile，使 npm/pm2 路径可用
+  run(`ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "bash -lc '${cmd}'"`, label)
 }
 
 const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/:]/g, '-').replace(',', '')
