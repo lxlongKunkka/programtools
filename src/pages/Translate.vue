@@ -541,7 +541,14 @@ window.onload = function() {
       margin: [12, 14, 12, 14],
       filename: ${JSON.stringify(filename)},
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 860 },
+      pagebreak: { mode: 'css', before: '.page-break' },
+      html2canvas: {
+        scale: 2, useCORS: true, logging: false, windowWidth: 860,
+        onclone: function(doc) {
+          var ov = doc.getElementById('overlay')
+          if (ov) ov.style.display = 'none'
+        }
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(el).save().then(function() {
       document.getElementById('overlay').innerHTML = '<div style="font-size:32px">✅</div><div>PDF 已下载，可关闭此窗口</div>'
