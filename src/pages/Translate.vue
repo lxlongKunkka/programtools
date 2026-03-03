@@ -119,6 +119,10 @@
               <button @click="saveText(result, 'zh')" :disabled="!result" class="btn-icon" title="保存">💾</button>
             </div>
           </div>
+          <div v-if="resultTitle || resultTags.length" class="title-tags-bar">
+            <span v-if="resultTitle" class="result-ai-title">{{ resultTitle }}</span>
+            <span v-for="tag in resultTags" :key="tag" class="result-tag">{{ tag }}</span>
+          </div>
           <div class="result-area" v-if="result">
             <MarkdownViewer v-if="activeTabZh === 'preview'" :content="result" />
             <textarea v-else class="raw-output" readonly :value="result"></textarea>
@@ -151,6 +155,10 @@
               <button @click="copyText(englishResult)" :disabled="!englishResult" class="btn-icon" title="复制">📋</button>
               <button @click="saveText(englishResult, 'en')" :disabled="!englishResult" class="btn-icon" title="保存">💾</button>
             </div>
+          </div>
+          <div v-if="resultTitle || resultTags.length" class="title-tags-bar">
+            <span v-if="resultTitle" class="result-ai-title">{{ resultTitle }}</span>
+            <span v-for="tag in resultTags" :key="tag" class="result-tag">{{ tag }}</span>
           </div>
           <div class="result-area" v-if="englishResult">
             <MarkdownViewer v-if="activeTabEn === 'preview'" :content="englishResult" />
@@ -201,8 +209,10 @@ history: [],
 // 批量模式
 isBatchRunning: false,
 currentTaskIndex: 0,
+resultTitle: '',
+resultTags: [],
 tasks: [
-  { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }
+  { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }
 ]
 }
 },
@@ -311,6 +321,8 @@ if (!this.prompt.trim()) return false
 this.loading = true
 this.result = ''
 this.englishResult = ''
+this.resultTitle = ''
+this.resultTags = []
 this.streamCharsCount = 0
 let success = false
 try {
@@ -341,9 +353,13 @@ try {
         } else if (ev.type === 'result') {
           this.result = ev.result
           this.englishResult = ev.english || ''
+          this.resultTitle = ev.meta?.title || ''
+          this.resultTags = ev.meta?.tags || []
+          this.updateCurrentTask('aiTitle', this.resultTitle)
+          this.updateCurrentTask('aiTags', this.resultTags)
           this.saveState()
           if (!skipHistory) {
-            this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '' })
+            this.saveHistory({ prompt: this.prompt, result: ev.result, englishResult: ev.english || '', title: ev.meta?.title || '', tags: ev.meta?.tags || [] })
           }
           success = true
         } else if (ev.type === 'error') {
@@ -366,6 +382,8 @@ clear() {
 this.prompt = ''
 this.result = ''
 this.englishResult = ''
+this.resultTitle = ''
+this.resultTags = []
 this.urlInput = ''
 },
 isContestUrl(url) {
@@ -454,8 +472,8 @@ async fetchUrl() {
     this.urlLoading = false
   }
 },
-saveHistory({ prompt, result, englishResult, title }) {
-const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title }
+saveHistory({ prompt, result, englishResult, title, tags }) {
+const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
 this.history = [item, ...this.history.filter(h => h.prompt !== prompt)].slice(0, 10)
 localStorage.setItem('translate_history', JSON.stringify(this.history))
 },
@@ -463,6 +481,8 @@ restoreHistory(item) {
 this.prompt = item.prompt
 this.result = item.result
 this.englishResult = item.englishResult || ''
+this.resultTitle = item.title || ''
+this.resultTags = item.tags || []
 this.showHistory = false
 this.showToastMessage('已恢复历史记录')
 },
@@ -515,20 +535,22 @@ loadTask(index) {
   this.prompt = t.prompt || ''
   this.result = t.result || ''
   this.englishResult = t.englishResult || ''
+  this.resultTitle = t.aiTitle || ''
+  this.resultTags = t.aiTags || []
 },
 switchTask(index) {
   this.currentTaskIndex = index
   this.loadTask(index)
 },
 addNewTask() {
-  const task = { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }
+  const task = { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }
   this.tasks.push(task)
   this.switchTask(this.tasks.length - 1)
 },
 clearAllTasks() {
   if (this.isBatchRunning) return
   if (!confirm('确定清空所有任务？')) return
-  this.tasks = [{ id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '' }]
+  this.tasks = [{ id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }]
   this.switchTask(0)
 },
 async runBatch() {
@@ -546,7 +568,7 @@ async runBatch() {
     this.tasks[idx].status = ok ? 'completed' : 'failed'
     if (ok) {
       const t = this.tasks[idx]
-      this.saveHistory({ prompt: t.prompt, result: t.result, englishResult: t.englishResult, title: t.taskTitle || this.getTaskTitle(t) })
+      this.saveHistory({ prompt: t.prompt, result: t.result, englishResult: t.englishResult, title: t.aiTitle || t.taskTitle || this.getTaskTitle(t), tags: t.aiTags || [] })
     }
   }
   this.isBatchRunning = false
@@ -905,6 +927,34 @@ textarea:focus {
 .raw-output:focus {
   box-shadow: none;
   background: #f8f9fa;
+}
+
+.title-tags-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f5f3ff;
+  border: 1.5px solid #ede9fe;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.result-ai-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin-right: 4px;
+}
+.result-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .result-area {
