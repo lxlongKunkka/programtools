@@ -74,8 +74,11 @@
     <button class="btn-secondary btn-sm" @click="downloadCombinedMd('en')" :disabled="isBatchRunning || !hasCompletedTasks">
       📋 英文MD
     </button>
-    <button class="btn-secondary btn-sm btn-pdf" @click="downloadBatchPdf" :disabled="isBatchRunning || !hasCompletedTasks">
-      📄 批量PDF
+    <button class="btn-secondary btn-sm btn-pdf" @click="downloadBatchPdfZh" :disabled="isBatchRunning || !hasCompletedTasks">
+      📄 中文PDF
+    </button>
+    <button class="btn-secondary btn-sm btn-pdf" @click="downloadBatchPdfEn" :disabled="isBatchRunning || !hasCompletedTasks">
+      📄 英文PDF
     </button>
   </div>
 </div>
@@ -608,24 +611,29 @@ window.onload = function() {
 
   win.document.close()
 },
-downloadBatchPdf() {
-  const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
-  if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
+downloadBatchPdfZh() {
+  const completed = this.tasks.filter(t => t.status === 'completed' && t.result)
+  if (!completed.length) { this.showToastMessage('没有已完成的中文翻译'); return }
   const parts = []
   completed.forEach((task, i) => {
     const title = `${String(i + 1).padStart(2, '0')}. ${this.getTaskTitle(task)}`
-    if (task.result) {
-      if (parts.length) parts.push('<div class="page-break"></div>')
-      parts.push(`<div class="task-section"><p style="font-size:11px;color:#9ca3af;margin-bottom:4px">中文翻译</p>${marked.parse(task.result, { mangle: false, headerIds: false, breaks: true })}</div>`)
-    }
-    if (task.englishResult) {
-      if (parts.length) parts.push('<div class="page-break"></div>')
-      parts.push(`<div class="task-section"><p style="font-size:11px;color:#9ca3af;margin-bottom:4px">English</p>${marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true })}</div>`)
-    }
+    if (parts.length) parts.push('<div class="page-break"></div>')
+    parts.push(`<div class="task-section"><h2 style="font-size:13px;color:#6b7280;margin-bottom:8px">${title}</h2>${marked.parse(task.result, { mangle: false, headerIds: false, breaks: true })}</div>`)
   })
-  const combinedHtml = parts.join('\n')
   const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
-  this._openPdfWindow(combinedHtml, `批量翻译_${ds}`)
+  this._openPdfWindow(parts.join('\n'), `批量中文_${ds}`)
+},
+downloadBatchPdfEn() {
+  const completed = this.tasks.filter(t => t.status === 'completed' && t.englishResult)
+  if (!completed.length) { this.showToastMessage('没有已完成的英文题面'); return }
+  const parts = []
+  completed.forEach((task, i) => {
+    const title = `${String(i + 1).padStart(2, '0')}. ${this.getTaskTitle(task)}`
+    if (parts.length) parts.push('<div class="page-break"></div>')
+    parts.push(`<div class="task-section"><h2 style="font-size:13px;color:#6b7280;margin-bottom:8px">${title}</h2>${marked.parse(task.englishResult, { mangle: false, headerIds: false, breaks: true })}</div>`)
+  })
+  const date = new Date(); const ds = `${date.getMonth()+1}${date.getDate()}`
+  this._openPdfWindow(parts.join('\n'), `批量英文_${ds}`)
 },
 saveHistory({ prompt, result, englishResult, title, tags }) {
   const item = { id: Date.now(), ts: Date.now(), prompt, result, englishResult, title, tags: tags || [] }
