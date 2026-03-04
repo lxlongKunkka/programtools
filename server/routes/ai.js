@@ -1205,7 +1205,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
 
 router.post('/solve', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
   try {
-    const { text, model, language } = req.body
+    const { text, model, language, referenceText } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const lang = language || 'C++'
@@ -1215,9 +1215,15 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     const apiKey = YUN_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
+    // 若有参考题解，拼接到题目内容后面
+    let userContent = text
+    if (referenceText && referenceText.trim()) {
+      userContent = `${text}\n\n---\n## 参考思路（官方题解）\n\n${referenceText.trim()}`
+    }
+
     const messages = [
       { role: 'system', content: prompt },
-      { role: 'user', content: text }
+      { role: 'user', content: userContent }
     ]
 
     const payload = {
