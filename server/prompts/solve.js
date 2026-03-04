@@ -28,6 +28,7 @@ export const getSolvePrompt = (lang) => `你是一个专业的算法竞赛选手
 
 1. 代码必须是完整的，可以直接编译运行，**C++代码请使用 C++14 标准**
 2. **头文件规范**：C++ 代码统一使用 \`#include <bits/stdc++.h>\`，并在头文件下方添加 \`using namespace std;\`，代码中不要使用 \`std::\` 前缀（如 \`std::cin\`, \`std::cout\` 等）。
+3. **【禁止使用 ACL 等第三方库】**：严禁使用 AtCoder Library（ACL）或任何非标准库，例如 \`#include <atcoder/modint>\`、\`#include <atcoder/segtree>\` 等。所有功能必须用标准库手动实现（如 modint 需手写结构体）。
 3. 代码要处理好输入输出
 4. 代码要考虑边界情况
 5. 代码风格要清晰规范，包含必要的中文注释。**C++ 代码必须严格使用 Allman 风格（即大括号必须独占一行，严禁放在同一行）。**
