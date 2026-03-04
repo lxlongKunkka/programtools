@@ -120,7 +120,7 @@
           <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
             {{ isGenerating ? '⏳ 生成中...' : '⚡ 一键生成' }}
           </button>
-          <button @click="runAndDownload" :disabled="isGenerating || isBatchRunning || !(manualCode || codeOutput) || !dataOutput" class="btn-secondary btn-sm">
+          <button @click="runAndDownload" :disabled="!(manualCode || codeOutput) || !dataOutput" class="btn-secondary btn-sm">
             📦 下载项目包
           </button>
           <button @click="clearAll" :disabled="isBatchRunning" class="btn-ghost btn-sm">🗑️ 清空</button>
