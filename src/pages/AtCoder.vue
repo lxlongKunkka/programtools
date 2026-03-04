@@ -358,6 +358,7 @@ export default {
       if (!this.results[taskId]) {
         this.results[taskId] = {
           content: '',
+          editorial: '',
           translation: '',
           code: '',
           dataScript: '',
@@ -398,6 +399,7 @@ export default {
         try {
           const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(problem.url)}`)
           r.content = data.content
+          r.editorial = data.editorial || ''
           r.currentStep = null
         } catch (err) {
           this.setError(taskId, 'content', err.message)
@@ -430,7 +432,8 @@ export default {
           const data = await request.post('/api/solve', {
             text: r.translation,
             model: this.model,
-            language: this.language
+            language: this.language,
+            referenceText: r.editorial || ''
           })
           r.code = data.result || JSON.stringify(data)
           r.currentStep = null
@@ -520,6 +523,9 @@ export default {
       }
       if (r.dataScript) {
         md += `## 数据生成脚本\n\n${r.dataScript}\n\n`
+      }
+      if (r.editorial) {
+        md += `## 题解参考\n\n${r.editorial}\n\n`
       }
       if (r.content) {
         md += `## 英文原题\n\n\`\`\`\n${r.content}\n\`\`\`\n\n`
