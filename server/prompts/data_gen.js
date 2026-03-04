@@ -49,7 +49,7 @@ ${cyaronDocs}
 2. **推荐做法**：
    - 生成随机整数使用 CYaRon 提供的 \`randint(lo, hi)\`，生成一维数组使用 \`[randint(lo, hi) for _ in range(N)]\`
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
-   - **如果需要生成 0~1 之间的随机浮点数，必须使用 \`py_random.random()\`，不能直接使用 \`random()\`**
+   - **如果需要生成 0~1 之间的随机浮点数，必须使用 \`py_random.random()\`，严禁直接使用 \`random()\`**。原因：\`from cyaron import *\` 会将 \`random\` 模块本身导入到当前命名空间，此时 \`random\` 是一个模块对象而非函数，直接调用 \`random()\` 会报 \`TypeError: 'module' object is not callable\`
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`，并且**必须在循环前加上 \`import os\` 和 \`os.makedirs('./testdata', exist_ok=True)\`**，否则目录不存在时会抛出 \`FileNotFoundError\`
 4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
 5. **严禁使用** \`IO.comment\` 或类似不存在的方法。如果需要添加注释，请直接使用 Python 的 \`#\` 注释。
