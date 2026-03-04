@@ -263,39 +263,87 @@ async function fetchAtCoderEditorial(contestId, label, taskId) {
 
 // 单题 editorial 页面：直接提取正文（不按标题筛选）
 function parseFullEditorialPage($) {
-  // AtCoder 单题 editorial 的正文容器
+  // AtCoder 单题 editorial 的正文容器（尝试精确容器，不存在则降级）
   const $content = $('.editorial-content, #editorial-content, article.editorial, .lang-en, #task-editorial, main article').first()
-  const $root = $content.length ? $content : $('article, main').first()
-  if (!$root.length) return ''
+  let $root = $content.length ? $content : $('article, main').first()
+
+  // ── 降级策略：AtCoder 实际结构是 div.col-sm-12，内容从第一个 h2 开始 ──
+  // 找到页面第一个 h2，从它开始收集所有兄弟/后续节点内容
+  const usePageFallback = !$root.length
 
   let md = ''
-  let firstH1Skipped = false  // 跳过第一个 h1（页面标题如 "C - xxx Editorial"，不是内容）
-  $root.find('h1, h2, h3, h4, h5, p, pre, ul, ol, blockquote').each((_, el) => {
-    const tag = el.tagName?.toLowerCase() || ''
-    const text = $(el).text().trim()
-    if (!text) return
-    if (/^h[1-5]$/.test(tag)) {
-      // 跳过第一个 h1 —— 通常是 "X - Problem Name Editorial" 这样的页面标题
-      if (tag === 'h1' && !firstH1Skipped) {
-        firstH1Skipped = true
-        return
+
+  if (usePageFallback) {
+    // 找第一个 h2，逐个处理其后的兄弟节点
+    const firstH2 = $('h2').first()
+    if (!firstH2.length) return ''
+
+    const processEl = (el) => {
+      const tag = (el.tagName || el.name || '').toLowerCase()
+      const $el = $(el)
+      const text = $el.text().trim()
+      if (!text) return
+      if (/^h[1-5]$/.test(tag)) {
+        const lvl = '#'.repeat(Math.min(parseInt(tag[1]) + 1, 5))
+        md += `${lvl} ${text}\n\n`
+      } else if (tag === 'p') {
+        md += text + '\n\n'
+      } else if (tag === 'pre') {
+        md += '```\n' + text + '\n```\n\n'
+      } else if (tag === 'blockquote') {
+        md += '> ' + text.replace(/\n/g, '\n> ') + '\n\n'
+      } else if (tag === 'ul' || tag === 'ol') {
+        $el.children('li').each((i, li) => {
+          md += (tag === 'ol' ? `${i + 1}. ` : '- ') + $(li).text().trim() + '\n'
+        })
+        md += '\n'
       }
-      firstH1Skipped = true
-      const lvl = '#'.repeat(Math.min(parseInt(tag[1]) + 1, 5))
-      md += `${lvl} ${text}\n\n`
-    } else if (tag === 'p') {
-      md += text + '\n\n'
-    } else if (tag === 'pre') {
-      md += '```\n' + text + '\n```\n\n'
-    } else if (tag === 'blockquote') {
-      md += '> ' + text.replace(/\n/g, '\n> ') + '\n\n'
-    } else if (tag === 'ul' || tag === 'ol') {
-      $(el).children('li').each((i, li) => {
-        md += (tag === 'ol' ? `${i + 1}. ` : '- ') + $(li).text().trim() + '\n'
-      })
-      md += '\n'
     }
-  })
+
+    // 处理第一个 h2 本身及其后所有兄弟节点（跳过导航相关容器）
+    processEl(firstH2[0])
+    let sibling = firstH2.next()
+    while (sibling.length) {
+      // 跳过导航、页脚等无关容器
+      if (sibling.is('#contest-nav-tabs, footer, .navbar, nav')) {
+        sibling = sibling.next()
+        continue
+      }
+      // 如果是容器（div/section），递归找里面的内容节点
+      const sibTag = (sibling[0].tagName || '').toLowerCase()
+      if (sibTag === 'div' || sibTag === 'section') {
+        sibling.find('h1, h2, h3, h4, h5, p, pre, ul, ol, blockquote').each((_, el) => processEl(el))
+      } else {
+        processEl(sibling[0])
+      }
+      sibling = sibling.next()
+    }
+  } else {
+    let firstH1Skipped = false
+    $root.find('h1, h2, h3, h4, h5, p, pre, ul, ol, blockquote').each((_, el) => {
+      const tag = el.tagName?.toLowerCase() || ''
+      const text = $(el).text().trim()
+      if (!text) return
+      if (/^h[1-5]$/.test(tag)) {
+        if (tag === 'h1' && !firstH1Skipped) { firstH1Skipped = true; return }
+        firstH1Skipped = true
+        const lvl = '#'.repeat(Math.min(parseInt(tag[1]) + 1, 5))
+        md += `${lvl} ${text}\n\n`
+      } else if (tag === 'p') {
+        md += text + '\n\n'
+      } else if (tag === 'pre') {
+        md += '```\n' + text + '\n```\n\n'
+      } else if (tag === 'blockquote') {
+        md += '> ' + text.replace(/\n/g, '\n> ') + '\n\n'
+      } else if (tag === 'ul' || tag === 'ol') {
+        $(el).children('li').each((i, li) => {
+          md += (tag === 'ol' ? `${i + 1}. ` : '- ') + $(li).text().trim() + '\n'
+        })
+        md += '\n'
+      }
+    })
+  }
+
   if (md.length > 5000) md = md.slice(0, 5000) + '\n\n...（内容已截断）'
   return md.trim()
 }
