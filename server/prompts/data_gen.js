@@ -70,7 +70,7 @@ ${cyaronDocs}
    - 在调用 \`py_random.sample(nodes, k)\` 前，添加安全检查：\`k = min(k, len(nodes))\`
 
 14. **【⚠️ 总和约束：必须用预算分配法，禁止先随机再 assert】**
-   当题目有"多组测试，$\\sum N \\le L$"这类总和限制时，**独立随机每个 N 再断言总和的写法是错的**，期望值接近上限时极大概率超限 (`AssertionError`)。
+   当题目有"多组测试，$\\sum N \\le L$"这类总和限制时，**独立随机每个 N 再断言总和的写法是错的**，期望值接近上限时极大概率超限 (\`AssertionError\`)。
    
    **正确做法：预算分配法**（Budget Allocation）：
    \`\`\`python
