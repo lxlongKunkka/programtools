@@ -40,7 +40,7 @@ ${requireAC ? `**【重要：代码审查机制】**
 ## 4. 核心代码讲解
 请提供一份标准的 ${lang} AC 代码。
 - **代码风格要求**：${['C++', 'C', 'Java', 'C#'].includes(lang) ? '必须严格使用 **Allman 风格**（大括号独占一行）。' : '使用该语言的标准编码风格（如 Python 使用缩进，不使用大括号）。'}
-- **【禁止使用第三方库】**：严禁使用 AtCoder Library（ACL）或任何非标准库，例如 `#include <atcoder/modint>`、`#include <atcoder/segtree>` 等。所有功能必须用标准库（`<bits/stdc++.h>`）手动实现，例如 modint 需手写结构体。理由：ACL 不在标准编译器 include 路径中，会导致编译失败。
+- **【禁止使用第三方库】**：严禁使用 AtCoder Library（ACL）或任何非标准库，例如 \`#include <atcoder/modint>\`、\`#include <atcoder/segtree>\` 等。所有功能必须用标准库（\`<bits/stdc++.h>\`）手动实现，例如 modint 需手写结构体。理由：ACL 不在标准编译器 include 路径中，会导致编译失败。
 - **注释**：在关键逻辑处添加详细的中文注释。
 - **【强制要求，不得违反】代码提取标记**：代码块必须严格按如下格式输出。两个 HTML 注释标记必须各自独占一行，紧贴代码块的上下方，不得省略、修改或移位。系统将通过这两个标记自动提取代码，若标记缺失，提取将失败：
 
