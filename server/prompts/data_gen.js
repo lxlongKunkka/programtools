@@ -101,4 +101,36 @@ ${cyaronDocs}
    **本质**：先把每个槽填到 min_N（保底），再随机分配剩余预算，从根本上保证 ∑N ≤ sum_limit。
    - ❌ 错误写法：\`N = randint(lo, hi)\` × T 次，然后 \`assert sumN <= limit\`
    - ✅ 正确写法：调用 \`gen_sizes(T, lo, hi, limit)\` 一次性分配
+
+15. **【⚠️ Vector.random 类型陷阱：禁止用于生成普通整数数组】**
+   \`Vector.random(N, [(lo, hi)], 1)\` 的返回值是**元组列表**（每个元素是单元素 tuple），而不是整数列表。
+   对它做 \`min()\`、\`max()\`、算术运算或与普通整数列表拼接时，会抛出 \`TypeError\`。
+   
+   - ❌ 错误：\`A = Vector.random(N, [(1, N)], 1)\`，之后 \`min(A) >= 1\` → TypeError
+   - ❌ 错误：\`A = [1] * half + Vector.random(N - half, [(1, N)], 1)\` → 类型不一致
+   - ❌ 错误：\`block = Vector.random(50, ...); A = block * 200\` → A 里是 tuple 不是 int
+   
+   **生成普通整数数组一律使用列表推导式**：
+   \`\`\`python
+   # ✅ 正确：生成 N 个 [lo, hi] 范围内的随机整数
+   A = [randint(lo, hi) for _ in range(N)]
+   \`\`\`
+   
+   \`Vector.random\` 只用于需要多维向量（多列）输出的场合（如生成点坐标）。
+
+16. **【⚠️ 数据验证必须在生成时进行，禁止只在最后 assert】**
+   把所有 \`assert\` 堆到循环结束后统一校验的写法是错的：一旦出错，已生成的部分数据已写入文件，且错误信息无法定位到具体生成逻辑。
+   
+   **正确做法：在每个元素/参数确定后立即验证**：
+   \`\`\`python
+   # ✅ 生成参数后立即断言
+   N = randint(1, 100)
+   assert 1 <= N <= 100, f"N={N} 越界"
+   
+   # ✅ 生成数组元素时在推导式内保证范围（直接用 randint 正确范围）
+   A = [randint(1, N) for _ in range(N)]
+   # 无需再 assert min(A) / max(A)，因为 randint(1, N) 本身就保证了范围
+   \`\`\`
+   
+   如果元素来源复杂（如手动构造），可在构造后立刻做单步断言，而不是等所有测试点都生成完再统一检查。
 `
