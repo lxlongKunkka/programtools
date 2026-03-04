@@ -47,10 +47,9 @@ ${cyaronDocs}
    - **如果使用了 numpy 相关函数（如 np.base_repr），必须导入 \`import numpy as np\`**
    - CYaRon 的随机数函数（如 \`randint()\`、\`String.random()\`）直接使用，不需要前缀
 2. **推荐做法**：
-   - 生成随机整数需要使用 CYaRon 提供的随机数生成函数 randint
-   - 生成一维数组使用 [random.randint(0, 100000) for _ in range(n)] 这种方式
+   - 生成随机整数使用 CYaRon 提供的 \`randint(lo, hi)\`，生成一维数组使用 \`[randint(lo, hi) for _ in range(N)]\`
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
-   - **如果需要使用 random() 生成0到1之间的随机浮点数，必须使用 \`py_random.random()\`，不能直接使用 random()**
+   - **如果需要生成 0~1 之间的随机浮点数，必须使用 \`py_random.random()\`，不能直接使用 \`random()\`**
 3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`，并且**必须在循环前加上 \`import os\` 和 \`os.makedirs('./testdata', exist_ok=True)\`**，否则目录不存在时会抛出 \`FileNotFoundError\`
 4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
 5. **严禁使用** \`IO.comment\` 或类似不存在的方法。如果需要添加注释，请直接使用 Python 的 \`#\` 注释。
@@ -67,7 +66,6 @@ ${cyaronDocs}
 13. **【randint 安全约束】** CYaRon 的 \`randint(a, b)\` 要求 \`a <= b\`，违反时会抛出 \`ValueError: empty range\`：
    - 凡是调用 \`randint(1, X - 1)\` 的地方，必须先确保 \`X >= 2\`，否则会崩溃
    - 方向判断应使用 \`<= 1\` 而非 \`== 1\`，更安全
-   - 在调用 \`py_random.sample(nodes, k)\` 前，添加安全检查：\`k = min(k, len(nodes))\`
 
 14. **【⚠️ 总和约束：必须用预算分配法，禁止先随机再 assert】**
    当题目有"多组测试，$\\sum N \\le L$"这类总和限制时，**独立随机每个 N 再断言总和的写法是错的**，期望值接近上限时极大概率超限 (\`AssertionError\`)。
