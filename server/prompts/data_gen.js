@@ -68,4 +68,37 @@ ${cyaronDocs}
    - 凡是调用 \`randint(1, X - 1)\` 的地方，必须先确保 \`X >= 2\`，否则会崩溃
    - 方向判断应使用 \`<= 1\` 而非 \`== 1\`，更安全
    - 在调用 \`py_random.sample(nodes, k)\` 前，添加安全检查：\`k = min(k, len(nodes))\`
+
+14. **【⚠️ 总和约束：必须用预算分配法，禁止先随机再 assert】**
+   当题目有"多组测试，$\\sum N \\le L$"这类总和限制时，**独立随机每个 N 再断言总和的写法是错的**，期望值接近上限时极大概率超限 (`AssertionError`)。
+   
+   **正确做法：预算分配法**（Budget Allocation）：
+   \`\`\`python
+   def gen_sizes(T, min_N, max_N, sum_limit):
+       """在 sum_limit 约束下随机生成 T 个 N，每个 N ∈ [min_N, max_N]"""
+       assert T * min_N <= sum_limit, "min_N 过大，无解"
+       sizes = [min_N] * T
+       remaining = sum_limit - T * min_N  # 剩余可分配预算
+       indices = list(range(T))
+       py_random.shuffle(indices)  # 打乱顺序，避免前大后小的偏差
+       for i, idx in enumerate(indices):
+           can_give = max_N - min_N         # 此槽最多可再加多少
+           give = randint(0, min(can_give, remaining))
+           sizes[idx] += give
+           remaining -= give
+       return sizes
+   \`\`\`
+   
+   使用方式：
+   \`\`\`python
+   T = 10
+   Ns = gen_sizes(T, min_N=10000, max_N=30000, sum_limit=200000)
+   for N in Ns:
+       D = randint(1, N)
+       ...
+   \`\`\`
+   
+   **本质**：先把每个槽填到 min_N（保底），再随机分配剩余预算，从根本上保证 ∑N ≤ sum_limit。
+   - ❌ 错误写法：\`N = randint(lo, hi)\` × T 次，然后 \`assert sumN <= limit\`
+   - ✅ 正确写法：调用 \`gen_sizes(T, lo, hi, limit)\` 一次性分配
 `
