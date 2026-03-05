@@ -654,6 +654,13 @@ export default {
     // --- 统一的辅助函数 ---
 
     // 智能获取标题
+    // 将 translationText 的第一个 # 标题替换为 metaTitle（如有）
+    applyTitleToTranslation(text, metaTitle) {
+      if (!text || !metaTitle) return text
+      // 替换第一个 # 开头的标题行
+      return text.replace(/^(#{1,3} ).+/m, `$1${metaTitle}`)
+    },
+
     getSmartTitle(meta, text, id) {
       let title = `task_${id}`
       if (meta && meta.title && meta.title !== '题目标题') {
@@ -1120,7 +1127,7 @@ export default {
           
           // 3. 添加题目描述
           folder.file('problem.md', task.problemText, zipOptions)
-          if (task.translationText) folder.file('problem_zh.md', task.translationText, zipOptions)
+          if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.zhTitle || task.problemMeta?.title), zipOptions)
           if (task.translationEnglish) folder.file('problem_en.md', task.translationEnglish, zipOptions)
           
           // 4. 添加解题报告
@@ -1514,11 +1521,15 @@ pause
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
                       const existingTitle = existingMeta.title
                       const rawTitle = existingMeta.rawTitle
-                      const isPlaceholder = !existingTitle || existingTitle === '题目标题' || existingTitle === rawTitle
+                      // AtCoder 格式化标题（如 [ABC235B] xxx）不被 AI 翻译标题覆盖
+                      const isAtcoderFormatted = existingTitle && /^\[[A-Z]+\d+[A-Z0-9]+\]/.test(existingTitle)
+                      const isPlaceholder = !isAtcoderFormatted && (!existingTitle || existingTitle === '题目标题' || existingTitle === rawTitle)
                       const newMeta = {
                         ...existingMeta,
                         tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || []),
-                        title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle
+                        title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle,
+                        // AtCoder 题目保存 AI 提取的中文标题，用于 problem_zh.md
+                        zhTitle: isAtcoderFormatted && ev.meta.title ? ev.meta.title : (existingMeta.zhTitle || '')
                       }
                       this.saveToTask(taskIndex, 'problemMeta', newMeta)
                       if (isOnTask()) console.log('从翻译结果中提取到元数据:', newMeta)
@@ -2423,7 +2434,7 @@ pause
 
         // 如果有翻译内容则一并打包
         if (this.translationText && this.translationText.trim()) {
-          zip.file('problem_zh.md', this.translationText, zipOptions)
+          zip.file('problem_zh.md', this.applyTitleToTranslation(this.translationText, this.problemMeta?.zhTitle || this.problemMeta?.title), zipOptions)
         } else if (this.problemText && this.problemText.trim()) {
           zip.file('problem_zh.md', this.problemText, zipOptions)
         }
@@ -2994,7 +3005,9 @@ python data_generator.py
       }
 
       // 6) 输出 YAML
-      let yaml = `title: ${finalTitle}\n`
+      // YAML 中 [ 是特殊字符，含方括号的标题需加引号
+      const yamlTitle = /[\[\]:{}&*!|>'"%@`]/.test(finalTitle) ? `"${finalTitle.replace(/"/g, '\\"')}"` : finalTitle
+      let yaml = `title: ${yamlTitle}\n`
       yaml += 'tag:\n'
       yaml += `  - Level${level}\n`
       cleanTags.forEach(tag => { yaml += `  - ${tag}\n` })
