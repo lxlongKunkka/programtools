@@ -1000,11 +1000,14 @@ export default {
                   const metaRes = await request('/api/generate-problem-meta', {
                     method: 'POST',
                     body: JSON.stringify({
-                      text: this.problemText,
+                      text: this.tasks[i].problemText,
                       model: this.selectedModel
                     })
                   })
-                  if (metaRes) this.problemMeta = { ...(this.problemMeta || {}), ...metaRes }
+                  if (metaRes) {
+                    const existingMeta = this.tasks[i]?.problemMeta || {}
+                    this.saveToTask(i, 'problemMeta', { ...existingMeta, ...metaRes })
+                  }
                 } catch (e) { console.warn('Meta generation failed in report-only mode', e) }
              }
              
@@ -1814,7 +1817,7 @@ pause
             this.generationSteps.report = 'processing'
             // 并行执行报告生成
             parallelRequests.push(
-                this.generateReportInline().then(() => {
+                this.generateReportInline(targetIndex).then(() => {
                     this.generationSteps.report = 'success'
                 }).catch(() => {
                     this.generationSteps.report = 'failed'
@@ -2190,8 +2193,12 @@ pause
       this.reportHtml = ''
     },
 
-    async generateReportInline() {
-      if (!this.problemText.trim()) {
+    // targetIndex: 可选，指定写入哪个任务（从 generateAll 调用时传入，防止任务切换竞态）
+    async generateReportInline(targetIndex = null) {
+      const taskIdx = (targetIndex !== null && targetIndex !== undefined) ? targetIndex : this.currentTaskIndex
+      const taskSnap = this.tasks[taskIdx]
+
+      if (!taskSnap?.problemText?.trim()) {
         this.showToastMessage('请先输入题目描述')
         return
       }
@@ -2201,17 +2208,17 @@ pause
       this.activeTab = 'report'
       
       try {
-        // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
-        let codeContent = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode;
+        // 从 tasks[taskIdx] 读取，避免任务切换后读到错误内容
+        let codeContent = (taskSnap.codeOutput?.trim()) ? taskSnap.codeOutput : (taskSnap.manualCode || '')
         
         // 如果没有代码内容，先自动生成题解
         if (!codeContent) {
             this.showToastMessage('正在自动生成题解思路...')
             this.generationStatus = '正在自动生成题解思路...'
             try {
-                let promptText = this.problemText
-                if (this.referenceText && this.referenceText.trim()) {
-                    promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
+                let promptText = taskSnap.problemText
+                if (taskSnap.referenceText?.trim()) {
+                    promptText += `\n\n【参考解法/思路】\n${taskSnap.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
                 }
 
                 const solutionRes = await request('/api/solution', {
@@ -2223,9 +2230,9 @@ pause
                     })
                 })
                 if (solutionRes && solutionRes.result) {
-                    this.codeOutput = solutionRes.result
-                    if (solutionRes.pureCode) this.serverPureCode = solutionRes.pureCode
-                    codeContent = this.codeOutput
+                    this.saveToTask(taskIdx, 'codeOutput', solutionRes.result)
+                    if (solutionRes.pureCode) this.saveToTask(taskIdx, 'serverPureCode', solutionRes.pureCode)
+                    codeContent = solutionRes.result
                 }
             } catch (err) {
                 console.error('Auto generate solution failed:', err)
@@ -2233,7 +2240,7 @@ pause
             }
         }
 
-        // 检测是否为完整 Markdown 教案（AI 生成的详细题解）
+        // 检测是否为完整 Markdown 教案
         const isMarkdownSolution = codeContent && (
           codeContent.includes('## 算法思路') ||
           codeContent.includes('## 代码实现') ||
@@ -2242,17 +2249,19 @@ pause
         const solutionPlan = isMarkdownSolution ? codeContent : '';
 
         // 优先使用服务端已提取的纯净代码，其次 extractPureCode()
-        let pureCode = (this.serverPureCode && this.serverPureCode.trim())
-          ? this.serverPureCode
+        // 重新读 tasks[taskIdx] 获取可能刚写入的 serverPureCode
+        const latestSnap = this.tasks[taskIdx]
+        let pureCode = (latestSnap?.serverPureCode?.trim())
+          ? latestSnap.serverPureCode
           : (this.extractPureCode(codeContent || '') || '');
         if (!pureCode) {
           pureCode = '用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。';
         }
         
-        let problemDesc = this.translationText || this.problemText;
+        const problemDesc = latestSnap?.translationText || taskSnap.problemText;
         let referenceToSend = solutionPlan;
-        if (!referenceToSend && this.referenceText && this.referenceText.trim()) {
-           referenceToSend = this.referenceText.trim();
+        if (!referenceToSend && taskSnap.referenceText?.trim()) {
+           referenceToSend = taskSnap.referenceText.trim();
         }
 
         this.generationStatus = '正在渲染解题报告...'
@@ -2266,7 +2275,7 @@ pause
         })
         
         if (res.html) {
-          this.reportHtml = res.html
+          this.saveToTask(taskIdx, 'reportHtml', res.html)
           this.showToastMessage('✅ 解题报告生成成功')
           this.generationStatus = '✅ 解题报告生成成功'
           setTimeout(() => { if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' }, 3000)
@@ -2278,7 +2287,6 @@ pause
         throw e
       } finally {
         this.isGeneratingReport = false
-        // 如果没有其他生成任务在运行，清除状态
         if (!this.isGenerating && !this.isTranslating && !this.isGeneratingTitle) {
              setTimeout(() => { 
                  if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' 
