@@ -224,7 +224,7 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
       const found = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
       log(`[debug-ac] 用户${ATCODER_USERNAME} 本批 AC提交数=${found.length}`)
       if (found.length > 0) { userSubs = found; break }
-      if (batch.length < 500) break  // 该窗口已查完，无需继续
+      // 不能因为 < 500 就 break：该窗口没找到时需要继续到更早的窗口
     }
 
     // Step 4: 从找到的 AC 提交里选目标（优先 C++）
@@ -414,8 +414,7 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
         console.log(`[AtCoder AC] task=${taskId} 找到 AC 提交 id=${acSubs[0].id}`)
         return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
       }
-      // 不足500条说明该窗口内已全部查完，不需要再往更早的窗口找
-      if (allSubs.length < 500) break
+      // 不能因为 < 500 就 break：窗口1没找到时必须继续到更早的窗口2、3
     } catch (e) {
       console.warn(`[AtCoder AC] kenkoooo 请求失败: ${e.message}`)
     }
