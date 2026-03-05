@@ -1761,7 +1761,7 @@ pause
         let promptText = this.problemText
         
         if (manualContent) {
-             promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。请注意：\n1. 即使提供了参考代码，也请你重新生成一份风格优良、注释详细的标准 AC 代码，不要直接复制参考代码。\n2. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等）。\n3. 请优化代码风格，确保变量命名规范、逻辑清晰。`
+             promptText += `\n\n【已提供 AC 代码（来自真实提交，请以此为权威答案）】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请严格基于上述 AC 代码生成解题教案，要求：\n1. **代码实现部分必须使用上方提供的 AC 代码**，不要重新生成或改写代码逻辑；只需为每个关键语句添加详细中文注释。\n2. 算法思路、核心状态/变量分析、复杂度分析均须基于对该 AC 代码的解读得出，不得自行推测或另辟蹊径。\n3. 如果原代码使用了 atcoder/ 等第三方 ACL 库（如 atcoder/modint、atcoder/segtree），则在教案代码部分用手写等价实现替换，并注明替换原因；其余代码保持原样。\n4. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等），代码块用 <!-- AC_CODE --> 标记紧贴代码块之前。`
         }
         
         const solutionPromise = request('/api/solution', {
