@@ -6,6 +6,8 @@ import { ATCODER_USERNAME, ATCODER_PASSWORD } from '../config.js'
 
 const router = express.Router()
 
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -250,7 +252,15 @@ router.get('/debug-ac', async (req, res) => {
     for (let page = 0; page < MAX_PAGES; page++) {
       const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSec}`
       log(`[debug-ac] Step3 page=${page} from_second=${fromSec}: ${apiUrl1}`)
-      const apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
+      if (page > 0) await sleep(1000)
+      let apiResp1
+      try {
+        apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 })
+      } catch (e) {
+        log(`[debug-ac] kenkoooo 请求失败(${e.response?.status || e.message})，跳出`)
+        break
+      }
+      if (apiResp1.status === 429) { log('[debug-ac] kenkoooo 429 限流，跳出'); break }
       const batch = (apiResp1.data || [])
       log(`[debug-ac] kenkoooo 返回总条数=${batch.length}`)
       const found = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
@@ -278,7 +288,15 @@ router.get('/debug-ac', async (req, res) => {
         for (let pg = 0; pg < 3; pg++) {
           const fbUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFrom}`
           log(`[debug-ac] 备用用户 ${fbUser} page=${pg}: ${fbUrl}`)
-          const fbResp = await axios.get(fbUrl, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
+          await sleep(1000)
+          let fbResp
+          try {
+            fbResp = await axios.get(fbUrl, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 })
+          } catch (e) {
+            log(`[debug-ac] 备用用户 ${fbUser} 请求失败(${e.response?.status || e.message})，跳下一用户`)
+            break
+          }
+          if (fbResp.status === 429) { log(`[debug-ac] kenkoooo 429 限流，停止备用用户搜索`); targetSubId = null; break }
           const fbBatch = fbResp.data || []
           log(`[debug-ac] 备用用户 ${fbUser} 返回 ${fbBatch.length} 条`)
           let acSubs = fbBatch.filter(s => s.problem_id === taskId && s.result === 'AC')
@@ -478,11 +496,14 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
     for (let page = 0; page < MAX_PAGES; page++) {
       const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=${fromSecond}`
       console.log(`[AtCoder AC] kenkoooo page=${page} from_second=${fromSecond}`)
+      if (page > 0) await sleep(1000)
       try {
         const apiResp = await axios.get(apiUrl, {
           headers: { 'User-Agent': HEADERS['User-Agent'] },
-          timeout: 20000
+          timeout: 20000,
+          validateStatus: s => s < 500
         })
+        if (apiResp.status === 429) { console.warn('[AtCoder AC] kenkoooo 429 限流，跳出'); break }
         const allSubs = apiResp.data || []
         console.log(`[AtCoder AC] 返回 ${allSubs.length} 条`)
         let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
@@ -511,11 +532,14 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
     for (let page = 0; page < 3; page++) {
       const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFromSecond}`
       console.log(`[AtCoder AC] 备用用户 ${fbUser} page=${page}`)
+      await sleep(1000)
       try {
         const apiResp = await axios.get(apiUrl, {
           headers: { 'User-Agent': HEADERS['User-Agent'] },
-          timeout: 20000
+          timeout: 20000,
+          validateStatus: s => s < 500
         })
+        if (apiResp.status === 429) { console.warn('[AtCoder AC] kenkoooo 429 限流，停止备用用户搜索'); return '' }
         const allSubs = apiResp.data || []
         let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
         const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
