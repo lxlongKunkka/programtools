@@ -168,6 +168,90 @@ router.get('/problem', authenticateToken, async (req, res) => {
   }
 })
 
+// GET /api/atcoder/debug-ac?url=...  (临时调试接口，测试 AC 代码抓取流程)
+router.get('/debug-ac', authenticateToken, async (req, res) => {
+  const { url } = req.query
+  if (!url) return res.status(400).json({ error: '缺少 url 参数' })
+
+  const logs = []
+  const log = (...args) => { const msg = args.join(' '); logs.push(msg); console.log(msg) }
+
+  try {
+    // Step 1: 测试登录
+    log('[debug-ac] Step1: 测试 AtCoder 登录')
+    log(`[debug-ac] ATCODER_USERNAME="${ATCODER_USERNAME || '(未配置)'}"`)
+    log(`[debug-ac] ATCODER_PASSWORD="${ATCODER_PASSWORD ? '***已配置***' : '(未配置)'}"`)
+
+    if (!ATCODER_USERNAME || !ATCODER_PASSWORD) {
+      return res.json({ logs, error: 'ATCODER_USERNAME 或 ATCODER_PASSWORD 未配置' })
+    }
+
+    // 强制重新登录（清除缓存）
+    _atcoderCookie = ''
+    _atcoderCookieExpiry = 0
+    const cookie = await atcoderLogin()
+    log(`[debug-ac] 登录结果: cookie="${cookie ? cookie.substring(0, 80) + '...' : '(空，失败)'}"`)
+    if (!cookie) return res.json({ logs, error: '登录失败，cookie 为空' })
+
+    // Step 2: 解析题目 URL
+    const taskMatch = url.match(/contests\/([a-zA-Z0-9_-]+)\/tasks\/([a-zA-Z0-9_-]+)/)
+    if (!taskMatch) return res.json({ logs, error: '无法从 URL 解析 contestId/taskId，请确认是题目页面 URL' })
+    const [, contestId, taskId] = taskMatch
+    log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
+
+    // Step 3: 请求提交列表（kunkka）
+    const listUrl1 = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC&f.User=${encodeURIComponent(ATCODER_USERNAME)}`
+    log(`[debug-ac] Step3: 请求用户列表 ${listUrl1}`)
+    const authedHeaders = await getAuthedHeaders()
+    const resp1 = await axios.get(listUrl1, { headers: authedHeaders, timeout: 20000 })
+    const $1 = load(resp1.data)
+    const rows1 = $1('table tbody tr').toArray()
+    log(`[debug-ac] 用户列表状态码=${resp1.status}, 行数=${rows1.length}`)
+
+    // Step 4: 请求提交列表（任意用户）
+    const listUrl2 = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
+    log(`[debug-ac] Step4: 请求任意用户列表 ${listUrl2}`)
+    const resp2 = await axios.get(listUrl2, { headers: authedHeaders, timeout: 20000 })
+    const $2 = load(resp2.data)
+    const rows2 = $2('table tbody tr').toArray()
+    log(`[debug-ac] 任意用户列表状态码=${resp2.status}, 行数=${rows2.length}`)
+
+    // Step 5: 找第一行的 submission 链接
+    let subHref = ''
+    const targetRows = rows1.length > 0 ? rows1 : rows2
+    const $target = rows1.length > 0 ? $1 : $2
+    for (const row of targetRows) {
+      const links = $target(row).find('a[href*="/submissions/"]').toArray()
+      if (links.length > 0) {
+        subHref = $target(links[links.length - 1]).attr('href') || ''
+        if (subHref) break
+      }
+    }
+    log(`[debug-ac] Step5: subHref="${subHref || '(not found)'}"`)
+    if (!subHref) return res.json({ logs, error: '未找到任何 AC 提交链接' })
+
+    // Step 6: 抓取提交详情页
+    const detailUrl = subHref.startsWith('http') ? subHref : `https://atcoder.jp${subHref}`
+    log(`[debug-ac] Step6: 抓取详情页 ${detailUrl}`)
+    const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
+    const $d = load(detailResp.data)
+    log(`[debug-ac] 详情页状态码=${detailResp.status}`)
+
+    const code1 = $d('#submission-code').text().trim()
+    const code2 = $d('pre.prettyprint').text().trim()
+    const code3 = $d('.source-code').text().trim()
+    log(`[debug-ac] #submission-code 长度=${code1.length}`)
+    log(`[debug-ac] pre.prettyprint 长度=${code2.length}`)
+    log(`[debug-ac] .source-code 长度=${code3.length}`)
+
+    const finalCode = code1 || code2 || code3
+    return res.json({ logs, codeLength: finalCode.length, codePreview: finalCode.substring(0, 200) })
+  } catch (e) {
+    log(`[debug-ac] 异常: ${e.message}`)
+    return res.json({ logs, error: e.message })
+  }
+})
+
 // ─── AtCoder ─────────────────────────────────────────────────────────────────
 
 async function fetchAtCoderContest(url) {
