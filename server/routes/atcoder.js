@@ -199,11 +199,13 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     const [, contestId, taskId] = taskMatch
     log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
 
-    // Step 3: 用 kenkoooo 查用户自己的 AC 提交
-    const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=0`
+    // Step 3: 用 kenkoooo 查用户自己的 AC 提交（从1年前开始，避免只拿到最早500条而漏掉新提交）
+    const fromSecond = Math.floor(Date.now() / 1000) - 365 * 24 * 3600
+    const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSecond}`
     log(`[debug-ac] Step3: 请求 kenkoooo 用户提交 API ${apiUrl1}`)
     const authedHeaders = await getAuthedHeaders()
     const apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
+    log(`[debug-ac] kenkoooo 返回总条数=${(apiResp1.data || []).length}`)
     const userSubs = (apiResp1.data || []).filter(s => s.problem_id === taskId && s.result === 'AC')
     log(`[debug-ac] 用户${ATCODER_USERNAME} AC提交数=${userSubs.length}`)
 
@@ -213,6 +215,9 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     log(`[debug-ac] Step4: 爬提交列表页 (C++) ${listUrlCpp}`)
     const listRespCpp = await axios.get(listUrlCpp, { headers: authedHeaders, timeout: 20000 })
     const $lc = load(listRespCpp.data)
+    log(`[debug-ac] C++ 列表页状态码=${listRespCpp.status}, title=${$lc('title').text().trim()}`)
+    log(`[debug-ac] C++ 列表页 tbody tr 数量=${$lc('table tbody tr').length}`)
+    log(`[debug-ac] C++ 列表页 HTML片段=${$lc('body').html()?.substring(0, 1000) || '(空)'}`)
     let anySubId = null
     $lc('table tbody tr').each((_, row) => {
       if (anySubId) return
@@ -226,6 +231,7 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
       log(`[debug-ac] 回退：爬不限语言列表页 ${listUrlAny}`)
       const listRespAny = await axios.get(listUrlAny, { headers: authedHeaders, timeout: 20000 })
       const $la = load(listRespAny.data)
+      log(`[debug-ac] 不限语言列表页 tbody tr 数量=${$la('table tbody tr').length}`)
       $la('table tbody tr').each((_, row) => {
         if (anySubId) return
         const href = $la(row).find('a[href*="/submissions/"]').last().attr('href') || ''
@@ -395,8 +401,9 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   const authedHeaders = await getAuthedHeaders()
 
   if (user) {
-    // ── 指定用户：kenkoooo user/submissions API ───────────────────────────
-    const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=0`
+    // ── 指定用户：kenkoooo user/submissions API（从1年前开始，避免漏掉新提交）───
+    const fromSecond = Math.floor(Date.now() / 1000) - 365 * 24 * 3600
+    const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=${fromSecond}`
     console.log(`[AtCoder AC] 请求 kenkoooo 用户提交 API: ${apiUrl}`)
     const apiResp = await axios.get(apiUrl, {
       headers: { 'User-Agent': HEADERS['User-Agent'] },
