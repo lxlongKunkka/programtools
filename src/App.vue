@@ -37,7 +37,7 @@
 
     <!-- 全局 Toast -->
     <div v-if="toast.show" class="global-toast">
-      <span v-html="toast.message"></span>
+      <span>{{ toast.message }}</span>
     </div>
   </div>
 </template>
@@ -82,8 +82,13 @@ export default {
     }
   },
   methods: {
-    checkLogin() {
-      clearModelCache()
+    checkLogin(event) {
+      // 如果是 storage 事件，只在 user_info 发生变化时才清除模型缓存
+      // !event：mounted() 直接调用；!event.key：login-success 自定义事件无 key 属性
+      // event.key === null：localStorage.clear() 触发的 storage 事件
+      if (!event || !event.key || event.key === 'user_info') {
+        clearModelCache()
+      }
       const u = localStorage.getItem('user_info')
       if (u) {
         try {

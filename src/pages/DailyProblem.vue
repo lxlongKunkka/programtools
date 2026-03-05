@@ -264,7 +264,7 @@ export default {
           await this.checkAllStatus(false) // Check status silently
         }
       } catch (e) {
-        this.error = '获取每日一题失败: ' + (e.response?.data?.error || e.message)
+        this.error = '获取每日一题失败: ' + e.message
       } finally {
         this.loading = false
       }

@@ -427,7 +427,7 @@ router.post('/proxy-image', async (req, res) => {
   }
 })
 
-router.post('/translate', checkModelPermission, async (req, res) => {
+router.post('/translate', authenticateToken, checkModelPermission, async (req, res) => {
   try {
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
@@ -743,7 +743,7 @@ function htmlToText(html) {
 }
 
 // 流式翻译接口（SSE）
-router.post('/translate/stream', checkModelPermission, async (req, res) => {
+router.post('/translate/stream', authenticateToken, checkModelPermission, async (req, res) => {
   const { text, model } = req.body
   if (!text) { res.status(400).end(); return }
   const apiKey = YUN_API_KEY
@@ -821,7 +821,7 @@ router.post('/translate/stream', checkModelPermission, async (req, res) => {
 })
 
 // 从 URL 抓取题目内容（Codeforces / AtCoder）
-router.get('/translate/fetch-url', checkModelPermission, async (req, res) => {
+router.get('/translate/fetch-url', authenticateToken, checkModelPermission, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
   const isCodeforces = /codeforces\.com/i.test(url)
@@ -1614,7 +1614,7 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
   }
 })
 
-router.post('/generate-problem-meta', checkModelPermission, async (req, res) => {
+router.post('/generate-problem-meta', authenticateToken, checkModelPermission, async (req, res) => {
   try {
     const { text, model, solution } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
@@ -1677,8 +1677,7 @@ router.post('/generate-problem-meta', checkModelPermission, async (req, res) => 
 
     return res.json({ 
       title: result.title || '', 
-      tags: Array.isArray(result.tags) ? result.tags : [], 
-      rawContent: content 
+      tags: Array.isArray(result.tags) ? result.tags : []
     })
 
   } catch (err) {
@@ -3427,7 +3426,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
   }
 })
 
-router.post('/summary', checkModelPermission, async (req, res) => {
+router.post('/summary', authenticateToken, checkModelPermission, async (req, res) => {
   try {
     const { role, keywords, achievements, challenges, plans, style, length, model, temperature } = req.body
     

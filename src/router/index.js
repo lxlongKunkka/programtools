@@ -109,9 +109,7 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresPremium) {
     const isPremium = user && (user.role === 'admin' || user.role === 'premium' || user.role === 'teacher' || user.priv === -1)
     if (!isPremium) {
-      // Redirect to home or show alert? 
-      // Better to redirect to home or stay put.
-      // I'll redirect to home for now.
+      alert('此功能需要会员权限，请升级账号后再访问')
       return next('/')
     }
   }
@@ -136,7 +134,7 @@ router.afterEach((to) => {
     // 避免在登录页重复上报（如果需要）
     // 使用 request.js 中的 request 实例可能更好，但这里为了解耦直接用 fetch
     // 注意：这里假设后端地址是相对路径 /api，如果配置了代理
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth_token')
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
 

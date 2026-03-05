@@ -107,7 +107,7 @@
           <div class="task-meta">{{ getTaskStatusText(task) }}</div>
         </div>
         <button
-          v-if="task.status === 'completed' || task.status === 'failed' || task.status === 'processing'"
+          v-if="task.status === 'completed' || task.status === 'failed'"
           class="btn-icon-small"
           @click.stop="resetTaskToPending(index)"
           title="重置为待翻译"
