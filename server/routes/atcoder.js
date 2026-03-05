@@ -182,7 +182,7 @@ router.get('/problem', authenticateToken, async (req, res) => {
 })
 
 // GET /api/atcoder/debug-ac?url=...  (临时调试接口，测试 AC 代码抓取流程)
-router.get('/debug-ac', authenticateToken, async (req, res) => {
+router.get('/debug-ac', async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
 
