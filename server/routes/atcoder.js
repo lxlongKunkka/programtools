@@ -190,96 +190,46 @@ router.get('/debug-ac', async (req, res) => {
 
   const logs = []
   const log = (...args) => { const msg = args.join(' '); logs.push(msg); console.log(msg) }
+  const KOPTS = { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 }
 
   try {
-    // Step 1: 测试登录
-    log('[debug-ac] Step1: 测试 AtCoder 登录')
-    log(`[debug-ac] ATCODER_USERNAME="${ATCODER_USERNAME || '(未配置)'}"`)
-    log(`[debug-ac] ATCODER_PASSWORD="${ATCODER_PASSWORD ? '***已配置***' : '(未配置)'}"`)
-
-    if (!ATCODER_USERNAME || !ATCODER_PASSWORD) {
-      return res.json({ logs, error: 'ATCODER_USERNAME 或 ATCODER_PASSWORD 未配置' })
-    }
-
-    // 强制重新登录（清除缓存）—— 内联诊断版
-    _atcoderCookie = ''
-    _atcoderCookieExpiry = 0
-
-    // ---- 内联诊断：直接 GET /login 拿 CSRF 并 POST ----
-    try {
-      const loginPage = await axios.get('https://atcoder.jp/login', {
-        headers: HEADERS, maxRedirects: 0, validateStatus: s => s < 400, timeout: 20000
-      })
-      const $lp = load(loginPage.data)
-      const csrf = $lp('input[name="csrf_token"]').val()
-      log(`[debug-ac] GET /login 状态码=${loginPage.status}, csrf="${csrf || '(未找到)'}"`)
-      const initCookie = (loginPage.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ')
-      log(`[debug-ac] GET /login Set-Cookie: ${loginPage.headers['set-cookie']?.join(' | ') || '(无)'}`)
-
-      if (csrf) {
-        const params = new URLSearchParams()
-        params.append('username', ATCODER_USERNAME)
-        params.append('password', ATCODER_PASSWORD)
-        params.append('csrf_token', csrf)
-        const postResp = await axios.post('https://atcoder.jp/login', params.toString(), {
-          headers: { ...HEADERS, 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': initCookie, 'Referer': 'https://atcoder.jp/login', 'Origin': 'https://atcoder.jp' },
-          maxRedirects: 0, validateStatus: s => s < 500, timeout: 20000
-        })
-        log(`[debug-ac] POST /login 状态码=${postResp.status}`)
-        log(`[debug-ac] POST /login Location="${postResp.headers['location'] || '(无)'}"`)
-        log(`[debug-ac] POST /login Set-Cookie: ${postResp.headers['set-cookie']?.join(' | ') || '(无)'}`)
-      }
-    } catch (diagErr) {
-      log(`[debug-ac] 内联诊断异常: ${diagErr.message}`)
-    }
-    // ---- 内联诊断结束 ----
-
-    const cookie = await atcoderLogin()
-    log(`[debug-ac] 登录结果: cookie="${cookie ? cookie.substring(0, 80) + '...' : '(空，失败，将以无 Cookie 方式继续试 kenkoooo 和公开提交页)'}"`)
-    // 注意：登录失败不 early return。kenkoooo 是公开 API 无需登录，ABC 提交详情页也公开可访问。
-
-    // Step 2: 解析题目 URL
+    // Step 1: 解析题目 URL
     const taskMatch = url.match(/contests\/([a-zA-Z0-9_-]+)\/tasks\/([a-zA-Z0-9_-]+)/)
-    if (!taskMatch) return res.json({ logs, error: '无法从 URL 解析 contestId/taskId，请确认是题目页面 URL' })
+    if (!taskMatch) return res.json({ logs, error: '无法从 URL 解析 contestId/taskId' })
     const [, contestId, taskId] = taskMatch
-    log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
+    log(`[debug-ac] contestId=${contestId}, taskId=${taskId}`)
 
-    // Step 3: kenkoooo 真正分页翻页（每页500条，从头翻到找到为止，最多15页）
-    const authedHeaders = await getAuthedHeaders()
-    let userSubs = []
-    let fromSec = 0
-    const MAX_PAGES = 15
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSec}`
-      log(`[debug-ac] Step3 page=${page} from_second=${fromSec}: ${apiUrl1}`)
-      if (page > 0) await sleep(1000)
-      let apiResp1
-      try {
-        apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 })
-      } catch (e) {
-        log(`[debug-ac] kenkoooo 请求失败(${e.response?.status || e.message})，跳出`)
-        break
+    let targetSubId = null
+
+    // Step 2: kenkoooo 查 kunkka
+    if (ATCODER_USERNAME) {
+      log(`[debug-ac] Step2: kenkoooo 查 kunkka (${ATCODER_USERNAME})`)
+      let fromSec = 0
+      for (let page = 0; page < 15 && !targetSubId; page++) {
+        const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSec}`
+        log(`[debug-ac] page=${page} from_second=${fromSec}`)
+        if (page > 0) await sleep(1000)
+        let r
+        try { r = await axios.get(apiUrl, KOPTS) } catch (e) { log(`[debug-ac] 请求失败: ${e.message}`); break }
+        if (r.status === 429) { log('[debug-ac] kenkoooo 429 限流'); break }
+        const batch = r.data || []
+        log(`[debug-ac] 返回 ${batch.length} 条`)
+        let ac = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          targetSubId = String(ac[0].id)
+          log(`[debug-ac] kunkka 找到 AC 提交 id=${targetSubId}`)
+        }
+        if (batch.length < 500) { log('[debug-ac] kunkka kenkoooo 最后一页'); break }
+        fromSec = batch[batch.length - 1].epoch_second + 1
       }
-      if (apiResp1.status === 429) { log('[debug-ac] kenkoooo 429 限流，跳出'); break }
-      const batch = (apiResp1.data || [])
-      log(`[debug-ac] kenkoooo 返回总条数=${batch.length}`)
-      const found = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
-      log(`[debug-ac] 用户${ATCODER_USERNAME} 本批 AC提交数=${found.length}`)
-      if (found.length > 0) { userSubs = found; break }
-      if (batch.length < 500) { log('[debug-ac] 已是最后一页，kenkoooo 无更多数据'); break }
-      // 翻页：用最后一条的时间戳+1作为下一页起点
-      fromSec = batch[batch.length - 1].epoch_second + 1
     }
 
-    // Step 4: 从找到的 AC 提交里选目标（优先 C++），若 kenkoooo 无记录则爬列表页
-    let cppSubs = userSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-    if (cppSubs.length === 0) cppSubs = userSubs
-    cppSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-    let targetSubId = cppSubs[0]?.id
-
+    // Step 3: kenkoooo 查备用用户
     if (!targetSubId) {
-      // 策略1.5：用备用知名用户查 kenkoooo
-      log(`[debug-ac] Step4a: kunkka 无记录，尝试用备用知名用户查 kenkoooo`)
+      log('[debug-ac] Step3: kenkoooo 查备用活跃用户')
       const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
       const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
       for (const fbUser of FALLBACK_USERS) {
@@ -287,25 +237,20 @@ router.get('/debug-ac', async (req, res) => {
         let fbFrom = fallbackFrom
         for (let pg = 0; pg < 3; pg++) {
           const fbUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFrom}`
-          log(`[debug-ac] 备用用户 ${fbUser} page=${pg}: ${fbUrl}`)
+          log(`[debug-ac] 备用 ${fbUser} page=${pg}`)
           await sleep(1000)
           let fbResp
-          try {
-            fbResp = await axios.get(fbUrl, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 })
-          } catch (e) {
-            log(`[debug-ac] 备用用户 ${fbUser} 请求失败(${e.response?.status || e.message})，跳下一用户`)
-            break
-          }
-          if (fbResp.status === 429) { log(`[debug-ac] kenkoooo 429 限流，停止备用用户搜索`); targetSubId = null; break }
+          try { fbResp = await axios.get(fbUrl, KOPTS) } catch (e) { log(`[debug-ac] ${fbUser} 失败: ${e.message}`); break }
+          if (fbResp.status === 429) { log('[debug-ac] kenkoooo 429 限流，停止'); break }
           const fbBatch = fbResp.data || []
-          log(`[debug-ac] 备用用户 ${fbUser} 返回 ${fbBatch.length} 条`)
-          let acSubs = fbBatch.filter(s => s.problem_id === taskId && s.result === 'AC')
-          const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-          if (cppSubs.length > 0) acSubs = cppSubs
-          if (acSubs.length > 0) {
-            acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-            targetSubId = String(acSubs[0].id)
-            log(`[debug-ac] 备用用户 ${fbUser} 找到 AC 提交 id=${targetSubId}`)
+          log(`[debug-ac] ${fbUser} 返回 ${fbBatch.length} 条`)
+          let ac = fbBatch.filter(s => s.problem_id === taskId && s.result === 'AC')
+          const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+          if (cpp.length) ac = cpp
+          if (ac.length) {
+            ac.sort((a, b) => b.epoch_second - a.epoch_second)
+            targetSubId = String(ac[0].id)
+            log(`[debug-ac] ${fbUser} 找到 AC 提交 id=${targetSubId}`)
             break
           }
           if (fbBatch.length < 500) break
@@ -314,53 +259,39 @@ router.get('/debug-ac', async (req, res) => {
       }
     }
 
+    // Step 4: AtCoder 提交列表页（需要登录）
     if (!targetSubId) {
-      // 策略2：爬 AtCoder 提交列表页（需要登录）
-      log(`[debug-ac] Step4b: 备用用户也无结果，回退到 AtCoder 提交列表页（需要登录）`)
-      const listUrlCpp = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC&f.Language=C%2B%2B`
-      const listUrlAny = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
-      for (const lu of [listUrlCpp, listUrlAny]) {
-        log(`[debug-ac] 爬列表页: ${lu}`)
+      log('[debug-ac] Step4: 回退到 AtCoder 提交列表页（需要登录）')
+      const authedHeaders = await getAuthedHeaders()
+      for (const cppOnly of [true, false]) {
+        const lu = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC` + (cppOnly ? '&f.Language=C%2B%2B' : '')
+        log(`[debug-ac] 爬: ${lu}`)
         const lr = await axios.get(lu, { headers: authedHeaders, timeout: 20000 })
         const $l = load(lr.data)
-        log(`[debug-ac] 列表页 title=${$l('title').text().trim()}, tbody tr 数=${$l('table tbody tr').length}`)
+        log(`[debug-ac] title="${$l('title').text().trim()}", tr 数=${$l('table tbody tr').length}`)
         $l('table tbody tr').each((_, row) => {
           if (targetSubId) return
-          const href = $l(row).find('a[href*="/submissions/"]').last().attr('href') || ''
-          const m = href.match(/\/submissions\/(\d+)/)
+          const m = ($l(row).find('a[href*="/submissions/"]').last().attr('href') || '').match(/\/submissions\/(\d+)/)
           if (m) targetSubId = m[1]
         })
         if (targetSubId) break
       }
     }
 
-    log(`[debug-ac] Step4: 目标提交 id=${targetSubId || '(not found)'}`)
+    log(`[debug-ac] 目标提交 id=${targetSubId || '(未找到)'}`)
     if (!targetSubId) return res.json({ logs, error: '未找到任何 AC 提交' })
 
-    const subHref = `/contests/${contestId}/submissions/${targetSubId}`
-
-    // Step 5: 抓取提交详情页
-    const detailUrl = `https://atcoder.jp${subHref}`
-    log(`[debug-ac] Step6: 抓取详情页 ${detailUrl}`)
-    const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
-    const $d = load(detailResp.data)
-    log(`[debug-ac] 详情页状态码=${detailResp.status}`)
-
-    const pageTitle = $d('title').text().trim()
-    log(`[debug-ac] 详情页 <title>=${pageTitle}`)
-    if (/login|ログイン/i.test(pageTitle)) {
-      log('[debug-ac] ⚠️  被重定向到登录页，Cookie 可能已失效')
-    }
-
+    // Step 5: 抓取提交详情页（公开可访问，无需 cookie）
+    const detailUrl = `https://atcoder.jp/contests/${contestId}/submissions/${targetSubId}`
+    log(`[debug-ac] 抓取详情页: ${detailUrl}`)
+    const dr = await axios.get(detailUrl, { headers: HEADERS, timeout: 20000 })
+    const $d = load(dr.data)
+    log(`[debug-ac] 详情页 title="${$d('title').text().trim()}"`)
     const code1 = $d('#submission-code').text().trim()
     const code2 = $d('pre.prettyprint').text().trim()
     const code3 = $d('.source-code').text().trim()
-    log(`[debug-ac] #submission-code 长度=${code1.length}`)
-    log(`[debug-ac] pre.prettyprint 长度=${code2.length}`)
-    log(`[debug-ac] .source-code 长度=${code3.length}`)
-
     const finalCode = code1 || code2 || code3
-    log(`[debug-ac] 最终代码长度=${finalCode.length}`)
+    log(`[debug-ac] 代码长度=${finalCode.length}`)
     return res.json({ logs, codeLength: finalCode.length, codePreview: finalCode.substring(0, 500), detailUrl })
   } catch (e) {
     log(`[debug-ac] 异常: ${e.message}`)
@@ -457,113 +388,82 @@ async function fetchAtCoderProblem(url) {
 // ─── AtCoder AC 提交代码抓取 ──────────────────────────────────────────────────
 
 /**
- * 从提交记录页抓取指定题目的 AC C++ 代码。
- * 策略：优先抓取 ATCODER_USERNAME 的，没有再抓任意用户的。
+ * 从提交列表中找第一条 AC C++ 提交，再抓取其源码。
+ * 策略1  : kenkoooo 查 kunkka（最多30页，从最早翻到最新）
+ * 策略1.5: kenkoooo 查备用活跃用户（每人最多3页，从18个月前开始）
+ * 策略2  : AtCoder 提交列表页（需要登录 Cookie，作为最后兜底）
  */
 async function fetchAtCoderAcCode(contestId, taskId) {
-  // 依次尝试：指定用户 → 任意用户
-  const usersToTry = ATCODER_USERNAME ? [ATCODER_USERNAME, ''] : ['']
+  const KENKOOOO_HEADERS = { 'User-Agent': HEADERS['User-Agent'] }
+  const KENKOOOO_OPTS = { headers: KENKOOOO_HEADERS, timeout: 20000, validateStatus: s => s < 500 }
 
-  for (const user of usersToTry) {
-    try {
-      const code = await fetchFirstAcCppSubmission(contestId, taskId, user)
-      if (code) {
-        console.log(`[AtCoder AC] task=${taskId} 抓到 ${user || '(any user)'} 的 AC 代码`)
-        return code
-      }
-    } catch (e) {
-      console.warn(`[AtCoder AC] user="${user || 'any'}" 失败:`, e.message)
-    }
-  }
-  return ''
-}
+  // 公开可访问，无需 cookie
+  const getCode = (subId) => fetchSubmissionCode(contestId, subId)
 
-/**
- * 从提交列表中找第一条 AC 提交，再抓取其源码。
- *
- * 策略：
- *  1. 配置用户（kunkka）：kenkoooo 真正分页翻页，每页500条，直到找到或翻完
- *  2. 任意用户 fallback：直接爬 AtCoder 提交列表页（登录 Cookie 已修复，现在可用）
- */
-async function fetchFirstAcCppSubmission(contestId, taskId, user) {
-  const authedHeaders = await getAuthedHeaders()
-
-  // ── 策略1：kenkoooo 真正分页翻页（仅当指定了具体用户时） ─────────────────
-  // user='' 表示"任意用户"，直接跳到策略2，避免重复搜配置账号
-  if (user) {
+  // ── 策略1：kenkoooo 查 kunkka ────────────────────────────────────────────
+  if (ATCODER_USERNAME) {
     let fromSecond = 0
-    const MAX_PAGES = 30
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=${fromSecond}`
-      console.log(`[AtCoder AC] kenkoooo page=${page} from_second=${fromSecond}`)
+    for (let page = 0; page < 30; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSecond}`
+      console.log(`[AtCoder AC] kenkoooo kunkka page=${page}`)
       if (page > 0) await sleep(1000)
       try {
-        const apiResp = await axios.get(apiUrl, {
-          headers: { 'User-Agent': HEADERS['User-Agent'] },
-          timeout: 20000,
-          validateStatus: s => s < 500
-        })
-        if (apiResp.status === 429) { console.warn('[AtCoder AC] kenkoooo 429 限流，跳出'); break }
-        const allSubs = apiResp.data || []
-        console.log(`[AtCoder AC] 返回 ${allSubs.length} 条`)
-        let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
-        const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-        if (cppSubs.length > 0) acSubs = cppSubs
-        if (acSubs.length > 0) {
-          acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-          console.log(`[AtCoder AC] task=${taskId} 找到 AC 提交 id=${acSubs[0].id}`)
-          return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+        const r = await axios.get(apiUrl, KENKOOOO_OPTS)
+        if (r.status === 429) { console.warn('[AtCoder AC] kenkoooo 429，跳出'); break }
+        const all = r.data || []
+        let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] kunkka 找到 id=${ac[0].id}`)
+          return await getCode(ac[0].id)
         }
-        if (allSubs.length < 500) break  // 已是最后一页
-        // 翻页：取本批最后一条时间戳+1作为下一页起点
-        fromSecond = allSubs[allSubs.length - 1].epoch_second + 1
+        if (all.length < 500) break
+        fromSecond = all[all.length - 1].epoch_second + 1
       } catch (e) {
-        console.warn(`[AtCoder AC] kenkoooo 请求失败: ${e.message}`)
-        break
+        console.warn(`[AtCoder AC] kenkoooo kunkka 失败: ${e.message}`); break
       }
     }
   }
 
-  // ── 策略1.5：kenkoooo 用备用知名用户查（适用于高难度题，kunkka 无提交时）──
+  // ── 策略1.5：kenkoooo 查备用活跃用户 ────────────────────────────────────
   const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
   const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
   for (const fbUser of FALLBACK_USERS) {
-    let fbFromSecond = fallbackFrom
+    let fbFrom = fallbackFrom
     for (let page = 0; page < 3; page++) {
-      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFromSecond}`
-      console.log(`[AtCoder AC] 备用用户 ${fbUser} page=${page}`)
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFrom}`
+      console.log(`[AtCoder AC] kenkoooo 备用 ${fbUser} page=${page}`)
       await sleep(1000)
       try {
-        const apiResp = await axios.get(apiUrl, {
-          headers: { 'User-Agent': HEADERS['User-Agent'] },
-          timeout: 20000,
-          validateStatus: s => s < 500
-        })
-        if (apiResp.status === 429) { console.warn('[AtCoder AC] kenkoooo 429 限流，停止备用用户搜索'); return '' }
-        const allSubs = apiResp.data || []
-        let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
-        const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-        if (cppSubs.length > 0) acSubs = cppSubs
-        if (acSubs.length > 0) {
-          acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-          console.log(`[AtCoder AC] 备用用户 ${fbUser} 找到 AC 提交 id=${acSubs[0].id}`)
-          return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+        const r = await axios.get(apiUrl, KENKOOOO_OPTS)
+        if (r.status === 429) { console.warn('[AtCoder AC] kenkoooo 429，停止备用搜索'); return '' }
+        const all = r.data || []
+        let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] 备用 ${fbUser} 找到 id=${ac[0].id}`)
+          return await getCode(ac[0].id)
         }
-        if (allSubs.length < 500) break
-        fbFromSecond = allSubs[allSubs.length - 1].epoch_second + 1
+        if (all.length < 500) break
+        fbFrom = all[all.length - 1].epoch_second + 1
       } catch (e) {
-        console.warn(`[AtCoder AC] 备用用户 ${fbUser} 请求失败: ${e.message}`)
-        break
+        console.warn(`[AtCoder AC] 备用 ${fbUser} 失败: ${e.message}`); break
       }
     }
   }
 
-  // ── 策略2：爬 AtCoder 提交列表页（需要登录 Cookie）─────────────────────
-  console.log(`[AtCoder AC] 回退到 AtCoder 提交列表页（需要登录）`)
+  // ── 策略2：AtCoder 提交列表页（需要登录）────────────────────────────────
+  console.log('[AtCoder AC] 回退到 AtCoder 提交列表页（需要登录）')
+  const authedHeaders = await getAuthedHeaders()
   const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
     || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
-  if (!subId) return ''
-  return await fetchSubmissionCode(contestId, subId, authedHeaders)
+  if (subId) return await getCode(subId)
+
+  return ''
 }
 
 /**
@@ -593,13 +493,12 @@ async function findAcSubIdFromListPage(contestId, taskId, authedHeaders, cppOnly
 }
 
 /**
- * 访问提交详情页，抓取源码。
- * AtCoder 提交详情页是服务端渲染，源码在 #submission-code 或 pre.prettyprint 里。
+ * 访问提交详情页，抓取源码。AtCoder ABC 提交页公开可见，无需 Cookie。
  */
-async function fetchSubmissionCode(contestId, subId, authedHeaders) {
+async function fetchSubmissionCode(contestId, subId) {
   const detailUrl = `https://atcoder.jp/contests/${contestId}/submissions/${subId}`
   console.log(`[AtCoder AC] 抓取提交详情页: ${detailUrl}`)
-  const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
+  const detailResp = await axios.get(detailUrl, { headers: HEADERS, timeout: 20000 })
   const $d = load(detailResp.data)
   const code = $d('#submission-code').text().trim()
     || $d('pre.prettyprint').text().trim()
