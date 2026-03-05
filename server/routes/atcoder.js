@@ -281,8 +281,9 @@ async function fetchAtCoderAcCode(contestId, taskId) {
   const getCode = (subId) => fetchSubmissionCode(contestId, subId)
 
   // ── 策略1：kenkoooo 查 kunkka ────────────────────────────────────────────
+  // 从 3 年前开始向后翻页，避免老账号历史太多导致翻不到近期比赛
   if (ATCODER_USERNAME) {
-    let fromSecond = 0
+    let fromSecond = Math.floor(Date.now() / 1000) - 3 * 365 * 24 * 3600
     for (let page = 0; page < 30; page++) {
       const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSecond}`
       console.log(`[AtCoder AC] kenkoooo kunkka page=${page}`)
