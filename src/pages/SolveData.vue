@@ -176,13 +176,7 @@
         <!-- 参考思路 + 手动代码 -->
         <template v-else-if="activeTab === 'reference'">
           <div class="reference-pane">
-            <div class="ref-section-label">💡 参考思路 / 算法提示（可选）</div>
-            <textarea
-              v-model="referenceText"
-              placeholder="在此输入解题思路、算法提示或参考文本，AI 将参考此内容生成代码..."
-              class="content-textarea ref-textarea"
-            ></textarea>
-            <div class="ref-section-label" style="margin-top:10px;">
+            <div class="ref-section-label">
               🔧 手动 AC 代码（可选）
               <button @click="clearManualCode" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
             </div>
@@ -1617,7 +1611,6 @@ pause
       const taskSnap = this.tasks[targetIndex]
       const problemText = taskSnap?.problemText || this.problemText
       const manualCode = taskSnap?.manualCode || ''
-      const referenceText = taskSnap?.referenceText || ''
       
       this.isGenerating = 'code'
       this.generationStatus = '正在生成题解代码...'
@@ -1646,12 +1639,6 @@ pause
                  promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${pureCode}\n\`\`\`\n\n`
                  hasReference = true
              }
-        }
-        
-        // 如果 referenceText 存在，则将其加入 Prompt
-        if (referenceText.trim()) {
-             promptText += `\n\n【解题思路提示】\n${referenceText.trim()}\n\n`
-             hasReference = true
         }
         
         // 统一添加生成要求
@@ -1766,10 +1753,6 @@ pause
         
         if (manualContent) {
              promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${manualContent}\n\`\`\`\n\n请参考上述代码（如果有）编写详细的解题教案。请注意：\n1. 即使提供了参考代码，也请你重新生成一份风格优良、注释详细的标准 AC 代码，不要直接复制参考代码。\n2. 请生成包含 Markdown 格式的完整解题报告（包含算法思路、代码实现、复杂度分析等）。\n3. 请优化代码风格，确保变量命名规范、逻辑清晰。`
-        }
-        
-        if (this.referenceText && this.referenceText.trim()) {
-          promptText += `\n\n【参考解法/思路】\n${this.referenceText.trim()}\n\n请参考上述思路（如果有）编写详细的解题教案。`
         }
         
         const solutionPromise = request('/api/solution', {
