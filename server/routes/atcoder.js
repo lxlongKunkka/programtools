@@ -2,6 +2,7 @@ import express from 'express'
 import axios from 'axios'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
+import { ATCODER_USERNAME } from '../config.js'
 
 const router = express.Router()
 
@@ -150,43 +151,76 @@ async function fetchAtCoderProblem(url) {
     console.warn('[AtCoder Editorial] 抓取失败（不影响题目）:', e.message)
   }
 
-  // 从 editorial 文本中提取最完整的代码块作为 acCode
-  const acCode = extractBestCodeFromMarkdown(editorial)
+  // 从提交记录中抓取 AC C++ 代码：优先指定用户，其次任意用户
+  let acCode = ''
+  try {
+    const taskMatch = url.match(/contests\/([a-zA-Z0-9_-]+)\/tasks\/([a-zA-Z0-9_-]+)/)
+    if (taskMatch) {
+      acCode = await fetchAtCoderAcCode(taskMatch[1], taskMatch[2])
+    }
+  } catch (e) {
+    console.warn('[AtCoder AC] 抓取提交代码失败（不影响题目）:', e.message)
+  }
 
   return { title, content, hasEnglish, url: enUrl, editorial, acCode }
 }
 
-// ─── AtCoder Editorial (解题思路) ─────────────────────────────────────────────
+// ─── AtCoder AC 提交代码抓取 ──────────────────────────────────────────────────
 
 /**
- * 从 editorial markdown 文本中提取最有可能是 AC 代码的代码块。
- * 优先选取以 cpp/c++ 标注的且行数最多的代码块；若无，则选取最长的任意代码块。
+ * 从提交记录页抓取指定题目的 AC C++ 代码。
+ * 策略：优先抓取 ATCODER_USERNAME 的，没有再抓任意用户的。
  */
-function extractBestCodeFromMarkdown(markdown) {
-  if (!markdown) return ''
+async function fetchAtCoderAcCode(contestId, taskId) {
+  // 依次尝试：指定用户 → 任意用户
+  const usersToTry = ATCODER_USERNAME ? [ATCODER_USERNAME, ''] : ['']
 
-  // 匹配所有 ``` 代码块（带或不带语言标注）
-  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g
-  const blocks = []
-  let m
-  while ((m = codeBlockRegex.exec(markdown)) !== null) {
-    const lang = m[1].toLowerCase()
-    const code = m[2].trim()
-    if (code.length > 20) {   // 忽略过短的片段（示例输入等）
-      blocks.push({ lang, code })
+  for (const user of usersToTry) {
+    try {
+      const code = await fetchFirstAcCppSubmission(contestId, taskId, user)
+      if (code) {
+        console.log(`[AtCoder AC] task=${taskId} 抓到 ${user || '(any user)'} 的 AC 代码`)
+        return code
+      }
+    } catch (e) {
+      console.warn(`[AtCoder AC] user="${user || 'any'}" 失败:`, e.message)
     }
   }
+  return ''
+}
 
-  if (blocks.length === 0) return ''
+/**
+ * 从提交列表中找第一条 C++ AC 提交，再抓取其源码。
+ * AtCoder f.Language 参数支持子串匹配，传 "C++" 可命中所有 C++ 版本。
+ */
+async function fetchFirstAcCppSubmission(contestId, taskId, user) {
+  // 构造筛选 URL：AC + C++ + (可选)指定用户
+  let listUrl = `https://atcoder.jp/contests/${contestId}/submissions`
+    + `?f.Task=${encodeURIComponent(taskId)}`
+    + `&f.Status=AC`
+    + `&f.Language=${encodeURIComponent('C++')}`
+  if (user) listUrl += `&f.User=${encodeURIComponent(user)}`
 
-  // 优先取 cpp/c++/c 标注且最长的代码块
-  const cppBlocks = blocks.filter(b => /^(c\+\+|cpp|c)$/.test(b.lang))
-  if (cppBlocks.length > 0) {
-    return cppBlocks.reduce((a, b) => (a.code.length >= b.code.length ? a : b)).code
-  }
+  const resp = await axios.get(listUrl, { headers: HEADERS, timeout: 20000 })
+  const $ = load(resp.data)
 
-  // 其次按代码长度取最长
-  return blocks.reduce((a, b) => (a.code.length >= b.code.length ? a : b)).code
+  // 找第一行中指向 .../submissions/{id} 的链接
+  let subHref = ''
+  $('table tbody tr').each((_, row) => {
+    if (subHref) return false
+    // 取行内最后一个 /submissions/ 链接（即"Detail"列）
+    const links = $(row).find('a[href*="/submissions/"]').toArray()
+    if (links.length > 0) {
+      subHref = $(links[links.length - 1]).attr('href') || ''
+    }
+  })
+  if (!subHref) return ''
+
+  // 抓取提交详情页，代码在 #submission-code
+  const detailUrl = subHref.startsWith('http') ? subHref : `https://atcoder.jp${subHref}`
+  const detailResp = await axios.get(detailUrl, { headers: HEADERS, timeout: 20000 })
+  const $d = load(detailResp.data)
+  return $d('#submission-code').text().trim()
 }
 
 /**
