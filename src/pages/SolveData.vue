@@ -3343,7 +3343,7 @@ python data_generator.py
   align-items: center;
   gap: 6px;
 }
-.ref-textarea { height: 400px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
+.ref-textarea { height: 1000px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
 
 .scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
 
