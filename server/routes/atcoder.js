@@ -270,7 +270,7 @@ router.get('/debug-ac', async (req, res) => {
     if (!targetSubId) {
       // 策略1.5：用备用知名用户查 kenkoooo
       log(`[debug-ac] Step4a: kunkka 无记录，尝试用备用知名用户查 kenkoooo`)
-      const FALLBACK_USERS = ['tourist', 'maroon_heavy', 'kort0n', 'noimi', 'yosupo', 'Um_nik', 'Benq']
+      const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
       const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
       for (const fbUser of FALLBACK_USERS) {
         if (targetSubId) break
@@ -504,7 +504,7 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   }
 
   // ── 策略1.5：kenkoooo 用备用知名用户查（适用于高难度题，kunkka 无提交时）──
-  const FALLBACK_USERS = ['tourist', 'maroon_heavy', 'kort0n', 'noimi', 'yosupo', 'Um_nik', 'Benq']
+  const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
   const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
   for (const fbUser of FALLBACK_USERS) {
     let fbFromSecond = fallbackFrom
