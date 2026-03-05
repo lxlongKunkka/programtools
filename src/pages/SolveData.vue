@@ -185,17 +185,6 @@
               placeholder="在此输入标准 AC 代码。如果提供，将直接使用此代码生成数据和报告..."
               class="content-textarea ref-textarea"
             ></textarea>
-            <div class="ref-quick-actions">
-              <button @click="autoTranslate" :disabled="isTranslating || isGenerating === 'all' || isBatchRunning || !problemText.trim()" class="btn-primary btn-sm">
-                {{ isTranslating ? '⏳ 翻译中...' : '🌐 生成翻译' }}
-              </button>
-              <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
-                {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成题解代码' }}
-              </button>
-              <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-secondary btn-sm">
-                {{ isGenerating === 'data' ? '⏳ 生成中...' : '📊 生成数据脚本' }}
-              </button>
-            </div>
           </div>
         </template>
 
@@ -3354,8 +3343,7 @@ python data_generator.py
   align-items: center;
   gap: 6px;
 }
-.ref-textarea { height: 260px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
-.ref-quick-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ref-textarea { height: 400px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
 
 .scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
 
