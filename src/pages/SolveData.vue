@@ -1430,7 +1430,7 @@ pause
           codeOutput: '',
           serverPureCode: '',
           dataOutput: '',
-          problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}) },
+          problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}) },
           status: 'pending'
         }
         this.loadTask(this.currentTaskIndex)
