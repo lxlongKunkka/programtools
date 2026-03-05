@@ -395,6 +395,10 @@ export default {
         }
       }
     } catch (e) { console.error('Failed to load tasks', e) }
+
+    // 恢复上次输入的 URL
+    const savedUrl = localStorage.getItem('solve_fetch_url')
+    if (savedUrl) this.fetchUrl = savedUrl
   },
   watch: {
     // 监听当前任务数据的变化，同步到 tasks 数组
@@ -410,6 +414,7 @@ export default {
     },
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
     referenceText(val) { this.updateCurrentTask('referenceText', val) },
+    fetchUrl(val) { localStorage.setItem('solve_fetch_url', val) },
     codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
     dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
     translationText(val) { this.updateCurrentTask('translationText', val) },
