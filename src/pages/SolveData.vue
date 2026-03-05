@@ -2035,7 +2035,9 @@ pause
     },
 
     async generateTitle() {
-      if (!this.problemText.trim()) {
+      const targetIndex = this.currentTaskIndex
+      const taskSnap = this.tasks[targetIndex]
+      if (!(taskSnap?.problemText?.trim())) {
         this.showToastMessage('请先输入题目描述')
         return
       }
@@ -2045,30 +2047,33 @@ pause
       try {
         // 优先方案：直接调用翻译接口，翻译结果自带 title 和 tags
         // 这样即使原题是日文/英文也能正确处理
-        await this.autoTranslate()
-        // autoTranslate 内部已将 ev.meta.title/tags 写入 this.problemMeta
-        if (this.problemMeta && this.problemMeta.title && this.problemMeta.title !== '题目标题') {
-          this.showToastMessage('✅ 标题已更新: ' + this.problemMeta.title)
+        await this.autoTranslate(targetIndex)
+        // autoTranslate 内部已将 ev.meta.title/tags 写入 tasks[targetIndex].problemMeta
+        const metaAfterTranslate = this.tasks[targetIndex]?.problemMeta
+        if (metaAfterTranslate?.title && metaAfterTranslate.title !== '题目标题') {
+          this.showToastMessage('✅ 标题已更新: ' + metaAfterTranslate.title)
           this.generationStatus = ''
           return
         }
         
         // 备选：翻译没有返回标题时，再调用 generate-problem-meta
-        const textToUse = (this.translationText && this.translationText.trim()) 
-          ? this.translationText 
-          : this.problemText
+        const latestSnap = this.tasks[targetIndex]
+        const textToUse = (latestSnap?.translationText?.trim())
+          ? latestSnap.translationText
+          : (latestSnap?.problemText || taskSnap.problemText)
           
         const res = await request('/api/generate-problem-meta', {
           method: 'POST',
           body: JSON.stringify({
             text: textToUse,
-            solution: this.codeOutput,
+            solution: latestSnap?.codeOutput || '',
             model: this.selectedModel
           })
         })
         
         if (res && res.title && res.title.trim()) {
-          this.problemMeta = { ...(this.problemMeta || {}), ...res }
+          const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
+          this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res })
           this.showToastMessage('✅ 标题已更新: ' + res.title)
         } else {
           console.warn('[generateTitle] AI 未返回标题，原始内容:', res?.rawContent)
