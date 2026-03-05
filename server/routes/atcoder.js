@@ -200,7 +200,7 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
 
     // Step 3: 用 AtCoder Problems API 查用户提交（绕过 JS 渲染的提交列表页）
-    const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&epoch_second=0`
+    const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=0`
     log(`[debug-ac] Step3: 请求 AtCoder Problems API (用户) ${apiUrl1}`)
     const authedHeaders = await getAuthedHeaders()
     const apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
@@ -367,8 +367,8 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   // AtCoder Problems 提供公开的提交记录 API（无需登录，JSON 格式，非 JS 渲染）
   let apiUrl
   if (user) {
-    // 查询指定用户的所有提交
-    apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&epoch_second=0`
+    // 查询指定用户的所有提交（from_second=0 表示从头开始）
+    apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=0`
   } else {
     // 查询指定题目的所有 AC 提交
     apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/problem/submissions?problem_id=${encodeURIComponent(taskId)}`
