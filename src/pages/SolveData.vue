@@ -2734,6 +2734,11 @@ def main():
                 if os.path.exists('problem_zh.md'):
                     zipf.write('problem_zh.md', 'problem_zh.md')
                     print("  + problem_zh.md")
+                
+                # 打包 problem_en.md
+                if os.path.exists('problem_en.md'):
+                    zipf.write('problem_en.md', 'problem_en.md')
+                    print("  + problem_en.md")
 
                 # 打包 additional_file 文件夹 (包含 solution.md, std.cpp, data_generator.py, ppt)
                 # 1. 如果当前目录下已经存在 additional_file 文件夹，直接打包其内容
@@ -2755,7 +2760,7 @@ def main():
                 for f in os.listdir('.'):
                     if os.path.isfile(f):
                         lower_f = f.lower()
-                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md'] or f in candidates:
+                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md', 'problem_en.md'] or f in candidates:
                             continue
                         if 'ppt' in lower_f or lower_f.endswith('.html') or lower_f.endswith('.pptx') or lower_f.endswith('.pdf'):
                             candidates.append(f)
