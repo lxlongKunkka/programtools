@@ -233,8 +233,8 @@ router.get('/debug-ac', async (req, res) => {
     // ---- 内联诊断结束 ----
 
     const cookie = await atcoderLogin()
-    log(`[debug-ac] 登录结果: cookie="${cookie ? cookie.substring(0, 80) + '...' : '(空，失败)'}"`)
-    if (!cookie) return res.json({ logs, error: '登录失败，cookie 为空' })
+    log(`[debug-ac] 登录结果: cookie="${cookie ? cookie.substring(0, 80) + '...' : '(空，失败，将以无 Cookie 方式继续试 kenkoooo 和公开提交页)'}"`)
+    // 注意：登录失败不 early return。kenkoooo 是公开 API 无需登录，ABC 提交详情页也公开可访问。
 
     // Step 2: 解析题目 URL
     const taskMatch = url.match(/contests\/([a-zA-Z0-9_-]+)\/tasks\/([a-zA-Z0-9_-]+)/)
