@@ -1128,7 +1128,12 @@ export default {
           // 3. 添加题目描述
           folder.file('problem.md', task.problemText, zipOptions)
           if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title), zipOptions)
-          if (task.translationEnglish) folder.file('problem_en.md', task.translationEnglish, zipOptions)
+          if (task.translationEnglish) {
+            const enContent = task.problemMeta?.sourceUrl
+              ? `原题链接：${task.problemMeta.sourceUrl}\n\n${task.translationEnglish}`
+              : task.translationEnglish
+            folder.file('problem_en.md', enContent, zipOptions)
+          }
           
           // 4. 添加解题报告
           if (task.reportHtml) {
@@ -1439,7 +1444,7 @@ pause
         dataOutput: '',
         translationText: '',
         translationEnglish: '',
-        problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}) },
+        problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}) },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -2436,7 +2441,10 @@ pause
           zip.file('problem_zh.md', this.problemText, zipOptions)
         }
         if (this.translationEnglish && this.translationEnglish.trim()) {
-          zip.file('problem_en.md', this.translationEnglish, zipOptions)
+          const enContent = this.problemMeta?.sourceUrl
+            ? `原题链接：${this.problemMeta.sourceUrl}\n\n${this.translationEnglish}`
+            : this.translationEnglish
+          zip.file('problem_en.md', enContent, zipOptions)
         }
 
         // 智能获取标题
