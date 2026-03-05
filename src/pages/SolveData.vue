@@ -1387,10 +1387,20 @@ pause
 
     async addProblemAsTask(url, fallbackTitle) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-      const title = data.title || fallbackTitle || url
       const editorial = data.editorial || ''
       if (editorial) {
         this.showToastMessage('✅ 已自动抓取 AtCoder 解题思路')
+      }
+
+      // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
+      let title = data.title || fallbackTitle || url
+      const atcoderMatch = url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/[^/]+_([a-z0-9]+)/i)
+      if (atcoderMatch) {
+        const contestId = atcoderMatch[1].toUpperCase() // e.g. ABC235
+        const label = atcoderMatch[2].toUpperCase()     // e.g. B
+        // 去掉 "B - " 或 "B. " 前缀，只保留纯标题
+        const cleanTitle = title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim()
+        title = `[${contestId}${label}] ${cleanTitle}`
       }
       // 如果当前唯一一个任务且是空的，直接填充而不是新增
       const cur = this.tasks[this.currentTaskIndex]
