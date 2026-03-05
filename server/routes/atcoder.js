@@ -2,7 +2,7 @@ import express from 'express'
 import axios from 'axios'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
-import { ATCODER_USERNAME, ATCODER_PASSWORD } from '../config.js'
+import { ATCODER_USERNAME } from '../config.js'
 
 const router = express.Router()
 
@@ -14,107 +14,6 @@ const HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9,ja;q=0.8'
 }
 
-// ─── AtCoder 登录 / Session 缓存 ─────────────────────────────────────────────
-
-// 缓存已登录的 Cookie 字符串，避免每次抓取都重新登录
-let _atcoderCookie = ''
-let _atcoderCookieExpiry = 0  // Unix ms
-
-/**
- * 登录 AtCoder，返回 Cookie 字符串。
- * AtCoder 使用 CSRF token + POST /login，成功后 Set-Cookie 返回 session。
- */
-async function atcoderLogin() {
-  if (!ATCODER_USERNAME || !ATCODER_PASSWORD) return ''
-
-  // 1. GET /login → 提取 CSRF token
-  const loginPage = await axios.get('https://atcoder.jp/login', {
-    headers: HEADERS,
-    maxRedirects: 0,
-    validateStatus: s => s < 400,
-    timeout: 20000
-  })
-  const $login = load(loginPage.data)
-  const csrf = $login('input[name="csrf_token"]').val()
-  if (!csrf) {
-    console.warn('[AtCoder Login] 未找到 csrf_token')
-    return ''
-  }
-
-  // 合并 GET 时拿到的 cookie（需要带着它才能 POST）
-  const initCookie = (loginPage.headers['set-cookie'] || [])
-    .map(c => c.split(';')[0]).join('; ')
-
-  // 2. POST /login
-  const params = new URLSearchParams()
-  params.append('username', ATCODER_USERNAME)
-  params.append('password', ATCODER_PASSWORD)
-  params.append('csrf_token', csrf)
-
-  const postResp = await axios.post('https://atcoder.jp/login', params.toString(), {
-    headers: {
-      ...HEADERS,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': initCookie,
-      'Referer': 'https://atcoder.jp/login',
-      'Origin': 'https://atcoder.jp'
-    },
-    maxRedirects: 0,          // 不跟随重定向，直接从 302 响应拿 Set-Cookie
-    validateStatus: s => s < 500,
-    timeout: 20000
-  })
-
-  // 3. 收集所有 Set-Cookie（302 重定向响应里的 cookie）
-  const rawCookies = postResp.headers['set-cookie'] || []
-  // 正确合并：按 cookie name 去重，POST 返回的覆盖 GET 的
-  // 避免两个 REVEL_SESSION= 共存导致服务器取到旧的（未登录）值
-  const cookieMap = new Map()
-  for (const c of initCookie.split('; ').filter(Boolean)) {
-    const name = c.split('=')[0]
-    if (name) cookieMap.set(name, c)
-  }
-  for (const raw of rawCookies) {
-    const c = raw.split(';')[0]
-    const name = c.split('=')[0]
-    if (name) cookieMap.set(name, c)
-  }
-  const cookieStr = [...cookieMap.values()].filter(Boolean).join('; ')
-  const location = postResp.headers['location'] || ''
-  console.log(`[AtCoder Login] POST 状态码=${postResp.status}, Location=${location}, Set-Cookie 数量=${rawCookies.length}`)
-
-  // AtCoder 登录成功 → 302 重定向到 /home 或 /；
-  // 失败 → 302 重定向回 /login（带 REVEL_FLASH error）
-  if (postResp.status !== 302 && postResp.status !== 303) {
-    console.warn('[AtCoder Login] 登录后未重定向，可能账号密码有误（或被 AtCoder 封禁）')
-    return ''
-  }
-  if (/\/login/i.test(location)) {
-    console.warn(`[AtCoder Login] 登录失败：302 重定向回登录页 (Location=${location})，账号密码有误或被封禁`)
-    return ''
-  }
-  if (!cookieStr) {
-    console.warn('[AtCoder Login] 登录后未收到 Cookie，可能账号密码有误')
-    return ''
-  }
-
-  console.log('[AtCoder Login] 登录成功，Cookie 已缓存')
-  return cookieStr
-}
-
-/**
- * 获取带有有效 AtCoder session 的请求头。
- * Cookie 缓存 6 小时，超时自动重新登录。
- */
-async function getAuthedHeaders() {
-  const now = Date.now()
-  if (!_atcoderCookie || now > _atcoderCookieExpiry) {
-    _atcoderCookie = await atcoderLogin()
-    // 登录成功则缓存 6 小时；失败时 5 分钟后重试
-    _atcoderCookieExpiry = now + (_atcoderCookie ? 6 * 60 * 60 * 1000 : 5 * 60 * 1000)
-  }
-  if (!_atcoderCookie) return { ...HEADERS }
-  return { ...HEADERS, Cookie: _atcoderCookie }
-}
 
 // ─── Platform Detection ───────────────────────────────────────────────────────
 function detectPlatform(url) {
@@ -256,25 +155,6 @@ router.get('/debug-ac', async (req, res) => {
           if (fbBatch.length < 500) break
           fbFrom = fbBatch[fbBatch.length - 1].epoch_second + 1
         }
-      }
-    }
-
-    // Step 4: AtCoder 提交列表页（需要登录）
-    if (!targetSubId) {
-      log('[debug-ac] Step4: 回退到 AtCoder 提交列表页（需要登录）')
-      const authedHeaders = await getAuthedHeaders()
-      for (const cppOnly of [true, false]) {
-        const lu = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC` + (cppOnly ? '&f.Language=C%2B%2B' : '')
-        log(`[debug-ac] 爬: ${lu}`)
-        const lr = await axios.get(lu, { headers: authedHeaders, timeout: 20000 })
-        const $l = load(lr.data)
-        log(`[debug-ac] title="${$l('title').text().trim()}", tr 数=${$l('table tbody tr').length}`)
-        $l('table tbody tr').each((_, row) => {
-          if (targetSubId) return
-          const m = ($l(row).find('a[href*="/submissions/"]').last().attr('href') || '').match(/\/submissions\/(\d+)/)
-          if (m) targetSubId = m[1]
-        })
-        if (targetSubId) break
       }
     }
 
@@ -456,40 +336,7 @@ async function fetchAtCoderAcCode(contestId, taskId) {
     }
   }
 
-  // ── 策略2：AtCoder 提交列表页（需要登录）────────────────────────────────
-  console.log('[AtCoder AC] 回退到 AtCoder 提交列表页（需要登录）')
-  const authedHeaders = await getAuthedHeaders()
-  const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
-    || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
-  if (subId) return await getCode(subId)
-
   return ''
-}
-
-/**
- * 爬 AtCoder 提交列表页，返回第一条 AC 提交的 ID。
- * URL: /contests/{id}/submissions?f.Task={taskId}&f.Status=AC[&f.Language=C%2B%2B]
- */
-async function findAcSubIdFromListPage(contestId, taskId, authedHeaders, cppOnly) {
-  let listUrl = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
-  if (cppOnly) listUrl += '&f.Language=C%2B%2B'
-  console.log(`[AtCoder AC] 爬提交列表页: ${listUrl}`)
-
-  const resp = await axios.get(listUrl, { headers: authedHeaders, timeout: 20000 })
-  const $ = load(resp.data)
-
-  // 提交列表：每行最后一格有"Detail"链接，href="/contests/{id}/submissions/{subId}"
-  let subId = null
-  $('table tbody tr').each((_, row) => {
-    if (subId) return
-    const detailLink = $(row).find('a[href*="/submissions/"]').last()
-    const href = detailLink.attr('href') || ''
-    const m = href.match(/\/submissions\/(\d+)/)
-    if (m) subId = m[1]
-  })
-
-  console.log(`[AtCoder AC] 列表页找到提交 id=${subId || '(未找到)'}, cppOnly=${cppOnly}`)
-  return subId
 }
 
 /**
