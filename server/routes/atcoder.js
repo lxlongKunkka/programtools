@@ -77,11 +77,17 @@ async function atcoderLogin() {
     if (name) cookieMap.set(name, c)
   }
   const cookieStr = [...cookieMap.values()].filter(Boolean).join('; ')
-  console.log(`[AtCoder Login] POST 状态码=${postResp.status}, Set-Cookie 数量=${rawCookies.length}`)
+  const location = postResp.headers['location'] || ''
+  console.log(`[AtCoder Login] POST 状态码=${postResp.status}, Location=${location}, Set-Cookie 数量=${rawCookies.length}`)
 
-  // AtCoder 登录成功 → 302 重定向；失败 → 200（继续显示登录页）
+  // AtCoder 登录成功 → 302 重定向到 /home 或 /；
+  // 失败 → 302 重定向回 /login（带 REVEL_FLASH error）
   if (postResp.status !== 302 && postResp.status !== 303) {
     console.warn('[AtCoder Login] 登录后未重定向，可能账号密码有误（或被 AtCoder 封禁）')
+    return ''
+  }
+  if (/\/login/i.test(location)) {
+    console.warn(`[AtCoder Login] 登录失败：302 重定向回登录页 (Location=${location})，账号密码有误或被封禁`)
     return ''
   }
   if (!cookieStr) {
