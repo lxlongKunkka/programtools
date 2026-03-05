@@ -2601,7 +2601,7 @@ def main():
         sys.exit(1)
     
     exe_name = 'std.exe' if is_windows else 'std'
-    compile_cmd = f"g++ std.cpp -o {exe_name} -std=c++17 -O2"
+    compile_cmd = f"g++ std.cpp -o {exe_name} -std=c++17 -O2 -Wl,--stack,536870912"
     
     print(f"正在编译: {compile_cmd}")
     if not run_command(compile_cmd):
@@ -2838,7 +2838,7 @@ pause
     
     generateReadme() {
       const langInfo = this.language === 'C++' 
-        ? { file: 'std.cpp', compiler: 'g++', compile: 'g++ std.cpp -o std -std=c++17 -O2' }
+        ? { file: 'std.cpp', compiler: 'g++', compile: 'g++ std.cpp -o std -std=c++17 -O2 -Wl,--stack,536870912' }
         : this.language === 'Python'
         ? { file: 'std.py', compiler: 'Python', compile: '无需编译' }
         : { file: 'Main.java', compiler: 'javac', compile: 'javac Main.java' }
