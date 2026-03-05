@@ -111,8 +111,7 @@ router.post('/chat', authenticateToken, requirePremium, checkModelPermission, as
     }
   } catch (err) {
     console.error('Chat error:', err?.response?.data || err.message || err)
-    const message = err?.response?.data || err.message || 'unknown error'
-    return res.status(500).json({ error: 'Chat failed', detail: message })
+    return res.status(500).json({ error: 'Chat failed' })
   }
 })
 

@@ -2,13 +2,32 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import rateLimit from 'express-rate-limit'
 import User from '../models/User.js'
 import { JWT_SECRET } from '../config.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/login', async (req, res) => {
+// 登录限速：同一 IP 15 分钟内最多 10 次
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '登录尝试过于频繁，请 15 分钟后重试' }
+})
+
+// 注册限速：同一 IP 1 小时内最多 5 次
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '注册请求过于频繁，请稍后重试' }
+})
+
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body
   try {
     const user = await User.findOne({
@@ -56,7 +75,7 @@ router.post('/login', async (req, res) => {
   }
 })
 
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const { username, password } = req.body
   // 严禁客户端传入 role，固定注册为普通用户
   try {

@@ -25,6 +25,11 @@ if (process.env.JWT_SECRET === undefined || process.env.JWT_SECRET === 'your_jwt
 }
 export const YUN_API_KEY = process.env.YUN_API_KEY
 export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
+
+// CORS 允许的源，生产环境应在 .env 中配置
+export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000']
 export const DEBUG_LOG = (process.env.DEBUG_LOG === '1' || process.env.DEBUG === 'true')
 
 export const MAIL_CONFIG = {

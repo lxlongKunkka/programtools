@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { PORT, YUN_API_KEY, DEBUG_LOG } from './config.js'
+import { PORT, YUN_API_KEY, DEBUG_LOG, ALLOWED_ORIGINS } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
 import { createServer } from 'http'
 import { setupSocket } from './socket/index.js'
@@ -36,7 +36,14 @@ const app = express()
 const httpServer = createServer(app)
 setupSocket(httpServer)
 
-app.use(cors())
+app.use(cors({
+  origin: (origin, callback) => {
+    // 允许无 origin （server-to-server / curl）和列表内的来源
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS: origin '${origin}' not allowed`))
+  },
+  credentials: true
+}))
 app.use(express.json({ limit: '50mb' }))
 
 // Serve static files
