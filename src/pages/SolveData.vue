@@ -1414,6 +1414,10 @@ pause
         const cleanTitle = title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim()
         title = `[${contestId}${label}] ${cleanTitle}`
       }
+      // atcoderTitle: 已格式化的标题（如 [ABC235B] xxx），用于 problem.yaml
+      const atcoderTitle = atcoderMatch ? title : null
+      // sourceUrl: AtCoder 原题链接，用于 problem_en.md 头部
+      const sourceUrl = atcoderMatch ? url : null
       // 如果当前唯一一个任务且是空的，直接填充而不是新增
       const cur = this.tasks[this.currentTaskIndex]
       if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
