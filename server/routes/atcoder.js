@@ -199,32 +199,51 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     const [, contestId, taskId] = taskMatch
     log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
 
-    // Step 3: 用 AtCoder Problems API 查用户提交（绕过 JS 渲染的提交列表页）
+    // Step 3: 用 kenkoooo 查用户自己的 AC 提交
     const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=0`
-    log(`[debug-ac] Step3: 请求 AtCoder Problems API (用户) ${apiUrl1}`)
+    log(`[debug-ac] Step3: 请求 kenkoooo 用户提交 API ${apiUrl1}`)
     const authedHeaders = await getAuthedHeaders()
     const apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
     const userSubs = (apiResp1.data || []).filter(s => s.problem_id === taskId && s.result === 'AC')
     log(`[debug-ac] 用户${ATCODER_USERNAME} AC提交数=${userSubs.length}`)
 
-    // Step 4: 查任意用户提交
-    const apiUrl2 = `https://kenkoooo.com/atcoder/atcoder-api/v3/problem/submissions?problem_id=${encodeURIComponent(taskId)}`
-    log(`[debug-ac] Step4: 请求 AtCoder Problems API (任意用户) ${apiUrl2}`)
-    const apiResp2 = await axios.get(apiUrl2, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
-    const anySubs = (apiResp2.data || []).filter(s => s.result === 'AC')
-    log(`[debug-ac] 任意用户 AC提交数=${anySubs.length}`)
+    // Step 4: 爬 AtCoder 提交列表页获取任意用户 AC 提交 ID（优先 C++）
+    const listUrlCpp = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC&f.Language=C%2B%2B`
+    const listUrlAny = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
+    log(`[debug-ac] Step4: 爬提交列表页 (C++) ${listUrlCpp}`)
+    const listRespCpp = await axios.get(listUrlCpp, { headers: authedHeaders, timeout: 20000 })
+    const $lc = load(listRespCpp.data)
+    let anySubId = null
+    $lc('table tbody tr').each((_, row) => {
+      if (anySubId) return
+      const href = $lc(row).find('a[href*="/submissions/"]').last().attr('href') || ''
+      const m = href.match(/\/submissions\/(\d+)/)
+      if (m) anySubId = m[1]
+    })
+    log(`[debug-ac] C++ 列表页找到提交 id=${anySubId || '(无)'}`)
 
-    // Step 5: 找最新 AC 提交（优先用户，其次任意，优先 C++）
-    let candidateSubs = userSubs.length > 0 ? userSubs : anySubs
-    const cppSubs = candidateSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-    if (cppSubs.length > 0) candidateSubs = cppSubs
-    candidateSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-    const targetSub = candidateSubs[0]
-    log(`[debug-ac] Step5: 目标提交=${targetSub ? `id=${targetSub.id} lang=${targetSub.language}` : '(not found)'}`)
-    if (!targetSub) return res.json({ logs, error: '未找到任何 AC 提交' })
+    if (!anySubId) {
+      log(`[debug-ac] 回退：爬不限语言列表页 ${listUrlAny}`)
+      const listRespAny = await axios.get(listUrlAny, { headers: authedHeaders, timeout: 20000 })
+      const $la = load(listRespAny.data)
+      $la('table tbody tr').each((_, row) => {
+        if (anySubId) return
+        const href = $la(row).find('a[href*="/submissions/"]').last().attr('href') || ''
+        const m = href.match(/\/submissions\/(\d+)/)
+        if (m) anySubId = m[1]
+      })
+      log(`[debug-ac] 任意语言列表页找到提交 id=${anySubId || '(无)'}`)
+    }
 
-    const subId = targetSub.id
-    const subHref = `/contests/${contestId}/submissions/${subId}`
+    // Step 5: 找最终目标提交 ID（优先用户自己，其次列表页）
+    let cppSubs = userSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+    if (cppSubs.length === 0) cppSubs = userSubs
+    cppSubs.sort((a, b) => b.epoch_second - a.epoch_second)
+    const targetSubId = cppSubs[0]?.id || anySubId
+    log(`[debug-ac] Step5: 目标提交 id=${targetSubId || '(not found)'}`)
+    if (!targetSubId) return res.json({ logs, error: '未找到任何 AC 提交' })
+
+    const subHref = `/contests/${contestId}/submissions/${targetSubId}`
 
     // Step 6: 抓取提交详情页
     const detailUrl = `https://atcoder.jp${subHref}`
@@ -232,6 +251,12 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
     const $d = load(detailResp.data)
     log(`[debug-ac] 详情页状态码=${detailResp.status}`)
+
+    const pageTitle = $d('title').text().trim()
+    log(`[debug-ac] 详情页 <title>=${pageTitle}`)
+    if (/login|ログイン/i.test(pageTitle)) {
+      log('[debug-ac] ⚠️  被重定向到登录页，Cookie 可能已失效')
+    }
 
     const code1 = $d('#submission-code').text().trim()
     const code2 = $d('pre.prettyprint').text().trim()
@@ -241,7 +266,8 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     log(`[debug-ac] .source-code 长度=${code3.length}`)
 
     const finalCode = code1 || code2 || code3
-    return res.json({ logs, codeLength: finalCode.length, codePreview: finalCode.substring(0, 200) })
+    log(`[debug-ac] 最终代码长度=${finalCode.length}`)
+    return res.json({ logs, codeLength: finalCode.length, codePreview: finalCode.substring(0, 500), detailUrl })
   } catch (e) {
     log(`[debug-ac] 异常: ${e.message}`)
     return res.json({ logs, error: e.message })
@@ -360,48 +386,74 @@ async function fetchAtCoderAcCode(contestId, taskId) {
 
 /**
  * 从提交列表中找第一条 AC 提交，再抓取其源码。
- * 使用 AtCoder Problems 公开 API 获取提交 ID（绕过客户端渲染），
- * 再用已登录 Cookie 访问提交详情页拿到源码。
+ *
+ * 策略：
+ *  - 指定用户：用 kenkoooo user/submissions API（JSON，无需登录）
+ *  - 任意用户：直接爬 AtCoder 提交列表页（服务端渲染，可用 cheerio 解析）
  */
 async function fetchFirstAcCppSubmission(contestId, taskId, user) {
-  // AtCoder Problems 提供公开的提交记录 API（无需登录，JSON 格式，非 JS 渲染）
-  let apiUrl
-  if (user) {
-    // 查询指定用户的所有提交（from_second=0 表示从头开始）
-    apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=0`
-  } else {
-    // 查询指定题目的所有 AC 提交
-    apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/problem/submissions?problem_id=${encodeURIComponent(taskId)}`
-  }
+  const authedHeaders = await getAuthedHeaders()
 
-  console.log(`[AtCoder AC] 请求 AtCoder Problems API: ${apiUrl}`)
-  const apiResp = await axios.get(apiUrl, {
-    headers: { 'User-Agent': HEADERS['User-Agent'] },
-    timeout: 20000
+  if (user) {
+    // ── 指定用户：kenkoooo user/submissions API ───────────────────────────
+    const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=0`
+    console.log(`[AtCoder AC] 请求 kenkoooo 用户提交 API: ${apiUrl}`)
+    const apiResp = await axios.get(apiUrl, {
+      headers: { 'User-Agent': HEADERS['User-Agent'] },
+      timeout: 20000
+    })
+    const allSubs = apiResp.data || []
+    let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
+    const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+    if (cppSubs.length > 0) acSubs = cppSubs
+    console.log(`[AtCoder AC] 用户"${user}" 筛选后 AC=${acSubs.length} 条`)
+    if (acSubs.length === 0) return ''
+
+    acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
+    return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+  } else {
+    // ── 任意用户：爬 AtCoder 提交列表页（服务端渲染） ─────────────────────
+    // 优先 C++，没有则不限语言
+    const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
+      || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
+    if (!subId) return ''
+    return await fetchSubmissionCode(contestId, subId, authedHeaders)
+  }
+}
+
+/**
+ * 爬 AtCoder 提交列表页，返回第一条 AC 提交的 ID。
+ * URL: /contests/{id}/submissions?f.Task={taskId}&f.Status=AC[&f.Language=C%2B%2B]
+ */
+async function findAcSubIdFromListPage(contestId, taskId, authedHeaders, cppOnly) {
+  let listUrl = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
+  if (cppOnly) listUrl += '&f.Language=C%2B%2B'
+  console.log(`[AtCoder AC] 爬提交列表页: ${listUrl}`)
+
+  const resp = await axios.get(listUrl, { headers: authedHeaders, timeout: 20000 })
+  const $ = load(resp.data)
+
+  // 提交列表：每行最后一格有"Detail"链接，href="/contests/{id}/submissions/{subId}"
+  let subId = null
+  $('table tbody tr').each((_, row) => {
+    if (subId) return
+    const detailLink = $(row).find('a[href*="/submissions/"]').last()
+    const href = detailLink.attr('href') || ''
+    const m = href.match(/\/submissions\/(\d+)/)
+    if (m) subId = m[1]
   })
 
-  // 筛选出该题目的 AC 提交（优先 C++ 语言）
-  const allSubs = apiResp.data || []
-  let acSubs = allSubs.filter(s =>
-    (!user || s.problem_id === taskId) &&
-    s.result === 'AC'
-  )
-  // 优先 C++ 提交
-  const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-  if (cppSubs.length > 0) acSubs = cppSubs
+  console.log(`[AtCoder AC] 列表页找到提交 id=${subId || '(未找到)'}, cppOnly=${cppOnly}`)
+  return subId
+}
 
-  console.log(`[AtCoder AC] API 返回 ${allSubs.length} 条，筛选后 AC=${acSubs.length} 条，用户="${user || 'any'}"`)
-  if (acSubs.length === 0) return ''
-
-  // 取最新的 AC 提交
-  acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-  const sub = acSubs[0]
-  const subId = sub.id
-  console.log(`[AtCoder AC] 目标提交 id=${subId}, lang=${sub.language}`)
-
-  // 从提交详情页抓取源码（需要登录 Cookie 才能看到）
+/**
+ * 访问提交详情页，抓取源码。
+ * AtCoder 提交详情页是服务端渲染，源码在 #submission-code 或 pre.prettyprint 里。
+ */
+async function fetchSubmissionCode(contestId, subId, authedHeaders) {
   const detailUrl = `https://atcoder.jp/contests/${contestId}/submissions/${subId}`
-  const authedHeaders = await getAuthedHeaders()
+  console.log(`[AtCoder AC] 抓取提交详情页: ${detailUrl}`)
   const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
   const $d = load(detailResp.data)
   const code = $d('#submission-code').text().trim()
