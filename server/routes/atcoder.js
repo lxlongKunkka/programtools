@@ -2,7 +2,7 @@ import express from 'express'
 import axios from 'axios'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
-import { ATCODER_USERNAME } from '../config.js'
+import { ATCODER_USERNAME, ATCODER_PASSWORD } from '../config.js'
 
 const router = express.Router()
 
@@ -10,6 +10,83 @@ const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9,ja;q=0.8'
+}
+
+// ─── AtCoder 登录 / Session 缓存 ─────────────────────────────────────────────
+
+// 缓存已登录的 Cookie 字符串，避免每次抓取都重新登录
+let _atcoderCookie = ''
+let _atcoderCookieExpiry = 0  // Unix ms
+
+/**
+ * 登录 AtCoder，返回 Cookie 字符串。
+ * AtCoder 使用 CSRF token + POST /login，成功后 Set-Cookie 返回 session。
+ */
+async function atcoderLogin() {
+  if (!ATCODER_USERNAME || !ATCODER_PASSWORD) return ''
+
+  // 1. GET /login → 提取 CSRF token
+  const loginPage = await axios.get('https://atcoder.jp/login', {
+    headers: HEADERS,
+    maxRedirects: 0,
+    validateStatus: s => s < 400,
+    timeout: 20000
+  })
+  const $login = load(loginPage.data)
+  const csrf = $login('input[name="csrf_token"]').val()
+  if (!csrf) {
+    console.warn('[AtCoder Login] 未找到 csrf_token')
+    return ''
+  }
+
+  // 合并 GET 时拿到的 cookie（需要带着它才能 POST）
+  const initCookie = (loginPage.headers['set-cookie'] || [])
+    .map(c => c.split(';')[0]).join('; ')
+
+  // 2. POST /login
+  const params = new URLSearchParams()
+  params.append('username', ATCODER_USERNAME)
+  params.append('password', ATCODER_PASSWORD)
+  params.append('csrf_token', csrf)
+
+  const postResp = await axios.post('https://atcoder.jp/login', params.toString(), {
+    headers: {
+      ...HEADERS,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': initCookie,
+      'Referer': 'https://atcoder.jp/login'
+    },
+    maxRedirects: 5,
+    validateStatus: s => s < 500,
+    timeout: 20000
+  })
+
+  // 3. 收集所有 Set-Cookie
+  const rawCookies = postResp.headers['set-cookie'] || []
+  const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ')
+
+  if (!cookieStr) {
+    console.warn('[AtCoder Login] 登录后未收到 Cookie，可能账号密码有误')
+    return ''
+  }
+
+  console.log('[AtCoder Login] 登录成功，Cookie 已缓存')
+  return cookieStr
+}
+
+/**
+ * 获取带有有效 AtCoder session 的请求头。
+ * Cookie 缓存 6 小时，超时自动重新登录。
+ */
+async function getAuthedHeaders() {
+  const now = Date.now()
+  if (!_atcoderCookie || now > _atcoderCookieExpiry) {
+    _atcoderCookie = await atcoderLogin()
+    // 登录成功则缓存 6 小时；失败时 5 分钟后重试
+    _atcoderCookieExpiry = now + (_atcoderCookie ? 6 * 60 * 60 * 1000 : 5 * 60 * 1000)
+  }
+  if (!_atcoderCookie) return { ...HEADERS }
+  return { ...HEADERS, Cookie: _atcoderCookie }
 }
 
 // ─── Platform Detection ───────────────────────────────────────────────────────
@@ -201,7 +278,8 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
     + `&f.Language=${encodeURIComponent('C++')}`
   if (user) listUrl += `&f.User=${encodeURIComponent(user)}`
 
-  const resp = await axios.get(listUrl, { headers: HEADERS, timeout: 20000 })
+  const authedHeaders = await getAuthedHeaders()
+  const resp = await axios.get(listUrl, { headers: authedHeaders, timeout: 20000 })
   const $ = load(resp.data)
 
   // 找第一行中指向 .../submissions/{id} 的链接
@@ -216,9 +294,9 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   })
   if (!subHref) return ''
 
-  // 抓取提交详情页，代码在 #submission-code
+  // 抓取提交详情页，代码在 #submission-code（需要登录）
   const detailUrl = subHref.startsWith('http') ? subHref : `https://atcoder.jp${subHref}`
-  const detailResp = await axios.get(detailUrl, { headers: HEADERS, timeout: 20000 })
+  const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
   const $d = load(detailResp.data)
   return $d('#submission-code').text().trim()
 }

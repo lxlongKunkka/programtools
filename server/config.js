@@ -26,9 +26,9 @@ if (process.env.JWT_SECRET === undefined || process.env.JWT_SECRET === 'your_jwt
 export const YUN_API_KEY = process.env.YUN_API_KEY
 export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
 
-// AtCoder 账号用户名（可选）：用于优先抓取该账号的 AC 提交代码
-// 提交记录在 AtCoder 上是公开的，只需用户名，无需密码
+// AtCoder 账号（可选）：用于抓取该账号的 AC 提交代码（提交源码需登录）
 export const ATCODER_USERNAME = process.env.ATCODER_USERNAME || ''
+export const ATCODER_PASSWORD = process.env.ATCODER_PASSWORD || ''
 
 // CORS 允许的源，生产环境应在 .env 中配置；未配置则不限制来源
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
