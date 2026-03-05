@@ -1049,19 +1049,20 @@ export default {
 
         if (isMarkdownSolution) {
           solutionPlan = codeContent;
-          // 使用统一的代码提取逻辑
-          pureCode = this.extractPureCode(codeContent) || '';
-        } else if (codeContent) {
-          // 使用统一的代码提取函数
-          pureCode = this.extractPureCode(codeContent) || codeContent;
-        } else {
-          pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码，并添加详细中文注释。";
+        }
+        // 优先使用服务端已提取的纯净代码，其次 extractPureCode()
+        pureCode = (task.serverPureCode && task.serverPureCode.trim())
+          ? task.serverPureCode
+          : (this.extractPureCode(codeContent || '') || '');
+        if (!pureCode) {
+          pureCode = '用户未提供代码，请根据题目描述生成标准 AC 代码，并添加详细中文注释。';
         }
         
         const res = await request.post('/api/solution-report', {
           problem: task.translationText || task.problemText,
           code: pureCode,
-          solutionPlan: solutionPlan,  // ✅ 传递完整题解
+          reference: task.referenceText || '',  // ✅ 传递 editorial 参考
+          solutionPlan: solutionPlan,
           model: this.selectedModel,
           language: this.language
         })
@@ -2222,73 +2223,20 @@ pause
             }
         }
 
-        // 提取纯代码
-        let pureCode = codeContent || '';
-        let solutionPlan = '';
-
-        // 检查是否为 AI 生成的完整 Markdown 题解
+        // 检测是否为完整 Markdown 教案（AI 生成的详细题解）
         const isMarkdownSolution = codeContent && (
-          codeContent.includes('## 算法思路') || 
-          codeContent.includes('## 代码实现') || 
+          codeContent.includes('## 算法思路') ||
+          codeContent.includes('## 代码实现') ||
           codeContent.includes('**算法思路**')
         );
+        const solutionPlan = isMarkdownSolution ? codeContent : '';
 
-        if (isMarkdownSolution) {
-          solutionPlan = codeContent;
-          
-          // 尝试提取代码块
-          const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
-          const matches = [...codeContent.matchAll(codeBlockRegex)];
-          
-          let foundCode = false;
-          
-          // 顶级优先：寻找 <!-- AC_CODE --> 标记
-          const markerIndex = codeContent.indexOf('<!-- AC_CODE -->');
-          if (markerIndex !== -1 && matches.length > 0) {
-             for (const m of matches) {
-               if (m.index > markerIndex) {
-                 pureCode = m[1].trim();
-                 foundCode = true;
-                 break;
-               }
-             }
-          }
-
-          // 其次：寻找 "代码实现" 部分后的代码块
-          if (!foundCode) {
-            const codeSectionIndex = codeContent.indexOf('## 代码实现');
-            if (codeSectionIndex !== -1 && matches.length > 0) {
-               for (const m of matches) {
-                 if (m.index > codeSectionIndex) {
-                   pureCode = m[1].trim();
-                   foundCode = true;
-                   break;
-                 }
-               }
-            }
-          }
-          
-          if (!foundCode && matches.length > 0) {
-            let bestMatch = matches[0];
-            let maxLen = 0;
-            for (const m of matches) {
-               if (m[1].length > maxLen) {
-                  maxLen = m[1].length;
-                  bestMatch = m;
-               }
-            }
-            pureCode = bestMatch[1].trim();
-          }
-        } else {
-          if (pureCode) {
-            const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g;
-            const matches = [...codeContent.matchAll(codeBlockRegex)];
-            if (matches.length > 0) {
-              pureCode = matches[0][1].trim();
-            }
-          } else {
-            pureCode = "用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。";
-          }
+        // 优先使用服务端已提取的纯净代码，其次 extractPureCode()
+        let pureCode = (this.serverPureCode && this.serverPureCode.trim())
+          ? this.serverPureCode
+          : (this.extractPureCode(codeContent || '') || '');
+        if (!pureCode) {
+          pureCode = '用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。';
         }
         
         let problemDesc = this.translationText || this.problemText;
