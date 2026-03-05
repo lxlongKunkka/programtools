@@ -54,17 +54,29 @@ async function atcoderLogin() {
       ...HEADERS,
       'Content-Type': 'application/x-www-form-urlencoded',
       'Cookie': initCookie,
-      'Referer': 'https://atcoder.jp/login'
+      'Referer': 'https://atcoder.jp/login',
+      'Origin': 'https://atcoder.jp'
     },
-    maxRedirects: 5,
+    maxRedirects: 0,          // 不跟随重定向，直接从 302 响应拿 Set-Cookie
     validateStatus: s => s < 500,
     timeout: 20000
   })
 
-  // 3. 收集所有 Set-Cookie
+  // 3. 收集所有 Set-Cookie（302 重定向响应里的 cookie）
   const rawCookies = postResp.headers['set-cookie'] || []
-  const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ')
+  // 合并 GET + POST 两阶段的 cookie（包含 REVEL_SESSION 等）
+  const allCookies = [
+    ...initCookie.split('; ').filter(Boolean),
+    ...rawCookies.map(c => c.split(';')[0])
+  ]
+  const cookieStr = [...new Set(allCookies)].filter(Boolean).join('; ')
+  console.log(`[AtCoder Login] POST 状态码=${postResp.status}, Set-Cookie 数量=${rawCookies.length}`)
 
+  // AtCoder 登录成功 → 302 重定向；失败 → 200（继续显示登录页）
+  if (postResp.status !== 302 && postResp.status !== 303) {
+    console.warn('[AtCoder Login] 登录后未重定向，可能账号密码有误（或被 AtCoder 封禁）')
+    return ''
+  }
   if (!cookieStr) {
     console.warn('[AtCoder Login] 登录后未收到 Cookie，可能账号密码有误')
     return ''
