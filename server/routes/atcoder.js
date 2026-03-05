@@ -268,8 +268,37 @@ router.get('/debug-ac', async (req, res) => {
     let targetSubId = cppSubs[0]?.id
 
     if (!targetSubId) {
-      // fallback：爬 AtCoder 提交列表页（Cookie 已修复，现在可用）
-      log(`[debug-ac] Step4: kenkoooo 无记录，回退到 AtCoder 提交列表页`)
+      // 策略1.5：用备用知名用户查 kenkoooo
+      log(`[debug-ac] Step4a: kunkka 无记录，尝试用备用知名用户查 kenkoooo`)
+      const FALLBACK_USERS = ['tourist', 'maroon_heavy', 'kort0n', 'noimi', 'yosupo', 'Um_nik', 'Benq']
+      const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
+      for (const fbUser of FALLBACK_USERS) {
+        if (targetSubId) break
+        let fbFrom = fallbackFrom
+        for (let pg = 0; pg < 3; pg++) {
+          const fbUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFrom}`
+          log(`[debug-ac] 备用用户 ${fbUser} page=${pg}: ${fbUrl}`)
+          const fbResp = await axios.get(fbUrl, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
+          const fbBatch = fbResp.data || []
+          log(`[debug-ac] 备用用户 ${fbUser} 返回 ${fbBatch.length} 条`)
+          let acSubs = fbBatch.filter(s => s.problem_id === taskId && s.result === 'AC')
+          const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+          if (cppSubs.length > 0) acSubs = cppSubs
+          if (acSubs.length > 0) {
+            acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
+            targetSubId = String(acSubs[0].id)
+            log(`[debug-ac] 备用用户 ${fbUser} 找到 AC 提交 id=${targetSubId}`)
+            break
+          }
+          if (fbBatch.length < 500) break
+          fbFrom = fbBatch[fbBatch.length - 1].epoch_second + 1
+        }
+      }
+    }
+
+    if (!targetSubId) {
+      // 策略2：爬 AtCoder 提交列表页（需要登录）
+      log(`[debug-ac] Step4b: 备用用户也无结果，回退到 AtCoder 提交列表页（需要登录）`)
       const listUrlCpp = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC&f.Language=C%2B%2B`
       const listUrlAny = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
       for (const lu of [listUrlCpp, listUrlAny]) {
@@ -474,8 +503,39 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
     }
   }
 
-  // ── 策略2：爬 AtCoder 提交列表页（任意用户 AC，Cookie 已修复可用）─────
-  console.log(`[AtCoder AC] 回退到 AtCoder 提交列表页（任意用户）`)
+  // ── 策略1.5：kenkoooo 用备用知名用户查（适用于高难度题，kunkka 无提交时）──
+  const FALLBACK_USERS = ['tourist', 'maroon_heavy', 'kort0n', 'noimi', 'yosupo', 'Um_nik', 'Benq']
+  const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
+  for (const fbUser of FALLBACK_USERS) {
+    let fbFromSecond = fallbackFrom
+    for (let page = 0; page < 3; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(fbUser)}&from_second=${fbFromSecond}`
+      console.log(`[AtCoder AC] 备用用户 ${fbUser} page=${page}`)
+      try {
+        const apiResp = await axios.get(apiUrl, {
+          headers: { 'User-Agent': HEADERS['User-Agent'] },
+          timeout: 20000
+        })
+        const allSubs = apiResp.data || []
+        let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cppSubs.length > 0) acSubs = cppSubs
+        if (acSubs.length > 0) {
+          acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] 备用用户 ${fbUser} 找到 AC 提交 id=${acSubs[0].id}`)
+          return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+        }
+        if (allSubs.length < 500) break
+        fbFromSecond = allSubs[allSubs.length - 1].epoch_second + 1
+      } catch (e) {
+        console.warn(`[AtCoder AC] 备用用户 ${fbUser} 请求失败: ${e.message}`)
+        break
+      }
+    }
+  }
+
+  // ── 策略2：爬 AtCoder 提交列表页（需要登录 Cookie）─────────────────────
+  console.log(`[AtCoder AC] 回退到 AtCoder 提交列表页（需要登录）`)
   const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
     || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
   if (!subId) return ''
