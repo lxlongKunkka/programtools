@@ -199,9 +199,39 @@ router.get('/debug-ac', async (req, res) => {
       return res.json({ logs, error: 'ATCODER_USERNAME 或 ATCODER_PASSWORD 未配置' })
     }
 
-    // 强制重新登录（清除缓存）
+    // 强制重新登录（清除缓存）—— 内联诊断版
     _atcoderCookie = ''
     _atcoderCookieExpiry = 0
+
+    // ---- 内联诊断：直接 GET /login 拿 CSRF 并 POST ----
+    try {
+      const loginPage = await axios.get('https://atcoder.jp/login', {
+        headers: HEADERS, maxRedirects: 0, validateStatus: s => s < 400, timeout: 20000
+      })
+      const $lp = load(loginPage.data)
+      const csrf = $lp('input[name="csrf_token"]').val()
+      log(`[debug-ac] GET /login 状态码=${loginPage.status}, csrf="${csrf || '(未找到)'}"`)
+      const initCookie = (loginPage.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ')
+      log(`[debug-ac] GET /login Set-Cookie: ${loginPage.headers['set-cookie']?.join(' | ') || '(无)'}`)
+
+      if (csrf) {
+        const params = new URLSearchParams()
+        params.append('username', ATCODER_USERNAME)
+        params.append('password', ATCODER_PASSWORD)
+        params.append('csrf_token', csrf)
+        const postResp = await axios.post('https://atcoder.jp/login', params.toString(), {
+          headers: { ...HEADERS, 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': initCookie, 'Referer': 'https://atcoder.jp/login', 'Origin': 'https://atcoder.jp' },
+          maxRedirects: 0, validateStatus: s => s < 500, timeout: 20000
+        })
+        log(`[debug-ac] POST /login 状态码=${postResp.status}`)
+        log(`[debug-ac] POST /login Location="${postResp.headers['location'] || '(无)'}"`)
+        log(`[debug-ac] POST /login Set-Cookie: ${postResp.headers['set-cookie']?.join(' | ') || '(无)'}`)
+      }
+    } catch (diagErr) {
+      log(`[debug-ac] 内联诊断异常: ${diagErr.message}`)
+    }
+    // ---- 内联诊断结束 ----
+
     const cookie = await atcoderLogin()
     log(`[debug-ac] 登录结果: cookie="${cookie ? cookie.substring(0, 80) + '...' : '(空，失败)'}"`)
     if (!cookie) return res.json({ logs, error: '登录失败，cookie 为空' })
