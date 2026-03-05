@@ -1610,6 +1610,11 @@ pause
         return
       }
       const targetIndex = this.currentTaskIndex
+      // await 前先快照所有响应式输入，防止用户切换任务后读到错误内容
+      const taskSnap = this.tasks[targetIndex]
+      const problemText = taskSnap?.problemText || this.problemText
+      const manualCode = taskSnap?.manualCode || ''
+      const referenceText = taskSnap?.referenceText || ''
       
       this.isGenerating = 'code'
       this.generationStatus = '正在生成题解代码...'
@@ -1627,13 +1632,13 @@ pause
         
         let requests = []
         
-        // 1. 请求生成代码 - 优化 Prompt 构建
-        let promptText = this.problemText
+        // 1. 请求生成代码 - 优化 Prompt 构建（使用快照变量，不受任务切换影响）
+        let promptText = problemText
         let hasReference = false
         
         // 如果 manualCode 存在，提取纯代码并作为参考
-        if (this.manualCode && this.manualCode.trim()) {
-             const pureCode = this.extractPureCode(this.manualCode)
+        if (manualCode.trim()) {
+             const pureCode = this.extractPureCode(manualCode)
              if (pureCode) {
                  promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${pureCode}\n\`\`\`\n\n`
                  hasReference = true
@@ -1641,8 +1646,8 @@ pause
         }
         
         // 如果 referenceText 存在，则将其加入 Prompt
-        if (this.referenceText && this.referenceText.trim()) {
-             promptText += `\n\n【解题思路提示】\n${this.referenceText.trim()}\n\n`
+        if (referenceText.trim()) {
+             promptText += `\n\n【解题思路提示】\n${referenceText.trim()}\n\n`
              hasReference = true
         }
         
@@ -1668,7 +1673,8 @@ pause
             request('/api/generate-problem-meta', {
               method: 'POST',
               body: JSON.stringify({
-                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : this.problemText,
+                // 优先使用 tasks[targetIndex] 的翻译，避免任务切换影响
+                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : problemText,
                 model: this.selectedModel
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
@@ -1683,7 +1689,7 @@ pause
               this.saveToTask(targetIndex, 'codeOutput', res.data.result)
               if (res.data.pureCode) this.saveToTask(targetIndex, 'serverPureCode', res.data.pureCode)
            } else if (res.type === 'meta') {
-              const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+              const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
               this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
            }
         }
@@ -1801,8 +1807,8 @@ pause
         let parallelRequests = []
 
         // 3a. 解题报告
-        // 如果不是批量模式，或者批量模式下选择了包含报告，且有代码输出，则生成
-        const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && this.codeOutput
+        // 读取 tasks[targetIndex] 而非 this.codeOutput（防止用户已切换任务）
+        const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && this.tasks[targetIndex]?.codeOutput
         
         if (shouldGenerateReport) {
             this.generationSteps.report = 'processing'
@@ -1818,20 +1824,22 @@ pause
             this.generationSteps.report = 'success' // 不需要生成，视为成功
         }
         
-        // 3a. 数据生成 (使用提取的代码)
+        // 3a. 数据生成 - 从 tasks[targetIndex] 读取代码，防止任务切换竞态
+        const taskCodeOutput = this.tasks[targetIndex]?.serverPureCode || this.tasks[targetIndex]?.codeOutput || ''
         let codeForData = ''
         if (manualContent) {
-            codeForData = manualContent
-        } else if (this.codeOutput) {
-            codeForData = this.extractPureCode(this.codeOutput)
+            codeForData = this.extractPureCode(manualContent) || manualContent
+        } else if (taskCodeOutput) {
+            codeForData = this.extractPureCode(taskCodeOutput) || taskCodeOutput
         }
+        const textForDataAll = this.tasks[targetIndex]?.problemText || this.problemText
         
         this.generationSteps.data = 'processing'
         parallelRequests.push(
           request('/api/generate-data', {
             method: 'POST',
             body: JSON.stringify({
-              text: this.problemText,
+              text: textForDataAll,
               model: this.selectedModel,
               code: codeForData
             })
@@ -1857,8 +1865,9 @@ pause
               request('/api/generate-problem-meta', {
                 method: 'POST',
                 body: JSON.stringify({
-                  text: this.translationText || this.problemText, // 优先使用翻译后的文本
-                  solution: this.codeOutput,
+                  // 从 tasks[targetIndex] 读取，防止任务切换后读到错误内容
+                  text: this.tasks[targetIndex]?.translationText || this.tasks[targetIndex]?.problemText || this.problemText,
+                  solution: this.tasks[targetIndex]?.codeOutput,
                   model: this.selectedModel
                 })
               }).then(res => {
@@ -1867,7 +1876,7 @@ pause
                   if (res) {
                       try {
                           const meta = res
-                          const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+                          const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
                           if (!existingMeta.title || existingMeta.title === '题目标题') {
                               this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
                           } else {
@@ -1903,7 +1912,7 @@ pause
                 if (res.data) {
                     try {
                         const meta = res.data
-                        const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+                        const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
                         if (!existingMeta.title || existingMeta.title === '题目标题') {
                             this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
                         } else {
@@ -2007,7 +2016,7 @@ pause
            if (res.type === 'data' && res.data.result) {
               this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
            } else if (res.type === 'meta') {
-              const existingMeta = targetIndex === this.currentTaskIndex ? (this.problemMeta || {}) : (this.tasks[targetIndex]?.problemMeta || {})
+              const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
               this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
            }
         }
