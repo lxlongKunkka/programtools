@@ -1940,22 +1940,30 @@ pause
     },
     
     async generateData() {
-      const hasManualCode = this.manualCode && this.manualCode.trim()
-      const textForData = hasManualCode 
-        ? (this.problemText || '请根据代码逻辑生成测试数据') 
-        : this.problemText
-        
+      // すべての入力を await より前に tasks[] から確定する（タスク切り替え競合防止）
+      const targetIndex = this.currentTaskIndex
+      const taskSnapshot = this.tasks[targetIndex]
+      const hasManualCode = !!(taskSnapshot?.manualCode?.trim())
+      const textForData = hasManualCode
+        ? (taskSnapshot?.problemText || '请根据代码逻辑生成测试数据')
+        : (taskSnapshot?.problemText || '')
+
       if (!textForData.trim()) {
         this.showToastMessage('请先输入题目描述')
         return
       }
-      const targetIndex = this.currentTaskIndex
-      
+
+      // codeForData も await 前に確定する（await 後は this.codeOutput が別タスクのものになる可能性がある）
+      const rawCodeForData = hasManualCode
+        ? taskSnapshot?.manualCode
+        : (taskSnapshot?.serverPureCode || taskSnapshot?.codeOutput || '')
+      const codeForData = this.extractPureCode(rawCodeForData || '') || rawCodeForData || ''
+
       this.isGenerating = 'data'
       this.generationStatus = '正在生成数据脚本...'
       this.dataOutput = ''
       this.activeTab = 'data'
-      
+
       try {
         // 确保有翻译文本，保证元数据基于译文
         if (!(this.tasks[targetIndex]?.translationText?.trim())) {
@@ -1963,17 +1971,10 @@ pause
           await this.autoTranslate(targetIndex)
           this.generationStatus = '翻译完成，正在生成数据脚本...'
         }
-        
-        let requests = []
-        
-        // 1. 请求生成数据 - 统一使用 extractPureCode 提取代码
-        let codeForData = ''
-        if (hasManualCode) {
-            codeForData = this.extractPureCode(this.manualCode)
-        } else if (this.codeOutput) {
-            codeForData = this.extractPureCode(this.codeOutput)
-        }
 
+        let requests = []
+
+        // 1. 生成数据脚本
         requests.push(
           request('/api/generate-data', {
             method: 'POST',
@@ -1992,7 +1993,7 @@ pause
               method: 'POST',
               body: JSON.stringify({
                 text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : textForData,
-                solution: this.tasks[targetIndex]?.codeOutput || this.codeOutput,
+                solution: this.tasks[targetIndex]?.codeOutput,
                 model: this.selectedModel
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
