@@ -2977,9 +2977,19 @@ python data_generator.py
       }
 
       // 6) 输出 YAML
-      // AtCoder 题目用 atcoderTitle（如 [ABC235B] xxx），其余用 finalTitle
+      // AtCoder 题目：取 atcoderTitle 中的 [ABC235B] 前缀 + meta.title（AI生成的描述性标题）
       const atcoderTitleForYaml = currentMeta?.atcoderTitle
-      const yamlRawTitle = atcoderTitleForYaml || finalTitle
+      let yamlRawTitle
+      if (atcoderTitleForYaml) {
+        // 提取 [ABC235B] 前缀部分
+        const bracketMatch = atcoderTitleForYaml.match(/^(\[[^\]]+\])/)
+        const prefix = bracketMatch ? bracketMatch[1] : ''
+        // 用 meta.title（AI生成）作为后半部分，兜底用原 atcoderTitle 中的纯标题
+        const titlePart = finalTitle || atcoderTitleForYaml.replace(/^\[[^\]]+\]\s*/, '')
+        yamlRawTitle = prefix ? `${prefix} ${titlePart}` : titlePart
+      } else {
+        yamlRawTitle = finalTitle
+      }
       // YAML 中 [ 是特殊字符，含方括号的标题需加引号
       const yamlTitle = /[\[\]:{}&*!|>'"%@`]/.test(yamlRawTitle) ? `"${yamlRawTitle.replace(/"/g, '\\"')}"` : yamlRawTitle
       let yaml = `title: ${yamlTitle}\n`
