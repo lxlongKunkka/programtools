@@ -1398,7 +1398,10 @@ pause
     async addProblemAsTask(url, fallbackTitle) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const editorial = data.editorial || ''
-      if (editorial) {
+      const acCode = data.acCode || ''
+      if (acCode) {
+        this.showToastMessage('✅ 已自动抓取 AC 代码')
+      } else if (editorial) {
         this.showToastMessage('✅ 已自动抓取 AtCoder 解题思路')
       }
 
@@ -1422,6 +1425,7 @@ pause
         this.tasks[this.currentTaskIndex] = {
           ...cur,
           problemText: data.content || '',
+          manualCode: acCode,
           referenceText: editorial,
           translationText: '',
           translationEnglish: '',
@@ -1439,7 +1443,7 @@ pause
         id: Date.now() + Math.random(),
         status: 'pending',
         problemText: data.content || '',
-        manualCode: '',
+        manualCode: acCode,
         referenceText: editorial,
         codeOutput: '',
         serverPureCode: '',
