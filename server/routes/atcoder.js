@@ -18,6 +18,21 @@ function detectPlatform(url) {
   return 'unknown'
 }
 
+// SSRF 防护：只允许已知外部竞赛平台域名，拒绝内网/任意地址
+const ALLOWED_HOSTS = [
+  /^([\w-]+\.)?atcoder\.jp$/i,
+  /^([\w-]+\.)?codeforces\.com$/i,
+]
+function isAllowedUrl(urlStr) {
+  try {
+    const { protocol, hostname } = new URL(urlStr)
+    if (protocol !== 'https:' && protocol !== 'http:') return false
+    return ALLOWED_HOSTS.some(re => re.test(hostname))
+  } catch {
+    return false
+  }
+}
+
 function parseAtCoderContestId(url) {
   const match = url.match(/atcoder\.jp\/contests\/([a-zA-Z0-9_-]+)/)
   return match ? match[1] : null
@@ -28,6 +43,7 @@ function parseAtCoderContestId(url) {
 router.get('/contest', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
+  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces' })
 
   const platform = detectPlatform(url)
   try {
@@ -48,6 +64,7 @@ router.get('/contest', authenticateToken, async (req, res) => {
 router.get('/problem', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
+  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces' })
 
   const platform = detectPlatform(url)
   try {

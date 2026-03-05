@@ -93,8 +93,7 @@ startDailyReportJob()
 // Global error handlers for uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! Server crashing...', err)
-  // Ideally we should exit, but for dev/debug we might want to keep it alive or at least log it
-  // process.exit(1) 
+  process.exit(1)
 })
 
 process.on('unhandledRejection', (reason, promise) => {

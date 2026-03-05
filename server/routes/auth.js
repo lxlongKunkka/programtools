@@ -52,12 +52,13 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: { uid: user._id, username: user.uname, role: role, priv: user.priv } })
   } catch (e) {
     console.error('Login error:', e)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: '登录失败，请稍后重试' })
   }
 })
 
 router.post('/register', async (req, res) => {
-  const { username, password, role } = req.body
+  const { username, password } = req.body
+  // 严禁客户端传入 role，固定注册为普通用户
   try {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
@@ -65,12 +66,13 @@ router.post('/register', async (req, res) => {
     const newUser = new User({
       username,
       password: hashedPassword,
-      role: role || 'user'
+      role: 'user'
     })
     await newUser.save()
     res.json({ message: 'User registered successfully' })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('Register error:', e)
+    res.status(500).json({ error: '注册失败，请检查用户名是否已存在' })
   }
 })
 

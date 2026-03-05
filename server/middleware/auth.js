@@ -90,7 +90,8 @@ export const protectStatic = (req, res, next) => {
 
 export const requireRole = (role) => {
   return (req, res, next) => {
-    const isAdmin = req.user && (req.user.role === 'admin' || req.user.priv === -1 || req.user.priv === 1)
+    // priv === -1 是管理员，priv === 1 是普通用户，不应赋予管理员权限
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.priv === -1)
     
     if (isAdmin) return next()
 

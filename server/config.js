@@ -13,6 +13,16 @@ export const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017
 export const HYDRO_MONGODB_URI = process.env.HYDRO_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/hydro'
 export const APP_MONGODB_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools'
 export const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_this'
+
+// 启动时强制校验 JWT_SECRET，防止使用默认值导致 token 可被伪造
+if (process.env.JWT_SECRET === undefined || process.env.JWT_SECRET === 'your_jwt_secret_key_change_this') {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[FATAL] JWT_SECRET 未在 .env 中配置或使用了默认值，生产环境禁止使用默认密钥！')
+    process.exit(1)
+  } else {
+    console.warn('[WARN] JWT_SECRET 使用默认值，请在 server/.env 中配置强密钥（仅开发环境允许）')
+  }
+}
 export const YUN_API_KEY = process.env.YUN_API_KEY
 export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
 export const DEBUG_LOG = (process.env.DEBUG_LOG === '1' || process.env.DEBUG === 'true')

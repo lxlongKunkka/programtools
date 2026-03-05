@@ -16,7 +16,7 @@
         </select>
       </div>
       <div class="toolbar-right">
-        <button @click="generatePlan" :disabled="loading || !problemText.trim()" class="btn-secondary" style="background-color: #e6f7ff; color: #1890ff; border: 1px solid #1890ff;">
+        <button @click="generatePlan" :disabled="loadingPlan || loading || !problemText.trim()" class="btn-secondary" style="background-color: #e6f7ff; color: #1890ff; border: 1px solid #1890ff;">
           {{ loadingPlan ? '⏳ 生成教案中...' : '📘 生成教案' }}
         </button>
         <button @click="generate" :disabled="loading || !problemText.trim()" class="btn-primary">
@@ -66,7 +66,7 @@
           <h3>预览</h3>
         </div>
         <div class="preview-area" v-if="resultHtml">
-          <iframe :srcdoc="resultHtml" frameborder="0" width="100%" height="100%"></iframe>
+          <iframe :srcdoc="resultHtml" frameborder="0" width="100%" height="100%" sandbox="allow-scripts"></iframe>
         </div>
         <div class="preview-area empty" v-else>
           <p>✨ 生成的 HTML 报告将显示在这里</p>
@@ -112,9 +112,14 @@ export default {
     }
   },
   async mounted() {
-    this.rawModelOptions = await getModels()
-    if (this.modelOptions.length > 0) {
-      this.model = this.modelOptions[0].id
+    try {
+      this.rawModelOptions = await getModels()
+      if (this.modelOptions.length > 0) {
+        this.model = this.modelOptions[0].id
+      }
+    } catch (e) {
+      console.error('Failed to load models:', e)
+      // 降级使用默认模型，页面仍可正常使用
     }
 
     this.checkAutoFill()
