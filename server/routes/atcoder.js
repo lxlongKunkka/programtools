@@ -100,7 +100,8 @@ async function fetchAtCoderProblem(url) {
   const resp = await axios.get(enUrl, { headers: HEADERS, timeout: 20000 })
   const $ = load(resp.data)
 
-  const rawTitle = $('span.h2').first().text().trim()
+  // 只取直接文本节点，忽略子元素（如 span.h2 内可能嵌有 <a>Editorial</a>）
+  const rawTitle = $('span.h2').first().contents().filter((_, n) => n.type === 'text').text().trim()
   const pageTitle = $('title').text().trim()
   const title = rawTitle || pageTitle.split('-')[0].trim()
 
