@@ -38,9 +38,10 @@ setupSocket(httpServer)
 
 app.use(cors({
   origin: (origin, callback) => {
-    // 允许无 origin （server-to-server / curl）和列表内的来源
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true)
-    callback(new Error(`CORS: origin '${origin}' not allowed`))
+    // 未配置白名单时允许全部来源；已配置时只允许列表内的来源
+    if (!ALLOWED_ORIGINS || !origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true)
+    // 用 false 而非 Error，避免触发全局错误处理器返回 500
+    callback(null, false)
   },
   credentials: true
 }))
