@@ -31,7 +31,9 @@ router.post('/convert', authenticateToken, async (req, res) => {
     const requestDir = path.join(TEMP_DIR, requestId)
     fs.mkdirSync(requestDir)
 
-    const pdfPath = path.join(requestDir, fileName)
+    // 防止路径穿越：只取文件名部分，剥离所有路径分隔符
+    const safeFileName = path.basename(fileName).replace(/[/\\]/g, '') || 'upload.pdf'
+    const pdfPath = path.join(requestDir, safeFileName)
     const base64Data = fileData.replace(/^data:application\/pdf;base64,/, "")
     await fs.promises.writeFile(pdfPath, base64Data, 'base64')
 
@@ -102,22 +104,19 @@ router.post('/convert-html', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('HTML Conversion error:', error)
-    res.status(500).json({ 
-        error: 'Conversion failed', 
-        details: error.message
-    })
+    res.status(500).json({ error: 'Conversion failed' })
   }
 })
 
 router.post('/send-email', authenticateToken, async (req, res) => {
   try {
-    const { zipData, fileName, to } = req.body
+    const { zipData, fileName } = req.body
     if (!zipData || !fileName) {
       return res.status(400).json({ error: 'Missing zip data or filename' })
     }
 
-    // Default recipient if not provided
-    const recipient = to || '110076790@qq.com'
+    // 收件人固定为配置项，禁止用户自定义 to（防止开放邮件中继）
+    const recipient = MAIL_CONFIG.to || '110076790@qq.com'
 
     const transporter = nodemailer.createTransport({
       host: MAIL_CONFIG.host,
@@ -149,7 +148,7 @@ router.post('/send-email', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Send Email Error:', error)
-    res.status(500).json({ error: 'Failed to send email', details: error.message })
+    res.status(500).json({ error: 'Failed to send email' })
   }
 })
 
