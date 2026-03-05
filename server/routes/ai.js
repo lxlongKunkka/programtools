@@ -1275,9 +1275,9 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
         fixed = fixed.replace(/output_gen\s*\(\s*['"][^'"]*['"]\s*\)/g, "output_gen('std.exe')")
       } catch (e) {}
 
-      return res.json({ result: fixed })
+      return res.json({ result: fixed, pureCode: extractPureCode(fixed) })
     } catch (e) {
-      return res.json({ result: content })
+      return res.json({ result: content, pureCode: extractPureCode(content) })
     }
   } catch (err) {
     console.error('Solve error:', err?.response?.data || err.message || err)
