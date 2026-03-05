@@ -150,10 +150,44 @@ async function fetchAtCoderProblem(url) {
     console.warn('[AtCoder Editorial] 抓取失败（不影响题目）:', e.message)
   }
 
-  return { title, content, hasEnglish, url: enUrl, editorial }
+  // 从 editorial 文本中提取最完整的代码块作为 acCode
+  const acCode = extractBestCodeFromMarkdown(editorial)
+
+  return { title, content, hasEnglish, url: enUrl, editorial, acCode }
 }
 
 // ─── AtCoder Editorial (解题思路) ─────────────────────────────────────────────
+
+/**
+ * 从 editorial markdown 文本中提取最有可能是 AC 代码的代码块。
+ * 优先选取以 cpp/c++ 标注的且行数最多的代码块；若无，则选取最长的任意代码块。
+ */
+function extractBestCodeFromMarkdown(markdown) {
+  if (!markdown) return ''
+
+  // 匹配所有 ``` 代码块（带或不带语言标注）
+  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g
+  const blocks = []
+  let m
+  while ((m = codeBlockRegex.exec(markdown)) !== null) {
+    const lang = m[1].toLowerCase()
+    const code = m[2].trim()
+    if (code.length > 20) {   // 忽略过短的片段（示例输入等）
+      blocks.push({ lang, code })
+    }
+  }
+
+  if (blocks.length === 0) return ''
+
+  // 优先取 cpp/c++/c 标注且最长的代码块
+  const cppBlocks = blocks.filter(b => /^(c\+\+|cpp|c)$/.test(b.lang))
+  if (cppBlocks.length > 0) {
+    return cppBlocks.reduce((a, b) => (a.code.length >= b.code.length ? a : b)).code
+  }
+
+  // 其次按代码长度取最长
+  return blocks.reduce((a, b) => (a.code.length >= b.code.length ? a : b)).code
+}
 
 /**
  * 从 editorial 索引页面（cheerio 对象）中找到指定题目标签的 editorial 链接。

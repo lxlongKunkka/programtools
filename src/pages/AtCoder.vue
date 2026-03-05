@@ -400,6 +400,7 @@ export default {
           const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(problem.url)}`)
           r.content = data.content
           r.editorial = data.editorial || ''
+          r.acCode = data.acCode || ''   // 从 editorial 提取的 AC 代码（若有）
           r.currentStep = null
         } catch (err) {
           this.setError(taskId, 'content', err.message)
@@ -433,7 +434,7 @@ export default {
             text: r.translation,
             model: this.model,
             language: this.language,
-            referenceText: r.editorial || ''
+            acCode: r.acCode || ''   // 传递 editorial 中提取的 AC 代码（有则讲解，无则独立解题）
           })
           r.code = data.result || JSON.stringify(data)
           r.currentStep = null
