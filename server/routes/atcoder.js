@@ -206,34 +206,53 @@ router.get('/debug-ac', authenticateToken, async (req, res) => {
     const [, contestId, taskId] = taskMatch
     log(`[debug-ac] Step2: contestId=${contestId}, taskId=${taskId}`)
 
-    // Step 3: 用 kenkoooo 多窗口翻页查找用户 AC 提交
+    // Step 3: kenkoooo 真正分页翻页（每页500条，从头翻到找到为止，最多15页）
     const authedHeaders = await getAuthedHeaders()
-    const now2 = Math.floor(Date.now() / 1000)
-    const searchWindows = [
-      now2 - 6 * 30 * 24 * 3600,
-      now2 - 2 * 365 * 24 * 3600,
-      now2 - 4 * 365 * 24 * 3600
-    ]
     let userSubs = []
-    for (const fromSec of searchWindows) {
+    let fromSec = 0
+    const MAX_PAGES = 15
+    for (let page = 0; page < MAX_PAGES; page++) {
       const apiUrl1 = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSec}`
-      log(`[debug-ac] Step3: from_second=${fromSec} ${apiUrl1}`)
+      log(`[debug-ac] Step3 page=${page} from_second=${fromSec}: ${apiUrl1}`)
       const apiResp1 = await axios.get(apiUrl1, { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000 })
       const batch = (apiResp1.data || [])
       log(`[debug-ac] kenkoooo 返回总条数=${batch.length}`)
       const found = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
       log(`[debug-ac] 用户${ATCODER_USERNAME} 本批 AC提交数=${found.length}`)
       if (found.length > 0) { userSubs = found; break }
-      // 不能因为 < 500 就 break：该窗口没找到时需要继续到更早的窗口
+      if (batch.length < 500) { log('[debug-ac] 已是最后一页，kenkoooo 无更多数据'); break }
+      // 翻页：用最后一条的时间戳+1作为下一页起点
+      fromSec = batch[batch.length - 1].epoch_second + 1
     }
 
-    // Step 4: 从找到的 AC 提交里选目标（优先 C++）
+    // Step 4: 从找到的 AC 提交里选目标（优先 C++），若 kenkoooo 无记录则爬列表页
     let cppSubs = userSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
     if (cppSubs.length === 0) cppSubs = userSubs
     cppSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-    const targetSubId = cppSubs[0]?.id
+    let targetSubId = cppSubs[0]?.id
+
+    if (!targetSubId) {
+      // fallback：爬 AtCoder 提交列表页（Cookie 已修复，现在可用）
+      log(`[debug-ac] Step4: kenkoooo 无记录，回退到 AtCoder 提交列表页`)
+      const listUrlCpp = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC&f.Language=C%2B%2B`
+      const listUrlAny = `https://atcoder.jp/contests/${contestId}/submissions?f.Task=${encodeURIComponent(taskId)}&f.Status=AC`
+      for (const lu of [listUrlCpp, listUrlAny]) {
+        log(`[debug-ac] 爬列表页: ${lu}`)
+        const lr = await axios.get(lu, { headers: authedHeaders, timeout: 20000 })
+        const $l = load(lr.data)
+        log(`[debug-ac] 列表页 title=${$l('title').text().trim()}, tbody tr 数=${$l('table tbody tr').length}`)
+        $l('table tbody tr').each((_, row) => {
+          if (targetSubId) return
+          const href = $l(row).find('a[href*="/submissions/"]').last().attr('href') || ''
+          const m = href.match(/\/submissions\/(\d+)/)
+          if (m) targetSubId = m[1]
+        })
+        if (targetSubId) break
+      }
+    }
+
     log(`[debug-ac] Step4: 目标提交 id=${targetSubId || '(not found)'}`)
-    if (!targetSubId) return res.json({ logs, error: '未找到任何 AC 提交（kunkka 账号该题暂无 AC 记录）' })
+    if (!targetSubId) return res.json({ logs, error: '未找到任何 AC 提交' })
 
     const subHref = `/contests/${contestId}/submissions/${targetSubId}`
 
@@ -379,47 +398,52 @@ async function fetchAtCoderAcCode(contestId, taskId) {
 /**
  * 从提交列表中找第一条 AC 提交，再抓取其源码。
  *
- * 策略：用 kenkoooo user/submissions API 分窗口翻页查找，无需依赖登录 Cookie。
- * 任意用户时使用配置账号（kunkka）作为代理查询。
+ * 策略：
+ *  1. 配置用户（kunkka）：kenkoooo 真正分页翻页，每页500条，直到找到或翻完
+ *  2. 任意用户 fallback：直接爬 AtCoder 提交列表页（登录 Cookie 已修复，现在可用）
  */
 async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   const authedHeaders = await getAuthedHeaders()
   const targetUser = user || ATCODER_USERNAME
-  if (!targetUser) return ''
 
-  // kenkoooo 每页 500 条，按 epoch_second 升序。
-  // 用三个时间窗口（近6个月、近2年、近4年）覆盖不同年代的比赛。
-  const now = Math.floor(Date.now() / 1000)
-  const windows = [
-    now - 6 * 30 * 24 * 3600,
-    now - 2 * 365 * 24 * 3600,
-    now - 4 * 365 * 24 * 3600
-  ]
-
-  for (const fromSecond of windows) {
-    const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(targetUser)}&from_second=${fromSecond}`
-    console.log(`[AtCoder AC] kenkoooo from_second=${fromSecond} user=${targetUser}`)
-    try {
-      const apiResp = await axios.get(apiUrl, {
-        headers: { 'User-Agent': HEADERS['User-Agent'] },
-        timeout: 20000
-      })
-      const allSubs = apiResp.data || []
-      console.log(`[AtCoder AC] 返回 ${allSubs.length} 条`)
-      let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
-      const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-      if (cppSubs.length > 0) acSubs = cppSubs
-      if (acSubs.length > 0) {
-        acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
-        console.log(`[AtCoder AC] task=${taskId} 找到 AC 提交 id=${acSubs[0].id}`)
-        return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+  // ── 策略1：kenkoooo 真正分页翻页（最多翻30页=15000条） ─────────────────
+  if (targetUser) {
+    let fromSecond = 0
+    const MAX_PAGES = 30
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(targetUser)}&from_second=${fromSecond}`
+      console.log(`[AtCoder AC] kenkoooo page=${page} from_second=${fromSecond}`)
+      try {
+        const apiResp = await axios.get(apiUrl, {
+          headers: { 'User-Agent': HEADERS['User-Agent'] },
+          timeout: 20000
+        })
+        const allSubs = apiResp.data || []
+        console.log(`[AtCoder AC] 返回 ${allSubs.length} 条`)
+        let acSubs = allSubs.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cppSubs = acSubs.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cppSubs.length > 0) acSubs = cppSubs
+        if (acSubs.length > 0) {
+          acSubs.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] task=${taskId} 找到 AC 提交 id=${acSubs[0].id}`)
+          return await fetchSubmissionCode(contestId, acSubs[0].id, authedHeaders)
+        }
+        if (allSubs.length < 500) break  // 已是最后一页
+        // 翻页：取本批最后一条时间戳+1作为下一页起点
+        fromSecond = allSubs[allSubs.length - 1].epoch_second + 1
+      } catch (e) {
+        console.warn(`[AtCoder AC] kenkoooo 请求失败: ${e.message}`)
+        break
       }
-      // 不能因为 < 500 就 break：窗口1没找到时必须继续到更早的窗口2、3
-    } catch (e) {
-      console.warn(`[AtCoder AC] kenkoooo 请求失败: ${e.message}`)
     }
   }
-  return ''
+
+  // ── 策略2：爬 AtCoder 提交列表页（任意用户 AC，Cookie 已修复可用）─────
+  console.log(`[AtCoder AC] kenkoooo 未找到，回退到 AtCoder 提交列表页`)
+  const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
+    || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
+  if (!subId) return ''
+  return await fetchSubmissionCode(contestId, subId, authedHeaders)
 }
 
 /**
