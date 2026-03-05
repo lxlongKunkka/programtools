@@ -404,14 +404,14 @@ async function fetchAtCoderAcCode(contestId, taskId) {
  */
 async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   const authedHeaders = await getAuthedHeaders()
-  const targetUser = user || ATCODER_USERNAME
 
-  // ── 策略1：kenkoooo 真正分页翻页（最多翻30页=15000条） ─────────────────
-  if (targetUser) {
+  // ── 策略1：kenkoooo 真正分页翻页（仅当指定了具体用户时） ─────────────────
+  // user='' 表示"任意用户"，直接跳到策略2，避免重复搜配置账号
+  if (user) {
     let fromSecond = 0
     const MAX_PAGES = 30
     for (let page = 0; page < MAX_PAGES; page++) {
-      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(targetUser)}&from_second=${fromSecond}`
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=${fromSecond}`
       console.log(`[AtCoder AC] kenkoooo page=${page} from_second=${fromSecond}`)
       try {
         const apiResp = await axios.get(apiUrl, {
@@ -439,7 +439,7 @@ async function fetchFirstAcCppSubmission(contestId, taskId, user) {
   }
 
   // ── 策略2：爬 AtCoder 提交列表页（任意用户 AC，Cookie 已修复可用）─────
-  console.log(`[AtCoder AC] kenkoooo 未找到，回退到 AtCoder 提交列表页`)
+  console.log(`[AtCoder AC] 回退到 AtCoder 提交列表页（任意用户）`)
   const subId = await findAcSubIdFromListPage(contestId, taskId, authedHeaders, true)
     || await findAcSubIdFromListPage(contestId, taskId, authedHeaders, false)
   if (!subId) return ''
