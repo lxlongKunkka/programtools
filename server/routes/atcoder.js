@@ -267,38 +267,45 @@ async function fetchAtCoderAcCode(contestId, taskId) {
 }
 
 /**
- * 从提交列表中找第一条 C++ AC 提交，再抓取其源码。
- * AtCoder f.Language 参数支持子串匹配，传 "C++" 可命中所有 C++ 版本。
+ * 从提交列表中找第一条 AC 提交，再抓取其源码。
+ * 不过滤语言（AtCoder语言ID不固定，用字符串过滤可能返回空）。
  */
 async function fetchFirstAcCppSubmission(contestId, taskId, user) {
-  // 构造筛选 URL：AC + C++ + (可选)指定用户
+  // 构造筛选 URL：AC + (可选)指定用户
   let listUrl = `https://atcoder.jp/contests/${contestId}/submissions`
     + `?f.Task=${encodeURIComponent(taskId)}`
     + `&f.Status=AC`
-    + `&f.Language=${encodeURIComponent('C++')}`
   if (user) listUrl += `&f.User=${encodeURIComponent(user)}`
 
+  console.log(`[AtCoder AC] 请求提交列表: ${listUrl}`)
   const authedHeaders = await getAuthedHeaders()
   const resp = await axios.get(listUrl, { headers: authedHeaders, timeout: 20000 })
   const $ = load(resp.data)
 
-  // 找第一行中指向 .../submissions/{id} 的链接
+  const rows = $('table tbody tr').toArray()
+  console.log(`[AtCoder AC] 找到 ${rows.length} 行提交记录，用户="${user || 'any'}"`)
+
+  // 找第一行中指向 .../submissions/{id} 的链接（Detail 列）
   let subHref = ''
-  $('table tbody tr').each((_, row) => {
-    if (subHref) return false
-    // 取行内最后一个 /submissions/ 链接（即"Detail"列）
+  for (const row of rows) {
     const links = $(row).find('a[href*="/submissions/"]').toArray()
     if (links.length > 0) {
       subHref = $(links[links.length - 1]).attr('href') || ''
+      if (subHref) break
     }
-  })
+  }
+  console.log(`[AtCoder AC] subHref=${subHref || '(not found)'}`)
   if (!subHref) return ''
 
-  // 抓取提交详情页，代码在 #submission-code（需要登录）
+  // 抓取提交详情页（需要登录才能看源码）
   const detailUrl = subHref.startsWith('http') ? subHref : `https://atcoder.jp${subHref}`
   const detailResp = await axios.get(detailUrl, { headers: authedHeaders, timeout: 20000 })
   const $d = load(detailResp.data)
-  return $d('#submission-code').text().trim()
+  const code = $d('#submission-code').text().trim()
+    || $d('pre.prettyprint').text().trim()
+    || $d('.source-code').text().trim()
+  console.log(`[AtCoder AC] 源码长度=${code.length}`)
+  return code
 }
 
 /**
