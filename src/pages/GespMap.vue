@@ -54,30 +54,75 @@
             >
               {{ sg.shortTitle }}
             </div>
-            <div
-              v-for="nodeId in sg.nodeIds"
-              :key="nodeId"
-              class="gesp-node"
-              :class="{
-                'node-hovered':       hoveredId === nodeId,
-                'node-highlight-in':  hoveredId && hoveredAllIn.has(nodeId),
-                'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
-                'node-dimmed':        hoveredId && hoveredId !== nodeId
-                                        && !hoveredAllIn.has(nodeId)
-                                        && !hoveredAllOut.has(nodeId)
-              }"
-              :style="{
-                background:   LEVEL_COLORS[sg.id]?.bg,
-                borderColor:  LEVEL_COLORS[sg.id]?.border,
-                color:        LEVEL_COLORS[sg.id]?.text
-              }"
-              :ref="el => { if (el) nodeRefs[nodeId] = el }"
-              @mouseenter="hoveredId = nodeId"
-              @mouseleave="hoveredId = null"
-              @click="onNodeClick(nodeId)"
-            >
-              {{ nodes[nodeId]?.label }}
-            </div>
+
+            <!-- g9/g10: grouped + collapsible -->
+            <template v-if="sg.groups.length">
+              <div v-for="grp in sg.groups" :key="grp.cat" class="node-group">
+                <div
+                  class="group-header"
+                  :style="{ borderColor: LEVEL_COLORS[sg.id]?.border, color: LEVEL_COLORS[sg.id]?.border }"
+                  @click="toggleGroup(sg.id, grp.cat)"
+                >
+                  <span class="group-toggle">{{ isCollapsed(sg.id, grp.cat) ? '▶' : '▼' }}</span>
+                  {{ grp.cat }}
+                  <span class="group-count">{{ grp.nodeIds.length }}</span>
+                </div>
+                <template v-if="!isCollapsed(sg.id, grp.cat)">
+                  <div
+                    v-for="nodeId in grp.nodeIds"
+                    :key="nodeId"
+                    class="gesp-node"
+                    :class="{
+                      'node-hovered':       hoveredId === nodeId,
+                      'node-highlight-in':  hoveredId && hoveredAllIn.has(nodeId),
+                      'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
+                      'node-dimmed':        hoveredId && hoveredId !== nodeId
+                                              && !hoveredAllIn.has(nodeId)
+                                              && !hoveredAllOut.has(nodeId)
+                    }"
+                    :style="{
+                      background:   LEVEL_COLORS[sg.id]?.bg,
+                      borderColor:  LEVEL_COLORS[sg.id]?.border,
+                      color:        LEVEL_COLORS[sg.id]?.text
+                    }"
+                    :ref="el => { if (el) nodeRefs[nodeId] = el }"
+                    @mouseenter="hoveredId = nodeId"
+                    @mouseleave="hoveredId = null"
+                    @click="onNodeClick(nodeId)"
+                  >
+                    {{ nodes[nodeId]?.label }}
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- g1-g8: flat list -->
+            <template v-else>
+              <div
+                v-for="nodeId in sg.nodeIds"
+                :key="nodeId"
+                class="gesp-node"
+                :class="{
+                  'node-hovered':       hoveredId === nodeId,
+                  'node-highlight-in':  hoveredId && hoveredAllIn.has(nodeId),
+                  'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
+                  'node-dimmed':        hoveredId && hoveredId !== nodeId
+                                          && !hoveredAllIn.has(nodeId)
+                                          && !hoveredAllOut.has(nodeId)
+                }"
+                :style="{
+                  background:   LEVEL_COLORS[sg.id]?.bg,
+                  borderColor:  LEVEL_COLORS[sg.id]?.border,
+                  color:        LEVEL_COLORS[sg.id]?.text
+                }"
+                :ref="el => { if (el) nodeRefs[nodeId] = el }"
+                @mouseenter="hoveredId = nodeId"
+                @mouseleave="hoveredId = null"
+                @click="onNodeClick(nodeId)"
+              >
+                {{ nodes[nodeId]?.label }}
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -121,19 +166,31 @@ function parseMmd(raw) {
   const lines = raw.split('\n')
   const subgraphs = [], nodes = {}, edges = []
   let currentSg = null
+  let currentCat = null
   for (const line of lines) {
     const t = line.trim()
     const sgM = t.match(/^subgraph\s+(\w+)\["([^"]+)"\]/)
     if (sgM) {
       const short = sgM[2].replace(/^gesp[\d-]+\s*/, '')
-      currentSg = { id: sgM[1], shortTitle: short, nodeIds: [] }
+      currentSg = { id: sgM[1], shortTitle: short, nodeIds: [], groups: [] }
+      currentCat = null
       subgraphs.push(currentSg); continue
     }
-    if (t === 'end') { currentSg = null; continue }
+    if (t === 'end') { currentSg = null; currentCat = null; continue }
+    const catM = t.match(/^%%\s*cat:(.+)$/)
+    if (catM && currentSg) {
+      currentCat = catM[1].trim()
+      currentSg.groups.push({ cat: currentCat, nodeIds: [] })
+      continue
+    }
     const nodeM = t.match(/^([A-H]\d+)\[([^\]]+)\]/)
     if (nodeM && currentSg) {
       nodes[nodeM[1]] = { id: nodeM[1], label: nodeM[2], sgId: currentSg.id }
-      currentSg.nodeIds.push(nodeM[1]); continue
+      currentSg.nodeIds.push(nodeM[1])
+      if (currentCat && currentSg.groups.length) {
+        currentSg.groups[currentSg.groups.length - 1].nodeIds.push(nodeM[1])
+      }
+      continue
     }
     if (t.includes('-->') && !t.startsWith('%')) {
       const chain = t.split('-->')
@@ -151,6 +208,23 @@ function parseMmd(raw) {
 }
 
 const { subgraphs, nodes, edges } = parseMmd(mmdRaw)
+
+// ── Collapsed state for category groups (g9/g10) ─────────────────
+// key: `${sgId}::${cat}`, true = collapsed
+const collapsedGroups = reactive({})
+for (const sg of subgraphs) {
+  for (const grp of sg.groups) {
+    collapsedGroups[`${sg.id}::${grp.cat}`] = true  // default collapsed
+  }
+}
+function toggleGroup(sgId, cat) {
+  const k = `${sgId}::${cat}`
+  collapsedGroups[k] = !collapsedGroups[k]
+  nextTick(() => computeEdges())
+}
+function isCollapsed(sgId, cat) {
+  return collapsedGroups[`${sgId}::${cat}`]
+}
 
 // ── Adjacency maps ────────────────────────────────────────────────
 const inNeighbors = {}
@@ -380,5 +454,45 @@ onMounted(async () => {
 .node-dimmed {
   opacity: 0.22;
   filter: grayscale(50%);
+}
+
+/* ── category groups (g9/g10) ── */
+.node-group {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3px, 0.3vw, 6px);
+  margin-bottom: 4px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: clamp(9px, 0.78vw, 11px);
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1.5px solid;
+  cursor: pointer;
+  background: rgba(255,255,255,0.6);
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s;
+}
+.group-header:hover {
+  background: rgba(255,255,255,0.9);
+}
+.group-toggle {
+  font-size: 8px;
+  flex-shrink: 0;
+}
+.group-count {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.65;
+  font-weight: 400;
+  flex-shrink: 0;
 }
 </style>
