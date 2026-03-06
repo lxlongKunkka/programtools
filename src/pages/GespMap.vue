@@ -284,7 +284,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 22px;
+  gap: clamp(14px, 2vw, 48px);
   position: relative;
   z-index: 1;
 }
@@ -292,16 +292,16 @@ onMounted(async () => {
 .gesp-column {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  width: 100px;
+  gap: clamp(4px, 0.4vw, 8px);
+  width: clamp(80px, 7.5vw, 148px);
   flex-shrink: 0;
 }
 
 .column-title {
-  font-size: 11px;
+  font-size: clamp(10px, 0.85vw, 13px);
   font-weight: 700;
   text-align: center;
-  padding: 5px 8px;
+  padding: clamp(4px, 0.4vw, 6px) 8px;
   border-radius: 8px;
   margin-bottom: 6px;
   color: #fff;
@@ -310,8 +310,8 @@ onMounted(async () => {
 
 /* ── nodes ── */
 .gesp-node {
-  font-size: 11px;
-  padding: 4px 6px;
+  font-size: clamp(10px, 0.85vw, 13px);
+  padding: clamp(3px, 0.3vw, 6px) clamp(4px, 0.5vw, 10px);
   border-radius: 16px;
   border: 1.5px solid;
   cursor: pointer;
