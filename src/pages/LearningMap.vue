@@ -47,11 +47,25 @@
                       :class="{ active: selectedNode && selectedNode.type === 'topic' && selectedNode.id === topic._id }"
                       @click="selectNode('topic', topic, level)"
                     >
+                      <span v-if="editMode" class="tree-icon" @click.stop="toggleTopicInTree(topic)">{{ isTopicExpandedInTree(topic) ? '\u25bc' : '\u25b6' }}</span>
                       <span class="tree-label">{{ topic.title }}</span>
-                      <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
+                      <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}\u9898</span>
+                    </div>
+                    <!-- Chapters (edit mode only) -->
+                    <div v-if="editMode && isTopicExpandedInTree(topic)" class="tree-children">
+                      <div
+                        v-for="chapter in (topic.chapters || [])"
+                        :key="chapter.id"
+                        class="tree-item chapter-item-tree"
+                        :class="{ active: editModeNode && editModeNode.type === 'chapter' && (editModeNode.id === chapter._id || editModeNode.id === chapter.id) }"
+                        @click="selectChapterInTree(chapter, level, topic)"
+                      >
+                        <span class="tree-label">{{ chapter.title }}</span>
+                      </div>
+                      <div v-if="!topic.chapters || topic.chapters.length === 0" class="empty-node">\u65e0\u7ae0\u8282</div>
                     </div>
                   </div>
-                  <div v-if="!level.topics || level.topics.length === 0" class="empty-node">暂无内容</div>
+                  <div v-if="!level.topics || level.topics.length === 0" class="empty-node">\u6682\u65e0\u5185\u5bb9</div>
                 </div>
               </div>
               <div v-if="!group.levels || group.levels.length === 0" class="empty-node">暂无课程</div>
@@ -207,6 +221,7 @@
                   <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
                 </p>
               </div>
+              <button v-if="canEdit" class="btn-chapter-edit" @click.stop="enterEditModeForChapter(chapter, selectedLevel, selectedData)" title="编辑章节">✏️</button>
             </div>
           </div>
 
@@ -298,6 +313,7 @@ export default {
       loading: true,
       editMode: false,
       editModeNode: null, // Phase A: node cursor passed to Design for auto-navigation
+      treeExpandedTopics: {}, // topic._id -> bool (chapter list in sidebar edit mode)
       selectedNode: null, // { type: 'group'|'level'|'topic', id: ... }
       selectedData: null, // The actual data object
       selectedLevel: null, // Context for topic view
@@ -573,6 +589,38 @@ export default {
         this.editModeNode = { type: this.selectedNode.type, id: this.selectedNode.id }
       }
       this.editMode = true
+    },
+    // Enter edit mode directly on a specific chapter
+    enterEditModeForChapter(chapter, level, topic) {
+      if (level && topic) {
+        this.selectedNode = { type: 'topic', id: topic._id }
+        this.selectedData = topic
+        this.selectedLevel = level
+      }
+      this.editMode = true
+      this.$nextTick(() => {
+        this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+      })
+    },
+    // Sidebar chapter click in edit mode
+    selectChapterInTree(chapter, level, topic) {
+      if (!this.editMode) {
+        this.selectedNode = { type: 'topic', id: topic._id }
+        this.selectedData = topic
+        this.selectedLevel = level
+        this.editMode = true
+        this.$nextTick(() => {
+          this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+        })
+      } else {
+        this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+      }
+    },
+    toggleTopicInTree(topic) {
+      this.treeExpandedTopics[topic._id] = !this.treeExpandedTopics[topic._id]
+    },
+    isTopicExpandedInTree(topic) {
+      return !!this.treeExpandedTopics[topic._id]
     },
     handleGroupClick(group) {
         group.collapsed = !group.collapsed
@@ -973,6 +1021,26 @@ export default {
   color: #065f46;
 }
 
+/* Sidebar chapter items (edit mode) */
+.chapter-item-tree {
+  padding-left: 64px;
+  font-size: 12px;
+  color: #888;
+  border-left: 3px solid #a78bfa;
+  background: #fafafa;
+  margin-bottom: 1px;
+}
+.chapter-item-tree:hover {
+  background: #f5f0ff;
+  color: #6d28d9;
+}
+.chapter-item-tree.active {
+  background: #ede9fe;
+  border-left-color: #7c3aed;
+  color: #5b21b6;
+  font-weight: 600;
+}
+
 .tree-icon {
   width: 20px;
   text-align: center;
@@ -1197,6 +1265,29 @@ export default {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  position: relative;
+}
+
+/* Edit button on chapter card (teachers/admins only) */
+.btn-chapter-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.chapter-card:hover .btn-chapter-edit {
+  opacity: 1;
+}
+.btn-chapter-edit:hover {
+  background: #ede9fe;
 }
 .chapter-card:hover {
   transform: translateY(-3px);

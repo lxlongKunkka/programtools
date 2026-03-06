@@ -1116,6 +1116,19 @@ export default {
           const topic = (level.topics || []).find(t => t._id === id)
           if (topic) { this.selectNode('topic', topic, level); break }
         }
+      } else if (type === 'chapter') {
+        for (const level of this.levels) {
+          for (const topic of (level.topics || [])) {
+            const chapter = (topic.chapters || []).find(c => c._id === id || String(c.id) === String(id))
+            if (chapter) {
+              // Expand parent nodes in the tree
+              level.descCollapsed = false
+              topic.collapsed = false
+              this.selectNode('chapter', chapter, level, topic)
+              return
+            }
+          }
+        }
       }
     },
 
