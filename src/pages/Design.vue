@@ -95,6 +95,11 @@
 
     <!-- Right Panel: Editor -->
     <div class="editor-panel">
+      <!-- 嵌入模式下顶部退出栏（侧边栏隐藏时） -->
+      <div v-if="hideSidebar" class="embedded-exit-bar">
+        <span class="embedded-edit-title">编辑模式</span>
+        <button @click="$emit('close')" class="btn-exit-embedded">← 退出编辑</button>
+      </div>
       <div v-if="!selectedNode" class="empty-state">
         <p>请在左侧选择一个节点进行编辑<span v-if="isAdmin">，或点击“添加分组”开始</span>。</p>
       </div>
@@ -2827,6 +2832,40 @@ export default {
 }
 .btn-close-embedded:hover {
   background: #dc2626;
+}
+
+/* 嵌入模式顶部退出栏 */
+.embedded-exit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #f0f4ff;
+  border-bottom: 1px solid #c7d2fe;
+  border-radius: 8px 8px 0 0;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.embedded-edit-title {
+  font-size: 13px;
+  color: #6366f1;
+  font-weight: 600;
+}
+.btn-exit-embedded {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-exit-embedded:hover {
+  background: #4f46e5;
 }
 
 /* Variables & Reset */
