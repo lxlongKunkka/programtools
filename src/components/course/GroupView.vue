@@ -10,6 +10,11 @@
       </div>
     </div>
 
+    <!-- GESP 知识图谱 (在课程列表上方) -->
+    <div v-if="isGespGroup" class="gesp-map-embed">
+      <GespMap :embedded="true" />
+    </div>
+
     <div class="levels-grid">
       <div
         v-for="level in group.levels"
@@ -28,11 +33,6 @@
           {{ level.topics ? level.topics.length : 0 }} 个知识点 · {{ level.problemCount || 0 }} 题
         </div>
       </div>
-    </div>
-
-    <!-- GESP 知识图谱 -->
-    <div v-if="isGespGroup" class="gesp-map-embed">
-      <GespMap :embedded="true" />
     </div>
   </div>
 </template>
@@ -149,11 +149,11 @@ export default {
 .badge.locked    { background: #f5f5f5; color: #95a5a6; }
 
 .gesp-map-embed {
-  margin-top: 32px;
-  height: 800px;
+  margin-bottom: 32px;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid #e8e8e8;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  background: #f7f9fc;
 }
 </style>

@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="gesp-map-page" :style="{ height: embedded ? '100%' : '100vh' }">
-    <div class="gesp-map-header">
+  <div class="gesp-map-page" :style="{ height: embedded ? 'auto' : '100vh' }">
+    <div v-if="!embedded" class="gesp-map-header">
       <h2>GESP 知识图谱</h2>
       <p>
         悬停节点查看前置/后继依赖 ·
@@ -16,8 +16,8 @@
       </div>
     </div>
 
-    <div class="gesp-map-scroll">
-      <div class="gesp-map-wrap" ref="wrapRef">
+    <div class="gesp-map-scroll" ref="scrollRef" :style="{ overflow: embedded ? 'hidden' : 'auto', flex: embedded ? 'none' : '1' }">
+      <div class="gesp-map-wrap" ref="wrapRef" :style="embedded ? { zoom: fitScale, transformOrigin: 'top left' } : {}">
         <!-- SVG edges layer -->
         <svg class="edges-svg" :width="svgSize.w" :height="svgSize.h">
           <defs>
@@ -147,6 +147,8 @@ const props = defineProps({
 
 const router = useRouter()
 const wrapRef = ref(null)
+const scrollRef = ref(null)
+const fitScale = ref(1)
 const nodeRefs = reactive({})
 const renderedEdges = ref([])
 const svgSize = ref({ w: 0, h: 0 })
@@ -354,11 +356,26 @@ function onNodeClick(nodeId) {
   if (node) router.push({ path: '/course', query: { tag: node.label } })
 }
 
+let naturalContentW = 0
+
+function computeFitScale() {
+  if (!props.embedded || !scrollRef.value || !wrapRef.value) return
+  const availW = scrollRef.value.clientWidth
+  // Measure natural width only when fitScale is 1 (no zoom applied yet)
+  if (naturalContentW === 0 || fitScale.value >= 0.99) {
+    naturalContentW = wrapRef.value.scrollWidth
+  }
+  if (naturalContentW > 0) fitScale.value = Math.min(1, availW / naturalContentW)
+}
+
 onMounted(async () => {
   await nextTick()
-  setTimeout(computeEdges, 120)
-  const ro = new ResizeObserver(computeEdges)
-  if (wrapRef.value) ro.observe(wrapRef.value)
+  setTimeout(() => { computeEdges(); computeFitScale() }, 120)
+  // Separate observers: wrapRef for edge positions, scrollRef for fit-scale
+  const edgeRo = new ResizeObserver(computeEdges)
+  const fitRo  = new ResizeObserver(computeFitScale)
+  if (wrapRef.value) edgeRo.observe(wrapRef.value)
+  if (scrollRef.value) fitRo.observe(scrollRef.value)
 })
 </script>
 
