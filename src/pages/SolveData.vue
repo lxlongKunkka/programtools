@@ -136,7 +136,7 @@
         <div v-if="showStepIndicators" class="generation-steps">
           <div class="step-item" :class="generationSteps.translate"><div class="step-dot"></div><span>翻译</span></div>
           <div class="step-item" :class="generationSteps.solution"><div class="step-dot"></div><span>题解</span></div>
-          <div class="step-item" :class="generationSteps.report"><div class="step-dot"></div><span>报告</span></div>
+          <div class="step-item" :class="generationSteps.report"><div class="step-dot"></div><span>PPT报告</span></div>
           <div class="step-item" :class="generationSteps.data"><div class="step-dot"></div><span>数据</span></div>
           <div class="step-item" :class="generationSteps.meta"><div class="step-dot"></div><span>元数据</span></div>
         </div>
@@ -1816,7 +1816,7 @@ pause
                 })
             )
         } else {
-            this.generationSteps.report = 'success' // 不需要生成，视为成功
+            this.generationSteps.report = 'skipped' // 当前模式不生成报告
         }
         
         // 3a. 数据生成 - 从 tasks[targetIndex] 读取代码，防止任务切换竞态
@@ -3291,6 +3291,8 @@ python data_generator.py
 .step-item.success .step-dot { background: #10b981; }
 .step-item.failed { opacity: 1; color: #ef4444; }
 .step-item.failed .step-dot { background: #ef4444; }
+.step-item.skipped { opacity: .38; color: #9ca3af; text-decoration: line-through; }
+.step-item.skipped .step-dot { background: #d1d5db; }
 
 /*  Step tabs  */
 .step-tabs {
