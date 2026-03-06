@@ -49,7 +49,7 @@
                     >
                       <span v-if="editMode" class="tree-icon" @click.stop="toggleTopicInTree(topic)">{{ isTopicExpandedInTree(topic) ? '\u25bc' : '\u25b6' }}</span>
                       <span class="tree-label">{{ topic.title }}</span>
-                      <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}\u9898</span>
+                      <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
                     </div>
                     <!-- Chapters (edit mode only) -->
                     <div v-if="editMode && isTopicExpandedInTree(topic)" class="tree-children">
