@@ -98,8 +98,10 @@ const svgSize = ref({ w: 0, h: 0 })
 const hoveredId = ref(null)
 
 const LEVEL_COLORS = {
-  g1:  { bg: '#e6f4ff', border: '#4096ff', text: '#003a8c' },
-  g3:  { bg: '#f6ffed', border: '#52c41a', text: '#135200' },
+  g1:  { bg: '#e6f4ff', border: '#69c0ff', text: '#0050b3' },
+  g2:  { bg: '#d6e4ff', border: '#4096ff', text: '#003a8c' },
+  g3:  { bg: '#f6ffed', border: '#73d13d', text: '#135200' },
+  g4:  { bg: '#d9f7be', border: '#52c41a', text: '#092b00' },
   g5:  { bg: '#fff7e6', border: '#fa8c16', text: '#612500' },
   g6:  { bg: '#f9f0ff', border: '#9254de', text: '#391085' },
   g7:  { bg: '#fff0f6', border: '#eb2f96', text: '#780650' },
@@ -109,8 +111,9 @@ const LEVEL_COLORS = {
 }
 
 const LEVEL_LABELS = {
-  g1: 'gesp1-2', g3: 'gesp3-4', g5: 'gesp5', g6: 'gesp6',
-  g7: 'gesp7', g8: 'gesp8', g9: 'gesp9', g10: 'gesp10'
+  g1: 'gesp1', g2: 'gesp2', g3: 'gesp3', g4: 'gesp4',
+  g5: 'gesp5', g6: 'gesp6', g7: 'gesp7', g8: 'gesp8',
+  g9: 'gesp9', g10: 'gesp10'
 }
 
 // ── Parse MMD ─────────────────────────────────────────────────────
