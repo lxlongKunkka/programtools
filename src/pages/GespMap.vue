@@ -236,8 +236,8 @@ function groupHighlightState(nodeIds) {
   if (!hoveredId.value) return ''
   let hasIn = false, hasOut = false
   for (const nid of nodeIds) {
-    if (hoveredAllIn.has(nid))  hasIn  = true
-    if (hoveredAllOut.has(nid)) hasOut = true
+    if (hoveredAllIn.value.has(nid))  hasIn  = true
+    if (hoveredAllOut.value.has(nid)) hasOut = true
   }
   if (hasIn && hasOut) return 'mixed'
   if (hasIn)  return 'in'
