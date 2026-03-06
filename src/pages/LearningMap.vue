@@ -12,7 +12,6 @@
         @select-level="l => selectNode('level', l)"
         @select-topic="(t, l) => selectNode('topic', t, l)"
         @select-chapter="selectChapterInTree"
-        @exit-edit="onDesignClose"
       />
 
       <!-- Right: content area -->

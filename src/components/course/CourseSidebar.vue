@@ -2,7 +2,6 @@
   <div class="course-sidebar" :class="{ 'edit-active': editMode }">
     <div class="sidebar-header">
       <h3>课程目录</h3>
-      <button v-if="editMode" @click="$emit('exit-edit')" class="btn-exit-edit">← 退出编辑</button>
     </div>
 
     <div v-if="!treeData || treeData.length === 0" class="loading-text">加载中...</div>
@@ -85,7 +84,7 @@ export default {
     editModeNode: { type: Object, default: null },
     userProgress: { type: Object, default: null }
   },
-  emits: ['select-group', 'select-level', 'select-topic', 'select-chapter', 'exit-edit'],
+  emits: ['select-group', 'select-level', 'select-topic', 'select-chapter'],
   data() {
     return {
       treeExpandedTopics: {}
@@ -236,18 +235,5 @@ export default {
 .tree-children > .empty-node    { padding-left: 45px; }
 .tree-children .tree-children > .empty-node { padding-left: 65px; }
 
-/* Exit-edit button */
-.btn-exit-edit {
-  margin-top: 6px;
-  width: 100%;
-  padding: 5px 0;
-  background: #64748b;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  font-weight: 600;
-}
-.btn-exit-edit:hover { background: #475569; }
+
 </style>
