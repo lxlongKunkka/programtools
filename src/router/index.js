@@ -17,6 +17,7 @@ import SolutionReport from '../pages/SolutionReport.vue'
 import Design from '../pages/Design.vue'
 import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
+import GespMap from '../pages/GespMap.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
 import YearEndSummary from '../pages/YearEndSummary.vue'
@@ -25,6 +26,7 @@ import request from '../utils/request'
 const routes = [
   { path: '/', component: Home },
   { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
+  { path: '/gesp-map', component: GespMap, meta: { requiresAuth: true } },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
