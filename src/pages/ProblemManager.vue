@@ -513,7 +513,13 @@ export default {
             doc.tag = [...new Set([...(doc.tag || []), ...tagRes.tags])]
           }
           if (tagRes.title) {
-            doc.title = tagRes.title
+            // 追加到原标题后面，避免覆盖；若原标题已含 AI 生成的部分则不重复追加
+            const aiTitle = tagRes.title.trim()
+            if (doc.title && !doc.title.includes(aiTitle)) {
+              doc.title = `${doc.title} ${aiTitle}`
+            } else if (!doc.title) {
+              doc.title = aiTitle
+            }
           }
           doc._modified = true
           // 只保存 tag/title，不去 PID
