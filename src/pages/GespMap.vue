@@ -60,11 +60,11 @@
               class="gesp-node"
               :class="{
                 'node-hovered':       hoveredId === nodeId,
-                'node-highlight-in':  hoveredId && hoveredAllIn.value.has(nodeId),
-                'node-highlight-out': hoveredId && hoveredAllOut.value.has(nodeId),
+                'node-highlight-in':  hoveredId && hoveredAllIn.has(nodeId),
+                'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
                 'node-dimmed':        hoveredId && hoveredId !== nodeId
-                                        && !hoveredAllIn.value.has(nodeId)
-                                        && !hoveredAllOut.value.has(nodeId)
+                                        && !hoveredAllIn.has(nodeId)
+                                        && !hoveredAllOut.has(nodeId)
               }"
               :style="{
                 background:   LEVEL_COLORS[sg.id]?.bg,
