@@ -541,11 +541,17 @@ export default {
             doc.tag = tagRes.tags
           }
           if (tagRes.title) {
-            // 追加到原标题后面，避免覆盖；若原标题已含 AI 生成的部分则不重复追加
             const aiTitle = tagRes.title.trim()
-            if (doc.title && !doc.title.includes(aiTitle)) {
-              doc.title = `${doc.title} ${aiTitle}`
-            } else if (!doc.title) {
+            const isAtcoder = (doc.domainId || '').toLowerCase().includes('atcoder')
+            if (isAtcoder) {
+              // AtCoder 题目：追加到原标题后面，避免重复追加
+              if (doc.title && !doc.title.includes(aiTitle)) {
+                doc.title = `${doc.title} ${aiTitle}`
+              } else if (!doc.title) {
+                doc.title = aiTitle
+              }
+            } else {
+              // 其他域：直接替换为新标题
               doc.title = aiTitle
             }
           }
