@@ -129,13 +129,16 @@
           </template>
 
           <template v-if="selectedNode.type === 'topic'">
-            <button @click="saveTopic" class="eas-btn eas-save">💾 保存更改</button>
-            <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-delete">🗑 删除知识点</button>
-            <button v-if="editingTopic._id" @click="deleteAllChapters(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-warn">🧹 清空章节</button>
-            <div class="eas-divider"></div>
-            <button v-if="editingTopic._id" @click="moveTopic('up')" class="eas-btn eas-move">↑ 上移</button>
-            <button v-if="editingTopic._id" @click="moveTopic('down')" class="eas-btn eas-move">↓ 下移</button>
-            <button v-if="editingTopic._id && isAdmin" @click="downloadTopicMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
+            <template v-if="canEditLevel(editingLevelForTopic)">
+              <button @click="saveTopic" class="eas-btn eas-save">💾 保存更改</button>
+              <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-delete">🗑 删除知识点</button>
+              <button v-if="editingTopic._id" @click="deleteAllChapters(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-warn">🧹 清空章节</button>
+              <div class="eas-divider"></div>
+              <button v-if="editingTopic._id" @click="moveTopic('up')" class="eas-btn eas-move">↑ 上移</button>
+              <button v-if="editingTopic._id" @click="moveTopic('down')" class="eas-btn eas-move">↓ 下移</button>
+              <button v-if="editingTopic._id && isAdmin" @click="downloadTopicMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
+            </template>
+            <span v-else class="eas-readonly">只读 (无权限)</span>
             <div class="eas-divider"></div>
             <label class="eas-label">AI 模型</label>
             <select v-model="selectedModel" class="eas-select">
@@ -144,12 +147,15 @@
           </template>
 
           <template v-if="selectedNode.type === 'chapter'">
-            <button @click="saveChapter" class="eas-btn eas-save">💾 保存更改</button>
-            <button v-if="!editingChapter.isNew" @click="deleteChapter(editingLevelForChapter._id, editingTopicForChapter._id, editingChapter._id || editingChapter.id)" class="eas-btn eas-delete">🗑 删除章节</button>
-            <div class="eas-divider"></div>
-            <button v-if="!editingChapter.isNew" @click="moveChapter('up')" class="eas-btn eas-move">↑ 上移</button>
-            <button v-if="!editingChapter.isNew" @click="moveChapter('down')" class="eas-btn eas-move">↓ 下移</button>
-            <button v-if="isAdmin && !editingChapter.isNew" @click="downloadChapter" class="eas-btn eas-download">⬇️ 下载 {{ editingChapter.contentType === 'html' ? 'PPT' : 'MD' }}</button>
+            <template v-if="canEditLevel(editingLevelForChapter)">
+              <button @click="saveChapter" class="eas-btn eas-save">💾 保存更改</button>
+              <button v-if="!editingChapter.isNew" @click="deleteChapter(editingLevelForChapter._id, editingTopicForChapter._id, editingChapter._id || editingChapter.id)" class="eas-btn eas-delete">🗑 删除章节</button>
+              <div class="eas-divider"></div>
+              <button v-if="!editingChapter.isNew" @click="moveChapter('up')" class="eas-btn eas-move">↑ 上移</button>
+              <button v-if="!editingChapter.isNew" @click="moveChapter('down')" class="eas-btn eas-move">↓ 下移</button>
+              <button v-if="isAdmin && !editingChapter.isNew" @click="downloadChapter" class="eas-btn eas-download">⬇️ 下载 {{ editingChapter.contentType === 'html' ? 'PPT' : 'MD' }}</button>
+            </template>
+            <span v-else class="eas-readonly">只读 (无权限)</span>
             <div class="eas-divider"></div>
             <label class="eas-label">AI 模型</label>
             <select v-model="selectedModel" class="eas-select">

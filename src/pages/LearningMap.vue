@@ -340,12 +340,6 @@ export default {
         return u.role === 'admin'
       } catch { return false }
     },
-    canEdit() {
-      try {
-        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
-        return u.role === 'admin' || u.role === 'teacher'
-      } catch { return false }
-    },
     learnerActiveLevels() {
       if (!this.selectedLearnerProgress || !this.treeData) return []
       
