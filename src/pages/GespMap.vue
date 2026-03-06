@@ -1,12 +1,17 @@
-<template>
+﻿<template>
   <div class="gesp-map-page">
     <div class="gesp-map-header">
       <h2>GESP 知识图谱</h2>
-      <p>点击节点查看相关题目 · 箭头表示前置知识依赖</p>
+      <p>
+        悬停节点查看前置/后继依赖 ·
+        <span class="hint-in">■ 绿色 = 前置知识</span> ·
+        <span class="hint-out">■ 橙色 = 后续应用</span> ·
+        点击跳转题目
+      </p>
       <div class="legend">
         <span v-for="(color, level) in LEVEL_COLORS" :key="level" class="legend-item">
           <span class="legend-dot" :style="{ background: color.bg, border: `2px solid ${color.border}` }"></span>
-          {{ level }}
+          {{ LEVEL_LABELS[level] || level }}
         </span>
       </div>
     </div>
@@ -14,38 +19,62 @@
     <div class="gesp-map-scroll">
       <div class="gesp-map-wrap" ref="wrapRef">
         <!-- SVG edges layer -->
-        <svg class="edges-svg" ref="svgRef" :width="svgSize.w" :height="svgSize.h">
+        <svg class="edges-svg" :width="svgSize.w" :height="svgSize.h">
           <defs>
-            <marker id="arr" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto">
-              <path d="M0,0 L7,3.5 L0,7 Z" fill="#bbb" />
+            <marker id="arr-default" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#c8d6e5" />
+            </marker>
+            <marker id="arr-in" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" fill="#52c41a" />
+            </marker>
+            <marker id="arr-out" markerWidth="7" markerHeight="7" refX="7" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" fill="#fa8c16" />
             </marker>
           </defs>
           <path
             v-for="(e, i) in renderedEdges"
             :key="i"
             :d="e.d"
-            :class="['edge-path', e.backward ? 'edge-back' : '']"
-            marker-end="url(#arr)"
+            fill="none"
+            :stroke="edgeStroke(e)"
+            :stroke-width="edgeWidth(e)"
+            :stroke-opacity="edgeOpacity(e)"
+            :stroke-dasharray="edgeDash(e)"
+            :marker-end="edgeMarker(e)"
+            style="transition: stroke 0.15s, stroke-width 0.15s, stroke-opacity 0.15s"
           />
         </svg>
 
         <!-- Columns -->
         <div class="gesp-columns" ref="columnsRef">
           <div v-for="sg in subgraphs" :key="sg.id" class="gesp-column">
-            <div class="column-title" :style="{ background: LEVEL_COLORS[sg.id]?.bg || '#eee', borderColor: LEVEL_COLORS[sg.id]?.border || '#ccc' }">
+            <div
+              class="column-title"
+              :style="{ background: LEVEL_COLORS[sg.id]?.border, color: '#fff' }"
+            >
               {{ sg.shortTitle }}
             </div>
             <div
               v-for="nodeId in sg.nodeIds"
               :key="nodeId"
               class="gesp-node"
+              :class="{
+                'node-hovered':       hoveredId === nodeId,
+                'node-highlight-in':  hoveredId && inNeighbors[hoveredId]?.has(nodeId),
+                'node-highlight-out': hoveredId && outNeighbors[hoveredId]?.has(nodeId),
+                'node-dimmed':        hoveredId && hoveredId !== nodeId
+                                        && !inNeighbors[hoveredId]?.has(nodeId)
+                                        && !outNeighbors[hoveredId]?.has(nodeId)
+              }"
               :style="{
-                background: LEVEL_COLORS[sg.id]?.bg,
-                borderColor: LEVEL_COLORS[sg.id]?.border,
-                color: LEVEL_COLORS[sg.id]?.text
+                background:   LEVEL_COLORS[sg.id]?.bg,
+                borderColor:  LEVEL_COLORS[sg.id]?.border,
+                color:        LEVEL_COLORS[sg.id]?.text
               }"
               :ref="el => { if (el) nodeRefs[nodeId] = el }"
-              @click="onNodeClick(nodeId, sg.id)"
+              @mouseenter="hoveredId = nodeId"
+              @mouseleave="hoveredId = null"
+              @click="onNodeClick(nodeId)"
             >
               {{ nodes[nodeId]?.label }}
             </div>
@@ -63,80 +92,106 @@ import mmdRaw from '../../GESP_TAGS.mmd?raw'
 
 const router = useRouter()
 const wrapRef = ref(null)
-const svgRef = ref(null)
-const columnsRef = ref(null)
 const nodeRefs = reactive({})
 const renderedEdges = ref([])
 const svgSize = ref({ w: 0, h: 0 })
+const hoveredId = ref(null)
 
-// ── Level color scheme ──────────────────────────────────────────────
 const LEVEL_COLORS = {
-  g1:  { bg: '#e6f4ff', border: '#91caff', text: '#003a8c' },
-  g3:  { bg: '#f6ffed', border: '#95de64', text: '#135200' },
-  g5:  { bg: '#fff7e6', border: '#ffc069', text: '#610b00' },
-  g6:  { bg: '#f9f0ff', border: '#d3adf7', text: '#391085' },
-  g7:  { bg: '#fff0f6', border: '#ffadd2', text: '#780650' },
-  g8:  { bg: '#e6fffb', border: '#5cdbd3', text: '#00474f' },
-  g9:  { bg: '#f0f5ff', border: '#adc6ff', text: '#10239e' },
-  g10: { bg: '#f9f0ff', border: '#b37feb', text: '#22075e' },
+  g1:  { bg: '#e6f4ff', border: '#4096ff', text: '#003a8c' },
+  g3:  { bg: '#f6ffed', border: '#52c41a', text: '#135200' },
+  g5:  { bg: '#fff7e6', border: '#fa8c16', text: '#612500' },
+  g6:  { bg: '#f9f0ff', border: '#9254de', text: '#391085' },
+  g7:  { bg: '#fff0f6', border: '#eb2f96', text: '#780650' },
+  g8:  { bg: '#e6fffb', border: '#13c2c2', text: '#00474f' },
+  g9:  { bg: '#f0f5ff', border: '#2f54eb', text: '#10239e' },
+  g10: { bg: '#f9f0ff', border: '#722ed1', text: '#22075e' },
 }
 
-// ── Parse MMD ──────────────────────────────────────────────────────
+const LEVEL_LABELS = {
+  g1: 'gesp1-2', g3: 'gesp3-4', g5: 'gesp5', g6: 'gesp6',
+  g7: 'gesp7', g8: 'gesp8', g9: 'gesp9', g10: 'gesp10'
+}
+
+// ── Parse MMD ─────────────────────────────────────────────────────
 function parseMmd(raw) {
   const lines = raw.split('\n')
-  const subgraphs = []
-  const nodes = {}
-  const edges = []
+  const subgraphs = [], nodes = {}, edges = []
   let currentSg = null
-
   for (const line of lines) {
     const t = line.trim()
-
-    // subgraph g1["gesp1-2 基础语法"]
     const sgM = t.match(/^subgraph\s+(\w+)\["([^"]+)"\]/)
     if (sgM) {
-      const fullTitle = sgM[2]
-      const shortTitle = fullTitle.replace(/^gesp[\d-]+\s*/, '')
-      currentSg = { id: sgM[1], title: fullTitle, shortTitle, nodeIds: [] }
-      subgraphs.push(currentSg)
-      continue
+      const short = sgM[2].replace(/^gesp[\d-]+\s*/, '')
+      currentSg = { id: sgM[1], shortTitle: short, nodeIds: [] }
+      subgraphs.push(currentSg); continue
     }
     if (t === 'end') { currentSg = null; continue }
-
-    // node: A1[顺序/条件/循环结构]
     const nodeM = t.match(/^([A-H]\d+)\[([^\]]+)\]/)
     if (nodeM && currentSg) {
       nodes[nodeM[1]] = { id: nodeM[1], label: nodeM[2], sgId: currentSg.id }
-      currentSg.nodeIds.push(nodeM[1])
-      continue
+      currentSg.nodeIds.push(nodeM[1]); continue
     }
-
-    // edges (skip comments)
     if (t.includes('-->') && !t.startsWith('%')) {
-      // may have multiple --> in chain: H1 --> H2 --> H3
       const chain = t.split('-->')
       for (let i = 0; i < chain.length - 1; i++) {
         const srcs = chain[i].trim().split('&').map(s => s.match(/([A-H]\d+)/)?.[1]).filter(Boolean)
-        const tgts = chain[i + 1].trim().split('&').map(s => s.match(/([A-H]\d+)/)?.[1]).filter(Boolean)
-        for (const s of srcs) for (const t2 of tgts) edges.push({ from: s, to: t2 })
+        const tgts = chain[i+1].trim().split('&').map(s => s.match(/([A-H]\d+)/)?.[1]).filter(Boolean)
+        for (const s of srcs) for (const tg of tgts) edges.push({ from: s, to: tg })
       }
     }
   }
-
-  // de-duplicate edges
   const seen = new Set()
-  const uniqueEdges = edges.filter(e => {
-    const k = `${e.from}->${e.to}`
-    if (seen.has(k)) return false
-    seen.add(k); return true
-  })
-
-  return { subgraphs, nodes, edges: uniqueEdges }
+  return { subgraphs, nodes, edges: edges.filter(e => {
+    const k = `${e.from}->${e.to}`; if (seen.has(k)) return false; seen.add(k); return true
+  })}
 }
 
 const { subgraphs, nodes, edges } = parseMmd(mmdRaw)
 
-// ── Compute SVG edges ──────────────────────────────────────────────
+// ── Adjacency maps ────────────────────────────────────────────────
+const inNeighbors = {}
+const outNeighbors = {}
+for (const e of edges) {
+  if (!inNeighbors[e.to])    inNeighbors[e.to]    = new Set()
+  if (!outNeighbors[e.from]) outNeighbors[e.from] = new Set()
+  inNeighbors[e.to].add(e.from)
+  outNeighbors[e.from].add(e.to)
+}
+
+// ── Edge visual state helpers ─────────────────────────────────────
+function edgeState(e) {
+  if (!hoveredId.value)          return 'default'
+  if (e.to   === hoveredId.value) return 'in'
+  if (e.from === hoveredId.value) return 'out'
+  return 'dim'
+}
+function edgeStroke(e) {
+  const s = edgeState(e)
+  if (s === 'in')  return '#52c41a'
+  if (s === 'out') return '#fa8c16'
+  return '#c8d6e5'
+}
+function edgeWidth(e) {
+  return (edgeState(e) === 'in' || edgeState(e) === 'out') ? 2.5 : 1
+}
+function edgeOpacity(e) {
+  const s = edgeState(e)
+  if (s === 'dim')     return 0.06
+  if (s === 'default') return 0.35
+  return 1
+}
+function edgeDash(e) {
+  return edgeState(e) === 'default' ? '4 3' : 'none'
+}
+function edgeMarker(e) {
+  const s = edgeState(e)
+  if (s === 'in')  return 'url(#arr-in)'
+  if (s === 'out') return 'url(#arr-out)'
+  return 'url(#arr-default)'
+}
+
+// ── Compute edge paths ────────────────────────────────────────────
 function computeEdges() {
   const wrap = wrapRef.value
   if (!wrap) return
@@ -146,44 +201,35 @@ function computeEdges() {
   const rendered = []
   for (const e of edges) {
     const fromEl = nodeRefs[e.from]
-    const toEl = nodeRefs[e.to]
+    const toEl   = nodeRefs[e.to]
     if (!fromEl || !toEl) continue
 
     const fR = fromEl.getBoundingClientRect()
     const tR = toEl.getBoundingClientRect()
 
-    const x1 = fR.right - wRect.left + wrap.scrollLeft
-    const y1 = fR.top + fR.height / 2 - wRect.top + wrap.scrollTop
-    const x2 = tR.left - wRect.left + wrap.scrollLeft - 6 // gap before arrowhead
-    const y2 = tR.top + tR.height / 2 - wRect.top + wrap.scrollTop
+    const x1 = fR.right  - wRect.left + wrap.scrollLeft
+    const y1 = (fR.top + fR.bottom) / 2 - wRect.top + wrap.scrollTop
+    const x2 = tR.left   - wRect.left + wrap.scrollLeft - 7
+    const y2 = (tR.top + tR.bottom) / 2 - wRect.top + wrap.scrollTop
 
-    const backward = x2 < x1
-    const dx = Math.abs(x2 - x1)
-    const cx1 = x1 + (backward ? -dx * 0.5 : dx * 0.45)
-    const cy1 = y1
-    const cx2 = x2 - (backward ? -dx * 0.5 : dx * 0.45)
-    const cy2 = y2
+    const dx = x2 - x1
+    const cx1 = x1 + dx * 0.55
+    const cx2 = x2 - dx * 0.55
 
-    rendered.push({ d: `M${x1},${y1} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`, backward })
+    rendered.push({ from: e.from, to: e.to, d: `M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}` })
   }
   renderedEdges.value = rendered
 }
 
-// ── Node click → search by tag ─────────────────────────────────────
-function onNodeClick(nodeId, sgId) {
+function onNodeClick(nodeId) {
   const node = nodes[nodeId]
-  if (!node) return
-  // 跳转到课程搜索页，按知识点 tag 筛选
-  router.push({ path: '/course', query: { tag: node.label } })
+  if (node) router.push({ path: '/course', query: { tag: node.label } })
 }
 
 onMounted(async () => {
   await nextTick()
-  // Wait for layout to stabilize
-  setTimeout(computeEdges, 100)
-
-  // Recompute on resize
-  const ro = new ResizeObserver(() => computeEdges())
+  setTimeout(computeEdges, 120)
+  const ro = new ResizeObserver(computeEdges)
   if (wrapRef.value) ro.observe(wrapRef.value)
 })
 </script>
@@ -193,90 +239,49 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #fafafa;
+  background: #f7f9fc;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 .gesp-map-header {
-  padding: 16px 24px 8px;
+  padding: 14px 24px 10px;
   border-bottom: 1px solid #e8e8e8;
   background: #fff;
   flex-shrink: 0;
 }
+.gesp-map-header h2 { margin: 0 0 4px; font-size: 18px; color: #1a1a1a; }
+.gesp-map-header p  { margin: 0 0 8px; font-size: 12px; color: #888; }
 
-.gesp-map-header h2 {
-  margin: 0 0 4px;
-  font-size: 20px;
-  color: #1a1a1a;
-}
+.hint-in  { color: #52c41a; font-weight: 600; }
+.hint-out { color: #fa8c16; font-weight: 600; }
 
-.gesp-map-header p {
-  margin: 0 0 8px;
-  font-size: 13px;
-  color: #888;
-}
+.legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #555; }
+.legend-dot  { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #555;
-}
-
-.legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-/* Scrollable area */
-.gesp-map-scroll {
-  flex: 1;
-  overflow: auto;
-}
+/* ── scroll ── */
+.gesp-map-scroll { flex: 1; overflow: auto; background: #f7f9fc; }
 
 .gesp-map-wrap {
   position: relative;
   min-width: max-content;
-  min-height: 100%;
-  padding: 24px 16px 80px;
+  padding: 28px 32px 80px;
 }
 
-/* SVG edge layer */
+/* ── svg ── */
 .edges-svg {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   pointer-events: none;
   overflow: visible;
 }
 
-.edge-path {
-  fill: none;
-  stroke: #c8d6e5;
-  stroke-width: 1.4;
-  stroke-dasharray: 5 3;
-}
-
-.edge-back {
-  stroke: #f0c0c0;
-  stroke-dasharray: 3 3;
-}
-
-/* Columns layout */
+/* ── columns ── */
 .gesp-columns {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 20px;
+  gap: 90px;   /* wide gap: bezier curves route here */
   position: relative;
   z-index: 1;
 }
@@ -284,8 +289,8 @@ onMounted(async () => {
 .gesp-column {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 130px;
+  gap: 7px;
+  width: 148px;
   flex-shrink: 0;
 }
 
@@ -293,38 +298,56 @@ onMounted(async () => {
   font-size: 11px;
   font-weight: 700;
   text-align: center;
-  padding: 4px 6px;
-  border-radius: 6px;
-  border: 1.5px solid;
-  margin-bottom: 4px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 5px 8px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
+/* ── nodes ── */
 .gesp-node {
   font-size: 12px;
-  padding: 5px 8px;
-  border-radius: 16px;
+  padding: 5px 10px;
+  border-radius: 20px;
   border: 1.5px solid;
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all 0.15s ease;
+  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s, filter 0.12s;
   user-select: none;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .gesp-node:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-  filter: brightness(0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
-.gesp-node:active {
-  transform: translateY(0);
+.node-hovered {
+  transform: scale(1.06) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22) !important;
+  z-index: 10;
+  position: relative;
+}
+
+.node-highlight-in {
+  outline: 2.5px solid #52c41a;
+  outline-offset: 2px;
+  z-index: 8;
+  position: relative;
+}
+
+.node-highlight-out {
+  outline: 2.5px solid #fa8c16;
+  outline-offset: 2px;
+  z-index: 8;
+  position: relative;
+}
+
+.node-dimmed {
+  opacity: 0.22;
+  filter: grayscale(50%);
 }
 </style>
