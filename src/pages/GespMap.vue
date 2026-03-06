@@ -60,6 +60,12 @@
               <div v-for="grp in sg.groups" :key="grp.cat" class="node-group">
                 <div
                   class="group-header"
+                  :class="isCollapsed(sg.id, grp.cat) ? {
+                    'group-highlight-in':  groupHighlightState(grp.nodeIds) === 'in',
+                    'group-highlight-out': groupHighlightState(grp.nodeIds) === 'out',
+                    'group-highlight-mixed': groupHighlightState(grp.nodeIds) === 'mixed',
+                    'group-dimmed':        groupHighlightState(grp.nodeIds) === 'dim',
+                  } : {}"
                   :style="{ borderColor: LEVEL_COLORS[sg.id]?.border, color: LEVEL_COLORS[sg.id]?.border }"
                   @click="toggleGroup(sg.id, grp.cat)"
                 >
@@ -224,6 +230,19 @@ function toggleGroup(sgId, cat) {
 }
 function isCollapsed(sgId, cat) {
   return collapsedGroups[`${sgId}::${cat}`]
+}
+// 折叠时分组标题的高亮状态: 'in' | 'out' | 'mixed' | 'dim' | ''
+function groupHighlightState(nodeIds) {
+  if (!hoveredId.value) return ''
+  let hasIn = false, hasOut = false
+  for (const nid of nodeIds) {
+    if (hoveredAllIn.has(nid))  hasIn  = true
+    if (hoveredAllOut.has(nid)) hasOut = true
+  }
+  if (hasIn && hasOut) return 'mixed'
+  if (hasIn)  return 'in'
+  if (hasOut) return 'out'
+  return 'dim'
 }
 
 // ── Adjacency maps ────────────────────────────────────────────────
@@ -483,6 +502,27 @@ onMounted(async () => {
 }
 .group-header:hover {
   background: rgba(255,255,255,0.9);
+}
+.group-highlight-in {
+  outline: 2.5px solid #52c41a;
+  outline-offset: 1px;
+  background: rgba(82,196,26,0.10) !important;
+  color: #237804 !important;
+}
+.group-highlight-out {
+  outline: 2.5px solid #fa8c16;
+  outline-offset: 1px;
+  background: rgba(250,140,22,0.10) !important;
+  color: #ad4e00 !important;
+}
+.group-highlight-mixed {
+  outline: 2.5px solid #9254de;
+  outline-offset: 1px;
+  background: rgba(146,84,222,0.10) !important;
+}
+.group-dimmed {
+  opacity: 0.25;
+  filter: grayscale(40%);
 }
 .group-toggle {
   font-size: 8px;
