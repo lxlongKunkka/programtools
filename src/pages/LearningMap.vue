@@ -179,7 +179,7 @@
               <div v-if="topic.description" class="topic-card-desc">{{ stripMarkdown(topic.description).slice(0,100) }}</div>
               <div class="topic-chapters-preview">
                 <div v-for="(ch,ci) in (topic.chapters||[]).slice(0,8)" :key="ci"
-                  :class="['chapter-dot', 'status-'+getChapterStatusClass(ch)]"></div>
+                  :class="['chapter-dot', 'status-'+getChapterStatusClass(selectedData, ch)]"></div>
                 <span v-if="(topic.chapters||[]).length>8" class="more-dots">+{{ (topic.chapters||[]).length-8 }}</span>
               </div>
             </div>
@@ -211,10 +211,10 @@
           </div>
           <div class="chapters-grid">
             <div v-for="chapter in (selectedData ? selectedData.chapters : [])" :key="chapter._id||chapter.id"
-              :class="['chapter-card', 'status-'+getChapterStatusClass(chapter)]"
-              @click="goToChapter(chapter, selectedNode)">
+              :class="['chapter-card', 'status-'+getChapterStatusClass(selectedNode.level, chapter)]"
+              @click="goToChapter(selectedNode.level, chapter)">
               <div class="chapter-icon">
-                {{ getChapterStatusClass(chapter)=='completed' ? '✅' : getChapterStatusClass(chapter)=='unlocked' ? '📖' : '🔒' }}
+                {{ getChapterStatusClass(selectedNode.level, chapter)=='completed' ? '✅' : getChapterStatusClass(selectedNode.level, chapter)=='unlocked' ? '📖' : '🔒' }}
               </div>
               <div class="chapter-info">
                 <h4>{{ chapter.title }}<span v-if="chapter.optional" class="tag-optional">选</span></h4>
@@ -751,22 +751,27 @@ export default {
       return (level.level||level.levelId) < this.getCurrentSubjectLevel(level.group)
     },
     isChapterUnlocked(level, chapter) {
-      if (!this.userProgress) return false
-      const lvl = level.level || level.levelId
-      if (lvl < this.getCurrentSubjectLevel(level.group)) return true
+      if (!this.userProgress || !chapter) return false
+      if (level) {
+        const lvl = level.level || level.levelId
+        if (lvl && lvl < this.getCurrentSubjectLevel(level.group)) return true
+      }
       if (this.userProgress.unlockedChapterUids && chapter._id) return this.userProgress.unlockedChapterUids.includes(chapter._id)
-      return this.userProgress.unlockedChapters.includes(chapter.id)
+      return (this.userProgress.unlockedChapters || []).includes(chapter.id)
     },
     isChapterCompleted(level, chapter) {
-      if (!this.userProgress) return false
+      if (!this.userProgress || !chapter) return false
       if (this.userProgress.completedChapterUids && chapter._id) return this.userProgress.completedChapterUids.includes(chapter._id)
-      return this.userProgress.completedChapters.includes(chapter.id)
+      return (this.userProgress.completedChapters || []).includes(chapter.id)
     },
-    getChapterStatusClass(level, chapter) {
-      if (this.isChapterCompleted(level, chapter)) return 'status-completed'
-      if (this.isChapterUnlocked(level, chapter)) return 'status-unlocked'
-      if (this.isTeacherOrAdmin()) return 'status-unlocked'
-      return 'status-locked'
+    getChapterStatusClass(levelOrChapter, chapter) {
+      // support single-arg call: getChapterStatusClass(chapter)
+      const ch = chapter === undefined ? levelOrChapter : chapter
+      const level = chapter === undefined ? null : levelOrChapter
+      if (this.isChapterCompleted(level, ch)) return 'completed'
+      if (this.isChapterUnlocked(level, ch)) return 'unlocked'
+      if (this.isTeacherOrAdmin()) return 'unlocked'
+      return 'locked'
     },
     getChapterProblemCount(chapter) {
       return (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0)
@@ -775,15 +780,18 @@ export default {
       if (!topic || !topic.chapters) return 0
       return topic.chapters.reduce((sum, ch) => sum + this.getChapterProblemCount(ch), 0)
     },
-    getTopicProgress(progress, topic) {
-      if (!progress || !topic || !topic.chapters) return 0
+    getTopicProgress(topic) {
+      if (!topic || !topic.chapters) return { pct: 0, completed: 0, total: 0 }
+      const required = topic.chapters.filter(c => !c.optional)
+      if (!required.length) return { pct: 0, completed: 0, total: 0 }
+      if (!this.userProgress) return { pct: 0, completed: 0, total: required.length }
+      const completedIds = this.userProgress.completedChapters || []
+      const completedUids = this.userProgress.completedChapterUids || []
       let completedCount = 0
-      const completedIds = progress.completedChapters || []
-      const completedUids = progress.completedChapterUids || []
-      topic.chapters.forEach(chapter => {
+      required.forEach(chapter => {
         if ((chapter._id && completedUids.includes(chapter._id)) || completedIds.includes(chapter.id)) completedCount++
       })
-      return completedCount
+      return { pct: Math.round(completedCount / required.length * 100), completed: completedCount, total: required.length }
     },
     goToChapter(level, chapter) {
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
