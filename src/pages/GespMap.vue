@@ -60,11 +60,11 @@
               class="gesp-node"
               :class="{
                 'node-hovered':       hoveredId === nodeId,
-                'node-highlight-in':  hoveredId && inNeighbors[hoveredId]?.has(nodeId),
-                'node-highlight-out': hoveredId && outNeighbors[hoveredId]?.has(nodeId),
+                'node-highlight-in':  hoveredId && hoveredAllIn.value.has(nodeId),
+                'node-highlight-out': hoveredId && hoveredAllOut.value.has(nodeId),
                 'node-dimmed':        hoveredId && hoveredId !== nodeId
-                                        && !inNeighbors[hoveredId]?.has(nodeId)
-                                        && !outNeighbors[hoveredId]?.has(nodeId)
+                                        && !hoveredAllIn.value.has(nodeId)
+                                        && !hoveredAllOut.value.has(nodeId)
               }"
               :style="{
                 background:   LEVEL_COLORS[sg.id]?.bg,
@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, reactive } from 'vue'
+import { ref, onMounted, nextTick, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import mmdRaw from '../../GESP_TAGS.mmd?raw'
 
@@ -162,11 +162,39 @@ for (const e of edges) {
   outNeighbors[e.from].add(e.to)
 }
 
+// BFS 传递闭包
+function bfsAll(startId, neighborFn) {
+  const result = new Set()
+  const queue = [startId]
+  while (queue.length) {
+    const cur = queue.shift()
+    for (const nb of (neighborFn(cur) || [])) {
+      if (!result.has(nb)) { result.add(nb); queue.push(nb) }
+    }
+  }
+  return result
+}
+
+// 当前悬停节点的全量祖先/后代集合（缓存避免每次重算）
+const hoveredAllIn  = ref(new Set())
+const hoveredAllOut = ref(new Set())
+
+watch(() => hoveredId.value, (id) => {
+  if (!id) { hoveredAllIn.value = new Set(); hoveredAllOut.value = new Set(); return }
+  hoveredAllIn.value  = bfsAll(id, n => inNeighbors[n])
+  hoveredAllOut.value = bfsAll(id, n => outNeighbors[n])
+})
+
 // ── Edge visual state helpers ─────────────────────────────────────
 function edgeState(e) {
-  if (!hoveredId.value)          return 'default'
-  if (e.to   === hoveredId.value) return 'in'
-  if (e.from === hoveredId.value) return 'out'
+  if (!hoveredId.value) return 'default'
+  const id     = hoveredId.value
+  const allIn  = hoveredAllIn.value
+  const allOut = hoveredAllOut.value
+  // from 是祖先，to 也是祖先或就是悬停节点 → 祠绿路径
+  if (allIn.has(e.from) && (allIn.has(e.to)  || e.to   === id)) return 'in'
+  // to 是后代，from 也是后代或就是悬停节点 → 橙色路径
+  if (allOut.has(e.to)  && (allOut.has(e.from) || e.from === id)) return 'out'
   return 'dim'
 }
 function edgeStroke(e) {
