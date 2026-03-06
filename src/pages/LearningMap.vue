@@ -1,10 +1,16 @@
 <template>
   <div class="learning-map-container">
+    <!-- Edit mode overlay -->
+    <div v-if="editMode" class="design-overlay">
+      <Design embedded @close="onDesignClose" />
+    </div>
+
     <div class="course-layout">
       <!-- Left Sidebar: Tree Navigation -->
       <div class="course-sidebar">
         <div class="sidebar-header">
           <h3>课程目录</h3>
+          <button v-if="canEdit" @click="editMode = true" class="btn-edit-mode">✏️ 编辑课程</button>
         </div>
         <div v-if="loading" class="loading-text">加载中...</div>
         <div v-else class="tree-nav">
@@ -263,13 +269,16 @@
 import request from '../utils/request'
 import { marked } from 'marked'
 import { SUBJECTS_CONFIG, getRealSubject } from '../utils/courseConfig'
+import Design from './Design.vue'
 
 export default {
+  components: { Design },
   data() {
     return {
       treeData: [], // Groups -> Levels -> Topics
       userProgress: null,
       loading: true,
+      editMode: false,
       selectedNode: null, // { type: 'group'|'level'|'topic', id: ... }
       selectedData: null, // The actual data object
       selectedLevel: null, // Context for topic view
@@ -291,6 +300,12 @@ export default {
     }
   },
   computed: {
+    canEdit() {
+      try {
+        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+        return u.role === 'admin' || u.role === 'teacher'
+      } catch { return false }
+    },
     learnerActiveLevels() {
       if (!this.selectedLearnerProgress || !this.treeData) return []
       
@@ -777,6 +792,10 @@ export default {
     isTeacherOrAdmin() {
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
       return userInfo.role === 'teacher' || userInfo.role === 'admin'
+    },
+    onDesignClose() {
+      this.editMode = false
+      this.fetchData()
     }
   }
 }
@@ -787,6 +806,32 @@ export default {
   height: calc(100vh - 52px);
   overflow: hidden;
   background: #f5f7fa;
+  position: relative;
+}
+
+.design-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-edit-mode {
+  margin-top: 6px;
+  width: 100%;
+  padding: 5px 0;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-edit-mode:hover {
+  background: #4f46e5;
 }
 
 .course-layout {

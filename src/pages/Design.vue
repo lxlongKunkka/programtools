@@ -1,9 +1,12 @@
 <template>
-  <div class="design-container">
+  <div class="design-container" :class="{ 'design-embedded': embedded }">
     <!-- Left Sidebar: Tree View -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <h3>课程结构</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <h3>课程结构</h3>
+          <button v-if="embedded" @click="$emit('close')" class="btn-close-embedded" title="退出编辑模式">× 退出</button>
+        </div>
         <button v-if="isAdmin" @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
       </div>
 
@@ -417,6 +420,10 @@ import JSZip from 'jszip'
 export default {
   name: 'Design',
   components: { MarkdownViewer },
+  emits: ['close'],
+  props: {
+    embedded: { type: Boolean, default: false }
+  },
   inject: ['showToastMessage'],
   data() {
     let currentUser = null
@@ -2753,6 +2760,26 @@ export default {
 </script>
 
 <style scoped>
+.design-container.design-embedded {
+  height: 100%;
+  width: 100%;
+}
+
+.btn-close-embedded {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.btn-close-embedded:hover {
+  background: #dc2626;
+}
+
 /* Variables & Reset */
 .design-container {
   --primary-color: #6366f1; /* Indigo 500 */
