@@ -97,7 +97,7 @@
               </div>
             </td>
             <td>
-              <div class="content-preview" :title="doc.content">{{ doc.content ? doc.content.slice(0, 50) + '...' : '(空)' }}</div>
+              <div class="content-preview" :title="getContentText(doc.content)">{{ getContentText(doc.content, 50) }}</div>
             </td>
             <td>
               <div class="tags-container">
@@ -194,6 +194,27 @@ export default {
     isRemoteJudge(doc) {
       if (!doc.config) return false
       return doc.config.includes('type: remote_judge')
+    },
+
+    // Parse content field: supports plain text or {"zh":...,"en":...} JSON
+    parseContent(raw) {
+      if (!raw) return { zh: '', en: '' }
+      try {
+        const s = raw.trim()
+        if (s.startsWith('{')) {
+          const obj = JSON.parse(s)
+          return { zh: obj.zh || '', en: obj.en || '' }
+        }
+      } catch (e) { /* not JSON */ }
+      return { zh: raw, en: '' }
+    },
+
+    // Get displayable text from content (for preview column)
+    getContentText(raw, maxLen) {
+      const { zh, en } = this.parseContent(raw)
+      const text = zh || en
+      if (!text) return '(空)'
+      return maxLen ? text.slice(0, maxLen) + '...' : text
     },
     async fetchModels() {
       try {
@@ -309,54 +330,60 @@ export default {
           doc.contentbak = doc.content
         }
 
-        // 1. Translate Content
-        // Use contentbak as source if available (to avoid translating already translated text)
-        const sourceText = doc.contentbak || doc.content
+        // Parse existing content (supports plain text or {"zh":...,"en":...} JSON)
+        const sourceRaw = doc.contentbak || doc.content || ''
+        const { zh: existingZh, en: existingEn } = this.parseContent(sourceRaw)
 
-        // Check if content is English (simple check)
-        const isEnglish = /[a-zA-Z]{5,}/.test(sourceText || '')
-        let newContent = doc.content
-        
-        if (isEnglish) {
+        // Determine text to translate: use en field if present, else check if plain text is English
+        const isEnglishPlain = !existingEn && /[a-zA-Z]{5,}/.test(existingZh)
+        const textToTranslate = existingEn || (isEnglishPlain ? existingZh : '')
+
+        let newZh = existingZh
+        let newEn = existingEn
+
+        if (textToTranslate) {
           const transRes = await request('/api/translate', {
             method: 'POST',
-            body: JSON.stringify({ 
-              text: sourceText,
+            body: JSON.stringify({
+              text: textToTranslate,
               model: this.selectedModel
             })
           })
           if (transRes.result) {
-            newContent = transRes.result
+            newZh = transRes.result
+            newEn = textToTranslate
           }
         }
-        
-        // 2. Extract Tags & Title (AI)
+
+        // Store as bilingual JSON
+        const newContent = JSON.stringify({ zh: newZh, en: newEn })
+
+        // 2. Extract Tags & Title using zh (or en fallback)
         let newTags = doc.tag || []
         let newTitle = doc.title
-        
+
         const tagRes = await request('/api/generate-tags', {
           method: 'POST',
-          body: JSON.stringify({ 
-            text: newContent || doc.content,
+          body: JSON.stringify({
+            text: newZh || newEn,
             model: this.selectedModel
           })
         })
-        
+
         if (tagRes.tags && Array.isArray(tagRes.tags)) {
-          // Merge existing tags with new tags, avoiding duplicates
           const currentTags = doc.tag || []
           newTags = [...new Set([...currentTags, ...tagRes.tags])]
         }
         if (tagRes.title) {
           newTitle = tagRes.title
         }
-        
+
         // Update local state
         doc.content = newContent
         doc.title = newTitle
         doc.tag = newTags
         doc._modified = true
-        
+
         console.log(`[ProblemManager] ✅ 智能处理成功: ${doc.docId}`)
         this.statusMsg = `处理完成: ${doc._id}`
         return true
@@ -502,10 +529,12 @@ export default {
         doc._processingType = 'tag'
         this.statusMsg = `正在打标签 (${this.processedCount + 1}/${queue.length}): ${doc.docId}`
         try {
+          const rawText = doc.contentbak || doc.content
+          const { zh, en } = this.parseContent(rawText)
           const tagRes = await request('/api/generate-tags', {
             method: 'POST',
             body: JSON.stringify({
-              text: doc.contentbak || doc.content,
+              text: zh || en,
               model: this.selectedModel
             })
           })
