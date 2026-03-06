@@ -650,7 +650,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
             // Split by common separators (space, comma, newline) and clean up
             meta.tags = tagsText.split(/[\s,，、]+/)
                 .map(t => t.trim())
-                .filter(t => t && !t.startsWith('**') && t !== '无') 
+                .filter(t => t && !t.startsWith('**') && t !== '无' && !/^level\d+$/i.test(t)) 
             }
         } catch (e) {
             console.warn('Failed to extract meta from translation:', e)
@@ -723,7 +723,7 @@ function parseTranslationContent(content) {
         meta.title = t
       }
       const tagM = fixed.match(/(?:###|\*\*|)\s*算法标签(?:\*\*|)\s*\n+([\s\S]*?)(?:\n#|\n\n|$)/)
-      if (tagM) meta.tags = tagM[1].trim().split(/[\s,，、]+/).map(t=>t.trim()).filter(t=>t&&!t.startsWith('**')&&t!=='无')
+      if (tagM) meta.tags = tagM[1].trim().split(/[\s,，、]+/).map(t=>t.trim()).filter(t=>t&&!t.startsWith('**')&&t!=='无'&&!/^level\d+$/i.test(t))
     } catch {}
   }
   return { result: fixed, meta }
