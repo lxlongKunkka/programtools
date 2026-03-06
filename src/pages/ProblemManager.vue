@@ -510,7 +510,7 @@ export default {
             })
           })
           if (tagRes.tags && Array.isArray(tagRes.tags)) {
-            doc.tag = [...new Set([...(doc.tag || []), ...tagRes.tags])]
+            doc.tag = tagRes.tags
           }
           if (tagRes.title) {
             // 追加到原标题后面，避免覆盖；若原标题已含 AI 生成的部分则不重复追加
