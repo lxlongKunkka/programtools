@@ -31,7 +31,7 @@
       <div class="control-group">
         <button @click="fetchDocuments" class="btn-refresh">刷新列表</button>
         <button @click="batchProcess" :disabled="processing || selectedDocs.length === 0" class="btn-batch">
-          {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签+去PID)' }}
+          {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签)' }}
         </button>
         <button @click="batchTagOnly" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-tag">
           {{ processing && processingType === 'tag' ? `打标签中 (${processedCount}/${selectedDocs.length})` : '批量打标签' }}
@@ -493,8 +493,7 @@ export default {
             title: doc.title,
             content: doc.content,
             contentbak: doc.contentbak,
-            tag: doc.tag,
-            removePid: true // Requirement: remove pid
+            tag: doc.tag
           })
         })
         doc._modified = false
