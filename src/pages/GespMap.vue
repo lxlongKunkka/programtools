@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="gesp-map-page">
+  <div class="gesp-map-page" :style="{ height: embedded ? '100%' : '100vh' }">
     <div class="gesp-map-header">
       <h2>GESP 知识图谱</h2>
       <p>
@@ -140,6 +140,10 @@
 import { ref, onMounted, nextTick, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import mmdRaw from '../../GESP_TAGS.mmd?raw'
+
+const props = defineProps({
+  embedded: { type: Boolean, default: false }
+})
 
 const router = useRouter()
 const wrapRef = ref(null)

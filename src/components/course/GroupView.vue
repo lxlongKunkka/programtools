@@ -29,10 +29,16 @@
         </div>
       </div>
     </div>
+
+    <!-- GESP 知识图谱 -->
+    <div v-if="isGespGroup" class="gesp-map-embed">
+      <GespMap :embedded="true" />
+    </div>
   </div>
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import {
   stripMarkdown,
   isLevelCompleted, isLevelUnlocked,
@@ -40,8 +46,11 @@ import {
 } from '../../utils/courseUtils'
 import { isAdmin } from '../../utils/permissionUtils'
 
+const GespMap = defineAsyncComponent(() => import('../../pages/GespMap.vue'))
+
 export default {
   name: 'GroupView',
+  components: { GespMap },
   props: {
     group:        { type: Object, required: true },
     userProgress: { type: Object, default: null },
@@ -50,6 +59,10 @@ export default {
   emits: ['select-level', 'enter-edit'],
   computed: {
     canEdit() { return isAdmin() },
+    isGespGroup() {
+      const t = (this.group.title || this.group.name || '').toUpperCase()
+      return t.includes('GESP')
+    },
     currentLevelTitle() {
       if (!this.userProgress) return ''
       const lvl = getCurrentSubjectLevel(this.group.name, this.userProgress, this.treeData)
@@ -134,4 +147,13 @@ export default {
 .badge.completed { background: #eafaf1; color: #2ecc71; }
 .badge.unlocked  { background: #ebf5fb; color: #3498db; }
 .badge.locked    { background: #f5f5f5; color: #95a5a6; }
+
+.gesp-map-embed {
+  margin-top: 32px;
+  height: 800px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
 </style>
