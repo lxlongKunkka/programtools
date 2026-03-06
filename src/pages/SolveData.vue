@@ -2930,8 +2930,7 @@ python data_generator.py
         return '未命名题目'
       })()
 
-      // 2) 初始标签集合与难度
-      let level = 1
+      // 2) 初始标签集合
       const cleanTags = []
 
       // 3) 如果 meta 存在，合并其标签
@@ -2943,11 +2942,8 @@ python data_generator.py
           tags.forEach(tag => {
             const cleaned = String(tag || '').trim()
             if (!cleaned) return
-            const levelMatch = cleaned.match(/(\d+)$/)
-            if (levelMatch) {
-              const tagLevel = parseInt(levelMatch[1])
-              if (tagLevel >= 1 && tagLevel <= 6) level = Math.max(level, tagLevel)
-            }
+            // 过滤旧的 level1-6 标签，只保留 gesp 体系和知识点标签
+            if (/^level\d+$/i.test(cleaned)) return
             cleanTags.push(cleaned)
           })
         }
@@ -2955,29 +2951,7 @@ python data_generator.py
         var finalTitle = fallbackTitle
       }
 
-      // 4) 基于题面文本关键词自动补全算法标签
-      const text = (currentProblemText + '\n' + currentTranslationText).toLowerCase()
-      const addTag = (t) => { if (!cleanTags.includes(t)) cleanTags.push(t) }
-      if (/two pointers|双指针/.test(text)) addTag('双指针')
-      if (/greedy|贪心/.test(text)) addTag('贪心')
-      if (/binary search|二分/.test(text)) addTag('二分')
-      if (/dynamic programming|dp|动态规划/.test(text)) addTag('动态规划')
-      if (/prefix sum|前缀和/.test(text)) addTag('前缀和')
-      if (/graph|图|bfs|dfs|dijkstra|最短路/.test(text)) addTag('图论')
-      if (/tree|树|segment tree|线段树|fenwick|树状数组/.test(text)) addTag('数据结构')
-      if (/math|数学|number theory|数论|gcd|lcm|素数/.test(text)) addTag('数学')
-      if (/string|字符串|kmp|z-function/.test(text)) addTag('字符串')
-      if (/simulation|模拟/.test(text)) addTag('模拟')
-      if (/sorting|排序/.test(text)) addTag('排序')
-
-      // 5) 依据数据范围粗估难度
-      const rangeMatch = (currentProblemText || '').match(/10\^(\d+)/)
-      if (rangeMatch) {
-        const pow = parseInt(rangeMatch[1])
-        level = Math.min(6, Math.max(level, pow <= 5 ? 2 : pow <= 6 ? 3 : pow <= 7 ? 4 : 5))
-      }
-
-      // 6) 输出 YAML
+      // 4) 输出 YAML（不再基于关键词自动补全，不再写入旧 Level1-6 标签）
       // AtCoder 题目：取 atcoderTitle 中的 [ABC235B] 前缀 + meta.title（AI生成的描述性标题）
       const atcoderTitleForYaml = currentMeta?.atcoderTitle
       let yamlRawTitle
@@ -2995,7 +2969,6 @@ python data_generator.py
       const yamlTitle = /[\[\]:{}&*!|>'"%@`]/.test(yamlRawTitle) ? `"${yamlRawTitle.replace(/"/g, '\\"')}"` : yamlRawTitle
       let yaml = `title: ${yamlTitle}\n`
       yaml += 'tag:\n'
-      yaml += `  - Level${level}\n`
       cleanTags.forEach(tag => { yaml += `  - ${tag}\n` })
       return yaml
     }
