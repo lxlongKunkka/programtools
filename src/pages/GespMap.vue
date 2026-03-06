@@ -268,7 +268,7 @@ onMounted(async () => {
 .gesp-map-wrap {
   position: relative;
   min-width: max-content;
-  padding: 28px 32px 80px;
+  padding: 16px 20px 60px;
 }
 
 /* ── svg ── */
@@ -284,7 +284,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 90px;   /* wide gap: bezier curves route here */
+  gap: 22px;
   position: relative;
   z-index: 1;
 }
@@ -292,8 +292,8 @@ onMounted(async () => {
 .gesp-column {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  width: 148px;
+  gap: 5px;
+  width: 100px;
   flex-shrink: 0;
 }
 
@@ -310,9 +310,9 @@ onMounted(async () => {
 
 /* ── nodes ── */
 .gesp-node {
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 20px;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 16px;
   border: 1.5px solid;
   cursor: pointer;
   text-align: center;
