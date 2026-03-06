@@ -375,7 +375,17 @@ export default {
           newTags = [...new Set([...currentTags, ...tagRes.tags])]
         }
         if (tagRes.title) {
-          newTitle = tagRes.title
+          const aiTitle = tagRes.title.trim()
+          const isAtcoder = (doc.domainId || '').toLowerCase().includes('atcoder')
+          if (isAtcoder) {
+            if (newTitle && !newTitle.includes(aiTitle)) {
+              newTitle = `${newTitle} ${aiTitle}`
+            } else if (!newTitle) {
+              newTitle = aiTitle
+            }
+          } else {
+            newTitle = aiTitle
+          }
         }
 
         // Update local state
