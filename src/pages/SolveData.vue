@@ -3119,11 +3119,20 @@ python data_generator.py
   align-items: center;
   justify-content: space-between;
   padding: 9px 12px;
-  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  background: #fafaff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: white;
+  flex-shrink: 0;
+}
+.task-list-header .btn-icon {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+}
+.task-list-header .btn-icon:hover {
+  background: rgba(255,255,255,0.28);
 }
 .btn-icon {
   background: #f3f4f6;
