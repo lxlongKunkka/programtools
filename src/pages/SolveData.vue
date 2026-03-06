@@ -29,7 +29,7 @@
     <input
       v-model="fetchUrl"
       class="url-input"
-      placeholder="输入题目/比赛链接：AtCoder / Codeforces"
+      placeholder="输入题目/比赛链接：AtCoder / Codeforces / 核桃OJ"
       @keydown.enter="fetchFromUrl"
       :disabled="isFetchingUrl"
     />
@@ -1352,7 +1352,8 @@ pause
         const isSingleProblem = (
           /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
           /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
-          /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url)
+          /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
+          /htoj\.com\.cn.*[?&]pid=\d+/i.test(url)
         )
         if (isSingleProblem) throw new Error('single_problem')
 

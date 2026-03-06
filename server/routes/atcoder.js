@@ -3,6 +3,7 @@ import axios from 'axios'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
+import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 
 const router = express.Router()
 
@@ -19,6 +20,7 @@ const HEADERS = {
 function detectPlatform(url) {
   if (/atcoder\.jp/i.test(url)) return 'atcoder'
   if (/codeforces\.com/i.test(url)) return 'codeforces'
+  if (/htoj\.com\.cn/i.test(url)) return 'htoj'
   return 'unknown'
 }
 
@@ -26,6 +28,7 @@ function detectPlatform(url) {
 const ALLOWED_HOSTS = [
   /^([\w-]+\.)?atcoder\.jp$/i,
   /^([\w-]+\.)?codeforces\.com$/i,
+  /^([\w-]+\.)?htoj\.com\.cn$/i,
 ]
 function isAllowedUrl(urlStr) {
   try {
@@ -43,17 +46,18 @@ function parseAtCoderContestId(url) {
 }
 
 // GET /api/atcoder/contest?url=...
-// Returns the list of problems in a contest (supports AtCoder / Codeforces)
+// Returns the list of problems in a contest (supports AtCoder / Codeforces / htoj)
 router.get('/contest', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
-  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces' })
+  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces / 核桃OJ' })
 
   const platform = detectPlatform(url)
   try {
     if (platform === 'atcoder') return res.json(await fetchAtCoderContest(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesContest(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces' })
+    if (platform === 'htoj') return res.json(await fetchHtojContest(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
     const code = err.response?.status
@@ -64,17 +68,18 @@ router.get('/contest', authenticateToken, async (req, res) => {
 })
 
 // GET /api/atcoder/problem?url=...
-// Returns parsed problem content as markdown (supports AtCoder / Codeforces)
+// Returns parsed problem content as markdown (supports AtCoder / Codeforces / htoj)
 router.get('/problem', authenticateToken, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
-  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces' })
+  if (!isAllowedUrl(url)) return res.status(400).json({ error: '不支持的 URL，仅允许 AtCoder / Codeforces / 核桃OJ' })
 
   const platform = detectPlatform(url)
   try {
     if (platform === 'atcoder') return res.json(await fetchAtCoderProblem(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesProblem(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces' })
+    if (platform === 'htoj') return res.json(await fetchHtojProblem(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ' })
   } catch (err) {
     console.error(`[${platform}] problem fetch error:`, err.message)
     const code = err.response?.status

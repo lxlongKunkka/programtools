@@ -18,6 +18,7 @@ import sudokuRoutes from './routes/sudoku.js'
 import sokobanRoutes from './routes/sokoban.js'
 import settingsRoutes from './routes/settings.js'
 import atcoderRoutes from './routes/atcoder.js'
+import htojRoutes from './routes/htoj.js'
 import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
@@ -76,6 +77,7 @@ app.use('/api', settingsRoutes)
 app.use('/api', sudokuRoutes)
 app.use('/api/sokoban', sokobanRoutes)
 app.use('/api/atcoder', atcoderRoutes)
+app.use('/api/htoj', htojRoutes)
 
 // 简单的日志上报接口，用于前端统计页面访问
 app.post('/api/log/visit', (req, res) => {

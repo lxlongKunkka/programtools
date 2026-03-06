@@ -29,6 +29,10 @@ export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/
 // AtCoder 用户名（可选）：用于在 kenkoooo 中优先查找该用户的 AC 提交
 export const ATCODER_USERNAME = process.env.ATCODER_USERNAME || ''
 
+// 核桃OJ (htoj.com.cn) 账号，用于抓取比赛题目
+export const HTOJ_PHONE = process.env.HTOJ_PHONE || ''
+export const HTOJ_PWD = process.env.HTOJ_PWD || ''
+
 // CORS 允许的源，生产环境应在 .env 中配置；未配置则不限制来源
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
