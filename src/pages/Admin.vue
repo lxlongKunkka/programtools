@@ -104,7 +104,7 @@
           <button @click="sendTestEmail" class="btn-tool">发送测试邮件</button>
           <button @click="sendDailyReport" class="btn-tool">发送昨日日报</button>
           <button @click="$router.push('/problems')" class="btn-tool">题目管理 (翻译/标签)</button>
-          <button @click="$router.push('/design')" class="btn-tool">课程设计 (Design)</button>
+          <button @click="$router.push('/course')" class="btn-tool">课程设计</button>
           <button @click="$router.push('/admin/prompts')" class="btn-tool">Prompts Editor</button>
         </div>
       </div>

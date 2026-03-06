@@ -14,7 +14,6 @@ import LearningMap from '../pages/LearningMap.vue'
 import ChapterDetail from '../pages/ChapterDetail.vue'
 import DailyProblem from '../pages/DailyProblem.vue'
 import SolutionReport from '../pages/SolutionReport.vue'
-import Design from '../pages/Design.vue'
 import PromptEditor from '../pages/PromptEditor.vue'
 import GespTool from '../pages/GespTool.vue'
 import GespMap from '../pages/GespMap.vue'
@@ -31,7 +30,6 @@ const routes = [
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/prompts', component: PromptEditor, meta: { requiresAuth: true, allowedRoles: ['admin'] } },
-  { path: '/design', component: Design, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/problems', component: ProblemManager, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },
   { path: '/checker', component: Checker, meta: { requiresAuth: true } },
