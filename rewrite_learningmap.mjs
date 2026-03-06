@@ -1,4 +1,6 @@
-<template>
+import { writeFileSync } from 'fs'
+
+const content = `<template>
   <div class="learning-map-container" :class="{ 'is-edit-mode': editMode }">
     <div class="course-layout">
       <!-- Left: tree navigation -->
@@ -28,7 +30,7 @@
         />
 
         <template v-else>
-          <div v-if="loading" class="loading">加载中...</div>
+          <div v-if="loading" class="loading">\u52a0\u8f7d\u4e2d...</div>
 
           <GroupView
             v-else-if="selectedNode && selectedNode.type === 'group'"
@@ -64,7 +66,7 @@
             @enter-edit="enterEditMode"
           />
 
-          <div v-else class="empty-state">请在左侧选择课程</div>
+          <div v-else class="empty-state">\u8bf7\u5728\u5de6\u4fa7\u9009\u62e9\u8bfe\u7a0b</div>
         </template>
       </div>
     </div>
@@ -200,7 +202,7 @@ export default {
           problemCount: 0,
           topics: (l.topics || []).map(t => ({ ...t, problemCount: 0 }))
         }
-        const gName = l.group || 'C++基础'
+        const gName = l.group || 'C++\u57fa\u7840'
         if (!groupMap[gName]) {
           groupMap[gName] = { name: gName, title: gName, levels: [], collapsed: true, order: l.group ? 999 : 0 }
         }
@@ -316,7 +318,7 @@ export default {
     goToChapter(level, chapter) {
       if (getChapterStatusClass(level, chapter, this.userProgress, this.treeData) === 'status-locked') return
       if (level && level.group) localStorage.setItem('selected_subject', level.group)
-      this.$router.push({ path: `/course/${chapter.id}`, query: { lid: level ? level._id : undefined } })
+      this.$router.push({ path: \`/course/\${chapter.id}\`, query: { lid: level ? level._id : undefined } })
     },
 
     async viewLearnerProgress(user) {
@@ -325,7 +327,7 @@ export default {
       this.loadingLearnerProgress = true
       this.selectedLearnerProgress = null
       try {
-        this.selectedLearnerProgress = await request(`/api/course/progress/${user._id}`)
+        this.selectedLearnerProgress = await request(\`/api/course/progress/\${user._id}\`)
       } catch (e) {
         console.error('Failed to fetch learner progress', e)
       } finally {
@@ -400,3 +402,8 @@ export default {
   color: #95a5a6;
 }
 </style>
+`
+
+writeFileSync('src/pages/LearningMap.vue', content, 'utf8')
+console.log('LearningMap.vue rewritten successfully.')
+console.log('Lines:', content.split('\n').length)
