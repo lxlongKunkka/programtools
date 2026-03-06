@@ -186,15 +186,20 @@ flowchart LR
     end
 
     %% ── gesp1-2 → gesp3-4 ──
+    A1 --> A3
     A1 --> B1 & B2 & B5
+    A2 --> B4
     A3 --> B7
+    B1 --> B7
     B5 --> C13
     B9 --> C9
     B8 --> C7 & C8
     B1 --> C7 & C8
+    C7 --> C8
 
     %% ── gesp5 内部 ──
     A5 --> C5
+    B1 --> C5
     C1 --> C2 & C3 & C4
     C13 --> C12 & D5 & D6
     C9 --> C10
@@ -251,6 +256,7 @@ flowchart LR
     F6 --> G10 & G11
 
     %% ── DP 进阶 ──
+    B3 --> G15
     D7 --> G15 & G16 & G17 & G18 & G19 & G20
     D8 --> G21 & G22 & G23 & H4 & H5
 
