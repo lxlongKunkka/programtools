@@ -91,6 +91,7 @@
       <span>任务列表</span>
       <div style="display:flex;gap:4px">
         <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
+        <button @click="clearCompletedTasks" class="btn-icon" title="清除已完成">✅</button>
         <button @click="clearAllTasks" class="btn-icon" title="清空" style="color:#ef4444">🗑️</button>
       </div>
     </div>
@@ -769,6 +770,22 @@ addNewTask() {
   const task = { id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }
   this.tasks.push(task)
   this.switchTask(this.tasks.length - 1)
+},
+clearCompletedTasks() {
+  const completedCount = this.tasks.filter(t => t.status === 'completed').length
+  if (completedCount === 0) { this.showToastMessage('没有已完成的任务'); return }
+  if (!confirm(`确认清除 ${completedCount} 个已完成的任务？`)) return
+  const remaining = this.tasks.filter(t => t.status !== 'completed')
+  if (remaining.length === 0) {
+    this.tasks = [{ id: Date.now(), status: 'pending', taskTitle: '', taskUrl: '', prompt: '', result: '', englishResult: '', aiTitle: '', aiTags: [] }]
+    this.switchTask(0)
+  } else {
+    this.tasks = remaining
+    if (this.currentTaskIndex >= this.tasks.length) {
+      this.currentTaskIndex = this.tasks.length - 1
+    }
+    this.switchTask(this.currentTaskIndex)
+  }
 },
 clearAllTasks() {
   if (this.isBatchRunning) return
