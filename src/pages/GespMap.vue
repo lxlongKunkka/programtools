@@ -214,7 +214,7 @@ const { subgraphs, nodes, edges } = parseMmd(mmdRaw)
 const collapsedGroups = reactive({})
 for (const sg of subgraphs) {
   for (const grp of sg.groups) {
-    collapsedGroups[`${sg.id}::${grp.cat}`] = false  // default expanded
+    collapsedGroups[`${sg.id}::${grp.cat}`] = true  // default collapsed
   }
 }
 function toggleGroup(sgId, cat) {
