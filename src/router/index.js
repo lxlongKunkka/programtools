@@ -15,6 +15,7 @@ import ChapterDetail from '../pages/ChapterDetail.vue'
 import DailyProblem from '../pages/DailyProblem.vue'
 import SolutionReport from '../pages/SolutionReport.vue'
 import PromptEditor from '../pages/PromptEditor.vue'
+import Design from '../pages/Design.vue'
 import GespTool from '../pages/GespTool.vue'
 import GespMap from '../pages/GespMap.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
@@ -39,6 +40,7 @@ const routes = [
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
+  { path: '/design', component: Design, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
