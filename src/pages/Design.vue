@@ -167,261 +167,57 @@
         <!-- 主内容区 -->
         <div class="editor-main-area">
 
-      <!-- Group Editor -->
-      <div v-if="selectedNode.type === 'group'" class="editor-form">
-        <div class="editor-header">
-          <h2>{{ editingGroup._id ? '编辑分组' : '新建分组' }}</h2>
-        </div>
-        
-        <div class="form-group">
-          <label>分组名称 (ID):</label>
-          <input v-model="editingGroup.name" class="form-input" placeholder="例如: C++基础" :disabled="!!editingGroup._id || !canEditGroup(editingGroup)">
-          <span class="hint" v-if="editingGroup._id">分组ID不可修改，请修改显示标题。</span>
-        </div>
-        <div class="form-group">
-          <label>显示标题:</label>
-          <input v-model="editingGroup.title" class="form-input" placeholder="例如: C++ 基础课程" :disabled="!canEditGroup(editingGroup)">
-        </div>
+          <GroupEditor
+            v-if="selectedNode.type === 'group'"
+            :group="editingGroup"
+            :isAdmin="isAdmin"
+            :canEdit="canEditGroup(editingGroup)"
+            :teachers="teachers"
+            :languageOptions="languageOptions"
+          />
 
-        <div class="form-group">
-          <label>编程语言:</label>
-          <select v-model="editingGroup.language" class="form-input" :disabled="!canEditGroup(editingGroup)">
-            <option v-for="lang in languageOptions" :key="lang" :value="lang">{{ lang }}</option>
-          </select>
-        </div>
-        
-        <div class="form-group" v-if="isAdmin">
-          <label>允许编辑的教师:</label>
-          <div class="checkbox-list" v-if="teachers.length > 0">
-             <label v-for="teacher in teachers" :key="teacher._id" class="checkbox-item">
-                <input type="checkbox" :value="teacher._id" v-model="editingGroup.editors">
-                {{ teacher.uname }}
-             </label>
-          </div>
-          <div v-else class="hint">暂无教师账号可选</div>
-          <div class="hint" style="margin-top: 5px; font-size: 12px; color: #888;">
-            注意: 列表仅显示角色为"教师"的用户。如果某用户既是高级用户又是教师, 请在后台将其角色设置为"教师" (教师默认拥有高级用户权限)。
-          </div>
-        </div>
-      </div>
+          <LevelEditor
+            v-if="selectedNode.type === 'level'"
+            :level="editingLevel"
+            :isAdmin="isAdmin"
+            :teachers="teachers"
+            :aiLoading="currentAiLoading"
+            :aiStatus="currentAiStatus"
+            :onResetAi="resetAiStatus"
+            :onBatchLessonPlans="batchGenerateLevelLessonPlans"
+            :onBatchPpts="batchGenerateLevelPPTs"
+            :onBatchSolutionReports="batchGenerateLevelSolutionReports"
+          />
 
-      <!-- Level Editor -->
-      <div v-if="selectedNode.type === 'level'" class="editor-form">
-        <div class="editor-header">
-          <h2>{{ editingLevel._id ? '编辑课程模块' : '新建课程模块' }}</h2>
-        </div>
-        
-        <div class="form-group">
-          <label>所属分组 (Tab):</label>
-          <input v-model="editingLevel.group" class="form-input" disabled>
-        </div>
+          <TopicEditor
+            v-if="selectedNode.type === 'topic'"
+            :topic="editingTopic"
+            :aiLoading="currentAiLoading"
+            :aiStatus="currentAiStatus"
+            :onResetAi="resetAiStatus"
+            :onGenerateDesc="generateTopicDescription"
+            :onGenerateChapters="generateTopicChapters"
+            :onBatchLessonPlans="batchGenerateLessonPlans"
+            :onBatchPpts="batchGeneratePPTs"
+            :onBatchSolutionPlans="batchGenerateSolutionPlans"
+            :onBatchSolutionReports="batchGenerateSolutionReports"
+          />
 
-        <!-- Hidden Level Input (Managed by Move Up/Down) -->
-        <!-- <div class="form-group">
-          <label>排序序号 (数字, 越小越靠前):</label>
-          <input v-model.number="editingLevel.level" type="number" class="form-input" step="0.1">
-        </div> -->
-
-        <!-- Hidden Label Input (Not needed per user request) -->
-        <!-- <div class="form-group">
-          <label>显示标签 (Label):</label>
-          <input v-model="editingLevel.label" class="form-input" placeholder="例如: Level 1 或 语法思维训练">
-        </div> -->
-
-        <div class="form-group">
-          <label>标题 (Title):</label>
-          <input v-model="editingLevel.title" class="form-input" placeholder="例如: 基础语法">
-        </div>
-
-        <!-- AI Assistant Section for Level -->
-        <div class="ai-assistant-box">
-          <div class="ai-header">
-            <h3>🤖 AI 模块规划</h3>
-            <div v-if="currentAiLoading" class="status-container">
-                <span class="ai-status">{{ currentAiStatus }}</span>
-                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
-            </div>
-          </div>
-          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
-            <button @click="batchGenerateLevelLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
-            <button @click="batchGenerateLevelPPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
-            <button @click="batchGenerateLevelSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>描述 (Markdown):</label>
-          <div class="split-view">
-            <textarea v-model="editingLevel.description" class="form-input" rows="10"></textarea>
-            <div class="preview-box">
-              <MarkdownViewer :content="editingLevel.description" />
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group" v-if="isAdmin">
-          <label>允许编辑的教师 (仅限此模块):</label>
-          <div class="checkbox-list" v-if="teachers.length > 0">
-             <label v-for="teacher in teachers" :key="teacher._id" class="checkbox-item">
-                <input type="checkbox" :value="teacher._id" v-model="editingLevel.editors">
-                {{ teacher.uname }}
-             </label>
-          </div>
-          <div v-else class="hint">暂无教师账号可选</div>
-          <div class="hint" style="margin-top: 5px; font-size: 12px; color: #888;">
-            注意: 分组管理员默认拥有该分组下所有模块的编辑权限。此处设置的是额外的模块级编辑权限。
-          </div>
-        </div>
-      </div>
-
-      <!-- Topic Editor -->
-      <div v-if="selectedNode.type === 'topic'" class="editor-form">
-        <div class="editor-header">
-          <h2>{{ editingTopic._id ? '编辑知识点' : '新建知识点' }}</h2>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>标题:</label>
-            <input v-model="editingTopic.title" class="form-input">
-          </div>
-        </div>
-
-        <!-- AI Assistant Section for Topic -->
-        <div class="ai-assistant-box">
-          <div class="ai-header">
-            <h3>🤖 AI 章节规划</h3>
-            <div v-if="currentAiLoading" class="status-container">
-                <span class="ai-status">{{ currentAiStatus }}</span>
-                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
-            </div>
-          </div>
-          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
-            <button @click="generateTopicDescription" class="btn-ai" :disabled="currentAiLoading">📝 自动生成描述</button>
-            <button @click="generateTopicChapters" class="btn-ai" :disabled="currentAiLoading">📑 自动生成章节列表</button>
-            <button @click="batchGenerateLessonPlans" class="btn-ai btn-ai-purple" :disabled="currentAiLoading">📚 一键生成所有教案</button>
-            <button @click="batchGeneratePPTs" class="btn-ai btn-ai-pink" :disabled="currentAiLoading">📊 一键生成所有PPT</button>
-            <button @click="batchGenerateSolutionPlans" class="btn-ai btn-ai-blue" :disabled="currentAiLoading">📘 一键生成所有题解教案</button>
-            <button @click="batchGenerateSolutionReports" class="btn-ai btn-ai-green" :disabled="currentAiLoading">💡 一键生成所有题解PPT</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>描述 (Markdown):</label>
-          <div class="split-view">
-            <textarea v-model="editingTopic.description" class="form-input" rows="10"></textarea>
-            <div class="preview-box">
-              <MarkdownViewer :content="editingTopic.description" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chapter Editor -->
-      <div v-if="selectedNode.type === 'chapter'" class="editor-form">
-        <div class="editor-header">
-          <h2>{{ editingChapter.isNew ? '新建章节' : '编辑章节' }}</h2>
-        </div>
-
-        <!-- AI Assistant Section -->
-        <div class="ai-assistant-box">
-          <div class="ai-header">
-            <h3>🤖 AI 备课助手</h3>
-            <div v-if="currentAiLoading" class="status-container">
-                <span class="ai-status">{{ currentAiStatus }}</span>
-                <button @click="resetAiStatus" class="btn-reset" title="如果长时间未响应，点击重置状态">重置状态</button>
-            </div>
-          </div>
-          <div class="ai-controls" :class="{ disabled: currentAiLoading }">
-            <input v-model="aiRequirements" placeholder="输入额外要求 (例如: 多一些生活例子, 侧重C++语法...)" class="form-input ai-input">
-            <div class="ai-buttons">
-              <button @click="generateLessonPlan" class="btn-ai" :disabled="currentAiLoading">📝 生成教案</button>
-              <button @click="generatePPT" class="btn-ai" :disabled="currentAiLoading">📊 生成 PPT</button>
-              <button @click="generateSolutionPlan" class="btn-ai btn-ai-blue" :disabled="currentAiLoading">📘 生成题解教案</button>
-              <button @click="generateSolutionReport" class="btn-ai" :disabled="currentAiLoading">💡 生成题解PPT</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-row">
-           <div class="form-group half">
-             <label>Chapter ID:</label>
-             <input v-model="editingChapter.id" class="form-input disabled" disabled>
-           </div>
-           <div class="form-group half">
-             <label>标题:</label>
-             <input v-model="editingChapter.title" class="form-input">
-           </div>
-        </div>
-
-        <div class="form-group">
-          <label>内容类型:</label>
-          <select v-model="editingChapter.contentType" class="form-input">
-            <option value="markdown">Markdown 文本</option>
-            <option value="html">HTML 课件 (Iframe)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <div class="label-row">
-             <label>内容 ({{ editingChapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
-             <div v-if="editingChapter.contentType === 'html'" style="display: inline-block;">
-                 <button v-if="isAdmin" @click="openInNewWindow" class="btn-small btn-preview" style="margin-right: 8px;" type="button">
-                   新窗口打开
-                 </button>
-                 <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
-                   {{ showPreview ? '关闭预览' : '开启预览' }}
-                 </button>
-             </div>
-          </div>
-
-          <!-- Markdown Mode: Split View -->
-          <div v-if="editingChapter.contentType === 'markdown'" class="split-view" style="height: 700px;">
-            <textarea v-model="editingChapter.content" class="form-input code-font" style="height: 100%;" placeholder="在此输入教案/大纲内容..."></textarea>
-            <div class="preview-box" style="height: 100%;">
-              <MarkdownViewer :content="editingChapter.content" />
-            </div>
-          </div>
-
-          <!-- HTML Mode: Input or Preview -->
-          <div v-if="editingChapter.contentType === 'html'">
-            <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
-                <strong>PPT 课件已生成</strong>
-                <div v-if="!showPreview" style="margin-top: 8px;">
-                    <input v-model="editingChapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
-                </div>
-            </div>
-            <div v-if="showPreview" class="preview-container-large">
-               <iframe :src="getPreviewUrl(editingChapter.resourceUrl)" class="preview-iframe"></iframe>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>关联必做题目 ID (逗号分隔):</label>
-          <input v-model="editingChapter.problemIdsStr" class="form-input" placeholder="例如: system:1001, 1002">
-          <div v-if="problemLinks && problemLinks.length > 0" class="problem-links-preview">
-              <a v-for="(link, idx) in problemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag">
-                  {{ link.text }} ↗
-              </a>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>关联选做题目 ID (逗号分隔):</label>
-          <input v-model="editingChapter.optionalProblemIdsStr" class="form-input" placeholder="例如: system:1003, 1004">
-          <div v-if="optionalProblemLinks && optionalProblemLinks.length > 0" class="problem-links-preview">
-              <a v-for="(link, idx) in optionalProblemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;">
-                  {{ link.text }} ↗
-              </a>
-          </div>
-        </div>
-        
-        <div class="form-group checkbox-group">
-          <label>
-            <input type="checkbox" v-model="editingChapter.optional"> 选做章节 (Optional)
-          </label>
-          <span class="hint">选做章节不会阻塞后续章节的解锁。</span>
-        </div>
-      </div>
+          <ChapterEditor
+            v-if="selectedNode.type === 'chapter'"
+            :chapter="editingChapter"
+            :isAdmin="isAdmin"
+            :aiLoading="currentAiLoading"
+            :aiStatus="currentAiStatus"
+            v-model:aiRequirements="aiRequirements"
+            :problemLinks="problemLinks"
+            :optionalProblemLinks="optionalProblemLinks"
+            :onResetAi="resetAiStatus"
+            :onGenerateLessonPlan="generateLessonPlan"
+            :onGeneratePpt="generatePPT"
+            :onGenerateSolutionPlan="generateSolutionPlan"
+            :onGenerateSolutionReport="generateSolutionReport"
+          />
 
         </div><!-- /editor-main-area -->
       </div><!-- /editor-layout -->
@@ -432,16 +228,24 @@
 
 <script>
 import { request } from '../utils/request.js'
-import { marked } from 'marked'
-import MarkdownViewer from '../components/MarkdownViewer.vue'
+import GroupEditor   from '../components/editor/GroupEditor.vue'
+import LevelEditor   from '../components/editor/LevelEditor.vue'
+import TopicEditor   from '../components/editor/TopicEditor.vue'
+import ChapterEditor from '../components/editor/ChapterEditor.vue'
 import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
 import { getModels } from '../utils/models'
 import { io } from 'socket.io-client'
 import JSZip from 'jszip'
+import {
+  canEditGroup as _canEditGroup,
+  canEditLevelWithUser as _canEditLevelWithUser,
+  isExplicitEditor as _isExplicitEditor,
+  isExplicitLevelEditor as _isExplicitLevelEditor
+} from '../utils/permissionUtils'
 
 export default {
   name: 'Design',
-  components: { MarkdownViewer },
+  components: { GroupEditor, LevelEditor, TopicEditor, ChapterEditor },
   emits: ['close'],
   props: {
     embedded:    { type: Boolean, default: false },
@@ -484,7 +288,6 @@ export default {
       editingLevelForChapter: null,
       editingTopicForChapter: null,
       
-      showPreview: false,
       isInitialLoad: true,
 
       // AI State
@@ -749,35 +552,16 @@ export default {
         this.rawModelOptions = await getModels()
     },
     canEditGroup(group) {
-      if (!this.user) return false
-      if (this.isAdmin) return true
-      return false // Only admin can edit groups
-    },
-    isExplicitEditor(group) {
-      if (!this.user || !group.editors) return false
-      const userId = this.user._id || this.user.uid
-      return group.editors.some(e => {
-          const id = typeof e === 'object' ? e._id : e
-          // Use loose equality to handle string/number mismatch
-          return id == userId
-      })
+      return _canEditGroup(group, this.user)
     },
     canEditLevel(level) {
-      if (!this.user) return false
-      if (this.isAdmin) return true
-      // Check if editor of the group
-      const group = this.groups.find(g => g.name === level.group)
-      if (group && this.isExplicitEditor(group)) return true
-      // Check if editor of the level
-      return this.isExplicitLevelEditor(level)
+      return _canEditLevelWithUser(level, this.user, this.groups)
+    },
+    isExplicitEditor(group) {
+      return _isExplicitEditor(group, this.user)
     },
     isExplicitLevelEditor(level) {
-      if (!this.user || !level.editors) return false
-      const userId = this.user._id || this.user.uid
-      return level.editors.some(e => {
-          const id = typeof e === 'object' ? e._id : e
-          return id == userId
-      })
+      return _isExplicitLevelEditor(level, this.user)
     },
     // --- Selection Logic ---
     isSelected(type, id) {
@@ -788,7 +572,6 @@ export default {
       // Set selection ID
       const id = data._id || data.id || 'new'
       this.selectedNode = { type, id }
-      this.showPreview = false // Reset preview on switch
 
       // Populate Editor Data
       if (type === 'group') {
@@ -2796,29 +2579,6 @@ export default {
       this.aiLoadingMap[id] = false
       this.aiStatusMap[id] = ''
       this.showToastMessage('状态已重置，您可以重新尝试')
-    },
-
-    openInNewWindow() {
-        const url = this.getPreviewUrl(this.editingChapter.resourceUrl)
-        if (url) {
-            window.open(url, '_blank')
-        } else {
-            this.showToastMessage('无效的链接')
-        }
-    },
-
-    getPreviewUrl(url) {
-      if (!url) return ''
-      if (url.indexOf('public/courseware') !== -1) {
-        if (url.startsWith('/public/')) url = '/api' + url
-        else if (url.startsWith('public/')) url = '/api/' + url
-        const token = localStorage.getItem('auth_token')
-        if (token) {
-          const separator = url.includes('?') ? '&' : '?'
-          return `${url}${separator}token=${token}`
-        }
-      }
-      return url
     }
   }
 }
