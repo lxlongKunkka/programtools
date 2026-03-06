@@ -33,6 +33,9 @@
         <button @click="batchProcess" :disabled="processing || selectedDocs.length === 0" class="btn-batch">
           {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签+去PID)' }}
         </button>
+        <button @click="batchTagOnly" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-tag">
+          {{ processing && processingType === 'tag' ? `打标签中 (${processedCount}/${selectedDocs.length})` : '批量打标签' }}
+        </button>
         <button @click="batchGenerateReport" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-report">
           {{ processing && processingType === 'report' ? `生成中 (${processedCount}/${selectedDocs.length})` : '批量生成题解' }}
         </button>
@@ -482,6 +485,57 @@ export default {
       this.showToastMessage('已恢复备份，请点击保存')
     },
     
+    async batchTagOnly() {
+      if (!confirm(`确定要为选中的 ${this.selectedDocs.length} 个题目批量打标签吗？（仅生成标签，不翻译不去PID）`)) return
+
+      this.processing = true
+      this.processingType = 'tag'
+      this.stopFlag = false
+      this.processedCount = 0
+
+      const queue = [...this.selectedDocs]
+
+      for (const doc of queue) {
+        if (this.stopFlag) break
+
+        doc._processing = true
+        doc._processingType = 'tag'
+        this.statusMsg = `正在打标签 (${this.processedCount + 1}/${queue.length}): ${doc.docId}`
+        try {
+          const tagRes = await request('/api/generate-tags', {
+            method: 'POST',
+            body: JSON.stringify({
+              text: doc.contentbak || doc.content,
+              model: this.selectedModel
+            })
+          })
+          if (tagRes.tags && Array.isArray(tagRes.tags)) {
+            doc.tag = [...new Set([...(doc.tag || []), ...tagRes.tags])]
+          }
+          if (tagRes.title) {
+            doc.title = tagRes.title
+          }
+          doc._modified = true
+          // 只保存 tag/title，不去 PID
+          await request(`/api/documents/${doc._id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ title: doc.title, tag: doc.tag })
+          })
+          doc._modified = false
+        } catch (e) {
+          this.statusMsg = `打标签失败 ${doc.docId}: ${e.message}`
+        } finally {
+          doc._processing = false
+          doc._processingType = null
+        }
+        this.processedCount++
+      }
+
+      this.processing = false
+      this.processingType = ''
+      this.statusMsg = this.stopFlag ? '批量打标签已停止' : '批量打标签完成'
+    },
+
     async batchProcess() {
       if (!confirm(`确定要批量处理选中的 ${this.selectedDocs.length} 个题目吗？这将消耗大量 Token。`)) return
       
@@ -667,6 +721,16 @@ button:active {
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-batch-tag {
+  background-color: #16a085;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(22, 160, 133, 0.2);
+}
+.btn-batch-tag:hover {
+  background-color: #1abc9c;
+  box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
 }
 
 .btn-batch-report {
