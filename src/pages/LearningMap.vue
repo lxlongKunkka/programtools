@@ -6,7 +6,6 @@
       <div class="course-sidebar">
         <div class="sidebar-header">
           <h3>课程目录</h3>
-          <button v-if="canEdit && !editMode" @click="enterEditMode" class="btn-edit-mode">✏️ 编辑课程</button>
           <button v-if="editMode" @click="onDesignClose" class="btn-exit-edit">← 退出编辑</button>
         </div>
         <div v-if="loading" class="loading-text">加载中...</div>
@@ -94,7 +93,7 @@
           <div class="view-header">
             <div class="view-header-row">
               <h1>{{ selectedData.title || selectedData.name }}</h1>
-              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+              <button v-if="isAdmin" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
             </div>
             <div class="progress-badge" v-if="userProgress">
               当前进度: {{ getLevelTitle(selectedData.name, getCurrentSubjectLevel(selectedData.name)) || ('Level ' + getCurrentSubjectLevel(selectedData.name)) }}
@@ -124,7 +123,7 @@
             </div>
             <div class="view-header-row">
               <h1>{{ selectedData.title }}</h1>
-              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+              <button v-if="canEditLevel(selectedData)" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
             </div>
             <div class="level-status">
               <span v-if="isLevelCompleted(selectedData)" class="badge completed">已完成</span>
@@ -189,7 +188,7 @@
             </div>
             <div class="view-header-row">
               <h1>{{ selectedData.title }}</h1>
-              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+              <button v-if="canEditLevel(selectedLevel)" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
             </div>
           </div>
 
@@ -221,7 +220,7 @@
                   <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
                 </p>
               </div>
-              <button v-if="canEdit" class="btn-chapter-edit" @click.stop="enterEditModeForChapter(chapter, selectedLevel, selectedData)" title="编辑章节">✏️</button>
+              <button v-if="canEditLevel(selectedLevel)" class="btn-chapter-edit" @click.stop="enterEditModeForChapter(chapter, selectedLevel, selectedData)" title="编辑章节">✏️</button>
             </div>
           </div>
 
@@ -335,6 +334,12 @@ export default {
     }
   },
   computed: {
+    isAdmin() {
+      try {
+        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+        return u.role === 'admin'
+      } catch { return false }
+    },
     canEdit() {
       try {
         const u = JSON.parse(localStorage.getItem('user_info') || '{}')
@@ -884,6 +889,36 @@ export default {
     isTeacherOrAdmin() {
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
       return userInfo.role === 'teacher' || userInfo.role === 'admin'
+    },
+    canEditLevel(level) {
+      // Check if current user has edit rights for the given level (or level-owning group)
+      // Rules match Design.vue: admin can edit anything; teacher only if explicitly listed
+      try {
+        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+        if (!u._id && !u.uid) return false
+        if (u.role === 'admin') return true
+        if (u.role !== 'teacher') return false
+        const userId = u._id || u.uid
+        // Check group.editors
+        if (level && level.group && this.treeData) {
+          const group = this.treeData.find(g => g.name === level.group)
+          if (group && group.editors) {
+            const inGroupEditors = group.editors.some(e => {
+              const id = typeof e === 'object' ? (e._id || e.id) : e
+              return String(id) === String(userId)
+            })
+            if (inGroupEditors) return true
+          }
+        }
+        // Check level.editors
+        if (level && level.editors) {
+          return level.editors.some(e => {
+            const id = typeof e === 'object' ? (e._id || e.id) : e
+            return String(id) === String(userId)
+          })
+        }
+        return false
+      } catch { return false }
     },
     onDesignClose() {
       this.editMode = false
