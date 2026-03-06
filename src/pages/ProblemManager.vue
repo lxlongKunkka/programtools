@@ -351,7 +351,7 @@ export default {
           })
           if (transRes.result) {
             newZh = transRes.result
-            newEn = textToTranslate
+            newEn = transRes.meta?.english || textToTranslate
           }
         }
 
