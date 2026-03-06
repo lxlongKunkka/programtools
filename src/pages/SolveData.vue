@@ -1367,7 +1367,7 @@ pause
         for (const p of problems) {
           this.fetchProgress = `正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`
           try {
-            await this.addProblemAsTask(p.url, p.label + '. ' + p.title)
+            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label)
             added++
           } catch { /* 单题失败不阻断 */ }
         }
@@ -1390,7 +1390,7 @@ pause
       }
     },
 
-    async addProblemAsTask(url, fallbackTitle) {
+    async addProblemAsTask(url, fallbackTitle, contestLabel) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const editorial = data.editorial || ''
       const acCode = data.acCode || ''
@@ -1414,6 +1414,9 @@ pause
       const atcoderTitle = atcoderMatch ? title : null
       // sourceUrl: AtCoder 原题链接，用于 problem_en.md 头部
       const sourceUrl = atcoderMatch ? url : null
+      // htojLabel: 比赛中的题目序号（A/B/C/D），用于 problem.yaml 标题前缀
+      const isHtoj = /htoj\.com\.cn/i.test(url)
+      const htojLabel = (isHtoj && contestLabel) ? String(contestLabel).trim() : null
       // 如果当前唯一一个任务且是空的，直接填充而不是新增
       const cur = this.tasks[this.currentTaskIndex]
       if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
@@ -1427,7 +1430,7 @@ pause
           codeOutput: '',
           serverPureCode: '',
           dataOutput: '',
-          problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}) },
+          problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
           status: 'pending'
         }
         this.loadTask(this.currentTaskIndex)
@@ -1445,7 +1448,7 @@ pause
         dataOutput: '',
         translationText: '',
         translationEnglish: '',
-        problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}) },
+        problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -2954,6 +2957,7 @@ python data_generator.py
       // 4) 输出 YAML（不再基于关键词自动补全，不再写入旧 Level1-6 标签）
       // AtCoder 题目：取 atcoderTitle 中的 [ABC235B] 前缀 + meta.title（AI生成的描述性标题）
       const atcoderTitleForYaml = currentMeta?.atcoderTitle
+      const htojLabel = currentMeta?.htojLabel
       let yamlRawTitle
       if (atcoderTitleForYaml) {
         // 提取 [ABC235B] 前缀部分
@@ -2962,6 +2966,9 @@ python data_generator.py
         // 用 meta.title（AI生成）作为后半部分，兜底用原 atcoderTitle 中的纯标题
         const titlePart = finalTitle || atcoderTitleForYaml.replace(/^\[[^\]]+\]\s*/, '')
         yamlRawTitle = prefix ? `${prefix} ${titlePart}` : titlePart
+      } else if (htojLabel) {
+        // HTOJ 比赛题目：加 A/B/C/D 前缀
+        yamlRawTitle = `${htojLabel}. ${finalTitle}`
       } else {
         yamlRawTitle = finalTitle
       }
