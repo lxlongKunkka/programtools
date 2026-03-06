@@ -3,6 +3,7 @@
     <div class="header-nav">
       <button @click="$router.push('/course')" class="btn-back">← 返回学习地图</button>
       <span v-if="level && chapter">{{ level.title }} - {{ chapter.title }}</span>
+      <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
     </div>
 
     <div v-if="loading" class="loading">加载中...</div>
@@ -201,6 +202,12 @@ export default {
     chapterId() {
       return this.$route.params.chapterId // String ID
     },
+    canEdit() {
+      try {
+        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+        return u.role === 'admin' || u.role === 'teacher'
+      } catch { return false }
+    },
     userInfo() {
       try {
         return JSON.parse(localStorage.getItem('user_info')) || null
@@ -342,6 +349,15 @@ export default {
     this.renderMath()
   },
   methods: {
+    openEditMode() {
+      if (!this.chapter) return
+      localStorage.setItem('pending_edit_node', JSON.stringify({
+        type: 'chapter',
+        id: this.chapter._id || this.chapter.id
+      }))
+      localStorage.setItem('pending_edit_return', this.$route.fullPath)
+      this.$router.push('/course')
+    },
     renderMath() {
       this.$nextTick(() => {
         const container = this.$el.querySelector('.markdown-scroll-wrapper')

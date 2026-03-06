@@ -565,6 +565,19 @@ export default {
       if (!this.selectedNode && this.treeData.length > 0) {
         this.selectNode('group', this.treeData[0])
       }
+
+      // Phase B: check if we were sent here from ChapterDetail edit button
+      const pendingEditRaw = localStorage.getItem('pending_edit_node')
+      if (pendingEditRaw) {
+        try {
+          const pending = JSON.parse(pendingEditRaw)
+          localStorage.removeItem('pending_edit_node')
+          this.editMode = true
+          this.$nextTick(() => {
+            this.editModeNode = pending
+          })
+        } catch (e) {}
+      }
     },
     selectNode(type, data, parentLevel = null, preventExpand = false) {
       this.selectedNode = { type, id: data._id || data.name }
@@ -875,6 +888,13 @@ export default {
     onDesignClose() {
       this.editMode = false
       this.editModeNode = null
+      // If we came from a chapter page, go back there
+      const returnPath = localStorage.getItem('pending_edit_return')
+      if (returnPath) {
+        localStorage.removeItem('pending_edit_return')
+        this.$router.push(returnPath)
+        return
+      }
       this.fetchData() // refresh LearningMap tree after edits
     }
   }
