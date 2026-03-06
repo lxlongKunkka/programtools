@@ -78,7 +78,10 @@
         <!-- Group View -->
         <div v-else-if="selectedNode && selectedNode.type === 'group'" class="content-view group-view">
           <div class="view-header">
-            <h1>{{ selectedData.title || selectedData.name }}</h1>
+            <div class="view-header-row">
+              <h1>{{ selectedData.title || selectedData.name }}</h1>
+              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+            </div>
             <div class="progress-badge" v-if="userProgress">
               当前进度: {{ getLevelTitle(selectedData.name, getCurrentSubjectLevel(selectedData.name)) || ('Level ' + getCurrentSubjectLevel(selectedData.name)) }}
             </div>
@@ -105,7 +108,10 @@
             <div class="breadcrumb">
               <span @click="selectNode('group', findGroup(selectedData.group))">{{ selectedData.group }}</span> / {{ selectedData.title }}
             </div>
-            <h1>{{ selectedData.title }}</h1>
+            <div class="view-header-row">
+              <h1>{{ selectedData.title }}</h1>
+              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+            </div>
             <div class="level-status">
               <span v-if="isLevelCompleted(selectedData)" class="badge completed">已完成</span>
               <span v-else-if="isLevelUnlocked(selectedData)" class="badge unlocked">进行中</span>
@@ -167,7 +173,10 @@
               <span @click="selectNode('level', selectedLevel)">{{ selectedLevel.title }}</span> / 
               {{ selectedData.title }}
             </div>
-            <h1>{{ selectedData.title }}</h1>
+            <div class="view-header-row">
+              <h1>{{ selectedData.title }}</h1>
+              <button v-if="canEdit" @click="enterEditMode" class="btn-inline-edit">✏️ 编辑</button>
+            </div>
           </div>
 
           <div v-if="selectedData.description" class="description-box markdown-content" v-html="renderMarkdown(selectedData.description)"></div>
@@ -1009,6 +1018,29 @@ export default {
 
 .view-header {
   margin-bottom: 30px;
+}
+.view-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.view-header-row h1 {
+  margin: 0;
+}
+.btn-inline-edit {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-inline-edit:hover {
+  background: #4f46e5;
 }
 .breadcrumb {
   font-size: 14px;
