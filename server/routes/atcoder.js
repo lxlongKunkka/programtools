@@ -105,8 +105,34 @@ router.get('/debug-ac', async (req, res) => {
 
     let targetSubId = null
 
+    // Step 1.5: ABC001-100 / ARC001-100 老比赛，优先从 kmjp 历史记录从头查
+    if (!targetSubId && /^(abc|arc)(0\d{2}|100)$/i.test(contestId)) {
+      log(`[debug-ac] Step1.5: 老比赛 ${contestId}，优先查 kmjp 历史记录 (from_second=0)`)
+      let fromSec = 0
+      for (let pg = 0; pg < 8 && !targetSubId; pg++) {
+        const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=kmjp&from_second=${fromSec}`
+        log(`[debug-ac] kmjp early page=${pg} from=${fromSec}`)
+        if (pg > 0) await sleep(1000)
+        let r
+        try { r = await axios.get(apiUrl, KOPTS) } catch (e) { log(`[debug-ac] kmjp 失败: ${e.message}`); break }
+        if (r.status === 429) { log('[debug-ac] kenkoooo 429 限流'); break }
+        const batch = r.data || []
+        log(`[debug-ac] kmjp 返回 ${batch.length} 条`)
+        let ac = batch.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          targetSubId = String(ac[0].id)
+          log(`[debug-ac] kmjp early 找到 AC 提交 id=${targetSubId}`)
+        }
+        if (batch.length < 500) { log('[debug-ac] kmjp early 已翻完'); break }
+        fromSec = batch[batch.length - 1].epoch_second + 1
+      }
+    }
+
     // Step 2: kenkoooo 查 kunkka
-    if (ATCODER_USERNAME) {
+    if (!targetSubId && ATCODER_USERNAME) {
       log(`[debug-ac] Step2: kenkoooo 查 kunkka (${ATCODER_USERNAME})`)
       let fromSec = 0
       for (let page = 0; page < 15 && !targetSubId; page++) {
@@ -305,9 +331,10 @@ async function fetchAtCoderProblem(url) {
 
 /**
  * 从提交列表中找第一条 AC C++ 提交，再抓取其源码。
+ * 策略0  : ABC001-100 / ARC001-100 老比赛，直接从 kmjp 历史记录（from_second=0）从头查
  * 策略1  : kenkoooo 查 kunkka（最多30页，从最早翻到最新）
  * 策略1.5: kenkoooo 查备用活跃用户（每人最多3页，从18个月前开始）
- * 策略2  : AtCoder 提交列表页（需要登录 Cookie，作为最后兜底）
+ * 策略1.6: 历史全量搜索（from_second=0，专为其余老比赛兜底）
  */
 async function fetchAtCoderAcCode(contestId, taskId) {
   const KENKOOOO_HEADERS = { 'User-Agent': HEADERS['User-Agent'] }
@@ -315,6 +342,36 @@ async function fetchAtCoderAcCode(contestId, taskId) {
 
   // 公开可访问，无需 cookie
   const getCode = (subId) => fetchSubmissionCode(contestId, subId)
+
+  // ── 策略0：ABC001-100 / ARC001-100 老比赛，直接从 kmjp 历史记录从头查 ──────
+  // 这些比赛举办于 2012-2016 年，近期搜索窗口找不到，kmjp 全程参与记录最完整
+  const oldContestMatch = contestId.match(/^(abc|arc)(0\d{2}|100)$/i)
+  if (oldContestMatch) {
+    console.log(`[AtCoder AC] 策略0: 老比赛 ${contestId}，优先查 kmjp 历史记录`)
+    let fromSec = 0
+    for (let page = 0; page < 8; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=kmjp&from_second=${fromSec}`
+      console.log(`[AtCoder AC] 策略0 kmjp page=${page} from=${fromSec}`)
+      if (page > 0) await sleep(1000)
+      try {
+        const r = await axios.get(apiUrl, KENKOOOO_OPTS)
+        if (r.status === 429) { console.warn('[AtCoder AC] 策略0 kenkoooo 429，跳出'); break }
+        const all = r.data || []
+        let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] 策略0 kmjp 找到 id=${ac[0].id}`)
+          return await getCode(ac[0].id)
+        }
+        if (all.length < 500) { console.log('[AtCoder AC] 策略0 kmjp 已翻完'); break }
+        fromSec = all[all.length - 1].epoch_second + 1
+      } catch (e) {
+        console.warn(`[AtCoder AC] 策略0 kmjp 失败: ${e.message}`); break
+      }
+    }
+  }
 
   // ── 策略1：kenkoooo 查 kunkka ────────────────────────────────────────────
   // 从 3 年前开始向后翻页，避免老账号历史太多导致翻不到近期比赛
