@@ -2093,35 +2093,16 @@ pause
     },
     
     copyPureCode() {
-      // 提取纯代码，去除 Markdown 格式和文字说明
-      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
-      const content = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
-      if (!content) return
-      
-      // 匹配所有代码块，支持多种格式
-      // ```language\ncode``` 或 ```\ncode``` 或 ```language code```
-      const codeBlockRegex = /```(?:[\w\+\-]+)?\s*\n([\s\S]*?)```/g
-      const matches = [...content.matchAll(codeBlockRegex)]
-      
-      if (matches.length > 0) {
-        // 如果有代码块，提取第一个代码块的内容
-        let pureCode = matches[0][1].trim()
-        
-        // 额外处理：如果第一行只是语言标识符，删除它
-        const firstLine = pureCode.split('\n')[0].trim()
-        if (/^(cpp|c\+\+|python|py|java|javascript|js)$/i.test(firstLine)) {
-          pureCode = pureCode.split('\n').slice(1).join('\n').trim()
-        }
-        
-        navigator.clipboard.writeText(pureCode).then(() => {
-          this.showToastMessage('✅ 已复制纯代码到剪贴板')
-        })
-      } else {
-        // 如果没有代码块标记，复制全部内容
-        navigator.clipboard.writeText(content).then(() => {
-          this.showToastMessage('✅ 已复制内容到剪贴板')
-        })
+      // 统一使用 pureAcCode 计算属性，它已包含完整的多优先级提取逻辑
+      // （AC_CODE_START 标记 → AC_CODE 标记 → 节标题 → 最后代码块）
+      const code = this.pureAcCode
+      if (!code) {
+        this.showToastMessage('⚠️ 未找到可提取的代码')
+        return
       }
+      navigator.clipboard.writeText(code).then(() => {
+        this.showToastMessage('✅ 已复制纯代码到剪贴板')
+      })
     },
     
     copyDataCode() {

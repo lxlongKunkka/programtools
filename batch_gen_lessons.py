@@ -37,7 +37,7 @@ MODEL   = "gemini-2.5-flash"
 LANG    = "C++"
 CURRICULUM_ROOT = r"e:\app\programtools\curriculum_export"
 # 只处理哪些等级 (None=全部)
-ONLY_LEVELS = ["Level1", "Level2", "Level3", "Level4"]
+ONLY_LEVELS = ["Level5", "Level6", "Level7", "Level8", "Level9"]
 DELAY_SECONDS = 2   # 每次请求之间的间隔（秒）
 
 SYSTEM_PROMPT = """你是一位经验丰富的少儿编程/信奥金牌教练，擅长深刻的教学设计和生动的知识讲解。请根据用户提供的主题、难度等级和要求，生成一份**深度教案**。

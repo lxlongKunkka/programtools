@@ -41,6 +41,9 @@ const LEVEL_FILTER = (() => {
 // ==============================
 
 function parseMd(content) {
+  // 规范化换行（Windows \r\n → \n），避免正则失配
+  content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
   const result = {
     title: '',
     chapterId: '',
