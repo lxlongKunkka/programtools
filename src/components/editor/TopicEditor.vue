@@ -62,3 +62,7 @@ export default {
   }
 }
 </script>
+
+<style>
+@import '../../styles/editor-common.css';
+</style>
