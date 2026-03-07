@@ -131,10 +131,10 @@ router.get('/debug-ac', async (req, res) => {
       }
     }
 
-    // Step 3: kenkoooo 查备用用户
+    // Step 3: kenkoooo 查备用用户（近 18 个月）
     if (!targetSubId) {
       log('[debug-ac] Step3: kenkoooo 查备用活跃用户')
-      const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
+      const FALLBACK_USERS = ['kmjp', 'qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
       const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
       for (const fbUser of FALLBACK_USERS) {
         if (targetSubId) break
@@ -159,6 +159,37 @@ router.get('/debug-ac', async (req, res) => {
           }
           if (fbBatch.length < 500) break
           fbFrom = fbBatch[fbBatch.length - 1].epoch_second + 1
+        }
+      }
+    }
+
+    // Step 3.5: 历史全量搜索（from_second=0，专为远古比赛）
+    if (!targetSubId) {
+      log('[debug-ac] Step3.5: 历史全量搜索（from_second=0）')
+      const HISTORICAL_USERS = ['kmjp', 'uwi', 'tourist', 'rng_58']
+      for (const hUser of HISTORICAL_USERS) {
+        if (targetSubId) break
+        let hFrom = 0
+        for (let pg = 0; pg < 6; pg++) {
+          const hUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(hUser)}&from_second=${hFrom}`
+          log(`[debug-ac] 历史搜索 ${hUser} page=${pg} from=${hFrom}`)
+          await sleep(1200)
+          let hResp
+          try { hResp = await axios.get(hUrl, KOPTS) } catch (e) { log(`[debug-ac] ${hUser} 失败: ${e.message}`); break }
+          if (hResp.status === 429) { log('[debug-ac] kenkoooo 429 限流，停止历史搜索'); break }
+          const hBatch = hResp.data || []
+          log(`[debug-ac] 历史 ${hUser} 返回 ${hBatch.length} 条`)
+          let ac = hBatch.filter(s => s.problem_id === taskId && s.result === 'AC')
+          const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+          if (cpp.length) ac = cpp
+          if (ac.length) {
+            ac.sort((a, b) => b.epoch_second - a.epoch_second)
+            targetSubId = String(ac[0].id)
+            log(`[debug-ac] 历史搜索 ${hUser} 找到 AC 提交 id=${targetSubId}`)
+            break
+          }
+          if (hBatch.length < 500) break
+          hFrom = hBatch[hBatch.length - 1].epoch_second + 1
         }
       }
     }
@@ -313,8 +344,9 @@ async function fetchAtCoderAcCode(contestId, taskId) {
     }
   }
 
-  // ── 策略1.5：kenkoooo 查备用活跃用户 ────────────────────────────────────
-  const FALLBACK_USERS = ['qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
+  // ── 策略1.5：kenkoooo 查备用活跃用户（近 18 个月） ──────────────────────
+  // kmjp 做题量极大（含大量远古题），放在首位
+  const FALLBACK_USERS = ['kmjp', 'qqqaaazzz', 'potato167', 'kotatsugame', 'm_99', 'maspy']
   const fallbackFrom = Math.floor(Date.now() / 1000) - 18 * 30 * 24 * 3600
   for (const fbUser of FALLBACK_USERS) {
     let fbFrom = fallbackFrom
@@ -338,6 +370,36 @@ async function fetchAtCoderAcCode(contestId, taskId) {
         fbFrom = all[all.length - 1].epoch_second + 1
       } catch (e) {
         console.warn(`[AtCoder AC] 备用 ${fbUser} 失败: ${e.message}`); break
+      }
+    }
+  }
+
+  // ── 策略1.6：历史全量搜索（from_second=0，专为 abc001 等远古比赛） ────────
+  // 上面从近 18 个月找不到时，说明该题可能是远古比赛题目（2012~2018 年）
+  // kmjp / uwi / tourist / rng_58 从最早期就在做题，从时间戳 0 翻起最多 6 页
+  const HISTORICAL_USERS = ['kmjp', 'uwi', 'tourist', 'rng_58']
+  for (const hUser of HISTORICAL_USERS) {
+    let hFrom = 0
+    for (let page = 0; page < 6; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(hUser)}&from_second=${hFrom}`
+      console.log(`[AtCoder AC] 历史搜索 ${hUser} page=${page} from=${hFrom}`)
+      await sleep(1200)
+      try {
+        const r = await axios.get(apiUrl, KENKOOOO_OPTS)
+        if (r.status === 429) { console.warn('[AtCoder AC] kenkoooo 429，停止历史搜索'); return '' }
+        const all = r.data || []
+        let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] 历史搜索 ${hUser} 找到 id=${ac[0].id}`)
+          return await getCode(ac[0].id)
+        }
+        if (all.length < 500) break
+        hFrom = all[all.length - 1].epoch_second + 1
+      } catch (e) {
+        console.warn(`[AtCoder AC] 历史搜索 ${hUser} 失败: ${e.message}`); break
       }
     }
   }
