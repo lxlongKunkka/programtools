@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="editor-form">
     <div class="editor-header">
       <h2>{{ chapter.isNew ? '鏂板缓绔犺妭' : '缂栬緫绔犺妭' }}</h2>
@@ -83,8 +83,7 @@
       <input v-model="chapter.problemIdsStr" class="form-input" placeholder="渚嬪: system:1001, 1002">
       <div v-if="problemLinks && problemLinks.length > 0" class="problem-links-preview">
         <a v-for="(link, idx) in problemLinks" :key="idx" :href="link.url" target="_blank" class="problem-link-tag">
-          {{ link.text }} 鈫?
-        </a>
+          {{ link.text }} 鈫?        </a>
       </div>
     </div>
 
@@ -95,8 +94,7 @@
         <a v-for="(link, idx) in optionalProblemLinks" :key="idx" :href="link.url" target="_blank"
            class="problem-link-tag"
            style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;">
-          {{ link.text }} 鈫?
-        </a>
+          {{ link.text }} 鈫?        </a>
       </div>
     </div>
 
