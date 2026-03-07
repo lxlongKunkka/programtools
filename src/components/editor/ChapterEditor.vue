@@ -10,7 +10,7 @@
         <h3>馃 AI 澶囪鍔╂墜</h3>
         <div v-if="aiLoading" class="status-container">
           <span class="ai-status">{{ aiStatus }}</span>
-          <button @click="onResetAi" class="btn-reset" title="濡傛灉闀挎椂闂存湭鍝嶅簲锛岀偣鍑婚噸缃姸鎬?>閲嶇疆鐘舵€?/button>
+          <button @click="onResetAi" class="btn-reset" title="濡傛灉闀挎椂闂存湭鍝嶅簲锛岀偣鍑婚噸缃姸鎬?&gt;閲嶇疆鐘舵€?/button>
         </div>
       </div>
       <div class="ai-controls" :class="{ disabled: aiLoading }">
