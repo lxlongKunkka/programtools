@@ -329,10 +329,22 @@ function edgeMarker(e) {
 }
 
 // ── Compute edge paths ────────────────────────────────────────────
+// Use offsetLeft/offsetTop traversal instead of getBoundingClientRect so that
+// CSS `zoom` (applied in embedded mode) does NOT distort the coordinates.
+// offsetLeft/offsetTop are layout pixels, matching the SVG coordinate system.
+function getRelPos(el, container) {
+  let x = 0, y = 0, cur = el
+  while (cur && cur !== container) {
+    x += cur.offsetLeft
+    y += cur.offsetTop
+    cur = cur.offsetParent
+  }
+  return { left: x, top: y, w: el.offsetWidth, h: el.offsetHeight }
+}
+
 function computeEdges() {
   const wrap = wrapRef.value
   if (!wrap) return
-  const wRect = wrap.getBoundingClientRect()
   svgSize.value = { w: wrap.scrollWidth, h: wrap.scrollHeight }
 
   const rendered = []
@@ -341,13 +353,13 @@ function computeEdges() {
     const toEl   = nodeRefs[e.to]
     if (!fromEl || !toEl) continue
 
-    const fR = fromEl.getBoundingClientRect()
-    const tR = toEl.getBoundingClientRect()
+    const f = getRelPos(fromEl, wrap)
+    const t = getRelPos(toEl, wrap)
 
-    const x1 = fR.right  - wRect.left + wrap.scrollLeft
-    const y1 = (fR.top + fR.bottom) / 2 - wRect.top + wrap.scrollTop
-    const x2 = tR.left   - wRect.left + wrap.scrollLeft - 7
-    const y2 = (tR.top + tR.bottom) / 2 - wRect.top + wrap.scrollTop
+    const x1 = f.left + f.w
+    const y1 = f.top  + f.h / 2
+    const x2 = t.left - 7
+    const y2 = t.top  + t.h / 2
 
     const dx = x2 - x1
     const cx1 = x1 + dx * 0.55
