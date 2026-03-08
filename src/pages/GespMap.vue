@@ -6,7 +6,7 @@
         悬停节点查看前置/后继依赖 ·
         <span class="hint-in">■ 绿色 = 前置知识</span> ·
         <span class="hint-out">■ 橙色 = 后续应用</span> ·
-        点击跳转题目
+        点击跳转课程章节
       </p>
       <div class="legend">
         <span v-for="(color, level) in LEVEL_COLORS" :key="level" class="legend-item">
@@ -84,19 +84,22 @@
                       'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
                       'node-dimmed':        hoveredId && hoveredId !== nodeId
                                               && !hoveredAllIn.has(nodeId)
-                                              && !hoveredAllOut.has(nodeId)
+                                              && !hoveredAllOut.has(nodeId),
+                      'node-linked':        hasLink(nodeId),
                     }"
                     :style="{
                       background:   LEVEL_COLORS[sg.id]?.bg,
                       borderColor:  LEVEL_COLORS[sg.id]?.border,
                       color:        LEVEL_COLORS[sg.id]?.text
                     }"
+                    :title="nodeTitle(nodeId)"
                     :ref="el => { if (el) nodeRefs[nodeId] = el }"
                     @mouseenter="hoveredId = nodeId"
                     @mouseleave="hoveredId = null"
-                    @click="onNodeClick(nodeId)"
+                    @click.stop="onNodeClick(nodeId)"
                   >
                     {{ nodes[nodeId]?.label }}
+                    <span v-if="hasLink(nodeId)" class="node-link-dot">●</span>
                   </div>
                 </template>
               </div>
@@ -114,19 +117,22 @@
                   'node-highlight-out': hoveredId && hoveredAllOut.has(nodeId),
                   'node-dimmed':        hoveredId && hoveredId !== nodeId
                                           && !hoveredAllIn.has(nodeId)
-                                          && !hoveredAllOut.has(nodeId)
+                                          && !hoveredAllOut.has(nodeId),
+                  'node-linked':        hasLink(nodeId),
                 }"
                 :style="{
                   background:   LEVEL_COLORS[sg.id]?.bg,
                   borderColor:  LEVEL_COLORS[sg.id]?.border,
                   color:        LEVEL_COLORS[sg.id]?.text
                 }"
+                :title="nodeTitle(nodeId)"
                 :ref="el => { if (el) nodeRefs[nodeId] = el }"
                 @mouseenter="hoveredId = nodeId"
                 @mouseleave="hoveredId = null"
-                @click="onNodeClick(nodeId)"
+                @click.stop="onNodeClick(nodeId)"
               >
                 {{ nodes[nodeId]?.label }}
+                <span v-if="hasLink(nodeId)" class="node-link-dot">●</span>
               </div>
             </template>
           </div>
@@ -140,6 +146,7 @@
 import { ref, onMounted, nextTick, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import mmdRaw from '../../GESP_TAGS.mmd?raw'
+import tagMap from '../utils/gespTagMap.json'
 
 const props = defineProps({
   embedded: { type: Boolean, default: false }
@@ -353,7 +360,25 @@ function computeEdges() {
 
 function onNodeClick(nodeId) {
   const node = nodes[nodeId]
-  if (node) router.push({ path: '/course', query: { tag: node.label } })
+  if (!node) return
+  const chapterId = tagMap[node.label]
+  if (chapterId) {
+    router.push({ path: `/course/${chapterId}` })
+  } else {
+    // 无精确映射：跳到课程首页并高亮对应 tag
+    router.push({ path: '/course', query: { tag: node.label } })
+  }
+}
+
+function hasLink(nodeId) {
+  const node = nodes[nodeId]
+  return !!(node && tagMap[node.label])
+}
+
+function nodeTitle(nodeId) {
+  const node = nodes[nodeId]
+  if (!node) return ''
+  return tagMap[node.label] ? `点击进入：${node.label} 课程章节` : `${node.label}（暂无课程章节）`
 }
 
 let naturalContentW = 0
@@ -494,6 +519,22 @@ onMounted(async () => {
 .node-dimmed {
   opacity: 0.22;
   filter: grayscale(50%);
+}
+
+.node-linked {
+  position: relative;
+}
+
+.node-linked:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.node-link-dot {
+  font-size: 7px;
+  vertical-align: super;
+  margin-left: 2px;
+  opacity: 0.55;
 }
 
 /* ── category groups (g9/g10) ── */
