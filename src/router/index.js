@@ -21,6 +21,7 @@ import GespMap from '../pages/GespMap.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
 import YearEndSummary from '../pages/YearEndSummary.vue'
+import ProgressDashboard from '../pages/ProgressDashboard.vue'
 import request from '../utils/request'
 
 const routes = [
@@ -40,6 +41,7 @@ const routes = [
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
+  { path: '/progress', component: ProgressDashboard, meta: { requiresAuth: true } },
   { path: '/design', component: Design, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },

@@ -11,6 +11,7 @@
         <router-link to="/translate">Translate</router-link>
         <router-link to="/typing">Typing</router-link>
         <router-link v-if="user" to="/course">Course</router-link>
+        <router-link v-if="user" to="/progress">进度</router-link>
         <router-link v-if="user" to="/daily">Daily</router-link>
         <router-link v-if="user" to="/gesp">GESP</router-link>
         <router-link v-if="user" to="/gesp-map">图谱</router-link>
