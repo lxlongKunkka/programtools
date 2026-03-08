@@ -73,20 +73,37 @@ function buildPrompt(level, topicTitle, chapterTitle) {
 }
 
 // ── AI Call ─────────────────────────────────────────────────────────────────
-async function callAI(prompt) {
+async function callAI(prompt, retries = 4) {
   if (!AI_URL || !AI_KEY) throw new Error('缺少 YUN_API_URL 或 YUN_API_KEY')
-  const resp = await axios.post(AI_URL, {
-    model: AI_MODEL,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.4,
-    max_tokens: 4096
-  }, {
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AI_KEY}` },
-    timeout: 120000
-  })
-  const content = resp.data?.choices?.[0]?.message?.content || ''
-  if (!content) throw new Error('AI 返回空内容')
-  return content.trim()
+  let lastErr
+  for (let attempt = 0; attempt < retries; attempt++) {
+    if (attempt > 0) {
+      const wait = 10000 * Math.pow(2, attempt - 1) // 10s, 20s, 40s
+      log(`  ⏳ 等待 ${wait / 1000}s 后重试 (${attempt}/${retries - 1})...`)
+      await new Promise(r => setTimeout(r, wait))
+    }
+    try {
+      const resp = await axios.post(AI_URL, {
+        model: AI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 4096
+      }, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AI_KEY}` },
+        timeout: 120000
+      })
+      const content = resp.data?.choices?.[0]?.message?.content || ''
+      if (!content) throw new Error('AI 返回空内容')
+      return content.trim()
+    } catch (e) {
+      const status = e.response?.status
+      lastErr = e
+      // 只对 429/500/502/503/504 重试
+      if (status && ![429, 500, 502, 503, 504].includes(status)) throw e
+      log(`  ⚠️  第 ${attempt + 1} 次尝试失败 (HTTP ${status ?? e.code ?? e.message})`)
+    }
+  }
+  throw lastErr
 }
 
 // ── Log ──────────────────────────────────────────────────────────────────────
