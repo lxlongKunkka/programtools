@@ -356,8 +356,13 @@ export default {
   methods: {
     goBackToTopic() {
       const topic = this.currentTopic
-      if (topic?._id) {
-        localStorage.setItem('learning_map_last_node', JSON.stringify({ type: 'topic', id: topic._id }))
+      if (topic) {
+        localStorage.setItem('learning_map_last_node', JSON.stringify({
+          type: 'topic',
+          id: topic._id || null,
+          levelId: this.level?._id || null,
+          title: topic.title
+        }))
       }
       this.$router.push('/course')
     },

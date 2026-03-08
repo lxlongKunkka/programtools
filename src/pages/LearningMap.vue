@@ -242,10 +242,17 @@ export default {
               if (l) { g.collapsed = false; this.selectNode('level', l); break }
             }
           } else if (node.type === 'topic') {
+            let found = false
             for (const g of this.treeData) {
+              if (found) break
               for (const l of g.levels) {
-                const t = l.topics.find(top => top._id === node.id)
-                if (t) { g.collapsed = false; l.collapsed = false; this.selectNode('topic', t, l); break }
+                // Match by _id first, then fall back to levelId+title
+                let t = node.id ? l.topics.find(top => top._id === node.id) : null
+                if (!t && node.title) {
+                  const levelMatch = !node.levelId || l._id === node.levelId
+                  if (levelMatch) t = l.topics.find(top => top.title === node.title)
+                }
+                if (t) { g.collapsed = false; l.collapsed = false; this.selectNode('topic', t, l); found = true; break }
               }
             }
           }
