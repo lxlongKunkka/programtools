@@ -1,8 +1,9 @@
 <template>
   <div class="chapter-detail-container">
     <div class="header-nav">
-      <button @click="$router.push('/course')" class="btn-back">← 返回学习地图</button>
-      <span v-if="level && chapter">{{ level.title }} - {{ chapter.title }}</span>
+      <button @click="$router.push('/course')" class="btn-back">← 学习地图</button>
+      <button v-if="currentTopic" @click="goBackToTopic" class="btn-back-topic">📚 {{ currentTopic.title }}</button>
+      <span v-if="level && chapter" class="nav-title">{{ chapter.title }}</span>
       <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
     </div>
 
@@ -262,6 +263,10 @@ export default {
     totalProblems() {
       return this.chapter?.problemIds?.length || 0
     },
+    currentTopic() {
+      if (!this.level?.topics || !this.chapter) return null
+      return this.level.topics.find(t => t.chapters?.some(c => c.id === this.chapter.id)) || null
+    },
     solvedCount() {
       if (!this.chapter || !this.userProgress) return 0
       const chapterData = this.userProgress.chapterProgress[this.chapter.id]
@@ -349,6 +354,13 @@ export default {
     this.renderMath()
   },
   methods: {
+    goBackToTopic() {
+      const topic = this.currentTopic
+      if (topic?._id) {
+        localStorage.setItem('learning_map_last_node', JSON.stringify({ type: 'topic', id: topic._id }))
+      }
+      this.$router.push('/course')
+    },
     openEditMode() {
       if (!this.chapter) return
       localStorage.setItem('pending_edit_node', JSON.stringify({
@@ -763,9 +775,32 @@ export default {
   color: #2b9af3;
   cursor: pointer;
   font-size: 16px;
+  white-space: nowrap;
 }
 .btn-back:hover {
   text-decoration: underline;
+}
+.btn-back-topic {
+  background: #2b9af3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-back-topic:hover {
+  background: #1a7fd4;
+}
+.nav-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  color: #333;
 }
 
 .content-wrapper {
