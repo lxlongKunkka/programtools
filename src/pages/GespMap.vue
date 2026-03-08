@@ -339,6 +339,8 @@ function getRelPos(el, container) {
     y += cur.offsetTop
     cur = cur.offsetParent
   }
+  // If we never reached the container, element is detached/outside — skip
+  if (cur !== container) return null
   return { left: x, top: y, w: el.offsetWidth, h: el.offsetHeight }
 }
 
@@ -355,6 +357,7 @@ function computeEdges() {
 
     const f = getRelPos(fromEl, wrap)
     const t = getRelPos(toEl, wrap)
+    if (!f || !t) continue
 
     const x1 = f.left + f.w
     const y1 = f.top  + f.h / 2
