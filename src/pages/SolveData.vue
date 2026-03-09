@@ -1563,7 +1563,9 @@ pause
                       const existingTitle = existingMeta.title
                       const rawTitle = existingMeta.rawTitle
                       // title 未被用户修改时（空/占位符/与rawTitle相同）允许 AI 覆盖
-                      const isPlaceholder = !existingTitle || existingTitle === '题目标题' || existingTitle === rawTitle
+                      // 但若 rawTitle 本身已含中文（如 NFLSOJ 源站就是中文标题），则不允许 AI 覆盖
+                      const hasChinese = (s) => /[\u4e00-\u9fa5]/.test(s || '')
+                      const isPlaceholder = !existingTitle || existingTitle === '题目标题' || (existingTitle === rawTitle && !hasChinese(rawTitle))
                       const newMeta = {
                         ...existingMeta,
                         tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || []),
