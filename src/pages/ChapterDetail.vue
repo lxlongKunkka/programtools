@@ -97,6 +97,7 @@
               <div class="bilibili-rclick-blocker" @contextmenu.prevent @mousedown="handleBilibiliOverlay"></div>
             </div>
             <div class="lesson-video-toolbar">
+              <button class="lesson-video-fs-btn" @click="replayBilibiliVideo">↺ 重播</button>
               <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
             </div>
           </template>
@@ -416,6 +417,13 @@ export default {
       const el = e.currentTarget
       el.style.pointerEvents = 'none'
       setTimeout(() => { el.style.pointerEvents = 'auto' }, 200)
+    },
+    replayBilibiliVideo() {
+      const el = this.$refs.bilibiliIframeRef
+      if (!el) return
+      const src = el.src
+      el.src = ''
+      this.$nextTick(() => { el.src = src })
     },
     requestBilibiliFullscreen() {
       const el = this.$refs.bilibiliIframeRef
@@ -954,10 +962,6 @@ export default {
   padding: 40px;
   overflow: hidden; /* Scroll wrapper handles scroll */
   box-sizing: border-box;
-}
-
-.markdown-scroll-wrapper {
-  /* Default for non-maximized: auto height */
 }
 
 .markdown-content-container.maximized .markdown-scroll-wrapper {
