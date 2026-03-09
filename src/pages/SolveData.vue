@@ -1131,7 +1131,7 @@ export default {
           
           // 3. 添加题目描述
           const hasSample = !!(task.additionalFile && task.additionalFile.base64)
-          const sampleSuffix = hasSample ? '\n\n[sample]:(file://sample.zip)' : ''
+          const sampleSuffix = hasSample ? '\n\n[sample](file://sample.zip)' : ''
           folder.file('problem.md', task.problemText, zipOptions)
           folder.file('problem_zh_TW.md', task.problemText + sampleSuffix, zipOptions)
           if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title) + sampleSuffix, zipOptions)
@@ -2428,7 +2428,7 @@ pause
         // 如果有翻译内容则一并打包
         const curTaskForSample = this.tasks[this.currentTaskIndex]
         const hasSampleZip = !!(curTaskForSample?.additionalFile?.base64)
-        const sampleSuffix = hasSampleZip ? '\n\n[sample]:(file://sample.zip)' : ''
+        const sampleSuffix = hasSampleZip ? '\n\n[sample](file://sample.zip)' : ''
         if (this.problemText && this.problemText.trim()) {
           zip.file('problem_zh_TW.md', this.problemText + sampleSuffix, zipOptions)
         }
