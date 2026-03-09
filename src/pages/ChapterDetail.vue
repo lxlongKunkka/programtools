@@ -98,6 +98,17 @@
             </div>
             <div class="lesson-video-toolbar">
               <button class="lesson-video-fs-btn" @click="replayBilibiliVideo">↺ 重播</button>
+              <span class="toolbar-divider"></span>
+              <span class="speed-label">倍速：</span>
+              <button
+                v-for="s in [1, 1.25, 1.5, 1.75, 2]"
+                :key="s"
+                class="lesson-video-speed-btn"
+                :class="{ active: currentSpeed === s }"
+                @click="setBilibiliSpeed(s)">
+                {{ s }}x
+              </button>
+              <span class="toolbar-divider"></span>
               <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
             </div>
           </template>
@@ -109,8 +120,20 @@
               controls
               controlsList="nodownload"
               class="direct-video"
-              @contextmenu.prevent>
+              @contextmenu.prevent
+              @loadedmetadata="reapplySpeed">
             </video>
+            <div class="lesson-video-toolbar">
+              <span class="speed-label">倍速：</span>
+              <button
+                v-for="s in [1, 1.25, 1.5, 1.75, 2]"
+                :key="s"
+                class="lesson-video-speed-btn"
+                :class="{ active: currentSpeed === s }"
+                @click="setSpeed(s)">
+                {{ s }}x
+              </button>
+            </div>
           </template>
         </div>
       </div>
@@ -201,6 +224,7 @@ export default {
   data() {
     return {
       viewMode: 'ppt',
+      currentSpeed: 1,
       loading: true,
       level: null,
       allLevels: [],
@@ -417,6 +441,27 @@ export default {
       const el = e.currentTarget
       el.style.pointerEvents = 'none'
       setTimeout(() => { el.style.pointerEvents = 'auto' }, 200)
+    },
+    setSpeed(speed) {
+      this.currentSpeed = speed
+      const el = this.$refs.directVideoRef
+      if (el) el.playbackRate = speed
+    },
+    setBilibiliSpeed(speed) {
+      this.currentSpeed = speed
+      // 尝试通过 allow-same-origin sandbox 控制 iframe 内 video 元素倍速（跨域时 fail silently）
+      try {
+        const iframeEl = this.$refs.bilibiliIframeRef
+        if (iframeEl) {
+          const video = iframeEl.contentDocument?.querySelector('video')
+            || iframeEl.contentWindow?.document?.querySelector('video')
+          if (video) video.playbackRate = speed
+        }
+      } catch (e) {}
+    },
+    reapplySpeed() {
+      const el = this.$refs.directVideoRef
+      if (el) el.playbackRate = this.currentSpeed
     },
     replayBilibiliVideo() {
       const el = this.$refs.bilibiliIframeRef
@@ -1367,7 +1412,7 @@ export default {
 .bilibili-rclick-blocker {
   position: absolute;
   top: 0; left: 0; right: 0;
-  bottom: 15%; /* 露出底部播放器控件栏 */
+  bottom: 28%; /* 露出底部播放器控件栏＋倒速弹出面板 */
   z-index: 3;
   background: transparent;
   pointer-events: auto;
@@ -1408,6 +1453,39 @@ export default {
 }
 .lesson-video-fs-btn:hover {
   background: rgba(255,255,255,0.2);
+}
+.speed-label {
+  color: rgba(255,255,255,0.6);
+  font-size: 12px;
+  margin-right: 2px;
+  white-space: nowrap;
+}
+.lesson-video-speed-btn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.lesson-video-speed-btn:hover {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+.lesson-video-speed-btn.active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 </style>
