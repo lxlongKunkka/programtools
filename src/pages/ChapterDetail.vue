@@ -22,10 +22,11 @@
 
         <h1 class="chapter-title">{{ chapter.title }}</h1>
 
-        <!-- View mode toggle: only shown when both PPT and Markdown content exist -->
-        <div v-if="chapter.contentType === 'html' && chapter.content" class="view-toggle-bar">
-          <button :class="['btn-view-toggle', { active: viewMode === 'ppt' }]" @click="viewMode = 'ppt'">🖥 PPT 课件</button>
-          <button :class="['btn-view-toggle', { active: viewMode === 'md' }]" @click="viewMode = 'md'">📄 教案</button>
+        <!-- View mode toggle: shown when multiple content types exist -->
+        <div v-if="availableTabs.length > 1" class="view-toggle-bar">
+          <button v-if="availableTabs.includes('ppt')" :class="['btn-view-toggle', { active: viewMode === 'ppt' }]" @click="viewMode = 'ppt'">🖥 PPT 课件</button>
+          <button v-if="availableTabs.includes('md')" :class="['btn-view-toggle', { active: viewMode === 'md' }]" @click="viewMode = 'md'">📄 教案</button>
+          <button v-if="availableTabs.includes('video')" :class="['btn-view-toggle', { active: viewMode === 'video' }]" @click="viewMode = 'video'">🎬 视频</button>
         </div>
 
         <!-- HTML Content Mode -->
@@ -46,7 +47,7 @@
         </div>
 
         <!-- Markdown Content Mode -->
-        <div v-if="chapter.contentType !== 'html' || viewMode === 'md'" :class="['markdown-content-container', { maximized: isMaximized }]">
+        <div v-if="viewMode === 'md'" :class="['markdown-content-container', { maximized: isMaximized }]">
             <!-- Watermark for Fullscreen -->
             <div class="watermark-container" v-if="userInfo && isMaximized">
               <div class="watermark-text" v-for="n in 30" :key="n">
@@ -74,9 +75,34 @@
                 </div>
             </div>
         </div>
-      </div>
 
-      <!-- Right: Problems or Reading Completion -->
+        <!-- Video Content Mode -->
+        <div v-if="viewMode === 'video' && chapter.videoUrl" :class="['video-content-container', { maximized: isMaximized }]">
+          <div class="controls-bar">
+            <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+              {{ isMaximized ? '退出全屏' : '全屏显示' }}
+            </button>
+          </div>
+          <!-- Bilibili 嵌入 -->
+          <iframe
+            v-if="isBilibiliVideo(chapter.videoUrl)"
+            :src="getBilibiliEmbedUrl(chapter.videoUrl)"
+            class="video-iframe"
+            frameborder="0"
+            scrolling="no"
+            allowfullscreen>
+          </iframe>
+          <!-- 直链视频 -->
+          <video
+            v-else
+            :src="chapter.videoUrl"
+            controls
+            controlsList="nodownload"
+            class="direct-video"
+            @contextmenu.prevent>
+          </video>
+        </div>
+      </div>
       <div class="problems-section">
         <div v-if="totalProblems > 0">
           <div class="problems-header">
@@ -205,6 +231,14 @@ export default {
       const user = this.userInfo
       if (!user) return ''
       return `${user.uname || user.username || 'User'} (${user.uid || user._id || 'ID'})`
+    },
+    availableTabs() {
+      if (!this.chapter) return []
+      const tabs = []
+      if (this.chapter.contentType === 'html') tabs.push('ppt')
+      if (this.chapter.content) tabs.push('md')
+      if (this.chapter.videoUrl) tabs.push('video')
+      return tabs
     },
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
@@ -339,6 +373,22 @@ export default {
     this.renderMath()
   },
   methods: {
+    isBilibiliVideo(url) {
+      return url && (url.includes('bilibili.com') || url.includes('b23.tv'))
+    },
+    getBilibiliEmbedUrl(url) {
+      // Extract BV ID
+      const bvMatch = url.match(/BV[a-zA-Z0-9]+/)
+      if (bvMatch) {
+        return `//player.bilibili.com/player.html?bvid=${bvMatch[0]}&autoplay=0&high_quality=1&danmaku=0`
+      }
+      // Extract av ID
+      const avMatch = url.match(/av(\d+)/i)
+      if (avMatch) {
+        return `//player.bilibili.com/player.html?aid=${avMatch[1]}&autoplay=0&high_quality=1&danmaku=0`
+      }
+      return url
+    },
     goBackToTopic() {
       const topic = this.currentTopic
       if (topic) {
@@ -512,7 +562,15 @@ export default {
             const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
-            this.viewMode = chapterDetail.contentType === 'html' ? 'ppt' : 'md'
+            if (chapterDetail.contentType === 'html') {
+              this.viewMode = 'ppt'
+            } else if (chapterDetail.content) {
+              this.viewMode = 'md'
+            } else if (chapterDetail.videoUrl) {
+              this.viewMode = 'video'
+            } else {
+              this.viewMode = 'md'
+            }
         } catch (err) {
             if (err.message.includes('locked') || err.message.includes('Access denied') || err.message.includes('403')) {
                 this.showToastMessage('Chapter is locked')
@@ -1201,6 +1259,47 @@ export default {
 .btn-view-toggle:hover:not(.active) {
   background: #e2e8f0;
   color: #334155;
+}
+
+/* Video content container */
+.video-content-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: #000;
+  transition: all 0.3s ease;
+}
+.video-content-container.maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+  margin: 0;
+  border: none;
+}
+.video-content-container.maximized .controls-bar {
+  position: fixed;
+  top: 20px;
+  right: 40px;
+}
+.video-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+.direct-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
 }
 
 </style>

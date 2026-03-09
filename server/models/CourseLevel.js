@@ -9,7 +9,8 @@ const chapterSchema = new mongoose.Schema({
   resourceUrl: { type: String }, // URL for HTML content (e.g., '/public/courseware/bfs.html')
   problemIds: [{ type: String }], // Linked problems (Stored as "domainId:docId" or "docId")
   optionalProblemIds: [{ type: String }], // Optional problems (not required for unlocking)
-  optional: { type: Boolean, default: false } // Whether the chapter is optional
+  optional: { type: Boolean, default: false }, // Whether the chapter is optional
+  videoUrl: { type: String } // Video URL (COS or Bilibili) for student viewing
 })
 
 const topicSchema = new mongoose.Schema({

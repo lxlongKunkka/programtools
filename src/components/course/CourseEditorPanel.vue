@@ -542,6 +542,7 @@ export default {
           optional: !!chapter.optional,
           contentType: chapter.contentType || 'markdown',
           resourceUrl: chapter.resourceUrl || '',
+          videoUrl: chapter.videoUrl || '',
           isNew: !!chapter.isNew,
           content: chapter.content || ''
         }
@@ -588,6 +589,7 @@ export default {
                 this.editingChapter.content = fullChapter.content || ''
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
+                this.editingChapter.videoUrl = fullChapter.videoUrl || ''
                 if (fullChapter.title) this.editingChapter.title = fullChapter.title
                 
                 // Update tree node
@@ -1312,6 +1314,7 @@ export default {
           content: this.editingChapter.content,
           contentType: this.editingChapter.contentType,
           resourceUrl: this.editingChapter.resourceUrl,
+          videoUrl: this.editingChapter.videoUrl || '',
           problemIds: problemIds,
           optionalProblemIds: optionalProblemIds,
           optional: this.editingChapter.optional,

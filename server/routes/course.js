@@ -1537,7 +1537,7 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
 // Add a Chapter to a Topic
 router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1558,6 +1558,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       content, 
       contentType: contentType || 'markdown',
       resourceUrl: resourceUrl || '',
+      videoUrl: videoUrl || '',
       problemIds: storedProblemIds,
       optionalProblemIds: storedOptionalProblemIds,
       optional: !!optional 
@@ -1597,7 +1598,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 // Update a Chapter in a Topic
 router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1625,6 +1626,7 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     targetChapter.content = content
     targetChapter.contentType = contentType || 'markdown'
     targetChapter.resourceUrl = resourceUrl || ''
+    targetChapter.videoUrl = videoUrl || ''
     targetChapter.problemIds = storedProblemIds
     targetChapter.optionalProblemIds = storedOptionalProblemIds
     targetChapter.optional = !!optional

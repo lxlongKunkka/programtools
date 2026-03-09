@@ -36,6 +36,14 @@
     </div>
 
     <div class="form-group">
+      <label>视频链接 (可选):</label>
+      <input v-model="chapter.videoUrl" class="form-input" placeholder="支持 Bilibili 链接 (https://www.bilibili.com/video/BV...) 或 COS 视频直链 (.mp4)">
+      <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
+        {{ isBilibili(chapter.videoUrl) ? '🎬 已识别为 Bilibili 视频' : '🎥 已识别为直链视频' }}
+      </div>
+    </div>
+
+    <div class="form-group">
       <label>内容类型:</label>
       <select v-model="chapter.contentType" class="form-input">
         <option value="markdown">Markdown 文本</option>
@@ -148,6 +156,9 @@ export default {
     'chapter._id'() { this.showPreview = false }
   },
   methods: {
+    isBilibili(url) {
+      return url && (url.includes('bilibili.com') || url.includes('b23.tv'))
+    },
     getPreviewUrl(url) {
       if (!url) return ''
       if (url.indexOf('public/courseware') !== -1) {
