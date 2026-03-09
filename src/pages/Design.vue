@@ -588,6 +588,8 @@ export default {
         if (!this.editingGroup.editors) this.editingGroup.editors = []
         if (!this.editingGroup.language) this.editingGroup.language = 'C++'
       } else if (type === 'level') {
+        // Auto-expand level to show topics
+        data.descCollapsed = false
         this.editingLevel = JSON.parse(JSON.stringify(data))
         // Ensure editors is an array of IDs
         if (this.editingLevel.editors && this.editingLevel.editors.length > 0 && typeof this.editingLevel.editors[0] === 'object') {
@@ -595,6 +597,8 @@ export default {
         }
         if (!this.editingLevel.editors) this.editingLevel.editors = []
       } else if (type === 'topic') {
+        // Auto-expand topic to show chapters
+        data.collapsed = false
         this.editingTopic = JSON.parse(JSON.stringify(data))
         this.editingLevelForTopic = parentLevel
       } else if (type === 'chapter') {
