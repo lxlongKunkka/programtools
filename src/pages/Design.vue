@@ -126,6 +126,11 @@
               <button v-if="editingLevel._id && isAdmin" @click="downloadLevelMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
             </template>
             <span v-else class="eas-readonly">只读 (无权限)</span>
+            <div class="eas-divider"></div>
+            <label class="eas-label">AI 模型</label>
+            <select v-model="selectedModel" class="eas-select">
+              <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
           </template>
 
           <template v-if="selectedNode.type === 'topic'">
