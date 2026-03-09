@@ -4,6 +4,7 @@ import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
+import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
 
 const router = express.Router()
 
@@ -21,6 +22,7 @@ function detectPlatform(url) {
   if (/atcoder\.jp/i.test(url)) return 'atcoder'
   if (/codeforces\.com/i.test(url)) return 'codeforces'
   if (/htoj\.com\.cn/i.test(url)) return 'htoj'
+  if (/nflsoi\.cc/i.test(url)) return 'nflsoj'
   return 'unknown'
 }
 
@@ -29,6 +31,7 @@ const ALLOWED_HOSTS = [
   /^([\w-]+\.)?atcoder\.jp$/i,
   /^([\w-]+\.)?codeforces\.com$/i,
   /^([\w-]+\.)?htoj\.com\.cn$/i,
+  /^nflsoi\.cc$/i,
 ]
 function isAllowedUrl(urlStr) {
   try {
@@ -57,7 +60,8 @@ router.get('/contest', authenticateToken, async (req, res) => {
     if (platform === 'atcoder') return res.json(await fetchAtCoderContest(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesContest(url))
     if (platform === 'htoj') return res.json(await fetchHtojContest(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ' })
+    if (platform === 'nflsoj') return res.json(await fetchNflsojContest(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
     const code = err.response?.status
@@ -79,7 +83,8 @@ router.get('/problem', authenticateToken, async (req, res) => {
     if (platform === 'atcoder') return res.json(await fetchAtCoderProblem(url))
     if (platform === 'codeforces') return res.json(await fetchCodeforcesProblem(url))
     if (platform === 'htoj') return res.json(await fetchHtojProblem(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ' })
+    if (platform === 'nflsoj') return res.json(await fetchNflsojProblem(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ' })
   } catch (err) {
     console.error(`[${platform}] problem fetch error:`, err.message)
     const code = err.response?.status

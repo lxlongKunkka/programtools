@@ -33,6 +33,10 @@ export const ATCODER_USERNAME = process.env.ATCODER_USERNAME || ''
 export const HTOJ_PHONE = process.env.HTOJ_PHONE || ''
 export const HTOJ_PWD = process.env.HTOJ_PWD || ''
 
+// NFLSOJ (nflsoi.cc:20035, SYZOJ 框架) 账号，用于抓取比赛题目和 AC 代码
+export const NFLSOJ_USER = process.env.NFLSOJ_USER || ''
+export const NFLSOJ_PWD = process.env.NFLSOJ_PWD || ''
+
 // CORS 允许的源，生产环境应在 .env 中配置；未配置则不限制来源
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
