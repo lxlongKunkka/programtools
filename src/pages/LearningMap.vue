@@ -295,21 +295,26 @@ export default {
       }
       this.editMode = true
       this.$nextTick(() => {
-        this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+        this.editModeNode = { type: 'chapter', id: chapter.id || chapter._id, uid: chapter._id }
       })
     },
 
     selectChapterInTree(chapter, level, topic) {
+      const node = { type: 'chapter', id: chapter.id || chapter._id, uid: chapter._id }
       if (!this.editMode) {
         this.selectedNode = { type: 'topic', id: topic._id }
         this.selectedData = topic
         this.selectedLevel = level
         this.editMode = true
         this.$nextTick(() => {
-          this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+          this.editModeNode = node
         })
       } else {
-        this.editModeNode = { type: 'chapter', id: chapter._id || chapter.id }
+        // 强制触发 watcher：先置 null 再设新值
+        this.editModeNode = null
+        this.$nextTick(() => {
+          this.editModeNode = node
+        })
       }
     },
 
