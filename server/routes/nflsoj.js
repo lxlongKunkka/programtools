@@ -362,49 +362,40 @@ function decodeSvgFormula($svg, $) {
 
 /**
  * 将 SYZOJ 题目页面的 HTML 转换为 Markdown
+ * 主要内容在 class 包含 "font-content" 的 div 中
  * SYZOJ v2 结构：题面分多个 .ui.segment，每段含 h4 标题 + .font-content 内容
  * SYZOJ v3 结构：所有内容在单个 .font-content 内
  */
 function parseProblemContent($) {
   // ── SYZOJ v2：多 section 模式 ──────────────────────────────────────────────
   // 形如：<div class="ui segment"><h4>题目描述</h4><div class="font-content">...</div></div>
+  // 只在同一个 segment 内同时有 h4 和直接子级 .font-content 时才认定为 v2
   const segments = $('.ui.segment').filter((_, el) => {
     const $el = $(el)
-    return $el.find('h4').length > 0 && $el.find('.font-content').length > 0
+    // 必须是直接子级的 h4 和 .font-content，避免匹配外层包装容器
+    return $el.children('h4').length > 0 && $el.children('.font-content').length > 0
   })
 
   if (segments.length > 0) {
     let md = ''
     segments.each((_, seg) => {
       const $seg = $(seg)
-      const sectionTitle = $seg.find('h4').first().text().trim()
-      const $fc = $seg.find('.font-content').first()
+      const sectionTitle = $seg.children('h4').first().text().trim()
+      const $fc = $seg.children('.font-content').first()
 
-      // 输入输出样例 section 中的 pre 直接在 .test-cases 里，由 font-content 包含或额外处理
       if (sectionTitle) md += `## ${sectionTitle}\n\n`
       md += processChildren($fc[0]) + '\n\n'
     })
 
-    // 样例若在独立 .test-cases 容器中（部分 SYZOJ 版本）
-    const $testCases = $('.test-cases, .sample-test')
-    if ($testCases.length) {
-      md += '## 输入输出样例\n\n'
-      $testCases.each((i, tc) => {
-        const $tc = $(tc)
-        const inputText = $tc.find('pre').eq(0).text().trimEnd()
-        const outputText = $tc.find('pre').eq(1).text().trimEnd()
-        if (inputText !== undefined) md += `### 输入 #${i + 1}\n\n\`\`\`\n${inputText}\n\`\`\`\n\n`
-        if (outputText !== undefined) md += `### 输出 #${i + 1}\n\n\`\`\`\n${outputText}\n\`\`\`\n\n`
-      })
-    }
-
     return md.replace(/\n{3,}/g, '\n\n').trim()
   }
 
-  // ── SYZOJ v3 / 单容器模式（回退）────────────────────────────────────────────
+  // ── SYZOJ v3 / 单容器模式（原有逻辑，回退）────────────────────────────────
   let $content = $('.font-content').first()
   if (!$content.length) $content = $('[class*="content"]').first()
   if (!$content.length) return ''
+
+  let md = ''
 
   // 遍历子节点
   function processNode(el) {
