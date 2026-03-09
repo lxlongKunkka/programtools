@@ -262,9 +262,15 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
             isUnlocked = progress.unlockedChapterUids.some(id => id.toString() === chapter._id.toString())
         }
         
-        // Always allow access to the first chapter of any topic
+        // Allow access to the first chapter of a topic ONLY if the level is unlocked for this user
         if (!isUnlocked && isFirstChapter) {
-            isUnlocked = true
+            const levelSubject = level.subject || 'C++'
+            const currentSubjectLevel = (progress.subjectLevels && typeof progress.subjectLevels.get === 'function')
+                ? (progress.subjectLevels.get(levelSubject) || (levelSubject === 'C++' ? (progress.currentLevel || 1) : 1))
+                : (progress.currentLevel || 1)
+            if (currentSubjectLevel >= level.level) {
+                isUnlocked = true
+            }
         }
 
         // Fallback: Check if previous chapter is completed (Self-Healing)

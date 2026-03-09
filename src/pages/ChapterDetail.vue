@@ -142,25 +142,6 @@
 
     </div>
 
-    <!-- Solve Modal -->
-    <div v-if="showSolveModal" class="modal-overlay">
-      <div class="modal-content solve-modal">
-        <div class="modal-header">
-          <h3>{{ currentProblem.title }}</h3>
-          <button @click="closeSolveModal" class="btn-close">×</button>
-        </div>
-        <div class="modal-body">
-          <p class="problem-desc">请编写代码解决此问题 (模拟提交)</p>
-          <textarea v-model="code" class="code-editor" placeholder="// Write your C++ code here..."></textarea>
-        </div>
-        <div class="modal-footer">
-          <button @click="submitSolution" class="btn-submit" :disabled="submitting">
-            {{ submitting ? '提交中...' : '提交运行' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -181,9 +162,6 @@ export default {
       allLevels: [],
       chapter: null,
       userProgress: null,
-      showSolveModal: false,
-      currentProblem: null,
-      code: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello World" << endl;\n    return 0;\n}',
       submitting: false,
       isMaximized: false,
       fontSize: 18,
@@ -595,40 +573,6 @@ export default {
         this.showToastMessage('检查失败: ' + e.message)
       } finally {
         this.checking = null
-      }
-    },
-    openSolveModal(problem) {
-      this.currentProblem = problem
-      this.showSolveModal = true
-    },
-    closeSolveModal() {
-      this.showSolveModal = false
-      this.currentProblem = null
-    },
-    async submitSolution() {
-      this.submitting = true
-      try {
-        // Simulate a delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        const res = await request('/api/course/submit-problem', {
-          method: 'POST',
-          body: JSON.stringify({
-            chapterId: this.chapter.id,
-            problemId: this.currentProblem._id,
-            passed: true // Simulate success
-          })
-        })
-        
-        if (res.progress) {
-          this.userProgress = res.progress
-          this.showToastMessage('提交成功！')
-          this.closeSolveModal()
-        }
-      } catch (e) {
-        this.showToastMessage('提交失败: ' + e.message)
-      } finally {
-        this.submitting = false
       }
     },
     async completeReading() {
@@ -1222,67 +1166,4 @@ export default {
   cursor: not-allowed;
 }
 
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-.solve-modal {
-  width: 600px;
-  height: 500px;
-  display: flex;
-  flex-direction: column;
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-.modal-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.code-editor {
-  flex: 1;
-  width: 100%;
-  padding: 10px;
-  font-family: monospace;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  resize: none;
-}
-.modal-footer {
-  margin-top: 15px;
-  display: flex;
-  justify-content: flex-end;
-}
-.btn-submit {
-  padding: 10px 25px;
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-.btn-submit:disabled {
-  background-color: #95a5a6;
-  cursor: not-allowed;
-}
 </style>

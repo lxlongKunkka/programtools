@@ -14,7 +14,7 @@ const userProgressSchema = new mongoose.Schema({
   },
 
   // Store unlocked chapter IDs (e.g., "1-1", "1-2") - LEGACY / DISPLAY
-  unlockedChapters: { type: [String], default: ['1-1'] },
+  unlockedChapters: { type: [String], default: [] },
   // Store completed chapter IDs - LEGACY / DISPLAY
   completedChapters: { type: [String], default: [] },
 
