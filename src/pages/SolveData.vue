@@ -2779,7 +2779,7 @@ def main():
                 # 2. 同时也扫描当前目录下的关键文件，补充进去 (如果 additional_file 中没有的话)
                 # 这样既支持批量下载时预生成的 additional_file，也支持手动运行时的文件收集
                 
-                candidates = ['solution.md', 'data_generator.py', 'std.cpp', 'std.py', 'Main.java']
+                candidates = ['solution.md', 'data_generator.py', 'std.cpp', 'std.py', 'Main.java', 'sample.zip']
                 
                 # 自动查找 PPT 相关文件
                 for f in os.listdir('.'):
