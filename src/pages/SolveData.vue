@@ -1145,6 +1145,18 @@ export default {
           if (task.codeOutput && task.codeOutput.trim()) {
             folder.file('solution.md', task.codeOutput, zipOptions)
           }
+
+          // 8. 附加文件（如 NFLSOJ testdata.zip）
+          if (task.additionalFile && task.additionalFile.base64) {
+            try {
+              const binaryStr = atob(task.additionalFile.base64)
+              const bytes = new Uint8Array(binaryStr.length)
+              for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
+              folder.file(task.additionalFile.filename || 'additional_file.zip', bytes, zipOptions)
+            } catch (e) {
+              console.warn('Failed to add additional file to zip:', e)
+            }
+          }
         }
 
         // 添加批量运行脚本 (包含运行任务和提取报告)
@@ -1395,10 +1407,15 @@ pause
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const editorial = data.editorial || ''
       const acCode = data.acCode || ''
+      const additionalFile = data.additionalFile || null
       if (acCode) {
         this.showToastMessage('✅ 已自动抓取 AC 代码')
       } else if (editorial) {
         this.showToastMessage('✅ 已自动抓取 AtCoder 解题思路')
+      }
+      if (additionalFile) {
+        const sizeKb = Math.round(additionalFile.size / 1024)
+        this.showToastMessage(`📦 已下载附加文件 ${additionalFile.filename} (${sizeKb} KB)`)
       }
 
       // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
@@ -1431,6 +1448,7 @@ pause
           codeOutput: '',
           serverPureCode: '',
           dataOutput: '',
+          additionalFile,
           problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
           status: 'pending'
         }
@@ -1449,6 +1467,7 @@ pause
         dataOutput: '',
         translationText: '',
         translationEnglish: '',
+        additionalFile,
         problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
         reportHtml: ''
       }

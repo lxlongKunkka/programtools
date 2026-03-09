@@ -89,6 +89,28 @@ async function nflsojGet(path) {
   return r.data
 }
 
+/** 二进制下载（用于附加文件）, 返回 { buffer: Buffer, filename: string } */
+async function nflsojGetBinary(path) {
+  const cookies = await getNflsojSession()
+  const r = await axios.get(NFLSOJ_BASE + path, {
+    headers: nflsojHeaders(cookies),
+    responseType: 'arraybuffer',
+    validateStatus: s => s < 600,
+    timeout: 30000
+  })
+  if (r.status === 403) throw new Error('NFLSOJ 无权下载附加文件（403）')
+  if (r.status === 404) throw new Error('NFLSOJ 附加文件不存在（404）')
+  if (r.status >= 400) throw new Error(`NFLSOJ 下载失败，HTTP ${r.status}`)
+
+  // 尝试从 Content-Disposition 解析文件名
+  const cd = r.headers['content-disposition'] || ''
+  let filename = 'additional_file.zip'
+  const fnMatch = cd.match(/filename\*?=(?:UTF-8'')?"?([^"\s;]+)"?/i)
+  if (fnMatch) filename = decodeURIComponent(fnMatch[1])
+
+  return { buffer: Buffer.from(r.data), filename }
+}
+
 // ─── URL 解析 ─────────────────────────────────────────────────────────────────
 
 /**
@@ -318,6 +340,24 @@ export async function fetchNflsojProblem(url) {
     console.warn(`[nflsoj] AC code skipped for ${contestId}/${problemNumber}:`, e.message)
   }
 
+  // 检测并下载附加文件（如 testdata zip）
+  let additionalFile = null
+  try {
+    // SYZOJ 附加文件链接格式: href="/problem/:id/download/additional_file"
+    const addLink = $('a[href*="/download/additional_file"]').first().attr('href')
+    if (addLink) {
+      const { buffer, filename } = await nflsojGetBinary(addLink)
+      additionalFile = {
+        filename,
+        base64: buffer.toString('base64'),
+        size: buffer.length
+      }
+      console.log(`[nflsoj] 附加文件下载成功: ${filename} (${buffer.length} bytes)`)
+    }
+  } catch (e) {
+    console.warn(`[nflsoj] 附加文件下载跳过 for ${contestId}/${problemNumber}:`, e.message)
+  }
+
   return {
     title,
     content,
@@ -325,6 +365,7 @@ export async function fetchNflsojProblem(url) {
     contestId,
     problemNumber,
     acCode,
+    additionalFile,
   }
 }
 
