@@ -67,7 +67,7 @@
                         v-for="(chapter, cIdx) in topic.chapters" 
                         :key="chapter.id" 
                         :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
-                        @click.stop="selectNode('chapter', chapter, level, topic)"
+                        @click.stop="debugChapterClick(chapter, level, topic); selectNode('chapter', chapter, level, topic)"
                         >
                         <span class="tree-label">{{ chapter.title }}</span>
                         <div class="tree-meta">
@@ -572,7 +572,19 @@ export default {
     isSelected(type, id) {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
     },
+    debugChapterClick(chapter, level, topic) {
+      console.log('[DEBUG] chapter click fired:', {
+        chapterId: chapter.id,
+        chapterUid: chapter._id,
+        chapterTitle: chapter.title,
+        topicTitle: topic ? topic.title : null,
+        topicCollapsed: topic ? topic.collapsed : null,
+        levelTitle: level ? level.title : null,
+        levelDescCollapsed: level ? level.descCollapsed : null,
+      })
+    },
     selectNode(type, data, parentLevel = null, parentTopic = null) {
+      console.log('[DEBUG] selectNode called:', type, data && (data.id || data._id || data.title || data.name))
       this.isSelecting = true
       // Set selection ID
       const id = data._id || data.id || 'new'
@@ -603,6 +615,7 @@ export default {
         this.editingTopic = JSON.parse(JSON.stringify(data))
         this.editingLevelForTopic = parentLevel
       } else if (type === 'chapter') {
+        console.log('[DEBUG] entering chapter branch, parentTopic:', parentTopic ? parentTopic.title : null, 'parentLevel:', parentLevel ? parentLevel.title : null)
         this.editingLevelForChapter = parentLevel
         this.editingTopicForChapter = parentTopic
         
