@@ -348,7 +348,9 @@ export default {
       if (!this.chapter) return
       localStorage.setItem('pending_edit_node', JSON.stringify({
         type: 'chapter',
-        id: this.chapter._id         // MongoDB ObjectId — 唯一标识符
+        id: this.chapter._id,
+        docId: this.chapter.id,
+        levelId: this.$route.query.lid || undefined
       }))
       localStorage.setItem('pending_edit_return', this.$route.fullPath)
       this.$router.push('/course')

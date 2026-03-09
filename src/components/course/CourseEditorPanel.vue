@@ -835,7 +835,7 @@ export default {
     applyInitialNode() {
       console.log('[CourseEditorPanel] applyInitialNode:', this.initialNode, 'levels count:', this.levels.length)
       if (!this.initialNode) return
-      const { type, id } = this.initialNode
+      const { type, id, docId, levelId } = this.initialNode
       if (type === 'group') {
         const group = this.displayGroups.find(g => g._id === id || g.name === id)
         if (group) { group.collapsed = false; this.selectNode('group', group) }
@@ -848,15 +848,21 @@ export default {
           if (topic) { this.selectNode('topic', topic, level); break }
         }
       } else if (type === 'chapter') {
-        // id is always _id (MongoDB ObjectId) — the single source of truth
+        // Match by _id first; fall back to docId (stable '2-5-1' style) if _id is stale
         const matchChapter = (c) => {
           const matchById = c._id && String(c._id) === String(id)
-          const matchByDocId = String(c.id) === String(id)
+          const matchByDocId = docId && String(c.id) === String(docId)
           if (matchById || matchByDocId) console.log('[CourseEditorPanel] matchChapter FOUND:', c.id, c._id)
           return matchById || matchByDocId
         }
+        // When levelId is provided, prefer the level that matches to avoid cross-level conflicts
+        const levelMatchScore = (l) => (levelId && String(l._id) === String(levelId)) ? 1 : 0
         let found = false
-        for (const level of this.levels) {
+        // Sort levels so the matching levelId comes first (avoids cross-level docId collision)
+        const sortedLevels = levelId
+          ? [...this.levels].sort((a, b) => levelMatchScore(b) - levelMatchScore(a))
+          : this.levels
+        for (const level of sortedLevels) {
           // Search in topics (standard)
           for (const topic of (level.topics || [])) {
             const chapter = (topic.chapters || []).find(matchChapter)
