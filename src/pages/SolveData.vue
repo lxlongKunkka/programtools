@@ -1131,6 +1131,7 @@ export default {
           
           // 3. 添加题目描述
           folder.file('problem.md', task.problemText, zipOptions)
+          folder.file('problem_zh_TW.md', task.problemText, zipOptions)
           if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title), zipOptions)
           if (task.translationEnglish) {
             const enContent = task.problemMeta?.sourceUrl
@@ -1158,15 +1159,21 @@ export default {
             folder.file('solution.md', task.codeOutput, zipOptions)
           }
 
-          // 8. 附加文件（如 NFLSOJ testdata.zip），统一命名为 sample.zip
+          // 8. 附加文件（如 NFLSOJ testdata.zip），解压内容到 additional_file/ 子目录
           if (task.additionalFile && task.additionalFile.base64) {
             try {
               const binaryStr = atob(task.additionalFile.base64)
               const bytes = new Uint8Array(binaryStr.length)
               for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-              folder.file('sample.zip', bytes, zipOptions)
+              const innerZip = await JSZip.loadAsync(bytes)
+              for (const [name, file] of Object.entries(innerZip.files)) {
+                if (!file.dir) {
+                  const content = await file.async('uint8array')
+                  folder.file(`additional_file/${name}`, content, zipOptions)
+                }
+              }
             } catch (e) {
-              console.warn('Failed to add additional file to zip:', e)
+              console.warn('Failed to extract additional file to zip:', e)
             }
           }
         }
@@ -1432,6 +1439,8 @@ pause
 
       // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
       let title = data.title || fallbackTitle || url
+      // 去除标题前缀中的点号："A. 鸭子与按钮" → "A 鸭子与按钮"（NFLSOJ 等竞赛题常见格式）
+      title = title.replace(/^([A-Za-z0-9]+)\. /, '$1 ')
       const atcoderMatch = url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/[^/]+_([a-z0-9]+)/i)
       if (atcoderMatch) {
         const contestId = atcoderMatch[1].toUpperCase() // e.g. ABC235
@@ -2421,6 +2430,9 @@ pause
         zip.file('problem.yaml', yamlContent, zipOptions)
 
         // 如果有翻译内容则一并打包
+        if (this.problemText && this.problemText.trim()) {
+          zip.file('problem_zh_TW.md', this.problemText, zipOptions)
+        }
         if (this.translationText && this.translationText.trim()) {
           zip.file('problem_zh.md', this.applyTitleToTranslation(this.translationText, this.problemMeta?.title), zipOptions)
         } else if (this.problemText && this.problemText.trim()) {
@@ -2441,16 +2453,22 @@ pause
             zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
         }
 
-        // 附加文件（如 NFLSOJ testdata.zip），统一命名为 sample.zip
+        // 附加文件（如 NFLSOJ testdata.zip），解压内容到 additional_file/ 子目录
         const curTask = this.tasks[this.currentTaskIndex]
         if (curTask?.additionalFile?.base64) {
           try {
             const binaryStr = atob(curTask.additionalFile.base64)
             const bytes = new Uint8Array(binaryStr.length)
             for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-            zip.file('sample.zip', bytes, zipOptions)
+            const innerZip = await JSZip.loadAsync(bytes)
+            for (const [name, file] of Object.entries(innerZip.files)) {
+              if (!file.dir) {
+                const content = await file.async('uint8array')
+                zip.file(`additional_file/${name}`, content, zipOptions)
+              }
+            }
           } catch (e) {
-            console.warn('打包附加文件时出错:', e)
+            console.warn('附加文件解压出错:', e)
           }
         }
 
@@ -2760,6 +2778,11 @@ def main():
                     zipf.write('problem_zh.md', 'problem_zh.md')
                     print("  + problem_zh.md")
                 
+                # 打包 problem_zh_TW.md（原文）
+                if os.path.exists('problem_zh_TW.md'):
+                    zipf.write('problem_zh_TW.md', 'problem_zh_TW.md')
+                    print("  + problem_zh_TW.md")
+                
                 # 打包 problem_en.md
                 if os.path.exists('problem_en.md'):
                     zipf.write('problem_en.md', 'problem_en.md')
@@ -2779,13 +2802,13 @@ def main():
                 # 2. 同时也扫描当前目录下的关键文件，补充进去 (如果 additional_file 中没有的话)
                 # 这样既支持批量下载时预生成的 additional_file，也支持手动运行时的文件收集
                 
-                candidates = ['solution.md', 'data_generator.py', 'std.cpp', 'std.py', 'Main.java', 'sample.zip']
+                candidates = ['solution.md', 'data_generator.py', 'std.cpp', 'std.py', 'Main.java']
                 
                 # 自动查找 PPT 相关文件
                 for f in os.listdir('.'):
                     if os.path.isfile(f):
                         lower_f = f.lower()
-                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md', 'problem_en.md'] or f in candidates:
+                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md', 'problem_zh_TW.md', 'problem_en.md'] or f in candidates:
                             continue
                         if 'ppt' in lower_f or lower_f.endswith('.html') or lower_f.endswith('.pptx') or lower_f.endswith('.pdf'):
                             candidates.append(f)
