@@ -168,6 +168,31 @@ function extractCodeFromSubmissionHtml(html) {
 // ─── 题目内容解析（cheerio）───────────────────────────────────────────────────
 
 /**
+ * 从 MathJax 3 的 <mjx-container> 或 <svg> 元素中提取原始 LaTeX 字符串
+ * 尝试顺序：aria-label → data-tex → svg>title → null
+ */
+function extractLatexFromMjx($el) {
+  // 1. aria-label（MathJax 3 最常见的存放位置）
+  const label = $el.attr('aria-label')
+  if (label && label.trim()) return label.trim()
+
+  // 2. data-tex / data-original-expression（某些自定义渲染器）
+  const dataTex = $el.attr('data-tex') || $el.attr('data-original-expression')
+  if (dataTex && dataTex.trim()) return dataTex.trim()
+
+  // 3. 内部 SVG 的 <title> 子元素
+  const svgTitle = $el.find('svg > title').first().text().trim()
+  if (svgTitle) return svgTitle
+
+  // 4. SYZOJ 有时将原始 TeX 放在同级的隐藏 <script type="math/tex"> 中
+  //    （旧版 MathJax 方式，cheerio 里可能解析不到，但保险起见留着）
+  const script = $el.next('script[type*="math/tex"]').text().trim()
+  if (script) return script
+
+  return null
+}
+
+/**
  * 将 SYZOJ 题目页面的 HTML 转换为 Markdown
  * 主要内容在 class 包含 "font-content" 的 div 中
  */
@@ -189,9 +214,23 @@ function parseProblemContent($) {
       return el.data || ''
     }
 
-    // SVG 数学公式：替换为 [公式]
-    if (tag === 'svg' || ($el.attr('role') === 'img' && $el.find('path').length)) {
-      return '[公式]'
+    // MathJax 3 容器 <mjx-container>：内含 SVG，原始 LaTeX 一般在 aria-label
+    if (tag === 'mjx-container') {
+      const latex = extractLatexFromMjx($el)
+      const isDisplay = $el.attr('display') === 'true' || $el.hasClass('MJX-TEX-DISPLAY')
+      if (latex) return isDisplay ? `\n$$${latex}$$\n` : `$${latex}$`
+      return isDisplay ? '\n$$[公式]$$\n' : '$[公式]$'
+    }
+
+    // SVG 数学公式（直接出现，不在 mjx-container 里的情况）
+    if (tag === 'svg' && $el.attr('role') === 'img') {
+      // 方式1：SVG 内的 <title>（部分 MathJax 版本会加）
+      const svgTitle = $el.children('title').first().text().trim()
+      if (svgTitle) return `$${svgTitle}$`
+      // 方式2：父元素的 aria-label
+      const parentLabel = $el.parent().attr('aria-label')
+      if (parentLabel) return `$${parentLabel}$`
+      return '$[公式]$'
     }
 
     // 段落
