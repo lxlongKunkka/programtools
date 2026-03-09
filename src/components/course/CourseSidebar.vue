@@ -41,7 +41,7 @@
                 <div
                   class="tree-item topic-item"
                   :class="{ active: selectedNode && selectedNode.type === 'topic' && selectedNode.id === topic._id }"
-                  @click="$emit('select-topic', topic, level)"
+                  @click="onTopicClick(topic, level)"
                 >
                   <span v-if="editMode" class="tree-icon" @click.stop="toggleTopicInTree(topic)">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
                   <span class="tree-label">{{ topic.title }}</span>
@@ -99,12 +99,18 @@ export default {
       level.collapsed = !level.collapsed
       this.$emit('select-level', level)
     },
+    onTopicClick(topic, level) {
+      if (this.editMode) {
+        this.toggleTopicInTree(topic)
+      }
+      this.$emit('select-topic', topic, level)
+    },
     toggleTopicInTree(topic) {
       this.treeExpandedTopics[topic._id] = !this.isTopicExpanded(topic)
     },
     isTopicExpanded(topic) {
-      // Default to expanded (true) so chapters are visible by default in edit mode
-      if (this.treeExpandedTopics[topic._id] === undefined) return true
+      // Default to collapsed (false) in edit mode
+      if (this.treeExpandedTopics[topic._id] === undefined) return false
       return !!this.treeExpandedTopics[topic._id]
     },
     isLevelCompletedFn(level) {
