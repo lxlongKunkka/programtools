@@ -512,6 +512,16 @@ export default {
   },
   activated() {
     this.checkUserUpdate()
+    // Always reset topic collapsed state when returning to this page.
+    // Topics should always be visible so chapters can be clicked.
+    let resetCount = 0
+    this.levels.forEach(l => {
+      if (l.topics) l.topics.forEach(t => {
+        if (t.collapsed) { t.collapsed = false; resetCount++ }
+      })
+    })
+    if (resetCount > 0) console.log(`[Design] activated: reset ${resetCount} collapsed topics`)
+    else console.log('[Design] activated: all topics already expanded')
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleGlobalKeydown)
