@@ -30,7 +30,7 @@
         </div>
 
         <!-- HTML Content Mode -->
-        <div v-if="chapter.contentType === 'html' && viewMode === 'ppt'" :class="['html-content-container', { maximized: isMaximized }]">
+        <div v-if="viewMode === 'ppt' && chapter.resourceUrl" :class="['html-content-container', { maximized: isMaximized }]">
            <!-- Watermark for Fullscreen -->
            <div class="watermark-container" v-if="userInfo">
              <div class="watermark-text" v-for="n in 30" :key="n">
@@ -235,7 +235,7 @@ export default {
     availableTabs() {
       if (!this.chapter) return []
       const tabs = []
-      if (this.chapter.contentType === 'html') tabs.push('ppt')
+      if (this.chapter.resourceUrl) tabs.push('ppt')
       if (this.chapter.content) tabs.push('md')
       if (this.chapter.videoUrl) tabs.push('video')
       return tabs
@@ -562,7 +562,7 @@ export default {
             const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
-            if (chapterDetail.contentType === 'html') {
+            if (chapterDetail.resourceUrl) {
               this.viewMode = 'ppt'
             } else if (chapterDetail.content) {
               this.viewMode = 'md'
