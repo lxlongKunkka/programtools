@@ -931,14 +931,31 @@ export default {
           if (topic) { this.selectNode('topic', topic, level); break }
         }
       } else if (type === 'chapter') {
+        const extra = this.initialNode
+        const uid = extra && extra.uid ? String(extra.uid) : null
+        const matchChapter = (c) => {
+          if (String(c.id) === String(id)) return true
+          if (uid && c._id && String(c._id) === uid) return true
+          if (c._id && String(c._id) === String(id)) return true
+          return false
+        }
         for (const level of this.levels) {
+          // Search in topics (standard)
           for (const topic of (level.topics || [])) {
-            const chapter = (topic.chapters || []).find(c => c._id === id || String(c.id) === String(id))
+            const chapter = (topic.chapters || []).find(matchChapter)
             if (chapter) {
-              // Expand parent nodes in the tree
               level.descCollapsed = false
               topic.collapsed = false
               this.selectNode('chapter', chapter, level, topic)
+              return
+            }
+          }
+          // Search in legacy level.chapters (no topic structure)
+          if (level.chapters && level.chapters.length) {
+            const chapter = level.chapters.find(matchChapter)
+            if (chapter) {
+              level.descCollapsed = false
+              this.selectNode('chapter', chapter, level, null)
               return
             }
           }
