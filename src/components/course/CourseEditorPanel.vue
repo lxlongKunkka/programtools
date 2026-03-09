@@ -833,7 +833,6 @@ export default {
 
     // Phase A: navigate to the node indicated by the initialNode prop
     applyInitialNode() {
-      console.log('[CourseEditorPanel] applyInitialNode:', this.initialNode, 'levels count:', this.levels.length)
       if (!this.initialNode) return
       const { type, id, docId, levelId } = this.initialNode
       if (type === 'group') {
@@ -852,7 +851,6 @@ export default {
         const matchChapter = (c) => {
           const matchById = c._id && String(c._id) === String(id)
           const matchByDocId = docId && String(c.id) === String(docId)
-          if (matchById || matchByDocId) console.log('[CourseEditorPanel] matchChapter FOUND:', c.id, c._id)
           return matchById || matchByDocId
         }
         // When levelId is provided, prefer the level that matches to avoid cross-level conflicts
@@ -886,14 +884,7 @@ export default {
           }
         }
         if (!found) {
-          console.warn('[CourseEditorPanel] chapter NOT FOUND, searching id:', id)
-          this.levels.forEach(l => {
-            ;(l.topics || []).forEach(t => {
-              ;(t.chapters || []).forEach(c => {
-                console.log('  level:', l.title, '| topic:', t.title, '| ch.id:', c.id, '| ch._id:', c._id, '| type:', typeof c._id)
-              })
-            })
-          })
+          console.warn('[CourseEditorPanel] chapter not found, id:', id, 'docId:', docId)
         }
       }
     },

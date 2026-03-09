@@ -300,7 +300,6 @@ export default {
     },
 
     selectChapterInTree(chapter, level, topic) {
-      console.log('[LearningMap] selectChapterInTree:', { chapter_id: chapter._id, chapter_dotid: chapter.id, chapter })
       const node = { type: 'chapter', id: chapter._id, docId: chapter.id, levelId: level ? level._id : undefined }
       if (!this.editMode) {
         this.selectedNode = { type: 'topic', id: topic._id }
