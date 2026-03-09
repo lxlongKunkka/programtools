@@ -1,6 +1,99 @@
 <template>
-  <div class="course-editor-panel">
-    <!-- Editor Panel (full width, no sidebar) -->
+  <div class="design-container" :class="{ 'design-embedded': embedded, 'design-no-sidebar': hideSidebar }">
+    <!-- Left Sidebar: Tree View -->
+    <div v-if="!hideSidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <h3>课程结构</h3>
+          <button v-if="embedded" @click="$emit('close')" class="btn-close-embedded" title="退出编辑模式">× 退出</button>
+        </div>
+        <button v-if="isAdmin" @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
+      </div>
+
+      <div v-if="loadingCourses" class="loading-text">加载中...</div>
+      <div v-else class="tree-container">
+        <div v-for="group in displayGroups" :key="group.name" class="tree-node-group">
+            <!-- Group Node -->
+            <div 
+                :class="['tree-item', 'group-item', { active: isSelected('group', group._id || group.name) }]"
+                @click="selectNode('group', group); toggleGroupCollapse(group)"
+            >
+                <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
+                <span class="tree-label">{{ group.title || group.name }}</span>
+                <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
+                <span v-if="isExplicitEditor(group)" class="permission-icon" title="您拥有此分组的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
+                <div class="tree-actions">
+                    <button @click.stop="createNewLevel(group)" class="btn-icon" title="添加模块">+</button>
+                </div>
+            </div>
+
+            <!-- Levels (Children of Group) -->
+            <div v-show="!group.collapsed" class="tree-children">
+                <div v-for="level in getLevelsForGroup(group.name)" :key="level._id" class="tree-node-level">
+                <!-- Level Node -->
+                <div 
+                    :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
+                    @click="selectNode('level', level)"
+                >
+                    <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
+                    <span class="tree-label">{{ level.title }}</span>
+                    <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}题</span>
+                    <span v-if="isExplicitLevelEditor(level)" class="permission-icon" title="您拥有此模块的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
+                    <div class="tree-actions">
+                    <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
+                    </div>
+                </div>
+
+                <!-- Topics (Children of Level) -->
+                <div v-show="!level.descCollapsed" class="tree-children">
+                    <div v-for="(topic, tIdx) in level.topics" :key="topic._id" class="tree-node-topic">
+                    <!-- Topic Node -->
+                    <div 
+                        :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
+                        @click="selectNode('topic', topic, level)"
+                    >
+                        <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
+                        <span class="tree-label">{{ topic.title }}</span>
+                        <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
+                        <div class="tree-actions">
+                        <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
+                        <button @click.stop="createNewTopic(level, tIdx)" class="btn-icon" title="在此前插入 Topic">↰</button>
+                        </div>
+                    </div>
+
+                    <!-- Chapters (Children of Topic) -->
+                    <div v-show="!topic.collapsed" class="tree-children">
+                        <div 
+                        v-for="(chapter, cIdx) in topic.chapters" 
+                        :key="chapter.id" 
+                        :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
+                        @click.stop="selectNode('chapter', chapter, level, topic)"
+                        >
+                        <span class="tree-label">{{ chapter.title }}</span>
+                        <div class="tree-meta">
+                            <span class="meta-badge" :class="chapter.contentType === 'html' ? 'badge-html' : 'badge-md'">
+                            {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
+                            </span>
+                            <span v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)" class="meta-count" title="题目数量">
+                            {{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题
+                            </span>
+                        </div>
+                        <div class="tree-actions">
+                            <button @click.stop="createNewChapter(level, topic, cIdx)" class="btn-icon" title="在此前插入章节">↰</button>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+                    <div v-if="!level.topics || level.topics.length === 0" class="empty-node">无 Topic</div>
+                </div>
+                </div>
+                <div v-if="getLevelsForGroup(group.name).length === 0" class="empty-node">无模块</div>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Editor -->
     <div class="editor-panel">
       <div v-if="!selectedNode" class="empty-state">
         <p>请在左侧选择一个节点进行编辑<span v-if="isAdmin">，或点击“添加分组”开始</span>。</p>
@@ -9,7 +102,7 @@
       <div v-else class="editor-layout">
         <!-- 右侧操作栏 -->
         <div class="editor-action-sidebar">
-          <button @click="$emit('close')" class="eas-btn eas-exit">← 退出编辑</button>
+          <button v-if="hideSidebar" @click="$emit('close')" class="eas-btn eas-exit">← 退出编辑</button>
 
           <template v-if="selectedNode.type === 'group'">
             <template v-if="canEditGroup(editingGroup)">
@@ -139,13 +232,13 @@
 </template>
 
 <script>
-import { request } from '../../utils/request.js'
-import GroupEditor   from '../editor/GroupEditor.vue'
-import LevelEditor   from '../editor/LevelEditor.vue'
-import TopicEditor   from '../editor/TopicEditor.vue'
-import ChapterEditor from '../editor/ChapterEditor.vue'
-import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../../utils/courseConfig'
-import { getModels } from '../../utils/models'
+import { request } from '../utils/request.js'
+import GroupEditor   from '../components/editor/GroupEditor.vue'
+import LevelEditor   from '../components/editor/LevelEditor.vue'
+import TopicEditor   from '../components/editor/TopicEditor.vue'
+import ChapterEditor from '../components/editor/ChapterEditor.vue'
+import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../utils/courseConfig'
+import { getModels } from '../utils/models'
 import { io } from 'socket.io-client'
 import JSZip from 'jszip'
 import {
@@ -153,14 +246,16 @@ import {
   canEditLevelWithUser as _canEditLevelWithUser,
   isExplicitEditor as _isExplicitEditor,
   isExplicitLevelEditor as _isExplicitLevelEditor
-} from '../../utils/permissionUtils'
+} from '../utils/permissionUtils'
 
 export default {
-  name: 'CourseEditorPanel',
+  name: 'Design',
   components: { GroupEditor, LevelEditor, TopicEditor, ChapterEditor },
   emits: ['close'],
   props: {
-    initialNode: { type: Object, default: null }
+    embedded:    { type: Boolean, default: false },
+    hideSidebar: { type: Boolean, default: false },
+    initialNode: { type: Object,  default: null }
   },
   inject: ['showToastMessage'],
   watch: {
@@ -833,7 +928,6 @@ export default {
 
     // Phase A: navigate to the node indicated by the initialNode prop
     applyInitialNode() {
-      console.log('[CourseEditorPanel] applyInitialNode:', this.initialNode, 'levels count:', this.levels.length)
       if (!this.initialNode) return
       const { type, id } = this.initialNode
       if (type === 'group') {
@@ -848,12 +942,13 @@ export default {
           if (topic) { this.selectNode('topic', topic, level); break }
         }
       } else if (type === 'chapter') {
-        // id is always _id (MongoDB ObjectId) — the single source of truth
+        const extra = this.initialNode
+        const uid = extra && extra.uid ? String(extra.uid) : null
         const matchChapter = (c) => {
-          const matchById = c._id && String(c._id) === String(id)
-          const matchByDocId = String(c.id) === String(id)
-          if (matchById || matchByDocId) console.log('[CourseEditorPanel] matchChapter FOUND:', c.id, c._id)
-          return matchById || matchByDocId
+          if (String(c.id) === String(id)) return true
+          if (uid && c._id && String(c._id) === uid) return true
+          if (c._id && String(c._id) === String(id)) return true
+          return false
         }
         for (const level of this.levels) {
           // Search in topics (standard)
@@ -1463,6 +1558,31 @@ export default {
         } catch (e) {}
     },
 
+    async saveLevel() {
+      try {
+        // Ensure group is set
+        if (!this.editingLevel.group) {
+            this.editingLevel.group = this.selectedSubject
+        }
+
+        if (this.editingLevel._id) {
+          await request(`/api/course/levels/${this.editingLevel._id}`, {
+            method: 'PUT',
+            body: JSON.stringify(this.editingLevel)
+          })
+        } else {
+          await request('/api/course/levels', {
+            method: 'POST',
+            body: JSON.stringify(this.editingLevel)
+          })
+        }
+        this.showToastMessage('保存成功')
+        this.fetchLevels()
+        this.selectedNode = null // Clear selection or re-select after fetch?
+      } catch (e) {
+        this.showToastMessage('保存失败: ' + e.message)
+      }
+    },
     // --- AI Methods ---
     async ensureChapterSaved() {
         if (!this.editingChapter._id || this.editingChapter.isNew) {
@@ -2496,14 +2616,13 @@ export default {
 </script>
 
 <style scoped>
-.course-editor-panel {
+.design-container.design-embedded {
   height: 100%;
   width: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
-.course-editor-panel .editor-panel {
+/* Phase B: when sidebar is hidden, editor-panel expands to full width */
+.design-container.design-no-sidebar .editor-panel {
   flex: 1;
   min-width: 0;
 }
@@ -2602,7 +2721,7 @@ export default {
 }
 
 /* Variables & Reset */
-.course-editor-panel {
+.design-container {
   --primary-color: #6366f1; /* Indigo 500 */
   --primary-hover: #4f46e5; /* Indigo 600 */
   --primary-light: #e0e7ff; /* Indigo 100 */
@@ -2624,27 +2743,257 @@ export default {
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-
+  
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 52px);
   overflow: hidden;
   background: var(--bg-color);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text-main);
 }
 
+/* Sidebar */
+.sidebar {
+  width: 340px;
+  min-width: 340px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: #fff;
+}
+
+.sidebar-header h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.025em;
+}
+
+.subject-selector {
+  margin-bottom: 16px;
+}
+
+.subject-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: #fff;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.subject-select:hover { border-color: #cbd5e1; }
+.subject-select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+.btn-add-level {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.btn-add-level:hover { 
+  background: var(--primary-hover); 
+  transform: translateY(-1px); 
+  box-shadow: var(--shadow-md);
+}
+.btn-add-level:active { transform: translateY(0); }
+
+.tree-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
 /* Scrollbar Styling */
+.tree-container::-webkit-scrollbar,
 .editor-panel::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+.tree-container::-webkit-scrollbar-thumb,
 .editor-panel::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
 }
+.tree-container::-webkit-scrollbar-track,
 .editor-panel::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* Tree Items */
+.tree-node-group { margin-bottom: 12px; }
+.tree-node-level { margin-bottom: 4px; }
+
+.tree-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+  border-radius: var(--radius-md);
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  position: relative;
+  color: var(--text-secondary);
+}
+
+.tree-item:hover { 
+  background: #f1f5f9; 
+  color: var(--text-main);
+}
+
+.tree-item.active { 
+  background: var(--active-bg); 
+  color: var(--primary-color); 
+  font-weight: 500;
+}
+
+.tree-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-right: 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.tree-item:hover .tree-icon { color: var(--text-secondary); }
+.tree-item.active .tree-icon { color: var(--primary-color); }
+
+.tree-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tree-actions {
+  display: none;
+  margin-left: 8px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.tree-item:hover .tree-actions { display: flex; }
+
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.btn-icon:hover { 
+  color: var(--primary-color); 
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+.group-item {
+    font-weight: 700;
+    color: #1e293b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 4px;
+}
+.group-item:hover { background: #e2e8f0; border-color: #cbd5e1; }
+.group-item.active { 
+  background: #e2e8f0; 
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+.group-item.active .tree-icon { color: var(--primary-color); }
+
+.level-item { 
+  font-weight: 600; 
+  color: #334155; 
+  margin-left: 8px; 
+  border-left: 3px solid #60a5fa;
+  background: #fff;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.level-item:hover { background: #f8fafc; }
+.level-item.active { 
+  background: #eff6ff;
+  border-left-color: #2563eb;
+  color: #1e40af;
+}
+
+.topic-item { 
+  padding-left: 24px; 
+  font-size: 13.5px; 
+  margin-left: 8px;
+  border-left: 3px solid #34d399;
+  background: #fff;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: #475569;
+}
+.topic-item:hover { background: #f8fafc; }
+.topic-item.active { 
+  background: #ecfdf5;
+  border-left-color: #059669;
+  color: #065f46;
+}
+
+.chapter-item { 
+  padding-left: 36px; 
+  font-size: 13px; 
+  margin-left: 8px;
+  border-left: 3px solid #fbbf24;
+  background: #fff;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: #64748b;
+}
+.chapter-item:hover { background: #f8fafc; }
+.chapter-item.active { 
+  background: #fffbeb;
+  border-left-color: #d97706;
+  color: #92400e;
+}
+
+.empty-node {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
 }
 
 /* Editor Panel */
@@ -3039,7 +3388,45 @@ export default {
   100% { transform: scale(0.8); opacity: 0.5; }
 }
 
-/* Checkbox list */
+/* Tree Meta Info */
+.tree-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.meta-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+}
+
+.badge-md {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.badge-html {
+  background-color: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #dbeafe;
+}
+
+.meta-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
 .checkbox-list {
   display: flex;
   flex-wrap: wrap;
@@ -3103,5 +3490,16 @@ export default {
   background-color: #e0f2fe;
   border-color: #7dd3fc;
   transform: translateY(-1px);
+}
+
+.tree-count-badge {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
 }
 </style>
