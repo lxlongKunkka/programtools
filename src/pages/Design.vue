@@ -33,7 +33,7 @@
                 <!-- Level Node -->
                 <div 
                     :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
-                    @click="selectNode('level', level); toggleLevelDesc(level)"
+                    @click="selectNode('level', level)"
                 >
                     <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
                     <span class="tree-label">{{ level.title }}</span>
