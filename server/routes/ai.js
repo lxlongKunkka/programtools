@@ -2383,7 +2383,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
 
     // Inject Chapter Content (Lesson Plan)
     if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-        systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 8000)}\n`
+        systemPrompt += `\n\n【教案内容（必须严格遵守）】\n以下是本节课的详细教案，你**必须**严格按照此教案生成 PPT：\n- PPT 中的所有知识点、例题、代码示例、类比说明、课堂互动环节，都必须直接来源于教案内容，不得自行发挥或替换为教案中没有的内容。\n- 如果教案中有具体的代码示例，PPT 中必须使用完全相同的代码（变量名、逻辑、注释不得修改）。\n- 如果教案中有具体的例题或练习题，PPT 中必须使用完全相同的题目。\n- PPT 的章节结构应与教案保持一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
     }
 
     // Inject Chapter Context
@@ -2633,7 +2633,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-              systemPrompt += `\n\n【参考素材：本节课详细教案/内容】\n请优先基于以下内容提取知识点、案例和例题来生成 PPT，确保 PPT 内容与教案一致：\n${chapterContent.slice(0, 5000)}\n`
+              systemPrompt += `\n\n【教案内容（必须严格遵守）】\n以下是本节课的详细教案，你**必须**严格按照此教案生成 PPT：\n- PPT 中的所有知识点、例题、代码示例、类比说明、课堂互动环节，都必须直接来源于教案内容，不得自行发挥或替换为教案中没有的内容。\n- 如果教案中有具体的代码示例，PPT 中必须使用完全相同的代码（变量名、逻辑、注释不得修改）。\n- 如果教案中有具体的例题或练习题，PPT 中必须使用完全相同的题目。\n- PPT 的章节结构应与教案保持一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
           }
 
           if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
