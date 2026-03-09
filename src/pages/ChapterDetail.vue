@@ -97,17 +97,9 @@
               <div class="bilibili-rclick-blocker" @contextmenu.prevent @mousedown="handleBilibiliOverlay"></div>
             </div>
             <div class="lesson-video-toolbar">
-              <button class="lesson-video-fs-btn" @click="replayBilibiliVideo">↺ 重播</button>
+              <button class="lesson-video-fs-btn" @click="replayBilibiliVideo">↺ 从头播放</button>
               <span class="toolbar-divider"></span>
-              <span class="speed-label">倍速：</span>
-              <button
-                v-for="s in [1, 1.25, 1.5, 1.75, 2]"
-                :key="s"
-                class="lesson-video-speed-btn"
-                :class="{ active: currentSpeed === s }"
-                @click="setBilibiliSpeed(s)">
-                {{ s }}x
-              </button>
+              <span class="speed-label">⚙️ 倍速请点播放器右下角齿轮图标</span>
               <span class="toolbar-divider"></span>
               <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
             </div>
@@ -447,18 +439,7 @@ export default {
       const el = this.$refs.directVideoRef
       if (el) el.playbackRate = speed
     },
-    setBilibiliSpeed(speed) {
-      this.currentSpeed = speed
-      // 尝试通过 allow-same-origin sandbox 控制 iframe 内 video 元素倍速（跨域时 fail silently）
-      try {
-        const iframeEl = this.$refs.bilibiliIframeRef
-        if (iframeEl) {
-          const video = iframeEl.contentDocument?.querySelector('video')
-            || iframeEl.contentWindow?.document?.querySelector('video')
-          if (video) video.playbackRate = speed
-        }
-      } catch (e) {}
-    },
+
     reapplySpeed() {
       const el = this.$refs.directVideoRef
       if (el) el.playbackRate = this.currentSpeed
@@ -467,8 +448,8 @@ export default {
       const el = this.$refs.bilibiliIframeRef
       if (!el) return
       const src = el.src
-      el.src = ''
-      this.$nextTick(() => { el.src = src })
+      el.src = 'about:blank'
+      setTimeout(() => { el.src = src }, 150)
     },
     requestBilibiliFullscreen() {
       const el = this.$refs.bilibiliIframeRef
