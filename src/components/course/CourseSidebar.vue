@@ -100,9 +100,11 @@ export default {
       this.$emit('select-level', level)
     },
     toggleTopicInTree(topic) {
-      this.treeExpandedTopics[topic._id] = !this.treeExpandedTopics[topic._id]
+      this.treeExpandedTopics[topic._id] = !this.isTopicExpanded(topic)
     },
     isTopicExpanded(topic) {
+      // Default to expanded (true) so chapters are visible by default in edit mode
+      if (this.treeExpandedTopics[topic._id] === undefined) return true
       return !!this.treeExpandedTopics[topic._id]
     },
     isLevelCompletedFn(level) {

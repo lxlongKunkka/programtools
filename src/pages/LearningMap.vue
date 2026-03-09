@@ -16,12 +16,10 @@
 
       <!-- Right: content area -->
       <div class="course-content">
-        <!-- Embedded Design editor (edit mode) -->
-        <Design
+        <!-- Embedded CourseEditorPanel (edit mode) -->
+        <CourseEditorPanel
           v-if="editMode"
           ref="designer"
-          embedded
-          :hide-sidebar="true"
           :initial-node="editModeNode"
           @close="onDesignClose"
         />
@@ -89,11 +87,11 @@ import LevelView     from '../components/course/LevelView.vue'
 import TopicView     from '../components/course/TopicView.vue'
 import LearnerModal  from '../components/course/LearnerModal.vue'
 
-// Lazy-load the heavy Design editor — students never load it
-const Design = defineAsyncComponent(() => import('./Design.vue'))
+// Lazy-load the heavy course editor — students never load it
+const CourseEditorPanel = defineAsyncComponent(() => import('../components/course/CourseEditorPanel.vue'))
 
 export default {
-  components: { CourseSidebar, GroupView, LevelView, TopicView, LearnerModal, Design },
+  components: { CourseSidebar, GroupView, LevelView, TopicView, LearnerModal, CourseEditorPanel },
 
   data() {
     return {
