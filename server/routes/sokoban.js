@@ -2,6 +2,7 @@ import express from 'express';
 import SokobanLevel from '../models/SokobanLevel.js';
 import SokobanResult from '../models/SokobanResult.js'; // Legacy? Or maybe I should use this instead of creating new one?
 import SokobanProgress from '../models/SokobanProgress.js';
+import User from '../models/User.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -578,28 +579,22 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
 router.get('/levels/:id/leaderboard', async (req, res) => {
   try {
     const levelId = parseInt(req.params.id);
-    // Use aggregation on SokobanProgress to get unique best scores and join user info
+    // user 集合在 hydroConn，SokobanProgress 在 appConn，无法跨连接 $lookup
+    // 先取排行榜数据，再单独查用户名
     const results = await SokobanProgress.aggregate([
       { $match: { levelId } },
       { $sort: { moves: 1, timeElapsed: 1, completedAt: 1 } },
       { $limit: 10 },
-      {
-        $lookup: {
-          from: 'user',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'userInfo'
-        }
-      },
-      {
-        $project: {
-          moves: 1,
-          timeElapsed: 1,
-          completedAt: 1,
-          username: { $arrayElemAt: ['$userInfo.uname', 0] }
-        }
-      }
+      { $project: { moves: 1, timeElapsed: 1, completedAt: 1, userId: 1 } }
     ]);
+
+    if (results.length > 0) {
+      const userIds = results.map(r => r.userId);
+      const users = await User.find({ _id: { $in: userIds } }).select('_id uname').lean();
+      const userMap = {};
+      users.forEach(u => { userMap[u._id] = u.uname; });
+      results.forEach(r => { r.username = userMap[r.userId] || ''; });
+    }
 
     res.json({
       success: true,
