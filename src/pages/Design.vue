@@ -67,7 +67,7 @@
                         v-for="(chapter, cIdx) in topic.chapters" 
                         :key="chapter.id" 
                         :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
-                        @click.stop="debugChapterClick(chapter, level, topic); selectNode('chapter', chapter, level, topic)"
+                        @click.stop="selectNode('chapter', chapter, level, topic)"
                         >
                         <span class="tree-label">{{ chapter.title }}</span>
                         <div class="tree-meta">
@@ -572,19 +572,7 @@ export default {
     isSelected(type, id) {
       return this.selectedNode && this.selectedNode.type === type && this.selectedNode.id === id
     },
-    debugChapterClick(chapter, level, topic) {
-      console.log('[DEBUG] chapter click fired:', {
-        chapterId: chapter.id,
-        chapterUid: chapter._id,
-        chapterTitle: chapter.title,
-        topicTitle: topic ? topic.title : null,
-        topicCollapsed: topic ? topic.collapsed : null,
-        levelTitle: level ? level.title : null,
-        levelDescCollapsed: level ? level.descCollapsed : null,
-      })
-    },
     selectNode(type, data, parentLevel = null, parentTopic = null) {
-      console.log('[DEBUG] selectNode called:', type, data && (data.id || data._id || data.title || data.name))
       this.isSelecting = true
       // Set selection ID
       const id = data._id || data.id || 'new'
@@ -615,7 +603,6 @@ export default {
         this.editingTopic = JSON.parse(JSON.stringify(data))
         this.editingLevelForTopic = parentLevel
       } else if (type === 'chapter') {
-        console.log('[DEBUG] entering chapter branch, parentTopic:', parentTopic ? parentTopic.title : null, 'parentLevel:', parentLevel ? parentLevel.title : null)
         this.editingLevelForChapter = parentLevel
         this.editingTopicForChapter = parentTopic
         
@@ -1512,18 +1499,11 @@ export default {
     },
 
     saveTreeState() {
+        // Only save group/level collapsed state; topics always stay expanded
         const state = {
             groups: this.groups.filter(g => g.collapsed).map(g => g._id || g.name),
-            levels: this.levels.filter(l => l.descCollapsed).map(l => l._id),
-            topics: []
+            levels: this.levels.filter(l => l.descCollapsed).map(l => l._id)
         }
-        this.levels.forEach(l => {
-            if (l.topics) {
-                l.topics.forEach(t => {
-                    if (t.collapsed) state.topics.push(t._id)
-                })
-            }
-        })
         localStorage.setItem('design_tree_collapsed_state', JSON.stringify(state))
     },
     restoreTreeState() {
@@ -1550,21 +1530,22 @@ export default {
                 })
             }
             
-            if (state.topics) {
-                const collapsedTopics = new Set(state.topics)
-                this.levels.forEach(l => {
-                    if (l.topics) {
-                        l.topics.forEach(t => {
-                            if (collapsedTopics.has(t._id)) {
-                                t.collapsed = true
-                            }
-                        })
-                    }
-                })
-            }
+            // Note: topic collapsed state is intentionally NOT restored.
+            // Topics always default to expanded so all chapters are clickable.
         } catch (e) {
             console.error('Failed to restore tree state', e)
         }
+        // Clear any stale topic collapsed state from old localStorage format
+        try {
+            const raw = localStorage.getItem('design_tree_collapsed_state')
+            if (raw) {
+                const state = JSON.parse(raw)
+                if (state.topics) {
+                    delete state.topics
+                    localStorage.setItem('design_tree_collapsed_state', JSON.stringify(state))
+                }
+            }
+        } catch (e) {}
     },
 
     async saveLevel() {
