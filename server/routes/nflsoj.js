@@ -368,11 +368,13 @@ function decodeSvgFormula($svg, $) {
  */
 function parseProblemContent($) {
   // ── SYZOJ v2：多 section 模式 ──────────────────────────────────────────────
-  // 形如：<div class="ui segment"><h4>题目描述</h4><div class="font-content">...</div></div>
-  // 只在同一个 segment 内同时有 h4 和直接子级 .font-content 时才认定为 v2
-  const segments = $('.ui.segment').filter((_, el) => {
+  // 实际结构：<div class="row"><div class="column">
+  //             <h4 class="ui top attached block header">题目描述</h4>
+  //             <div class="ui bottom attached segment font-content">...</div>
+  //           </div></div>
+  // 找 .column，要求直接子元素同时有 h4 和 .font-content
+  const segments = $('.column').filter((_, el) => {
     const $el = $(el)
-    // 必须是直接子级的 h4 和 .font-content，避免匹配外层包装容器
     return $el.children('h4').length > 0 && $el.children('.font-content').length > 0
   })
 
