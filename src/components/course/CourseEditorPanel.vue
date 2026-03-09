@@ -847,12 +847,10 @@ export default {
           if (topic) { this.selectNode('topic', topic, level); break }
         }
       } else if (type === 'chapter') {
-        const extra = this.initialNode
-        const uid = extra && extra.uid ? String(extra.uid) : null
+        // id is always _id (MongoDB ObjectId) — the single source of truth
         const matchChapter = (c) => {
-          if (String(c.id) === String(id)) return true
-          if (uid && c._id && String(c._id) === uid) return true
           if (c._id && String(c._id) === String(id)) return true
+          if (String(c.id) === String(id)) return true  // fallback for legacy
           return false
         }
         for (const level of this.levels) {

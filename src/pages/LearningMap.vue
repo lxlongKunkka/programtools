@@ -295,12 +295,12 @@ export default {
       }
       this.editMode = true
       this.$nextTick(() => {
-        this.editModeNode = { type: 'chapter', id: chapter.id || chapter._id, uid: chapter._id }
+        this.editModeNode = { type: 'chapter', id: chapter._id }
       })
     },
 
     selectChapterInTree(chapter, level, topic) {
-      const node = { type: 'chapter', id: chapter.id || chapter._id, uid: chapter._id }
+      const node = { type: 'chapter', id: chapter._id }
       if (!this.editMode) {
         this.selectedNode = { type: 'topic', id: topic._id }
         this.selectedData = topic
