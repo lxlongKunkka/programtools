@@ -580,12 +580,11 @@ export async function fetchNflsojProblem(url) {
   const html = await nflsojGet(`/contest/${contestId}/problem/${problemNumber}`)
   const $ = load(html)
 
-  // 提取题目标题（<title> = "A. 次短路 - 比赛名 - 比赛 - NFLSOJ"）
-  const rawTitle = $('title').text().trim()
-  const title = rawTitle.split(' - ')[0]?.trim() || `题目 ${problemNumber}`
+  // 提取题目标题（保留原始标题，不做截断）
+  const title = $('title').text().trim() || `题目 ${problemNumber}`
 
   // 提取正文内容
-  const content = parseProblemContent($)
+  let content = parseProblemContent($)
 
   // 获取 AC 代码（失败不影响题目返回）
   // 替换题面中 NFLSOJ 域名图片为 COS 链接（避免浏览器因 session 限制无法加载）
