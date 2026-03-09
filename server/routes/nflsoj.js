@@ -10,9 +10,11 @@
 import express from 'express'
 import axios from 'axios'
 import crypto from 'crypto'
+import path from 'path'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
 import { NFLSOJ_USER, NFLSOJ_PWD } from '../config.js'
+import { uploadImageToCos } from '../utils/cosUploader.js'
 
 const router = express.Router()
 
@@ -486,6 +488,42 @@ function parseProblemContent($) {
   return md.replace(/\n{3,}/g, '\n\n').trim()
 }
 
+// ─── 图片代理：下载 NFLSOJ 图片（需要 session）并上传 COS ────────────────────────
+
+/**
+ * 将 markdown 中所有 NFLSOJ 域名的图片下载（带 session cookie）并上传 COS，替换为 COS URL
+ * 失败时保留原链接
+ */
+async function replaceNflsojImages(markdown) {
+  // 匹配 ![alt](http://nflsoi.cc:20035/...)
+  const imgRe = /!\[([^\]]*)\]\((https?:\/\/nflsoi\.cc:[\d]+\/[^)]+)\)/g
+  const matches = []
+  let m
+  while ((m = imgRe.exec(markdown)) !== null) {
+    matches.push({ full: m[0], alt: m[1], src: m[2] })
+  }
+  if (!matches.length) return markdown
+
+  let result = markdown
+  for (const { full, alt, src } of matches) {
+    try {
+      // 从 URL 中提取路径部分（去掉 base）
+      const urlPath = src.replace(/^https?:\/\/nflsoi\.cc:\d+/, '')
+      const { buffer } = await nflsojGetBinary(urlPath)
+      const ext = path.extname(urlPath.split('?')[0]) || '.png'
+      const fileName = `nflsoj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`
+      const cosUrl = await uploadImageToCos(buffer, fileName)
+      if (cosUrl) {
+        result = result.replace(full, `![${alt}](${cosUrl})`)
+        console.log(`[nflsoj] 图片已上传 COS: ${src} → ${cosUrl}`)
+      }
+    } catch (e) {
+      console.warn(`[nflsoj] 图片上传跳过: ${src}`, e.message)
+    }
+  }
+  return result
+}
+
 // ─── 核心抓取函数 ─────────────────────────────────────────────────────────────
 
 /**
@@ -550,6 +588,13 @@ export async function fetchNflsojProblem(url) {
   const content = parseProblemContent($)
 
   // 获取 AC 代码（失败不影响题目返回）
+  // 替换题面中 NFLSOJ 域名图片为 COS 链接（避免浏览器因 session 限制无法加载）
+  try {
+    content = await replaceNflsojImages(content)
+  } catch (e) {
+    console.warn('[nflsoj] 图片替换失败，跳过:', e.message)
+  }
+
   let acCode = ''
   try {
     acCode = await fetchNflsojAcCode(contestId, problemNumber) || ''
