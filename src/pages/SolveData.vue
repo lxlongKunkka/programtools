@@ -1353,7 +1353,8 @@ pause
           /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
           /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
           /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
-          /htoj\.com\.cn.*[?&]pid=\d+/i.test(url)
+          /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
+          /nflsoi\.cc[^/]*\/contest\/\d+\/problem\/\d+/i.test(url)
         )
         if (isSingleProblem) throw new Error('single_problem')
 

@@ -310,23 +310,97 @@ export async function fetchNflsojProblem(url) {
   // 提取正文内容
   const content = parseProblemContent($)
 
+  // 获取 AC 代码（失败不影响题目返回）
+  let acCode = ''
+  try {
+    acCode = await fetchNflsojAcCode(contestId, problemNumber) || ''
+  } catch (e) {
+    console.warn(`[nflsoj] AC code skipped for ${contestId}/${problemNumber}:`, e.message)
+  }
+
   return {
     title,
     content,
     url: `${NFLSOJ_BASE}/contest/${contestId}/problem/${problemNumber}`,
     contestId,
     problemNumber,
+    acCode,
   }
 }
 
 /**
+ * 从排行榜页面提取 AC 代码（首选方式）
+ * SYZOJ 排行榜嵌入 const ranklist = [...]; 每条含每题最佳提交 ID
+ */
+async function fetchNflsojAcCodeFromRanklist(contestId, problemNumber) {
+  const html = await nflsojGet(`/contest/${contestId}/ranklist`)
+
+  // 尝试多种 SYZOJ 版本的嵌入格式
+  const rankMatch = html.match(/const\s+ranklist\s*=\s*(\[[\s\S]*?\])\s*;/)
+  if (!rankMatch) return null
+
+  let ranklist
+  try { ranklist = JSON.parse(rankMatch[1]) } catch { return null }
+  if (!Array.isArray(ranklist) || !ranklist.length) return null
+
+  const probKey = String(problemNumber)
+
+  // 收集所有满分（100分）提交 ID，优先 C++
+  const candidates = []
+  for (const entry of ranklist) {
+    // SYZOJ 不同版本的字段名略有差异，兼容处理
+    const details = (
+      entry.score?.details ||
+      entry.problemStatus ||
+      entry.problems ||
+      (entry.detail && entry.detail[probKey] !== undefined ? entry.detail : null) ||
+      {}
+    )
+    const prob = details[probKey]
+    if (!prob) continue
+    const score = prob.score ?? prob.totalScore ?? prob.result
+    const subId = prob.submissionId || prob.submission_id || prob.id
+    if (score === 100 && subId) {
+      candidates.push({ subId, language: prob.language || '' })
+    }
+  }
+
+  if (!candidates.length) return null
+
+  // 优先 C++
+  candidates.sort((a, b) => {
+    const aC = /[Cc]\+\+|cpp/i.test(a.language) ? -1 : 1
+    const bC = /[Cc]\+\+|cpp/i.test(b.language) ? -1 : 1
+    return aC - bC
+  })
+
+  for (const { subId } of candidates.slice(0, 3)) {
+    try {
+      const subHtml = await nflsojGet(`/submission/${subId}`)
+      const code = extractCodeFromSubmissionHtml(subHtml)
+      if (code) return code
+    } catch { /* 单条失败继续下一条 */ }
+  }
+  return null
+}
+
+/**
  * 抓取 NFLSOJ 某道题目的一道 AC 代码（优先 C++）
+ * 先尝试排行榜，再尝试提交列表页
  * @param {string} contestId
  * @param {string} problemNumber  题目在比赛中的序号（1-indexed）
  * @returns {string|null} 源代码字符串，或 null
  */
 export async function fetchNflsojAcCode(contestId, problemNumber) {
-  // 获取该题 AC 提交列表
+  // ── 方式一：从排行榜提取（无需查看他人提交权限）
+  try {
+    const code = await fetchNflsojAcCodeFromRanklist(contestId, problemNumber)
+    if (code) return code
+  } catch (e) {
+    console.warn('[nflsoj] ranklist AC code failed, falling back to submissions:', e.message)
+  }
+
+  // ── 方式二：从提交列表页提取（需有查看权限）
   const listHtml = await nflsojGet(`/contest/${contestId}/submissions?problem_id=${problemNumber}&status=Accepted`)
   const itemMatch = listHtml.match(/const itemList = (\[[\s\S]*?\]);/)
   if (!itemMatch) throw new Error('NFLSOJ：无法解析提交列表（itemList）')
@@ -346,12 +420,9 @@ export async function fetchNflsojAcCode(contestId, problemNumber) {
   })
 
   const subId = sorted[0].info.submissionId
-
-  // 获取提交详情页（代码嵌入在页面 HTML 里）
   const subHtml = await nflsojGet(`/submission/${subId}`)
   const code = extractCodeFromSubmissionHtml(subHtml)
   if (!code) throw new Error(`NFLSOJ：无法从提交 #${subId} 页面提取代码`)
-
   return code
 }
 
