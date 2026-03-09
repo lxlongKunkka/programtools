@@ -1563,7 +1563,8 @@ export default {
       const chapterContent = this.editingChapter.content
       const requirements = this.aiRequirements
 
-      // Gather full chapter list for context
+      console.log('[generatePPT] chapterContent length:', chapterContent ? chapterContent.length : 0)
+      console.log('[generatePPT] chapterContent preview:', chapterContent ? chapterContent.slice(0, 200) : '(empty)')
       let chapterList = []
       let currentChapterIndex = -1
       if (this.editingTopicForChapter && this.editingTopicForChapter.chapters) {
@@ -2026,6 +2027,9 @@ export default {
         try {
             this.aiLoadingMap[chapterId] = true
             this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
+            
+            console.log(`[batchGeneratePPTs] chapter "${chapterTitle}" content length:`, chapter.content ? chapter.content.length : 0, '| contentType:', chapter.contentType)
+            console.log(`[batchGeneratePPTs] content preview:`, chapter.content ? chapter.content.slice(0, 200) : '(empty)')
             
             await request('/api/generate-ppt/background', {
               method: 'POST',
