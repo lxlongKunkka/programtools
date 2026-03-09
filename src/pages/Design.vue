@@ -67,7 +67,7 @@
                         v-for="(chapter, cIdx) in topic.chapters" 
                         :key="chapter.id" 
                         :class="['tree-item', 'chapter-item', { active: isSelected('chapter', chapter._id || chapter.id) }]"
-                        @click="selectNode('chapter', chapter, level, topic)"
+                        @click.stop="selectNode('chapter', chapter, level, topic)"
                         >
                         <span class="tree-label">{{ chapter.title }}</span>
                         <div class="tree-meta">
