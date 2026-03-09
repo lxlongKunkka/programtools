@@ -21,9 +21,15 @@
         </div>
 
         <h1 class="chapter-title">{{ chapter.title }}</h1>
-        
+
+        <!-- View mode toggle: only shown when both PPT and Markdown content exist -->
+        <div v-if="chapter.contentType === 'html' && chapter.content" class="view-toggle-bar">
+          <button :class="['btn-view-toggle', { active: viewMode === 'ppt' }]" @click="viewMode = 'ppt'">🖥 PPT 课件</button>
+          <button :class="['btn-view-toggle', { active: viewMode === 'md' }]" @click="viewMode = 'md'">📄 教案</button>
+        </div>
+
         <!-- HTML Content Mode -->
-        <div v-if="chapter.contentType === 'html'" :class="['html-content-container', { maximized: isMaximized }]">
+        <div v-if="chapter.contentType === 'html' && viewMode === 'ppt'" :class="['html-content-container', { maximized: isMaximized }]">
            <!-- Watermark for Fullscreen -->
            <div class="watermark-container" v-if="userInfo">
              <div class="watermark-text" v-for="n in 30" :key="n">
@@ -40,7 +46,7 @@
         </div>
 
         <!-- Markdown Content Mode -->
-        <div v-else :class="['markdown-content-container', { maximized: isMaximized }]">
+        <div v-if="chapter.contentType !== 'html' || viewMode === 'md'" :class="['markdown-content-container', { maximized: isMaximized }]">
             <!-- Watermark for Fullscreen -->
             <div class="watermark-container" v-if="userInfo && isMaximized">
               <div class="watermark-text" v-for="n in 30" :key="n">
@@ -157,6 +163,7 @@ export default {
   inject: ['showToastMessage'],
   data() {
     return {
+      viewMode: 'ppt',
       loading: true,
       level: null,
       allLevels: [],
@@ -505,6 +512,7 @@ export default {
             const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
+            this.viewMode = chapterDetail.contentType === 'html' ? 'ppt' : 'md'
         } catch (err) {
             if (err.message.includes('locked') || err.message.includes('Access denied') || err.message.includes('403')) {
                 this.showToastMessage('Chapter is locked')
@@ -1166,6 +1174,33 @@ export default {
 .btn-complete-reading:disabled {
   background-color: #95a5a6;
   cursor: not-allowed;
+}
+
+/* View mode toggle */
+.view-toggle-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.btn-view-toggle {
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.btn-view-toggle.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  font-weight: 600;
+}
+.btn-view-toggle:hover:not(.active) {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 </style>
