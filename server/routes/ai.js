@@ -2412,7 +2412,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     const payload = {
       model: model || 'gemini-3-flash-preview',
       messages,
-      temperature: 0.7,
+      temperature: 0.3,
       max_tokens: 16000
     }
     res.locals.logModel = payload.model
@@ -2686,7 +2686,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   const continueResp = await axios.post(YUN_API_URL, {
                       model: model || 'gemini-3-flash-preview',
                       messages,
-                      temperature: 0.7,
+                      temperature: 0.3,
                       max_tokens: 16000
                   }, {
                     headers: {
