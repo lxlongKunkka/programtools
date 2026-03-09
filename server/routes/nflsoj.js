@@ -147,7 +147,7 @@ function extractCodeFromSubmissionHtml(html) {
   if (!m) return null
   try {
     const rawHtml = JSON.parse('"' + m[1] + '"')
-    return rawHtml
+    let code = rawHtml
       .replace(/<[^>]+>/g, '')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
@@ -155,6 +155,11 @@ function extractCodeFromSubmissionHtml(html) {
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .replace(/&nbsp;/g, ' ')
+
+    // 去掉文件重定向（NFLSOJ 题目通常要求 freopen，但教学时不需要）
+    code = code.replace(/^\s*freopen\s*\([^)]*\)\s*;\s*\n?/gm, '')
+
+    return code
   } catch {
     return null
   }
