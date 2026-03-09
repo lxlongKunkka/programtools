@@ -422,7 +422,7 @@ function parseProblemContent($) {
 
     // 代码块（样例输入/输出）
     if (tag === 'pre') {
-      const codeText = $el.text()
+      const codeText = $el.text().trimEnd()
       return '```\n' + codeText + '\n```\n\n'
     }
 
