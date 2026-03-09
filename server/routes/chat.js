@@ -61,7 +61,7 @@ router.post('/chat', authenticateToken, requirePremium, checkModelPermission, as
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const payload = {
-      model: model || 'gemini-2.5-flash',
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.2,
       max_tokens: 2048
