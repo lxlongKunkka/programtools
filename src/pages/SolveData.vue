@@ -2427,6 +2427,19 @@ pause
             zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
         }
 
+        // 附加文件（如 NFLSOJ testdata.zip）
+        const curTask = this.tasks[this.currentTaskIndex]
+        if (curTask?.additionalFile?.base64) {
+          try {
+            const binaryStr = atob(curTask.additionalFile.base64)
+            const bytes = new Uint8Array(binaryStr.length)
+            for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
+            zip.file(curTask.additionalFile.filename || 'additional_file.zip', bytes, zipOptions)
+          } catch (e) {
+            console.warn('打包附加文件时出错:', e)
+          }
+        }
+
         const blob = await zip.generateAsync({ type: 'blob' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
