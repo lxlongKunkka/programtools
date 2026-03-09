@@ -581,9 +581,8 @@ export async function fetchNflsojProblem(url) {
   const $ = load(html)
 
   // 提取题目标题：优先从页面 DOM 中取题目名，回退到 <title> 第一段
-  const domTitle =
-    $('h1.problem-title, .problem-title, h2.problem-title').first().text().trim() ||
-    $('h2').not('.font-content h2').first().text().trim()
+  // SYZOJ 结构：<h1 class="ui header">A. 三回文序列</h1>
+  const domTitle = $('h1.ui.header').first().text().trim()
   const pageTitle = $('title').text().trim()
   const title = domTitle || pageTitle.split(' - ')[0].trim() || `题目 ${problemNumber}`
 
