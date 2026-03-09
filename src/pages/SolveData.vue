@@ -1130,14 +1130,16 @@ export default {
           }
           
           // 3. 添加题目描述
+          const hasSample = !!(task.additionalFile && task.additionalFile.base64)
+          const sampleSuffix = hasSample ? '\n\n[sample]:(file://sample.zip)' : ''
           folder.file('problem.md', task.problemText, zipOptions)
-          folder.file('problem_zh_TW.md', task.problemText, zipOptions)
-          if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title), zipOptions)
+          folder.file('problem_zh_TW.md', task.problemText + sampleSuffix, zipOptions)
+          if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title) + sampleSuffix, zipOptions)
           if (task.translationEnglish) {
             const enContent = task.problemMeta?.sourceUrl
               ? `原题链接：${task.problemMeta.sourceUrl}\n\n${task.translationEnglish}`
               : task.translationEnglish
-            folder.file('problem_en.md', enContent, zipOptions)
+            folder.file('problem_en.md', enContent + sampleSuffix, zipOptions)
           }
           
           // 4. 添加解题报告
@@ -1159,13 +1161,13 @@ export default {
             folder.file('solution.md', task.codeOutput, zipOptions)
           }
 
-          // 8. 附加文件（如 NFLSOJ sample.zip），直接放入根目录，由 run.py 在本地解压
+          // 8. 附加文件（如 NFLSOJ sample.zip），放入 additional_file/ 子目录
           if (task.additionalFile && task.additionalFile.base64) {
             try {
               const binaryStr = atob(task.additionalFile.base64)
               const bytes = new Uint8Array(binaryStr.length)
               for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-              folder.file('sample.zip', bytes, zipOptions)
+              folder.file('additional_file/sample.zip', bytes, zipOptions)
             } catch (e) {
               console.warn('Failed to add sample.zip to zip:', e)
             }
@@ -2424,19 +2426,22 @@ pause
         zip.file('problem.yaml', yamlContent, zipOptions)
 
         // 如果有翻译内容则一并打包
+        const curTaskForSample = this.tasks[this.currentTaskIndex]
+        const hasSampleZip = !!(curTaskForSample?.additionalFile?.base64)
+        const sampleSuffix = hasSampleZip ? '\n\n[sample]:(file://sample.zip)' : ''
         if (this.problemText && this.problemText.trim()) {
-          zip.file('problem_zh_TW.md', this.problemText, zipOptions)
+          zip.file('problem_zh_TW.md', this.problemText + sampleSuffix, zipOptions)
         }
         if (this.translationText && this.translationText.trim()) {
-          zip.file('problem_zh.md', this.applyTitleToTranslation(this.translationText, this.problemMeta?.title), zipOptions)
+          zip.file('problem_zh.md', this.applyTitleToTranslation(this.translationText, this.problemMeta?.title) + sampleSuffix, zipOptions)
         } else if (this.problemText && this.problemText.trim()) {
-          zip.file('problem_zh.md', this.problemText, zipOptions)
+          zip.file('problem_zh.md', this.problemText + sampleSuffix, zipOptions)
         }
         if (this.translationEnglish && this.translationEnglish.trim()) {
           const enContent = this.problemMeta?.sourceUrl
             ? `原题链接：${this.problemMeta.sourceUrl}\n\n${this.translationEnglish}`
             : this.translationEnglish
-          zip.file('problem_en.md', enContent, zipOptions)
+          zip.file('problem_en.md', enContent + sampleSuffix, zipOptions)
         }
 
         // 智能获取标题
@@ -2447,14 +2452,14 @@ pause
             zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
         }
 
-        // 附加文件（如 NFLSOJ sample.zip），直接放入根目录，由 run.py 在本地解压
+        // 附加文件（如 NFLSOJ sample.zip），放入 additional_file/ 子目录
         const curTask = this.tasks[this.currentTaskIndex]
         if (curTask?.additionalFile?.base64) {
           try {
             const binaryStr = atob(curTask.additionalFile.base64)
             const bytes = new Uint8Array(binaryStr.length)
             for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-            zip.file('sample.zip', bytes, zipOptions)
+            zip.file('additional_file/sample.zip', bytes, zipOptions)
           } catch (e) {
             console.warn('附加文件添加出错:', e)
           }
@@ -2594,18 +2599,6 @@ def main():
     except Exception as e:
         print(f"[!] 警告: 无法切换工作目录: {e}")
         print(f"当前工作目录: {os.getcwd()}\\n")
-    
-    # 如果存在 sample.zip，解压到 additional_file/
-    if os.path.exists('sample.zip'):
-        print("解压 sample.zip 到 additional_file/ ...")
-        if not os.path.exists('additional_file'):
-            os.makedirs('additional_file')
-        try:
-            with zipfile.ZipFile('sample.zip', 'r') as zf:
-                zf.extractall('additional_file')
-            print("[√] sample.zip 已解压到 additional_file/\\n")
-        except Exception as e:
-            print(f"[!] 解压 sample.zip 失败: {e}\\n")
     
     is_windows = platform.system() == 'Windows'
     
