@@ -344,9 +344,9 @@ function getMmlChildrenArr(el, $) {
   return results
 }
 
-/** 将所有 MML 子节点拼接为字符串 */
+/** 将所有 MML 子节点拼接为字符串（用空格分隔，避免 \le + n → \len 命令冲突）*/
 function decodeMmlChildren(el, $) {
-  return getMmlChildrenArr(el, $).join('')
+  return getMmlChildrenArr(el, $).join(' ')
 }
 
 /**
