@@ -2383,7 +2383,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
 
     // Inject Chapter Content (Lesson Plan)
     if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-        systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **主动增加图表、示意图、对比表格**来辅助说明：\n  - 流程/执行顺序 → 用 Mermaid flowchart 绘制流程图\n  - 数据结构/内存布局 → ASCII 示意图或表格\n  - 多概念对比 → 对比表格\n  - 算法步骤 → 逐步拆解的编号列表配示意\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
+        systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 ✅ ❌ ⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid 或 ASCII 图）。\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
     }
 
     // Inject Chapter Context
@@ -2633,7 +2633,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-              systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **主动增加图表、示意图、对比表格**来辅助说明：\n  - 流程/执行顺序 → 用 Mermaid flowchart 绘制流程图\n  - 数据结构/内存布局 → ASCII 示意图或表格\n  - 多概念对比 → 对比表格\n  - 算法步骤 → 逐步拆解的编号列表配示意\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
+              systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 ✅ ❌ ⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid 或 ASCII 图）。\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 10000)}\n===教案结束===\n`
           }
 
           if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
