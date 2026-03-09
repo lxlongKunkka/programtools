@@ -440,13 +440,6 @@ export default {
       const el = this.$refs.directVideoRef
       if (el) el.playbackRate = this.currentSpeed
     },
-    replayBilibiliVideo() {
-      const el = this.$refs.bilibiliIframeRef
-      if (!el) return
-      const src = el.src
-      el.src = 'about:blank'
-      setTimeout(() => { el.src = src }, 150)
-    },
     requestBilibiliFullscreen() {
       const el = this.$refs.bilibiliIframeRef
       if (!el) return
@@ -1456,13 +1449,6 @@ export default {
   background: #007aff;
   color: #fff;
   border-color: #007aff;
-}
-.toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background: rgba(255,255,255,0.2);
-  margin: 0 4px;
-  flex-shrink: 0;
 }
 
 </style>
