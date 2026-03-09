@@ -172,24 +172,190 @@ function extractCodeFromSubmissionHtml(html) {
  * 尝试顺序：aria-label → data-tex → svg>title → null
  */
 function extractLatexFromMjx($el) {
-  // 1. aria-label（MathJax 3 最常见的存放位置）
   const label = $el.attr('aria-label')
   if (label && label.trim()) return label.trim()
-
-  // 2. data-tex / data-original-expression（某些自定义渲染器）
   const dataTex = $el.attr('data-tex') || $el.attr('data-original-expression')
   if (dataTex && dataTex.trim()) return dataTex.trim()
-
-  // 3. 内部 SVG 的 <title> 子元素
   const svgTitle = $el.find('svg > title').first().text().trim()
   if (svgTitle) return svgTitle
-
-  // 4. SYZOJ 有时将原始 TeX 放在同级的隐藏 <script type="math/tex"> 中
-  //    （旧版 MathJax 方式，cheerio 里可能解析不到，但保险起见留着）
   const script = $el.next('script[type*="math/tex"]').text().trim()
   if (script) return script
-
   return null
+}
+
+// Unicode code point → LaTeX 符号映射表
+const MML_CHAR_MAP = {
+  0x2026: '\\ldots', 0x22EF: '\\cdots', 0x22EE: '\\vdots', 0x22F1: '\\ddots',
+  0x00D7: '\\times', 0x00F7: '\\div', 0x00B1: '\\pm', 0x2213: '\\mp',
+  0x2264: '\\le', 0x2265: '\\ge', 0x2260: '\\ne', 0x226A: '\\ll', 0x226B: '\\gg',
+  0x221E: '\\infty', 0x2205: '\\emptyset', 0x2202: '\\partial', 0x2207: '\\nabla',
+  0x2211: '\\sum', 0x220F: '\\prod', 0x222B: '\\int', 0x222C: '\\iint', 0x222D: '\\iiint',
+  0x221A: '\\sqrt', 0x2308: '\\lceil', 0x2309: '\\rceil', 0x230A: '\\lfloor', 0x230B: '\\rfloor',
+  0x2208: '\\in', 0x2209: '\\notin', 0x2282: '\\subset', 0x2283: '\\supset',
+  0x2286: '\\subseteq', 0x2287: '\\supseteq', 0x222A: '\\cup', 0x2229: '\\cap',
+  0x2200: '\\forall', 0x2203: '\\exists', 0x00B7: '\\cdot', 0x2218: '\\circ',
+  0x2192: '\\to', 0x21D2: '\\Rightarrow', 0x21D4: '\\Leftrightarrow',
+  0x2190: '\\leftarrow', 0x21D0: '\\Leftarrow', 0x2194: '\\leftrightarrow',
+  0x2234: '\\therefore', 0x2235: '\\because',
+  0x2016: '\\|', 0x2223: '\\mid', 0x2225: '\\parallel', 0x22A5: '\\perp',
+  0x22C5: '\\cdot', 0x22C6: '\\star', 0x22C0: '\\bigwedge', 0x22C1: '\\bigvee',
+  0x2227: '\\land', 0x2228: '\\lor', 0x00AC: '\\lnot',
+  0x03B1: '\\alpha', 0x03B2: '\\beta', 0x03B3: '\\gamma', 0x03B4: '\\delta',
+  0x03B5: '\\epsilon', 0x03B6: '\\zeta', 0x03B7: '\\eta', 0x03B8: '\\theta',
+  0x03B9: '\\iota', 0x03BA: '\\kappa', 0x03BB: '\\lambda', 0x03BC: '\\mu',
+  0x03BD: '\\nu', 0x03BE: '\\xi', 0x03C0: '\\pi', 0x03C1: '\\rho',
+  0x03C3: '\\sigma', 0x03C4: '\\tau', 0x03C5: '\\upsilon', 0x03C6: '\\varphi',
+  0x03C7: '\\chi', 0x03C8: '\\psi', 0x03C9: '\\omega',
+  0x0393: '\\Gamma', 0x0394: '\\Delta', 0x0398: '\\Theta', 0x039B: '\\Lambda',
+  0x039E: '\\Xi', 0x03A0: '\\Pi', 0x03A3: '\\Sigma', 0x03A5: '\\Upsilon',
+  0x03A6: '\\Phi', 0x03A8: '\\Psi', 0x03A9: '\\Omega',
+  0x2113: '\\ell', 0x210F: '\\hbar', 0x2118: '\\wp', 0x211C: '\\Re', 0x2111: '\\Im',
+  0x2135: '\\aleph', 0x2252: '\\fallingdotseq',
+}
+
+/**
+ * 将单个 data-c 十六进制码点解码为 LaTeX 字符串
+ */
+function decodeDataC(hex) {
+  if (!hex) return ''
+  const cp = parseInt(hex, 16)
+  if (isNaN(cp)) return ''
+
+  // 优先查符号表
+  if (MML_CHAR_MAP[cp]) return MML_CHAR_MAP[cp]
+
+  // 数学斜体小写 a-z: U+1D44E–U+1D467
+  if (cp >= 0x1D44E && cp <= 0x1D467) return String.fromCharCode(cp - 0x1D44E + 97)
+  // 数学斜体大写 A-Z: U+1D434–U+1D44D
+  if (cp >= 0x1D434 && cp <= 0x1D44D) return String.fromCharCode(cp - 0x1D434 + 65)
+  // 数学粗体斜体小写: U+1D482–U+1D49B
+  if (cp >= 0x1D482 && cp <= 0x1D49B) return String.fromCharCode(cp - 0x1D482 + 97)
+  // 数学粗体斜体大写: U+1D468–U+1D481
+  if (cp >= 0x1D468 && cp <= 0x1D481) return String.fromCharCode(cp - 0x1D468 + 65)
+  // 数学无衬线: U+1D5BA–U+1D5D3 小写
+  if (cp >= 0x1D5BA && cp <= 0x1D5D3) return String.fromCharCode(cp - 0x1D5BA + 97)
+  // 数学无衬线: U+1D5A0–U+1D5B9 大写
+  if (cp >= 0x1D5A0 && cp <= 0x1D5B9) return String.fromCharCode(cp - 0x1D5A0 + 65)
+  // 数学花体大写: U+1D49C–U+1D4B5
+  if (cp >= 0x1D49C && cp <= 0x1D4B5) return String.fromCharCode(cp - 0x1D49C + 65)
+  // 数学双线体大写: U+1D538–U+1D551
+  if (cp >= 0x1D538 && cp <= 0x1D551) return String.fromCharCode(cp - 0x1D538 + 65)
+
+  // 普通 ASCII 可显示字符
+  if (cp >= 0x20 && cp <= 0x7E) return String.fromCharCode(cp)
+
+  // 其余直接转 Unicode 字符
+  return String.fromCharCode(cp)
+}
+
+/**
+ * 递归解码 SVG 中的 MathJax MML 节点树，输出 LaTeX 字符串（尽力还原）
+ * @param {CheerioElement} el  - 当前 g 元素
+ * @param {CheerioAPI} $
+ * @returns {string}
+ */
+function decodeMmlNode(el, $) {
+  const $el = $(el)
+  const node = $el.attr('data-mml-node')
+
+  // 直接渲染叶子：mi / mn / mo / mtext — 读所有 use[data-c]
+  if (!node || node === 'mi' || node === 'mn' || node === 'mo' || node === 'mtext') {
+    const chars = []
+    $el.children('use[data-c]').each((_, u) => chars.push(decodeDataC($(u).attr('data-c'))))
+    // 如果自身无 use，可能是纯容器，递归子 g
+    if (chars.length > 0) return chars.join('')
+    return decodeMmlChildren(el, $)
+  }
+
+  if (node === 'math' || node === 'mrow' || node === 'mstyle' || node === 'mpadded' || node === 'mphantom') {
+    return decodeMmlChildren(el, $)
+  }
+
+  if (node === 'msub') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    return ch[0] + '_{' + ch[1] + '}'
+  }
+  if (node === 'msup') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    return ch[0] + '^{' + ch[1] + '}'
+  }
+  if (node === 'msubsup') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 3) return decodeMmlChildren(el, $)
+    return ch[0] + '_{' + ch[1] + '}^{' + ch[2] + '}'
+  }
+  if (node === 'mfrac') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    return '\\frac{' + ch[0] + '}{' + ch[1] + '}'
+  }
+  if (node === 'msqrt') {
+    return '\\sqrt{' + decodeMmlChildren(el, $) + '}'
+  }
+  if (node === 'mroot') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    return '\\sqrt[' + ch[1] + ']{' + ch[0] + '}'
+  }
+  if (node === 'mover') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    // 常见 accent 映射
+    const ACC = { '\\cdot': '\\dot', '−': '\\bar', '∼': '\\tilde', '∧': '\\hat', '⃗': '\\vec' }
+    const acc = ACC[ch[1]] || '\\overset{' + ch[1] + '}'
+    if (ACC[ch[1]]) return acc + '{' + ch[0] + '}'
+    return '\\overset{' + ch[1] + '}{' + ch[0] + '}'
+  }
+  if (node === 'munder') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 2) return decodeMmlChildren(el, $)
+    return '\\underset{' + ch[1] + '}{' + ch[0] + '}'
+  }
+  if (node === 'munderover') {
+    const ch = getMmlChildrenArr(el, $)
+    if (ch.length < 3) return decodeMmlChildren(el, $)
+    return ch[0] + '_{' + ch[1] + '}^{' + ch[2] + '}'
+  }
+  if (node === 'mfenced' || node === 'mo') {
+    return decodeMmlChildren(el, $)
+  }
+  if (node === 'mtable') {
+    const rows = []
+    $el.children('g[data-mml-node="mtr"]').each((_, tr) => {
+      const cols = []
+      $(tr).children('g[data-mml-node="mtd"]').each((_, td) => cols.push(decodeMmlChildren(td, $)))
+      rows.push(cols.join(' & '))
+    })
+    return '\\begin{matrix}' + rows.join(' \\\\ ') + '\\end{matrix}'
+  }
+
+  // 其余节点：直接递归子节点
+  return decodeMmlChildren(el, $)
+}
+
+/** 获取 MML 直接子节点（data-mml-node 的 g 子元素）的解码结果数组 */
+function getMmlChildrenArr(el, $) {
+  const results = []
+  $(el).children('g[data-mml-node]').each((_, child) => results.push(decodeMmlNode(child, $)))
+  return results
+}
+
+/** 将所有 MML 子节点拼接为字符串 */
+function decodeMmlChildren(el, $) {
+  return getMmlChildrenArr(el, $).join('')
+}
+
+/**
+ * 从 MathJax 3 SVG 中解码公式文本
+ * 找到 g[data-mml-node="math"] 根节点，递归解码
+ */
+function decodeSvgFormula($svg, $) {
+  const $math = $svg.find('g[data-mml-node="math"]').first()
+  if (!$math.length) return null
+  const result = decodeMmlNode($math[0], $)
+  return result && result.trim() ? result.trim() : null
 }
 
 /**
@@ -216,9 +382,13 @@ function parseProblemContent($) {
 
     // MathJax 3 容器 <mjx-container>：内含 SVG，原始 LaTeX 一般在 aria-label
     if (tag === 'mjx-container') {
-      const latex = extractLatexFromMjx($el)
       const isDisplay = $el.attr('display') === 'true' || $el.hasClass('MJX-TEX-DISPLAY')
+      const latex = extractLatexFromMjx($el)
       if (latex) return isDisplay ? `\n$$${latex}$$\n` : `$${latex}$`
+      // 回退：从内部 SVG 的 data-c 属性解码公式字符
+      const $svg = $el.find('svg[role="img"]').first()
+      const decoded = $svg.length ? decodeSvgFormula($svg, $) : null
+      if (decoded) return isDisplay ? `\n$$${decoded}$$\n` : `$${decoded}$`
       return isDisplay ? '\n$$[公式]$$\n' : '$[公式]$'
     }
 
@@ -230,6 +400,9 @@ function parseProblemContent($) {
       // 方式2：父元素的 aria-label
       const parentLabel = $el.parent().attr('aria-label')
       if (parentLabel) return `$${parentLabel}$`
+      // 方式3：从 data-c 属性解码 MML 节点树
+      const decoded = decodeSvgFormula($el, $)
+      if (decoded) return `$${decoded}$`
       return '$[公式]$'
     }
 
