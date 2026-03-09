@@ -111,8 +111,9 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         /* --- 基础和布局 --- */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #000; }
         .ppt-container { width: 100%; height: 100%; position: relative; }
-        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.6s ease-in-out; overflow-y: auto; }
+        .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.4s ease-in-out; overflow-y: auto; }
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
+        .slide.leaving { opacity: 0; visibility: visible; z-index: 0; }
         
         /* --- 导航按钮 --- */
         .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.8); color: white; border: none; border-radius: 30px; padding: 10px 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
@@ -120,7 +121,8 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         .nav-button:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         #prevBtn { left: 30px; } #nextBtn { right: 30px; }
         #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
-        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); }
+        #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); cursor: pointer; user-select: none; }
+        #slideCounter:hover { background-color: rgba(0,0,0,0.8); }
 
         /* --- Logo --- */
         .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
@@ -267,8 +269,17 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
             const totalSlides = slides.length;
 
             function showSlide(index) {
-                slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+                if (index < 0) index = 0;
+                if (index >= totalSlides) index = totalSlides - 1;
+                const prevSlide = slides[currentSlide];
                 currentSlide = index;
+                const nextSlide = slides[currentSlide];
+                if (prevSlide !== nextSlide) {
+                    prevSlide.classList.add('leaving');
+                    prevSlide.classList.remove('active');
+                    setTimeout(() => prevSlide.classList.remove('leaving'), 400);
+                }
+                nextSlide.classList.add('active');
                 prevBtn.disabled = currentSlide === 0;
                 nextBtn.disabled = currentSlide === totalSlides - 1;
                 slideCounter.textContent = \`\${currentSlide + 1} / \${totalSlides}\`;
@@ -280,6 +291,12 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'ArrowLeft') prevBtn.click();
                     else if (e.key === 'ArrowRight') nextBtn.click();
+                });
+                // 点击页码跳转
+                slideCounter.title = '点击跳转到指定页';
+                slideCounter.addEventListener('click', () => {
+                    const input = prompt(`跳转到第几页？(1 - \${totalSlides})`, currentSlide + 1);
+                    if (input !== null) { const p = parseInt(input); if (!isNaN(p)) showSlide(p - 1); }
                 });
                 showSlide(0);
             }
