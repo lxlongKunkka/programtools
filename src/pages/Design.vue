@@ -588,8 +588,9 @@ export default {
         if (!this.editingGroup.editors) this.editingGroup.editors = []
         if (!this.editingGroup.language) this.editingGroup.language = 'C++'
       } else if (type === 'level') {
-        // Auto-expand level to show topics
+        // Auto-expand level and all its topics to show chapters
         data.descCollapsed = false
+        if (data.topics) data.topics.forEach(t => { t.collapsed = false })
         this.editingLevel = JSON.parse(JSON.stringify(data))
         // Ensure editors is an array of IDs
         if (this.editingLevel.editors && this.editingLevel.editors.length > 0 && typeof this.editingLevel.editors[0] === 'object') {
