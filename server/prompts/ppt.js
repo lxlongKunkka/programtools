@@ -47,7 +47,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         .ppt-container { width: 100%; height: 100%; position: relative; }
         .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.4s ease-in-out; overflow-y: auto; }
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
-        .slide.leaving { opacity: 0; visibility: visible; z-index: 0; }
+        .slide.leaving { opacity: 0; visibility: visible; z-index: 2; transition: opacity 0.4s ease-in-out; }
         
         /* --- 导航按钮 --- */
         .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.3s; display: flex; justify-content: center; align-items: center; }
@@ -56,6 +56,8 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: scale(1); }
         #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.4); color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; cursor: pointer; user-select: none; }
         #slideCounter:hover { background-color: rgba(0,0,0,0.65); }
+        #slideSlider { position: absolute; bottom: 44px; left: 110px; right: 110px; z-index: 10; width: calc(100% - 220px); height: 4px; accent-color: #007aff; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        #slideSlider:hover { opacity: 1; }
         
         /* --- Logo --- */
         .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
@@ -155,6 +157,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
         <!-- Slide Z: 总结与作业 (评价) -->
 
         <button id="prevBtn" class="nav-button">‹</button>
+        <input type="range" id="slideSlider" min="1" max="1" value="1">
         <button id="nextBtn" class="nav-button">›</button>
         <div id="slideCounter">1 / N</div>
     </div>
@@ -168,26 +171,33 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
             const slideCounter = document.getElementById('slideCounter');
             let currentSlide = 0;
 
+            const slideSlider = document.getElementById('slideSlider');
+            if (slideSlider) slideSlider.max = slides.length;
+
             function showSlide(index) {
                 if (!slides.length) return;
                 if (index < 0) index = 0;
                 if (index >= slides.length) index = slides.length - 1;
-                
-                // 让旧 slide 在 z-index:0 淡出，新 slide 在 z-index:1 淡入，避免黑屏
+
                 const prevSlide = slides[currentSlide];
                 currentSlide = index;
                 const nextSlide = slides[currentSlide];
-                
+
                 if (prevSlide !== nextSlide) {
+                    // 新页面立即出现（无淡入），旧页面在最上层淡出，彻底避免黑屏
+                    nextSlide.style.transition = 'none';
+                    nextSlide.classList.add('active');
+                    nextSlide.offsetHeight; // 强制重排
+                    nextSlide.style.transition = '';
                     prevSlide.classList.add('leaving');
                     prevSlide.classList.remove('active');
                     setTimeout(() => prevSlide.classList.remove('leaving'), 400);
                 }
-                nextSlide.classList.add('active');
-                
+
                 if (prevBtn) prevBtn.disabled = currentSlide === 0;
                 if (nextBtn) nextBtn.disabled = currentSlide === slides.length - 1;
                 if (slideCounter) slideCounter.textContent = \`\${currentSlide + 1} / \${slides.length}\`;
+                if (slideSlider) slideSlider.value = currentSlide + 1;
 
                 // 尝试重置动画
                 if (typeof window.resetAnimation === 'function' && nextSlide.querySelector('#animArea')) {
@@ -198,6 +208,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
             // 绑定导航事件
             if (prevBtn) prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
             if (nextBtn) nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+            if (slideSlider) slideSlider.addEventListener('input', () => showSlide(parseInt(slideSlider.value) - 1));
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
                 if (e.key === 'ArrowRight') showSlide(currentSlide + 1);

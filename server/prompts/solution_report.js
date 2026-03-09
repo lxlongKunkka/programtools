@@ -113,7 +113,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         .ppt-container { width: 100%; height: 100%; position: relative; }
         .slide { position: absolute; width: 100%; height: 100%; background-color: #ffffff; padding: 4vh 6vw 120px 6vw; box-sizing: border-box; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 0.4s ease-in-out; overflow-y: auto; }
         .slide.active { opacity: 1; visibility: visible; z-index: 1; }
-        .slide.leaving { opacity: 0; visibility: visible; z-index: 0; }
+        .slide.leaving { opacity: 0; visibility: visible; z-index: 2; transition: opacity 0.4s ease-in-out; }
         
         /* --- 导航按钮 --- */
         .nav-button { position: absolute; bottom: 30px; z-index: 10; background-color: rgba(0, 122, 255, 0.8); color: white; border: none; border-radius: 30px; padding: 10px 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
@@ -123,6 +123,8 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         #prevBtn:disabled, #nextBtn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
         #slideCounter { position: absolute; top: 20px; right: 20px; z-index: 5; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 500; letter-spacing: 1px; backdrop-filter: blur(5px); cursor: pointer; user-select: none; }
         #slideCounter:hover { background-color: rgba(0,0,0,0.8); }
+        #slideSlider { position: absolute; bottom: 48px; left: 140px; right: 140px; z-index: 10; width: calc(100% - 280px); height: 4px; accent-color: #007aff; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        #slideSlider:hover { opacity: 1; }
 
         /* --- Logo --- */
         .logo { position: absolute; top: 20px; left: 20px; width: 120px; height: auto; z-index: 15; opacity: 0.8; }
@@ -254,6 +256,7 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
         </div>
 
         <button id="prevBtn" class="nav-button">‹ 上一页</button>
+        <input type="range" id="slideSlider" min="1" max="1" value="1">
         <button id="nextBtn" class="nav-button">下一页 ›</button>
         <div id="slideCounter">1 / 7</div>
     </div>
@@ -268,6 +271,9 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
             let currentSlide = 0;
             const totalSlides = slides.length;
 
+            const slideSlider = document.getElementById('slideSlider');
+            if (slideSlider) slideSlider.max = totalSlides;
+
             function showSlide(index) {
                 if (index < 0) index = 0;
                 if (index >= totalSlides) index = totalSlides - 1;
@@ -275,19 +281,25 @@ export const SOLUTION_REPORT_PROMPT = `你是一个专业的算法竞赛教练�
                 currentSlide = index;
                 const nextSlide = slides[currentSlide];
                 if (prevSlide !== nextSlide) {
+                    // 新页面立即出现，旧页面在最上层淡出，彻底避免黑屏
+                    nextSlide.style.transition = 'none';
+                    nextSlide.classList.add('active');
+                    nextSlide.offsetHeight;
+                    nextSlide.style.transition = '';
                     prevSlide.classList.add('leaving');
                     prevSlide.classList.remove('active');
                     setTimeout(() => prevSlide.classList.remove('leaving'), 400);
                 }
-                nextSlide.classList.add('active');
                 prevBtn.disabled = currentSlide === 0;
                 nextBtn.disabled = currentSlide === totalSlides - 1;
                 slideCounter.textContent = \`\${currentSlide + 1} / \${totalSlides}\`;
+                if (slideSlider) slideSlider.value = currentSlide + 1;
             }
 
             if(prevBtn && nextBtn) {
-                prevBtn.addEventListener('click', () => currentSlide > 0 && showSlide(currentSlide - 1));
-                nextBtn.addEventListener('click', () => currentSlide < totalSlides - 1 && showSlide(currentSlide + 1));
+                prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+                nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+                if (slideSlider) slideSlider.addEventListener('input', () => showSlide(parseInt(slideSlider.value) - 1));
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'ArrowLeft') prevBtn.click();
                     else if (e.key === 'ArrowRight') nextBtn.click();
