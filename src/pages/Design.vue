@@ -5,12 +5,12 @@
       <div class="sidebar-header">
         <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
           <h3>课程结构</h3>
-          <button v-if="embedded" @click="$emit('close')" class="btn-close-embedded" title="退出编辑模式">× 退出</button>
+          <button v-if="embedded" @click="$emit('close')" class="btn-close-embedded" title="退出编辑模�?>× 退�?/button>
         </div>
         <button v-if="isAdmin" @click="createNewGroup" class="btn-add-level" style="margin-bottom: 8px;">+ 添加分组 (Group)</button>
       </div>
 
-      <div v-if="loadingCourses" class="loading-text">加载中...</div>
+      <div v-if="loadingCourses" class="loading-text">加载�?..</div>
       <div v-else class="tree-container">
         <div v-for="group in displayGroups" :key="group.name" class="tree-node-group">
             <!-- Group Node -->
@@ -18,10 +18,10 @@
                 :class="['tree-item', 'group-item', { active: isSelected('group', group._id || group.name) }]"
                 @click="selectNode('group', group); toggleGroupCollapse(group)"
             >
-                <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '▶' : '▼' }}</span>
+                <span class="tree-icon" @click.stop="toggleGroupCollapse(group)">{{ group.collapsed ? '�? : '�? }}</span>
                 <span class="tree-label">{{ group.title || group.name }}</span>
-                <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
-                <span v-if="isExplicitEditor(group)" class="permission-icon" title="您拥有此分组的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
+                <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}�?/span>
+                <span v-if="isExplicitEditor(group)" class="permission-icon" title="您拥有此分组的编辑权�? style="margin-left: 5px; font-size: 12px;">✏️</span>
                 <div class="tree-actions">
                     <button @click.stop="createNewLevel(group)" class="btn-icon" title="添加模块">+</button>
                 </div>
@@ -35,10 +35,10 @@
                     :class="['tree-item', 'level-item', { active: isSelected('level', level._id) }]"
                     @click="selectNode('level', level)"
                 >
-                    <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '▶' : '▼' }}</span>
+                    <span class="tree-icon" @click.stop="toggleLevelDesc(level)">{{ level.descCollapsed ? '�? : '�? }}</span>
                     <span class="tree-label">{{ level.title }}</span>
-                    <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}题</span>
-                    <span v-if="isExplicitLevelEditor(level)" class="permission-icon" title="您拥有此模块的编辑权限" style="margin-left: 5px; font-size: 12px;">✏️</span>
+                    <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}�?/span>
+                    <span v-if="isExplicitLevelEditor(level)" class="permission-icon" title="您拥有此模块的编辑权�? style="margin-left: 5px; font-size: 12px;">✏️</span>
                     <div class="tree-actions">
                     <button @click.stop="createNewTopic(level)" class="btn-icon" title="添加 Topic">+</button>
                     </div>
@@ -52,12 +52,12 @@
                         :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
                         @click="selectNode('topic', topic, level)"
                     >
-                        <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
+                        <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '�? : '�? }}</span>
                         <span class="tree-label">{{ topic.title }}</span>
-                        <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
+                        <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}�?/span>
                         <div class="tree-actions">
                         <button @click.stop="createNewChapter(level, topic)" class="btn-icon" title="添加 Chapter">+</button>
-                        <button @click.stop="createNewTopic(level, tIdx)" class="btn-icon" title="在此前插入 Topic">↰</button>
+                        <button @click.stop="createNewTopic(level, tIdx)" class="btn-icon" title="在此前插�?Topic">�?/button>
                         </div>
                     </div>
 
@@ -75,19 +75,19 @@
                             {{ chapter.contentType === 'html' ? 'HTML' : 'MD' }}
                             </span>
                             <span v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)" class="meta-count" title="题目数量">
-                            {{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题
+                            {{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}�?
                             </span>
                         </div>
                         <div class="tree-actions">
-                            <button @click.stop="createNewChapter(level, topic, cIdx)" class="btn-icon" title="在此前插入章节">↰</button>
+                            <button @click.stop="createNewChapter(level, topic, cIdx)" class="btn-icon" title="在此前插入章�?>�?/button>
                         </div>
                         </div>
                     </div>
                     </div>
-                    <div v-if="!level.topics || level.topics.length === 0" class="empty-node">无 Topic</div>
+                    <div v-if="!level.topics || level.topics.length === 0" class="empty-node">�?Topic</div>
                 </div>
                 </div>
-                <div v-if="getLevelsForGroup(group.name).length === 0" class="empty-node">无模块</div>
+                <div v-if="getLevelsForGroup(group.name).length === 0" class="empty-node">无模�?/div>
             </div>
         </div>
       </div>
@@ -96,24 +96,24 @@
     <!-- Right Panel: Editor -->
     <div class="editor-panel">
       <div v-if="!selectedNode" class="empty-state">
-        <p>请在左侧选择一个节点进行编辑<span v-if="isAdmin">，或点击“添加分组”开始</span>。</p>
+        <p>请在左侧选择一个节点进行编�?span v-if="isAdmin">，或点击“添加分组”开�?/span>�?/p>
       </div>
 
       <div v-else class="editor-layout">
-        <!-- 右侧操作栏 -->
+        <!-- 右侧操作�?-->
         <div class="editor-action-sidebar">
-          <button v-if="hideSidebar" @click="$emit('close')" class="eas-btn eas-exit">← 退出编辑</button>
+          <button v-if="hideSidebar" @click="$emit('close')" class="eas-btn eas-exit">�?退出编�?/button>
 
           <template v-if="selectedNode.type === 'group'">
             <template v-if="canEditGroup(editingGroup)">
               <button @click="saveGroup" class="eas-btn eas-save">💾 保存更改</button>
               <button v-if="editingGroup._id" @click="deleteGroup(editingGroup._id)" class="eas-btn eas-delete">🗑 删除分组</button>
               <div class="eas-divider"></div>
-              <button v-if="editingGroup._id" @click="moveGroup('up')" class="eas-btn eas-move">↑ 上移</button>
-              <button v-if="editingGroup._id" @click="moveGroup('down')" class="eas-btn eas-move">↓ 下移</button>
-              <button v-if="editingGroup._id && isAdmin" @click="downloadGroupMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
+              <button v-if="editingGroup._id" @click="moveGroup('up')" class="eas-btn eas-move">�?上移</button>
+              <button v-if="editingGroup._id" @click="moveGroup('down')" class="eas-btn eas-move">�?下移</button>
+              <button v-if="editingGroup._id && isAdmin" @click="downloadGroupMaterials" class="eas-btn eas-download">⬇️ 下载资料�?/button>
             </template>
-            <span v-else class="eas-readonly">只读 (无权限)</span>
+            <span v-else class="eas-readonly">只读 (无权�?</span>
           </template>
 
           <template v-if="selectedNode.type === 'level'">
@@ -121,11 +121,11 @@
               <button @click="saveLevel" class="eas-btn eas-save">💾 保存更改</button>
               <button v-if="editingLevel._id" @click="deleteLevel(editingLevel._id)" class="eas-btn eas-delete">🗑 删除模块</button>
               <div class="eas-divider"></div>
-              <button v-if="editingLevel._id" @click="moveLevel('up')" class="eas-btn eas-move">↑ 上移</button>
-              <button v-if="editingLevel._id" @click="moveLevel('down')" class="eas-btn eas-move">↓ 下移</button>
-              <button v-if="editingLevel._id && isAdmin" @click="downloadLevelMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
+              <button v-if="editingLevel._id" @click="moveLevel('up')" class="eas-btn eas-move">�?上移</button>
+              <button v-if="editingLevel._id" @click="moveLevel('down')" class="eas-btn eas-move">�?下移</button>
+              <button v-if="editingLevel._id && isAdmin" @click="downloadLevelMaterials" class="eas-btn eas-download">⬇️ 下载资料�?/button>
             </template>
-            <span v-else class="eas-readonly">只读 (无权限)</span>
+            <span v-else class="eas-readonly">只读 (无权�?</span>
             <div class="eas-divider"></div>
             <label class="eas-label">AI 模型</label>
             <select v-model="selectedModel" class="eas-select">
@@ -136,14 +136,14 @@
           <template v-if="selectedNode.type === 'topic'">
             <template v-if="canEditLevel(editingLevelForTopic)">
               <button @click="saveTopic" class="eas-btn eas-save">💾 保存更改</button>
-              <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-delete">🗑 删除知识点</button>
+              <button v-if="editingTopic._id" @click="deleteTopic(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-delete">🗑 删除知识�?/button>
               <button v-if="editingTopic._id" @click="deleteAllChapters(editingLevelForTopic._id, editingTopic._id)" class="eas-btn eas-warn">🧹 清空章节</button>
               <div class="eas-divider"></div>
-              <button v-if="editingTopic._id" @click="moveTopic('up')" class="eas-btn eas-move">↑ 上移</button>
-              <button v-if="editingTopic._id" @click="moveTopic('down')" class="eas-btn eas-move">↓ 下移</button>
-              <button v-if="editingTopic._id && isAdmin" @click="downloadTopicMaterials" class="eas-btn eas-download">⬇️ 下载资料包</button>
+              <button v-if="editingTopic._id" @click="moveTopic('up')" class="eas-btn eas-move">�?上移</button>
+              <button v-if="editingTopic._id" @click="moveTopic('down')" class="eas-btn eas-move">�?下移</button>
+              <button v-if="editingTopic._id && isAdmin" @click="downloadTopicMaterials" class="eas-btn eas-download">⬇️ 下载资料�?/button>
             </template>
-            <span v-else class="eas-readonly">只读 (无权限)</span>
+            <span v-else class="eas-readonly">只读 (无权�?</span>
             <div class="eas-divider"></div>
             <label class="eas-label">AI 模型</label>
             <select v-model="selectedModel" class="eas-select">
@@ -156,11 +156,11 @@
               <button @click="saveChapter" class="eas-btn eas-save">💾 保存更改</button>
               <button v-if="!editingChapter.isNew" @click="deleteChapter(editingLevelForChapter._id, editingTopicForChapter._id, editingChapter._id || editingChapter.id)" class="eas-btn eas-delete">🗑 删除章节</button>
               <div class="eas-divider"></div>
-              <button v-if="!editingChapter.isNew" @click="moveChapter('up')" class="eas-btn eas-move">↑ 上移</button>
-              <button v-if="!editingChapter.isNew" @click="moveChapter('down')" class="eas-btn eas-move">↓ 下移</button>
+              <button v-if="!editingChapter.isNew" @click="moveChapter('up')" class="eas-btn eas-move">�?上移</button>
+              <button v-if="!editingChapter.isNew" @click="moveChapter('down')" class="eas-btn eas-move">�?下移</button>
               <button v-if="isAdmin && !editingChapter.isNew" @click="downloadChapter" class="eas-btn eas-download">⬇️ 下载 {{ editingChapter.contentType === 'html' ? 'PPT' : 'MD' }}</button>
             </template>
-            <span v-else class="eas-readonly">只读 (无权限)</span>
+            <span v-else class="eas-readonly">只读 (无权�?</span>
             <div class="eas-divider"></div>
             <label class="eas-label">AI 模型</label>
             <select v-model="selectedModel" class="eas-select">
@@ -301,7 +301,7 @@ export default {
       aiStatusMap: {},
       
       // Models
-      selectedModel: 'o4-mini',
+      selectedModel: 'gemini-2.5-flash',
       rawModelOptions: [],
       
       // Language
@@ -705,8 +705,8 @@ export default {
     // --- Creation Methods ---
     createNewGroup() {
         const newGroup = {
-            name: '新分组',
-            title: '新分组',
+            name: '新分�?,
+            title: '新分�?,
             language: 'C++',
             editors: [],
             _id: null
@@ -724,7 +724,7 @@ export default {
 
       const newLevel = { 
         level: nextLevel, 
-        title: '新课程模块', 
+        title: '新课程模�?, 
         description: '',
         subject: group.language || 'C++', // Inherit from group
         group: group.name, // Pre-fill group
@@ -752,16 +752,16 @@ export default {
       const nextIndex = (topic.chapters ? topic.chapters.length : 0) + 1
       const nextId = `${level.level}-${nextIndex}-${Date.now()}`
       
-      const defaultContent = `### 新章节标题
+      const defaultContent = `### 新章节标�?
 
-这里是章节的正文内容。支持 **Markdown** 语法。
+这里是章节的正文内容。支�?**Markdown** 语法�?
 
-#### 常用资源嵌入示例 (请根据需要修改路径)
+#### 常用资源嵌入示例 (请根据需要修改路�?
 
 **1. 嵌入视频 (Video)**
 <video controls width="100%" controlsList="nodownload">
   <source src="/public/courseware/level1/videos/example.mp4" type="video/mp4">
-  您的浏览器不支持 video 标签。
+  您的浏览器不支持 video 标签�?
 </video>
 
 **2. 嵌入 PDF 文档**
@@ -778,7 +778,7 @@ export default {
 
       const newChapter = {
         id: nextId,
-        title: '新章节',
+        title: '新章�?,
         content: defaultContent,
         contentType: 'markdown',
         isNew: true,
@@ -1011,7 +1011,7 @@ export default {
         }
     },
     async deleteGroup(id) {
-        if (!confirm('确定要删除这个分组吗？')) return
+        if (!confirm('确定要删除这个分组吗�?)) return
         try {
             await request(`/api/course/groups/${id}`, { method: 'DELETE' })
             this.showToastMessage('删除分组成功')
@@ -1072,7 +1072,7 @@ export default {
       }
     },
     async deleteLevel(id) {
-      if (!confirm('确定要删除这个课程模块吗？')) return
+      if (!confirm('确定要删除这个课程模块吗�?)) return
       try {
         await request(`/api/course/levels/${id}`, { method: 'DELETE' })
         this.showToastMessage('删除成功')
@@ -1117,7 +1117,7 @@ export default {
           
           // Update ID for new topic (assuming appended to end)
           if (updatedLevel && updatedLevel.topics && updatedLevel.topics.length > 0) {
-              this.showToastMessage('知识点创建成功')
+              this.showToastMessage('知识点创建成�?)
               await this.fetchData()
               
               let newTopic;
@@ -1135,10 +1135,10 @@ export default {
           }
         }
         
-        this.showToastMessage('保存知识点成功')
+        this.showToastMessage('保存知识点成�?)
         await this.fetchData()
       } catch (e) {
-        this.showToastMessage('保存知识点失败: ' + e.message)
+        this.showToastMessage('保存知识点失�? ' + e.message)
       } finally {
         this.isSaving = false
       }
@@ -1147,18 +1147,18 @@ export default {
       if (!confirm('确定要删除这个知识点吗？')) return
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}`, { method: 'DELETE' })
-        this.showToastMessage('删除知识点成功')
+        this.showToastMessage('删除知识点成�?)
         this.fetchData()
         this.selectedNode = null
       } catch (e) {
-        this.showToastMessage('删除知识点失败: ' + e.message)
+        this.showToastMessage('删除知识点失�? ' + e.message)
       }
     },
     async deleteAllChapters(levelId, topicId) {
-      if (!confirm('确定要清空该知识点下的所有章节吗？此操作不可恢复！')) return
+      if (!confirm('确定要清空该知识点下的所有章节吗？此操作不可恢复�?)) return
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters`, { method: 'DELETE' })
-        this.showToastMessage('已清空所有章节')
+        this.showToastMessage('已清空所有章�?)
         
         // Update local state immediately to reflect changes
         this.editingTopic.chapters = []
@@ -1329,7 +1329,7 @@ export default {
       const safeTitle = this.sanitizeFileName(chapter.title)
       
       if (chapter.contentType === 'markdown') {
-        if (!chapter.content) return this.showToastMessage('没有内容可下载')
+        if (!chapter.content) return this.showToastMessage('没有内容可下�?)
         const filename = `${safeTitle}.md`
         const blob = new Blob([chapter.content], { type: 'text/markdown' })
         this.triggerDownload(blob, filename)
@@ -1466,7 +1466,7 @@ export default {
       }
     },
     async deleteChapter(levelId, topicId, chapterId) {
-      if (!confirm('确定要删除这个章节吗？')) return
+      if (!confirm('确定要删除这个章节吗�?)) return
       try {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, { method: 'DELETE' })
         this.showToastMessage('删除章节成功')
@@ -1589,7 +1589,7 @@ export default {
             this.showToastMessage('正在自动保存章节...')
             await this.saveChapter()
             if (!this.editingChapter._id) {
-                throw new Error('自动保存失败，请手动保存后再试')
+                throw new Error('自动保存失败，请手动保存后再�?)
             }
         }
     },
@@ -1599,7 +1599,7 @@ export default {
       
       try { await this.ensureChapterSaved() } catch (e) { return }
 
-      if (!confirm('确定要生成教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!confirm('确定要生成教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面�?)) return
       
       // Capture context
       const chapterId = this.editingChapter._id || this.editingChapter.id
@@ -1620,8 +1620,8 @@ export default {
       
       // Immediately switch to Markdown mode and show loading state
       this.editingChapter.contentType = 'markdown'
-      this.editingChapter.content = '正在生成教案中，请稍候...'
-      this.updateChapterInTree(chapterId, { contentType: 'markdown', content: '正在生成教案中，请稍候...' })
+      this.editingChapter.content = '正在生成教案中，请稍�?..'
+      this.updateChapterInTree(chapterId, { contentType: 'markdown', content: '正在生成教案中，请稍�?..' })
       
       try {
         await request('/api/lesson-plan/background', {
@@ -1640,7 +1640,7 @@ export default {
         })
         
         this.showToastMessage(`"${chapterTitle}" 教案生成任务已提交后台，完成后会自动保存`)
-        this.aiStatusMap[chapterId] = '正在后台生成教案中...'
+        this.aiStatusMap[chapterId] = '正在后台生成教案�?..'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
@@ -1654,7 +1654,7 @@ export default {
       
       try { await this.ensureChapterSaved() } catch (e) { return }
 
-      if (!confirm('确定要生成 PPT 吗？生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!confirm('确定要生�?PPT 吗？生成过程将在后台进行，您可以关闭此页面�?)) return
       
       // Capture context to handle navigation during generation
       const chapterId = this.editingChapter._id || this.editingChapter.id
@@ -1713,7 +1713,7 @@ export default {
         })
         
         this.showToastMessage(`"${chapterTitle}" PPT 生成任务已提交后台，完成后会自动保存`)
-        this.aiStatusMap[chapterId] = '正在后台生成PPT中...'
+        this.aiStatusMap[chapterId] = '正在后台生成PPT�?..'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
@@ -1722,11 +1722,11 @@ export default {
     },
 
     async generateSolutionPlan() {
-      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题�?ID')
       
       try { await this.ensureChapterSaved() } catch (e) { return }
 
-      if (!confirm('确定要生成解题教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!confirm('确定要生成解题教案吗？这将覆盖当前内容。生成过程将在后台进行，您可以关闭此页面�?)) return
       
       const firstProblemId = this.editingChapter.problemIdsStr.split(/[,，]/)[0].trim()
       if (!firstProblemId) return this.showToastMessage('未找到有效的题目 ID')
@@ -1740,7 +1740,7 @@ export default {
       
       // Capture chapter state for potential update
       const targetChapterState = {
-          content: '正在生成解题教案中，请稍候...', // We are setting this
+          content: '正在生成解题教案中，请稍�?..', // We are setting this
           contentType: 'markdown', // We are setting this
           resourceUrl: this.editingChapter.resourceUrl,
           problemIdsStr: this.editingChapter.problemIdsStr,
@@ -1803,7 +1803,7 @@ export default {
             const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
             if (subRes && subRes.code) {
                 userCode = subRes.code
-                this.showToastMessage('已找到您的 AC 代码，将基于此生成教案')
+                this.showToastMessage('已找到您�?AC 代码，将基于此生成教�?)
             }
         } catch (e) {
             console.warn('Failed to fetch submission', e)
@@ -1821,7 +1821,7 @@ export default {
             model: this.selectedModel
         })
         
-        this.aiStatusMap[id] = '正在后台生成教案中...'
+        this.aiStatusMap[id] = '正在后台生成教案�?..'
         this.showToastMessage('后台生成任务已提交！请耐心等待...')
 
       } catch (e) {
@@ -1833,16 +1833,16 @@ export default {
     },
 
     async generateSolutionReport() {
-      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题目 ID')
+      if (!this.editingChapter.problemIdsStr) return this.showToastMessage('请先在下方关联题�?ID')
       
       try { await this.ensureChapterSaved() } catch (e) { return }
 
-      if (!confirm('确定要生成题解报告吗？生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!confirm('确定要生成题解报告吗？生成过程将在后台进行，您可以关闭此页面�?)) return
       
       // Check if we have a generated solution plan
       let solutionPlan = ''
       if (this.editingChapter.contentType === 'markdown' && this.editingChapter.content && this.editingChapter.content.length > 100) {
-          if (confirm('检测到当前章节已有 Markdown 内容（可能是解题教案）。是否基于该教案生成 PPT？\n点击“确定”基于教案生成（推荐），点击“取消”基于原始题目生成。')) {
+          if (confirm('检测到当前章节已有 Markdown 内容（可能是解题教案）。是否基于该教案生成 PPT？\n点击“确定”基于教案生成（推荐），点击“取消”基于原始题目生成�?)) {
               solutionPlan = this.editingChapter.content
           }
       }
@@ -1929,7 +1929,7 @@ export default {
             const subRes = await request(`/api/course/submission/best?domainId=${domainId}&docId=${docId}`)
             if (subRes && subRes.code) {
                 userCode = subRes.code
-                this.showToastMessage('已找到您的 AC 代码，将基于此生成讲解')
+                this.showToastMessage('已找到您�?AC 代码，将基于此生成讲�?)
             }
         } catch (e) {
             console.warn('Failed to fetch submission', e)
@@ -1956,7 +1956,7 @@ export default {
             levelTitle: targetLevelTitle
         })
         
-        this.aiStatusMap[id] = '正在后台生成题解中...'
+        this.aiStatusMap[id] = '正在后台生成题解�?..'
         this.showToastMessage('后台生成任务已提交！请耐心等待...')
 
       } catch (e) {
@@ -1967,8 +1967,8 @@ export default {
     },
 
     async generateTopicDescription() {
-      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
-      if (!confirm('确定要生成描述吗？生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标�?)
+      if (!confirm('确定要生成描述吗？生成过程将在后台进行，您可以关闭此页面�?)) return
       
       // Capture the ID and Title of the topic being generated to handle context switching
       const targetTopicId = this.editingTopic._id || this.editingTopic.id;
@@ -2003,7 +2003,7 @@ export default {
         })
         
         this.showToastMessage('描述生成任务已提交后台，完成后会自动保存')
-        this.aiStatusMap[targetTopicId] = '正在后台生成中...'
+        this.aiStatusMap[targetTopicId] = '正在后台生成�?..'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[targetTopicId] = false
@@ -2012,8 +2012,8 @@ export default {
     },
 
     async generateTopicChapters() {
-      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标题')
-      if (!confirm('确定要生成章节列表吗？生成过程将在后台进行，您可以关闭此页面。')) return
+      if (!this.editingTopic.title) return this.showToastMessage('请先填写知识点标�?)
+      if (!confirm('确定要生成章节列表吗？生成过程将在后台进行，您可以关闭此页面�?)) return
 
       const targetTopicId = this.editingTopic._id || this.editingTopic.id;
       const levelId = this.editingLevelForTopic._id;
@@ -2046,7 +2046,7 @@ export default {
         })
         
         this.showToastMessage('章节列表生成任务已提交后台，完成后会自动保存')
-        this.aiStatusMap[targetTopicId] = '正在后台生成中...'
+        this.aiStatusMap[targetTopicId] = '正在后台生成�?..'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[targetTopicId] = false
@@ -2055,7 +2055,7 @@ export default {
     },
 
     async batchGenerateLessonPlans() {
-      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章�?)
       if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成教案吗？这将覆盖已有内容。`)) return
 
       const levelNum = this.editingLevelForTopic.level
@@ -2109,8 +2109,8 @@ export default {
     },
 
     async batchGeneratePPTs() {
-      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
-      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成 PPT 吗？`)) return
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章�?)
+      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生�?PPT 吗？`)) return
 
       const levelNum = this.editingLevelForTopic.level
       const levelTitle = this.editingLevelForTopic.title
@@ -2174,8 +2174,8 @@ export default {
     },
 
     async batchGenerateSolutionPlans() {
-      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
-      if (!confirm(`确定要为本知识点下的所有章节生成解题教案(Markdown)吗？只有关联了题目的章节才会生成。`)) return
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章�?)
+      if (!confirm(`确定要为本知识点下的所有章节生成解题教�?Markdown)吗？只有关联了题目的章节才会生成。`)) return
 
       const model = this.selectedModel
       const topicId = this.selectedNode.id
@@ -2210,7 +2210,7 @@ export default {
 
             const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
             const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
-            if (!doc) throw new Error('未找到题目')
+            if (!doc) throw new Error('未找到题�?)
             
             let problemText = doc.content
             let userCode = ''
@@ -2244,11 +2244,11 @@ export default {
 
       this.aiLoadingMap[topicId] = false
       this.aiStatusMap[topicId] = ''
-      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} �? 跳过 ${skippedCount} 个`)
     },
 
     async batchGenerateSolutionReports() {
-      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
+      if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章�?)
       if (!confirm(`确定要为本知识点下的所有章节生成题解报告吗？只有关联了题目的章节才会生成。`)) return
 
       const levelNum = this.editingLevelForTopic.level
@@ -2291,7 +2291,7 @@ export default {
 
             const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
             const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
-            if (!doc) throw new Error('未找到题目')
+            if (!doc) throw new Error('未找到题�?)
             
             let problemText = doc.content
             let userCode = ''
@@ -2341,11 +2341,11 @@ export default {
 
       this.aiLoadingMap[topicId] = false
       this.aiStatusMap[topicId] = ''
-      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} �? 跳过 ${skippedCount} 个`)
     },
 
     async batchGenerateLevelLessonPlans() {
-      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识�?)
       if (!confirm(`确定要为本模块下的所有章节生成教案吗？这将覆盖已有内容。`)) return
 
       const levelNum = this.editingLevel.level
@@ -2404,8 +2404,8 @@ export default {
     },
 
     async batchGenerateLevelPPTs() {
-      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
-      if (!confirm(`确定要为本模块下的所有章节生成 PPT 吗？`)) return
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识�?)
+      if (!confirm(`确定要为本模块下的所有章节生�?PPT 吗？`)) return
 
       const levelNum = this.editingLevel.level
       const levelTitle = this.editingLevel.title
@@ -2473,7 +2473,7 @@ export default {
     },
 
     async batchGenerateLevelSolutionReports() {
-      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识�?)
       if (!confirm(`确定要为本模块下的所有章节生成题解报告吗？只有关联了题目的章节才会生成。`)) return
 
       const levelNum = this.editingLevel.level
@@ -2519,7 +2519,7 @@ export default {
 
                 const docsRes = await request(`/api/documents?domainId=${domainId}&limit=1000`)
                 const doc = docsRes.docs.find(d => String(d.docId) === String(docId))
-                if (!doc) throw new Error('未找到题目')
+                if (!doc) throw new Error('未找到题�?)
                 
                 let problemText = doc.content
                 let userCode = ''
@@ -2561,7 +2561,7 @@ export default {
 
       this.aiLoadingMap[levelId] = false
       this.aiStatusMap[levelId] = ''
-      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
+      this.showToastMessage(`批量任务提交完成: 成功 ${successCount} �? 跳过 ${skippedCount} 个`)
     },
 
     findTopicInTree(topicId) {
@@ -2645,7 +2645,7 @@ export default {
 /* Hydro 式双栏编辑布局 */
 .editor-layout {
   display: flex;
-  flex-direction: row-reverse; /* 右侧操作栏在右 */
+  flex-direction: row-reverse; /* 右侧操作栏在�?*/
   gap: 16px;
   align-items: flex-start;
   min-height: 100%;
