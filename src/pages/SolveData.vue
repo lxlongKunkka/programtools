@@ -2728,7 +2728,6 @@ def main():
         print_header("打包文件")
         
         try:
-            import zipfile
             import yaml
             
             # 读取 problem.yaml 获取题目标题
