@@ -1158,13 +1158,13 @@ export default {
             folder.file('solution.md', task.codeOutput, zipOptions)
           }
 
-          // 8. 附加文件（如 NFLSOJ testdata.zip）
+          // 8. 附加文件（如 NFLSOJ testdata.zip），统一命名为 sample.zip
           if (task.additionalFile && task.additionalFile.base64) {
             try {
               const binaryStr = atob(task.additionalFile.base64)
               const bytes = new Uint8Array(binaryStr.length)
               for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-              folder.file(task.additionalFile.filename || 'additional_file.zip', bytes, zipOptions)
+              folder.file('sample.zip', bytes, zipOptions)
             } catch (e) {
               console.warn('Failed to add additional file to zip:', e)
             }
@@ -2439,14 +2439,14 @@ pause
             zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
         }
 
-        // 附加文件（如 NFLSOJ testdata.zip）
+        // 附加文件（如 NFLSOJ testdata.zip），统一命名为 sample.zip
         const curTask = this.tasks[this.currentTaskIndex]
         if (curTask?.additionalFile?.base64) {
           try {
             const binaryStr = atob(curTask.additionalFile.base64)
             const bytes = new Uint8Array(binaryStr.length)
             for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-            zip.file(curTask.additionalFile.filename || 'additional_file.zip', bytes, zipOptions)
+            zip.file('sample.zip', bytes, zipOptions)
           } catch (e) {
             console.warn('打包附加文件时出错:', e)
           }
