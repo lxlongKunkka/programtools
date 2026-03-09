@@ -55,7 +55,7 @@
                     :key="chapter.id"
                     class="tree-item chapter-item-tree"
                     :class="{ active: editModeNode && editModeNode.type === 'chapter' && (editModeNode.id === chapter._id || editModeNode.id === chapter.id) }"
-                    @click="$emit('select-chapter', chapter, level, topic)"
+                    @click.stop="$emit('select-chapter', chapter, level, topic)"
                   >
                     <span class="tree-label">{{ chapter.title }}</span>
                   </div>

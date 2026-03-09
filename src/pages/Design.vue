@@ -50,7 +50,7 @@
                     <!-- Topic Node -->
                     <div 
                         :class="['tree-item', 'topic-item', { active: isSelected('topic', topic._id) }]"
-                        @click="selectNode('topic', topic, level); toggleTopicCollapse(topic)"
+                        @click="selectNode('topic', topic, level)"
                     >
                         <span class="tree-icon" @click.stop="toggleTopicCollapse(topic)">{{ topic.collapsed ? '▶' : '▼' }}</span>
                         <span class="tree-label">{{ topic.title }}</span>
