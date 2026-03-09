@@ -157,8 +157,7 @@ function extractCodeFromSubmissionHtml(html) {
       .replace(/&nbsp;/g, ' ')
 
     // 去掉文件重定向（NFLSOJ 题目通常要求 freopen，但教学时不需要）
-    // 匹配任意缩进、任意文件名、\r\n 或 \n 行尾
-    code = code.replace(/^[^\S\n]*freopen\s*\([^)]*\)\s*;\s*\r?\n?/gm, '')
+    code = code.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '')
 
     return code
   } catch {
