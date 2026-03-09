@@ -1511,6 +1511,7 @@ export default {
       const groupName = this.editingLevelForChapter.group
       const groupObj = this.groups.find(g => g.name === groupName)
       const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const existingContent = this.editingChapter.content || ''
 
       this.aiLoadingMap[chapterId] = true
       this.aiStatusMap[chapterId] = '正在提交后台任务...'
@@ -1532,7 +1533,8 @@ export default {
             language: language,
             chapterId: chapterId,
             topicId: this.editingTopicForChapter._id,
-            clientKey: chapterId
+            clientKey: chapterId,
+            existingContent: existingContent
           })
         })
         
@@ -1989,7 +1991,8 @@ export default {
                     model: model,
                     language: language,
                     chapterId: chapterId,
-                    clientKey: chapterId
+                    clientKey: chapterId,
+                    existingContent: chapter.content || ''
                 })
             })
             successCount++
@@ -2286,7 +2289,8 @@ export default {
                         model: model,
                         language: language,
                         chapterId: chapterId,
-                        clientKey: chapterId
+                        clientKey: chapterId,
+                        existingContent: chapter.content || ''
                     })
                 })
                 successCount++

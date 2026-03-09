@@ -2915,7 +2915,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
 // Generate Lesson Plan Background
 router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, requirements, model, chapterId, topicId, clientKey, language } = req.body;
+  const { topic, context, level, requirements, model, chapterId, topicId, clientKey, language, existingContent } = req.body;
   
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -2947,6 +2947,10 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           userPrompt += `\n难度等级：${level}`
           if (requirements) {
               userPrompt += `\n额外要求：${requirements}`
+          }
+          const isPlaceholder = (existingContent || '').includes('正在生成') || (existingContent || '').includes('生成失败')
+          if (existingContent && existingContent.trim().length > 50 && !isPlaceholder) {
+              userPrompt += `\n\n【当前已有教案（请参考并在此基础上改进/完善，保留原有结构的优点）】\n${existingContent.slice(0, 6000)}`
           }
 
           const messages = [
