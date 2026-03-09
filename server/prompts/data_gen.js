@@ -63,8 +63,24 @@ ${cyaronDocs}
    - 生成随机整数使用 CYaRon 提供的 \`randint(lo, hi)\`，生成一维数组使用 \`[randint(lo, hi) for _ in range(N)]\`
    - 只在 CYaRon 未提供的功能（如 shuffle、choice、seed）时使用 \`py_random\`
    - **如果需要生成 0~1 之间的随机浮点数，必须使用 \`py_random.random()\`，严禁直接使用 \`random()\`**。原因：\`from cyaron import *\` 会将 \`random\` 模块本身导入到当前命名空间，此时 \`random\` 是一个模块对象而非函数，直接调用 \`random()\` 会报 \`TypeError: 'module' object is not callable\`
-3. 数据文件前缀设置为 \`file_prefix='./testdata/data'\`，并且**必须在循环前加上 \`import os\` 和 \`os.makedirs('./testdata', exist_ok=True)\`**，否则目录不存在时会抛出 \`FileNotFoundError\`
-4. 脚本中需要调用 \`io.output_gen('std.exe')\` 来生成输出（假设用户提供了标准程序）
+3. 数据文件前缀设置为\`file_prefix='./testdata/data'\`，并且**必须在循环前加上 \`import os\` 和 \`os.makedirs('./testdata', exist_ok=True)\`**，否则目录不存在时会抛出 \`FileNotFoundError\`
+4. **【⚠️ 致命错误：io.output_gen 必须在每组数据写完后立即调用】**
+   每个测试点的所有 \`io.input_writeln\` 写完后，**必须紧跟一行 \`io.output_gen('std.exe')\`**，且必须在循环体内（不能写在循环外面）。
+   遗漏此行会导致所有测试点都没有输出文件，整批数据全部作废。
+   \`\`\`python
+   # ✅ 正确写法（每组数据内都有 output_gen）
+   for test_id in range(1, 21):
+       io = IO(file_prefix='./testdata/data', data_id=test_id)
+       # ... 写输入 ...
+       io.input_writeln(n, m)
+       io.output_gen('std.exe')   # ← 必须在这里，循环体内
+   
+   # ❌ 错误写法（写在循环外，只对最后一组有效）
+   for test_id in range(1, 21):
+       io = IO(...)
+       io.input_writeln(n, m)
+   io.output_gen('std.exe')       # ← 只对 test_id=20 生效，其余19组白做
+   \`\`\``
 5. **严禁使用** \`IO.comment\` 或类似不存在的方法。如果需要添加注释，请直接使用 Python 的 \`#\` 注释。
 6. **严禁使用** \`ati()\` 或 \`int(1e9)\` 等方式将浮点数转换为整数。当需要大整数时，请直接使用整数常量，例如 \`N = 1000000000\`。
 7. 根据题目数据范围，合理划分测试点（小数据、中等数据、大数据、边界数据）
@@ -144,4 +160,45 @@ ${cyaronDocs}
    \`\`\`
    
    如果元素来源复杂（如手动构造），可在构造后立刻做单步断言，而不是等所有测试点都生成完再统一检查。
-`
+
+17. **【⚠️ 图论稠密图性能陷阱：禁止用 Python 双重循环 + set 构造完全图】**
+   题目 n ≤ 700 时，完全图有 C(700,2) ≈ 245,000 条边。如果用如下写法：
+   \`\`\`python
+   # ❌ 极慢：Python 双重 for + set.add，n=700 时耗时数十秒甚至超时
+   edges = set()
+   for u in range(1, n+1):
+       for v in range(u+1, n+1):
+           edges.add((u, v))
+   \`\`\`
+   这种写法在 n=700 时需要 244,650 次 Python 级别的 set.add，非常慢。
+   
+   **正确做法：直接写 io.input_writeln，不要先收集到 set 再输出**：
+   \`\`\`python
+   # ✅ 正确：直接逐条写入
+   edge_list = []
+   for u in range(1, n+1):
+       for v in range(u+1, n+1):
+           edge_list.append((u, v))
+   # 如需随机删边（如只保留部分边）：
+   py_random.shuffle(edge_list)
+   edge_list = edge_list[:m]   # 随机保留 m 条
+   edge_list.sort()
+   m = len(edge_list)
+   io.input_writeln(n, m)
+   for u, v in edge_list:
+       io.input_writeln(u, v)
+   io.output_gen('std.exe')
+   \`\`\`
+   
+   **更简洁的做法（不需要先 shuffle 时）**：
+   \`\`\`python
+   # ✅ 直接计算边数，一次性写入
+   edges_all = [(u, v) for u in range(1, n+1) for v in range(u+1, n+1)]
+   m = len(edges_all)
+   io.input_writeln(n, m)
+   for u, v in edges_all:
+       io.input_writeln(u, v)
+   io.output_gen('std.exe')
+   \`\`\`
+   - 列表推导式比 for+set.add 快数倍，且最终排序输出更简洁。
+   - **n ≥ 500 时，完全图或近完全图必须用列表推导式，严禁用 set 逐个 add**。`
