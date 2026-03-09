@@ -1159,21 +1159,15 @@ export default {
             folder.file('solution.md', task.codeOutput, zipOptions)
           }
 
-          // 8. 附加文件（如 NFLSOJ testdata.zip），解压内容到 additional_file/ 子目录
+          // 8. 附加文件（如 NFLSOJ sample.zip），直接放入根目录，由 run.py 在本地解压
           if (task.additionalFile && task.additionalFile.base64) {
             try {
               const binaryStr = atob(task.additionalFile.base64)
               const bytes = new Uint8Array(binaryStr.length)
               for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-              const innerZip = await JSZip.loadAsync(bytes)
-              for (const [name, file] of Object.entries(innerZip.files)) {
-                if (!file.dir) {
-                  const content = await file.async('uint8array')
-                  folder.file(`additional_file/${name}`, content, zipOptions)
-                }
-              }
+              folder.file('sample.zip', bytes, zipOptions)
             } catch (e) {
-              console.warn('Failed to extract additional file to zip:', e)
+              console.warn('Failed to add sample.zip to zip:', e)
             }
           }
         }
@@ -2453,22 +2447,16 @@ pause
             zip.file(`${problemTitle}.html`, this.reportHtml, zipOptions)
         }
 
-        // 附加文件（如 NFLSOJ testdata.zip），解压内容到 additional_file/ 子目录
+        // 附加文件（如 NFLSOJ sample.zip），直接放入根目录，由 run.py 在本地解压
         const curTask = this.tasks[this.currentTaskIndex]
         if (curTask?.additionalFile?.base64) {
           try {
             const binaryStr = atob(curTask.additionalFile.base64)
             const bytes = new Uint8Array(binaryStr.length)
             for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-            const innerZip = await JSZip.loadAsync(bytes)
-            for (const [name, file] of Object.entries(innerZip.files)) {
-              if (!file.dir) {
-                const content = await file.async('uint8array')
-                zip.file(`additional_file/${name}`, content, zipOptions)
-              }
-            }
+            zip.file('sample.zip', bytes, zipOptions)
           } catch (e) {
-            console.warn('附加文件解压出错:', e)
+            console.warn('附加文件添加出错:', e)
           }
         }
 
@@ -2606,6 +2594,18 @@ def main():
     except Exception as e:
         print(f"[!] 警告: 无法切换工作目录: {e}")
         print(f"当前工作目录: {os.getcwd()}\\n")
+    
+    # 如果存在 sample.zip，解压到 additional_file/
+    if os.path.exists('sample.zip'):
+        print("解压 sample.zip 到 additional_file/ ...")
+        if not os.path.exists('additional_file'):
+            os.makedirs('additional_file')
+        try:
+            with zipfile.ZipFile('sample.zip', 'r') as zf:
+                zf.extractall('additional_file')
+            print("[√] sample.zip 已解压到 additional_file/\\n")
+        except Exception as e:
+            print(f"[!] 解压 sample.zip 失败: {e}\\n")
     
     is_windows = platform.system() == 'Windows'
     
@@ -2808,7 +2808,7 @@ def main():
                 for f in os.listdir('.'):
                     if os.path.isfile(f):
                         lower_f = f.lower()
-                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md', 'problem_zh_TW.md', 'problem_en.md'] or f in candidates:
+                        if f in ['run.py', 'run.bat', 'problem.yaml', 'problem_zh.md', 'problem_zh_TW.md', 'problem_en.md', 'sample.zip'] or f in candidates:
                             continue
                         if 'ppt' in lower_f or lower_f.endswith('.html') or lower_f.endswith('.pptx') or lower_f.endswith('.pdf'):
                             candidates.append(f)
