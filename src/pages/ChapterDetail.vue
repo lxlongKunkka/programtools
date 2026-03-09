@@ -77,30 +77,40 @@
         </div>
 
         <!-- Video Content Mode -->
-        <div v-if="viewMode === 'video' && chapter.videoUrl" :class="['video-content-container', { maximized: isMaximized }]">
-          <div class="controls-bar">
-            <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
-              {{ isMaximized ? '退出全屏' : '全屏显示' }}
-            </button>
-          </div>
-          <!-- Bilibili 嵌入 -->
-          <iframe
-            v-if="isBilibiliVideo(chapter.videoUrl)"
-            :src="getBilibiliEmbedUrl(chapter.videoUrl)"
-            class="video-iframe"
-            frameborder="0"
-            scrolling="no"
-            allowfullscreen>
-          </iframe>
+        <div v-if="viewMode === 'video' && chapter.videoUrl">
+          <!-- Bilibili 嵌入（带保护层） -->
+          <template v-if="isBilibiliVideo(chapter.videoUrl)">
+            <div class="lesson-video-iframe-wrap">
+              <iframe
+                ref="bilibiliIframeRef"
+                :src="getBilibiliEmbedUrl(chapter.videoUrl)"
+                class="lesson-video-iframe"
+                frameborder="0"
+                allowfullscreen
+                scrolling="no"
+                allow="autoplay; encrypted-media; fullscreen"
+                sandbox="allow-scripts allow-same-origin allow-presentation allow-modals allow-fullscreen">
+              </iframe>
+              <!-- 拦截顶部 B站 Logo/标题点击，防止跳转 -->
+              <div class="bilibili-click-blocker bilibili-click-blocker-top"></div>
+              <!-- 透明遗罩：拦截右键，左键穿透给 iframe -->
+              <div class="bilibili-rclick-blocker" @contextmenu.prevent @mousedown="handleBilibiliOverlay"></div>
+            </div>
+            <div class="lesson-video-toolbar">
+              <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
+            </div>
+          </template>
           <!-- 直链视频 -->
-          <video
-            v-else
-            :src="chapter.videoUrl"
-            controls
-            controlsList="nodownload"
-            class="direct-video"
-            @contextmenu.prevent>
-          </video>
+          <template v-else>
+            <video
+              ref="directVideoRef"
+              :src="chapter.videoUrl"
+              controls
+              controlsList="nodownload"
+              class="direct-video"
+              @contextmenu.prevent>
+            </video>
+          </template>
         </div>
       </div>
       <div class="problems-section">
@@ -374,20 +384,48 @@ export default {
   },
   methods: {
     isBilibiliVideo(url) {
-      return url && (url.includes('bilibili.com') || url.includes('b23.tv'))
+      if (!url) return false
+      const s = url.trim()
+      // 纯 BV 号，如 BV1teP4zUEzN
+      if (/^BV[a-zA-Z0-9]+$/.test(s)) return true
+      return s.includes('bilibili.com') || s.includes('b23.tv')
     },
     getBilibiliEmbedUrl(url) {
-      // Extract BV ID
-      const bvMatch = url.match(/BV[a-zA-Z0-9]+/)
+      if (!url) return ''
+      const s = url.trim()
+      // 纯 BV 号
+      if (/^BV[a-zA-Z0-9]+$/.test(s)) {
+        return `//player.bilibili.com/player.html?bvid=${s}&high_quality=1&danmaku=0`
+      }
+      // 已经是嵌入链接
+      if (s.includes('player.bilibili.com')) return s
+      // URL 中提取 BV 号
+      const bvMatch = s.match(/BV[a-zA-Z0-9]+/)
       if (bvMatch) {
-        return `//player.bilibili.com/player.html?bvid=${bvMatch[0]}&autoplay=0&high_quality=1&danmaku=0`
+        return `//player.bilibili.com/player.html?bvid=${bvMatch[0]}&high_quality=1&danmaku=0`
       }
-      // Extract av ID
-      const avMatch = url.match(/av(\d+)/i)
+      // av 号
+      const avMatch = s.match(/av(\d+)/i)
       if (avMatch) {
-        return `//player.bilibili.com/player.html?aid=${avMatch[1]}&autoplay=0&high_quality=1&danmaku=0`
+        return `//player.bilibili.com/player.html?aid=${avMatch[1]}&high_quality=1&danmaku=0`
       }
-      return url
+      return s
+    },
+    handleBilibiliOverlay(e) {
+      if (e.button === 2) return
+      const el = e.currentTarget
+      el.style.pointerEvents = 'none'
+      setTimeout(() => { el.style.pointerEvents = 'auto' }, 200)
+    },
+    requestBilibiliFullscreen() {
+      const el = this.$refs.bilibiliIframeRef
+      if (!el) return
+      try {
+        if (el.requestFullscreen) el.requestFullscreen()
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+        else if (el.mozRequestFullScreen) el.mozRequestFullScreen()
+        else if (el.msRequestFullscreen) el.msRequestFullscreen()
+      } catch (e) {}
     },
     goBackToTopic() {
       const topic = this.currentTopic
@@ -1297,9 +1335,75 @@ export default {
 }
 .direct-video {
   width: 100%;
-  height: 100%;
   display: block;
+  max-height: 540px;
+  background: #000;
+  border-radius: 8px;
   outline: none;
+  margin-bottom: 4px;
+}
+
+/* Bilibili 视频保护层 */
+.lesson-video-iframe-wrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  height: 0;
+  background: #000;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+.lesson-video-iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none;
+}
+/* 全局透明遗罩：拦截右键，左键自动穿透给 iframe */
+.bilibili-rclick-blocker {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  bottom: 15%; /* 露出底部播放器控件栏 */
+  z-index: 3;
+  background: transparent;
+  pointer-events: auto;
+}
+/* 拦截 B站顶部 Logo/标题点击区域 */
+.bilibili-click-blocker {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+  cursor: default;
+  background: transparent;
+  pointer-events: auto;
+}
+.bilibili-click-blocker-top {
+  top: 0;
+  height: 12%;
+}
+/* 底部工具栏 */
+.lesson-video-toolbar {
+  background: #1a1a2e;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.lesson-video-fs-btn {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.lesson-video-fs-btn:hover {
+  background: rgba(255,255,255,0.2);
 }
 
 </style>
