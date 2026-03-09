@@ -855,6 +855,7 @@ export default {
           if (matchById || matchByDocId) console.log('[CourseEditorPanel] matchChapter FOUND:', c.id, c._id)
           return matchById || matchByDocId
         }
+        let found = false
         for (const level of this.levels) {
           // Search in topics (standard)
           for (const topic of (level.topics || [])) {
@@ -863,6 +864,7 @@ export default {
               level.descCollapsed = false
               topic.collapsed = false
               this.selectNode('chapter', chapter, level, topic)
+              found = true
               return
             }
           }
@@ -872,9 +874,20 @@ export default {
             if (chapter) {
               level.descCollapsed = false
               this.selectNode('chapter', chapter, level, null)
+              found = true
               return
             }
           }
+        }
+        if (!found) {
+          console.warn('[CourseEditorPanel] chapter NOT FOUND, searching id:', id)
+          this.levels.forEach(l => {
+            ;(l.topics || []).forEach(t => {
+              ;(t.chapters || []).forEach(c => {
+                console.log('  level:', l.title, '| topic:', t.title, '| ch.id:', c.id, '| ch._id:', c._id, '| type:', typeof c._id)
+              })
+            })
+          })
         }
       }
     },
