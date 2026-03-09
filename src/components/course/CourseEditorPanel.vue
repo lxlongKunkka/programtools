@@ -2038,19 +2038,14 @@ export default {
             this.aiLoadingMap[chapterId] = true
             this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
             
-            // 若本地没有缓存内容，先从服务端拉取
-            let chapterContent = chapter.content || ''
-            if (!chapterContent.trim() && chapterId) {
-                try {
-                    const res = await request(`/api/course/chapter/${chapterId}`)
-                    if (res && res.content) {
-                        chapterContent = res.content
-                        chapter.content = chapterContent
-                    }
-                } catch (e) { console.warn('Failed to fetch chapter content', e) }
-            }
+            // 始终从服务端拉取最新内容
+            let chapterContent = ''
+            try {
+                const res = await request(`/api/course/chapter/${chapterId}`)
+                if (res && res.content) chapterContent = res.content
+            } catch (e) { console.warn('Failed to fetch chapter content', e) }
             
-            console.log(`[batchGeneratePPTs] chapter "${chapterTitle}" content length:`, chapterContent.length, '| contentType:', chapter.contentType)
+            console.log(`[batchGeneratePPTs] chapter "${chapterTitle}" content length:`, chapterContent.length)
             
             await request('/api/generate-ppt/background', {
               method: 'POST',
@@ -2351,17 +2346,12 @@ export default {
                 this.aiLoadingMap[chapterId] = true
                 this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
                 
-                // 若本地没有缓存内容，先从服务端拉取
-                let chapterContent = chapter.content || ''
-                if (!chapterContent.trim() && chapterId) {
-                    try {
-                        const res = await request(`/api/course/chapter/${chapterId}`)
-                        if (res && res.content) {
-                            chapterContent = res.content
-                            chapter.content = chapterContent
-                        }
-                    } catch (e) { console.warn('Failed to fetch chapter content', e) }
-                }
+                // 始终从服务端拉取最新内容
+                let chapterContent = ''
+                try {
+                    const res = await request(`/api/course/chapter/${chapterId}`)
+                    if (res && res.content) chapterContent = res.content
+                } catch (e) { console.warn('Failed to fetch chapter content', e) }
                 
                 await request('/api/generate-ppt/background', {
                   method: 'POST',
