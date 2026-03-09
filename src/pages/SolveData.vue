@@ -416,7 +416,19 @@ export default {
     },
     tasks: {
       handler(val) {
-        localStorage.setItem('solve_data_tasks', JSON.stringify(val))
+        try {
+          // 存储前去掉 additionalFile.base64（二进制大文件），避免超出 localStorage 5MB 限制
+          // 保留 filename/size 用于界面提示，base64 仅在内存中保存
+          const toSave = val.map(t => {
+            if (!t.additionalFile) return t
+            const { base64, ...rest } = t.additionalFile
+            return { ...t, additionalFile: rest }
+          })
+          localStorage.setItem('solve_data_tasks', JSON.stringify(toSave))
+        } catch (e) {
+          // 仍然超额时（如 reportHtml 太大）静默忽略，不影响功能
+          console.warn('localStorage quota exceeded, skipping save:', e.message)
+        }
       },
       deep: true
     }
