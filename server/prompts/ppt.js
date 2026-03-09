@@ -187,7 +187,7 @@ export const PPT_PROMPT = `你是一位精通 HTML/CSS 的前端工程师，同�
                 
                 if (prevBtn) prevBtn.disabled = currentSlide === 0;
                 if (nextBtn) nextBtn.disabled = currentSlide === slides.length - 1;
-                if (slideCounter) slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+                if (slideCounter) slideCounter.textContent = \`\${currentSlide + 1} / \${slides.length}\`;
 
                 // 尝试重置动画
                 if (typeof window.resetAnimation === 'function' && nextSlide.querySelector('#animArea')) {
