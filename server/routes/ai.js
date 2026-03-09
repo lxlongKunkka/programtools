@@ -768,11 +768,12 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
   })
 
   const restoreImages = (str) => {
-    let result = str
-    for (const [key, original] of Object.entries(imageMap)) {
-      result = result.split(key).join(original)
-    }
-    return result
+    // 用正则一次性恢复：同时兼容 AI 保留完整 IMGPH0IMGPH 和只留 IMGPH0 的情况
+    return str.replace(/IMGPH(\d+)IMGPH|IMGPH(\d+)(?!\d)/g, (match, a, b) => {
+      const idx = a !== undefined ? a : b
+      const key = `IMGPH${idx}IMGPH`
+      return imageMap[key] || match
+    })
   }
 
   try {
