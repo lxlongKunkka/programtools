@@ -2143,9 +2143,21 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
           let courseLevel = await CourseLevel.findOne(query);
 
+          // Fallback: if not found by topicId, try broader search
+          if (!courseLevel) {
+              courseLevel = await CourseLevel.findOne({
+                  $or: [
+                      { 'topics.chapters.id': chapterId },
+                      { 'topics.chapters._id': chapterId }
+                  ]
+              });
+          }
+
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
+              let foundChapterId = null;
+              let foundTopicId = null;
               for (const topic of courseLevel.topics) {
                   // If topicId is provided, ensure we are looking at the correct topic
                   if (topicId && topic._id && topic._id.toString() !== topicId) continue;
@@ -2157,28 +2169,28 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                   if (!chapter) {
                       chapter = topic.chapters.find(c => c.id === chapterId);
                   }
+                  // Fallback: match by chapter title (handles stale _id from frontend)
+                  if (!chapter && chapterTitle) {
+                      chapter = topic.chapters.find(c => c.title === chapterTitle);
+                      if (chapter) console.log(`[Background] Solution-Report: chapter found by title fallback "${chapterTitle}" (stale id: ${chapterId}, actual: ${chapter._id})`);
+                  }
 
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
                       chapterFound = true;
                       foundChapterTitle = chapter.title;
+                      foundChapterId = chapter._id ? chapter._id.toString() : chapter.id;
+                      foundTopicId = topic._id ? topic._id.toString() : null;
                       break;
                   }
               }
               if (chapterFound) {
-                  // Use atomic update to avoid race conditions
                   try {
-                      // Construct the update path dynamically
-                      // We need to find the index of the topic and the chapter
-                      // Since we already found the objects, we can find their indices
-                      // But Mongoose arrays are tricky.
-                      // Safer to use array filters if we have IDs.
-                      
-                      if (topicId && chapterId) {
-                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
-                              ? { "c._id": chapterId } 
-                              : { "c.id": chapterId };
+                      if (foundTopicId && foundChapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId) 
+                              ? { "c._id": new mongoose.Types.ObjectId(foundChapterId) } 
+                              : { "c.id": foundChapterId };
                               
                           await CourseLevel.updateOne(
                               { _id: courseLevel._id },
@@ -2190,20 +2202,19 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                               },
                               {
                                   arrayFilters: [
-                                      { "t._id": topicId },
+                                      { "t._id": new mongoose.Types.ObjectId(foundTopicId) },
                                       chapterFilter
                                   ]
                               }
                           );
                       } else {
-                          // Fallback to save() if we can't construct atomic update
                           await courseLevel.save();
                       }
                       
-                      console.log(`[Background] Database updated for chapter ${chapterId}`);
+                      console.log(`[Background] Database updated for chapter ${foundChapterId}`);
                       try {
                           getIO().emit('ai_task_complete', { 
-                              chapterId, 
+                              chapterId: foundChapterId, 
                               chapterTitle: foundChapterTitle, 
                               clientKey, 
                               status: 'success', 
@@ -2216,7 +2227,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
                       await courseLevel.save();
                       try {
                           getIO().emit('ai_task_complete', { 
-                              chapterId, 
+                              chapterId: foundChapterId, 
                               chapterTitle: foundChapterTitle, 
                               clientKey, 
                               status: 'success', 
@@ -2802,9 +2813,21 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
 
           let courseLevel = await CourseLevel.findOne(query);
 
+          // If not found by topicId, try broader search
+          if (!courseLevel) {
+              courseLevel = await CourseLevel.findOne({
+                  $or: [
+                      { 'topics.chapters.id': chapterId },
+                      { 'topics.chapters._id': chapterId }
+                  ]
+              });
+          }
+
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
+              let foundChapterId = null; // actual _id in DB
+              let foundTopicId = null;
               for (const topic of courseLevel.topics) {
                   // If topicId is provided, ensure we are looking at the correct topic
                   if (topicId && topic._id && topic._id.toString() !== topicId) continue;
@@ -2816,22 +2839,31 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   if (!chapter) {
                       chapter = topic.chapters.find(c => c.id === chapterId);
                   }
+                  // Fallback: match by chapter title (handles stale _id in frontend)
+                  if (!chapter && chapterTitle) {
+                      chapter = topic.chapters.find(c => c.title === chapterTitle);
+                      if (chapter) {
+                          console.log(`[Background] Chapter found by title fallback: "${chapterTitle}" (stale id was ${chapterId}, actual _id: ${chapter._id})`);
+                      }
+                  }
 
                   if (chapter) {
                       chapter.resourceUrl = relativePath;
                       chapter.contentType = 'html';
                       chapterFound = true;
                       foundChapterTitle = chapter.title;
+                      foundChapterId = chapter._id ? chapter._id.toString() : chapter.id;
+                      foundTopicId = topic._id ? topic._id.toString() : null;
                       break;
                   }
               }
               if (chapterFound) {
-                  // Atomic update for PPT
+                  // Atomic update for PPT — use actual DB ids (not stale frontend ids)
                   try {
-                      if (topicId && chapterId) {
-                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
-                              ? { "c._id": chapterId } 
-                              : { "c.id": chapterId };
+                      if (foundTopicId && foundChapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId) 
+                              ? { "c._id": new mongoose.Types.ObjectId(foundChapterId) } 
+                              : { "c.id": foundChapterId };
                               
                           await CourseLevel.updateOne(
                               { _id: courseLevel._id },
@@ -2843,7 +2875,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                               },
                               {
                                   arrayFilters: [
-                                      { "t._id": topicId },
+                                      { "t._id": new mongoose.Types.ObjectId(foundTopicId) },
                                       chapterFilter
                                   ]
                               }
@@ -2851,11 +2883,11 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                       } else {
                           await courseLevel.save();
                       }
-                      console.log(`[Background] Database updated for chapter ${chapterId}`);
+                      console.log(`[Background] Database updated for chapter ${foundChapterId}`);
                       
                       // Notify client
                       getIO().emit('ai_task_complete', {
-                          chapterId,
+                          chapterId: foundChapterId,
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'ppt',
@@ -2866,7 +2898,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                       console.error('[Background] Atomic update failed for PPT, falling back to save():', updateErr);
                       await courseLevel.save();
                       getIO().emit('ai_task_complete', {
-                          chapterId,
+                          chapterId: foundChapterId,
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'ppt',
@@ -2978,9 +3010,23 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
 
           let courseLevel = await CourseLevel.findOne(query);
 
+          // Fallback: if not found by topicId, try broader search
+          if (!courseLevel) {
+              courseLevel = await CourseLevel.findOne({
+                  $or: [
+                      { 'topics.chapters.id': chapterId },
+                      { 'topics.chapters._id': chapterId }
+                  ]
+              });
+          }
+
+          const chapterTitleFromBody = topic; // 'topic' param = chapter title; save before loop variable shadows it
+
           if (courseLevel) {
               let chapterFound = false;
               let foundChapterTitle = '';
+              let foundChapterId = null;
+              let foundTopicId = null;
               for (const topic of courseLevel.topics) {
                   // If topicId is provided, ensure we are looking at the correct topic
                   if (topicId && topic._id && topic._id.toString() !== topicId) continue;
@@ -2992,22 +3038,29 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                   if (!chapter) {
                       chapter = topic.chapters.find(c => c.id === chapterId);
                   }
+                  // Fallback: match by chapter title (handles stale _id from frontend)
+                  if (!chapter && chapterTitleFromBody) {
+                      chapter = topic.chapters.find(c => c.title === chapterTitleFromBody);
+                      if (chapter) console.log(`[Background] Lesson-Plan: chapter found by title fallback "${chapterTitleFromBody}" (stale id: ${chapterId}, actual: ${chapter._id})`);
+                  }
 
                   if (chapter) {
                       chapter.content = content;
                       chapter.contentType = 'markdown';
                       chapterFound = true;
                       foundChapterTitle = chapter.title;
+                      foundChapterId = chapter._id ? chapter._id.toString() : chapter.id;
+                      foundTopicId = topic._id ? topic._id.toString() : null;
                       break;
                   }
               }
               if (chapterFound) {
                   // Atomic update for Lesson Plan
                   try {
-                      if (topicId && chapterId) {
-                          const chapterFilter = mongoose.Types.ObjectId.isValid(chapterId) 
-                              ? { "c._id": chapterId } 
-                              : { "c.id": chapterId };
+                      if (foundTopicId && foundChapterId) {
+                          const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId) 
+                              ? { "c._id": new mongoose.Types.ObjectId(foundChapterId) } 
+                              : { "c.id": foundChapterId };
                               
                           await CourseLevel.updateOne(
                               { _id: courseLevel._id },
@@ -3019,7 +3072,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                               },
                               {
                                   arrayFilters: [
-                                      { "t._id": topicId },
+                                      { "t._id": new mongoose.Types.ObjectId(foundTopicId) },
                                       chapterFilter
                                   ]
                               }
@@ -3027,11 +3080,11 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                       } else {
                           await courseLevel.save();
                       }
-                      console.log(`[Background] Database updated for chapter ${chapterId} (Lesson Plan)`);
+                      console.log(`[Background] Database updated for chapter ${foundChapterId} (Lesson Plan)`);
                       
                       // Notify client
                       getIO().emit('ai_task_complete', {
-                          chapterId,
+                          chapterId: foundChapterId,
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'lesson-plan',
@@ -3042,7 +3095,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                       console.error('[Background] Atomic update failed for Lesson Plan, falling back to save():', updateErr);
                       await courseLevel.save();
                       getIO().emit('ai_task_complete', {
-                          chapterId,
+                          chapterId: foundChapterId,
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'lesson-plan',
