@@ -22,6 +22,7 @@
           ref="designer"
           :initial-node="editModeNode"
           @close="onDesignClose"
+          @data-changed="fetchData"
         />
 
         <template v-else>

@@ -980,6 +980,7 @@ export default {
         
         this.showToastMessage('保存成功')
         this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('保存失败: ' + e.message)
       } finally {
@@ -992,6 +993,7 @@ export default {
         await request(`/api/course/levels/${id}`, { method: 'DELETE' })
         this.showToastMessage('删除成功')
         this.fetchData()
+        this.$emit('data-changed')
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除失败: ' + e.message)
@@ -1006,6 +1008,7 @@ export default {
         })
         this.showToastMessage('移动成功')
         this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('移动失败: ' + e.message)
       }
@@ -1046,12 +1049,14 @@ export default {
                 this.editingTopic._id = newTopic._id
                 this.selectedNode.id = newTopic._id
               }
+              this.$emit('data-changed')
               return
           }
         }
         
         this.showToastMessage('保存知识点成功')
         await this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('保存知识点失败: ' + e.message)
       } finally {
@@ -1064,6 +1069,7 @@ export default {
         await request(`/api/course/levels/${levelId}/topics/${topicId}`, { method: 'DELETE' })
         this.showToastMessage('删除知识点成功')
         this.fetchData()
+        this.$emit('data-changed')
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除知识点失败: ' + e.message)
@@ -1094,6 +1100,7 @@ export default {
         })
         this.showToastMessage('移动成功')
         this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('移动失败: ' + e.message)
       }
