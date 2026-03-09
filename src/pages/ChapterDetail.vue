@@ -97,10 +97,6 @@
               <div class="bilibili-rclick-blocker" @contextmenu.prevent @mousedown="handleBilibiliOverlay"></div>
             </div>
             <div class="lesson-video-toolbar">
-              <button class="lesson-video-fs-btn" @click="replayBilibiliVideo">↺ 从头播放</button>
-              <span class="toolbar-divider"></span>
-              <span class="speed-label">⚙️ 倍速请点播放器右下角齿轮图标</span>
-              <span class="toolbar-divider"></span>
               <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
             </div>
           </template>
