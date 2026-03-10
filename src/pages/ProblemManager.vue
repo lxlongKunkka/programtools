@@ -341,10 +341,6 @@ export default {
         const sourceRaw = doc.contentbak || doc.content || ''
         const { zh: existingZh, en: existingEn } = this.parseContent(sourceRaw)
 
-        // Determine text to translate: use en field if present, else check if plain text is English
-        const isEnglishPlain = !existingEn && /[a-zA-Z]{5,}/.test(existingZh)
-        const textToTranslate = existingEn || (isEnglishPlain ? existingZh : '')
-
         let newZh = existingZh
         let newEn = existingEn
 
@@ -357,7 +353,15 @@ export default {
           console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过全部处理: ${doc.docId}`)
           this.statusMsg = `${doc.docId} 已处理，跳过`
           return true
-        } else if (textToTranslate) {
+        }
+
+        // force=true：直接把 doc.content 整体发给 AI（支持重排版）
+        // force=false：提取英文字段或判断纯英文文本
+        const textToTranslate = force
+          ? (doc.content || '')
+          : (existingEn || ((!existingEn && /[a-zA-Z]{5,}/.test(existingZh)) ? existingZh : ''))
+
+        if (textToTranslate) {
           const transRes = await request('/api/translate', {
             method: 'POST',
             body: JSON.stringify({
@@ -367,7 +371,7 @@ export default {
           })
           if (transRes.result) {
             newZh = transRes.result
-            newEn = transRes.meta?.english || textToTranslate
+            newEn = transRes.meta?.english || existingEn || ''
           }
         }
 
