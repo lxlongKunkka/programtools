@@ -131,7 +131,7 @@
             </td>
             <td>
               <div class="actions">
-                <button @click="processOne(doc)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing && doc._processingType === 'smart' }">
+                <button @click="processOne(doc, true)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing && doc._processingType === 'smart' }">
                   {{ (doc._processing && doc._processingType === 'smart') ? '处理中...' : '智能处理' }}
                 </button>
                 <button v-if="doc.contentbak" @click="restoreBackup(doc)" class="btn-small btn-restore">恢复备份</button>
@@ -326,7 +326,7 @@ export default {
     },
 
     // Core logic: Translate -> Extract Title -> Extract Tags -> Remove PID
-    async processOne(doc) {
+    async processOne(doc, force = false) {
       console.log(`[ProblemManager] 🚀 智能处理开始: ${doc.docId} (${doc._id})`)
       doc._processing = true
       doc._processingType = 'smart'
@@ -352,8 +352,8 @@ export default {
         const currentParsed = this.parseContent(doc.content || '')
         const alreadyTranslated = !!(currentParsed.zh && currentParsed.en)
 
-        if (alreadyTranslated) {
-          // 已翻译说明之前已完整处理过（翻译+打标签），直接跳过
+        if (alreadyTranslated && !force) {
+          // 已翻译说明之前已完整处理过（翻译+打标签），批量时直接跳过
           console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过全部处理: ${doc.docId}`)
           this.statusMsg = `${doc.docId} 已处理，跳过`
           return true
