@@ -343,42 +343,62 @@ async function fetchAtCoderProblem(url) {
  * 策略1.6: 历史全量搜索（from_second=0，专为其余老比赛兜底）
  */
 async function fetchAtCoderAcCode(contestId, taskId) {
-  if (!ATCODER_USERNAME) return ''
-
   const KENKOOOO_OPTS = { headers: { 'User-Agent': HEADERS['User-Agent'] }, timeout: 20000, validateStatus: s => s < 500 }
 
-  // 根据比赛号码动态估算起始时间：号码越小说明比赛越早
-  let fromSecond = Math.floor(Date.now() / 1000) - 3 * 365 * 24 * 3600  // 默认3年前
-  const numMatch = contestId.match(/\d+/)
-  if (numMatch) {
-    const num = parseInt(numMatch[0])
-    if (num <= 100) fromSecond = 0                                                           // 2012~2016 年老比赛，从时间戳0开始
-    else if (num <= 200) fromSecond = Math.floor(Date.now() / 1000) - 8 * 365 * 24 * 3600  // ~2018年
-    else if (num <= 300) fromSecond = Math.floor(Date.now() / 1000) - 5 * 365 * 24 * 3600  // ~2021年
+  // 搜索指定用户的提交记录，找到 AC C++ 代码后返回提交 id，否则返回 null
+  const searchUser = async (user, fromSecond, maxPages = 20) => {
+    let from = fromSecond
+    for (let page = 0; page < maxPages; page++) {
+      const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(user)}&from_second=${from}`
+      console.log(`[AtCoder AC] ${user} page=${page} from=${from}`)
+      if (page > 0) await sleep(800)
+      try {
+        const r = await axios.get(apiUrl, KENKOOOO_OPTS)
+        if (r.status === 429) { console.warn(`[AtCoder AC] ${user} 429`); return null }
+        const all = r.data || []
+        let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
+        const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
+        if (cpp.length) ac = cpp
+        if (ac.length) {
+          ac.sort((a, b) => b.epoch_second - a.epoch_second)
+          console.log(`[AtCoder AC] ${user} 找到 id=${ac[0].id}`)
+          return ac[0].id
+        }
+        if (all.length < 500) { console.log(`[AtCoder AC] ${user} 已翻完`); return null }
+        from = all[all.length - 1].epoch_second + 1
+      } catch (e) {
+        console.warn(`[AtCoder AC] ${user} 失败: ${e.message}`); return null
+      }
+    }
+    return null
   }
 
-  console.log(`[AtCoder AC] 查询 ${ATCODER_USERNAME} from=${fromSecond}`)
-  for (let page = 0; page < 30; page++) {
-    const apiUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodeURIComponent(ATCODER_USERNAME)}&from_second=${fromSecond}`
-    console.log(`[AtCoder AC] page=${page}`)
-    if (page > 0) await sleep(800)
-    try {
-      const r = await axios.get(apiUrl, KENKOOOO_OPTS)
-      if (r.status === 429) { console.warn('[AtCoder AC] kenkoooo 429，跳出'); break }
-      const all = r.data || []
-      let ac = all.filter(s => s.problem_id === taskId && s.result === 'AC')
-      const cpp = ac.filter(s => s.language && /[Cc]\+\+/.test(s.language))
-      if (cpp.length) ac = cpp
-      if (ac.length) {
-        ac.sort((a, b) => b.epoch_second - a.epoch_second)
-        console.log(`[AtCoder AC] 找到 id=${ac[0].id}`)
-        return await fetchSubmissionCode(contestId, ac[0].id)
-      }
-      if (all.length < 500) { console.log('[AtCoder AC] 已翻完，未找到'); break }
-      fromSecond = all[all.length - 1].epoch_second + 1
-    } catch (e) {
-      console.warn(`[AtCoder AC] 失败: ${e.message}`); break
-    }
+  const numMatch = contestId.match(/\d+/)
+  const num = numMatch ? parseInt(numMatch[0]) : 9999
+  const NOW = Math.floor(Date.now() / 1000)
+
+  let userPlan  // [{ user, from, maxPages }, ...]
+  if (num <= 200) {
+    // 老比赛（≤2018年）：kmjp 和 potato167 历史记录最全
+    const from = num <= 100 ? 0 : NOW - 10 * 365 * 24 * 3600
+    userPlan = [
+      { user: 'kmjp',      from, maxPages: 10 },
+      { user: 'potato167', from, maxPages: 10 },
+    ]
+  } else {
+    // 新比赛：优先 kunkka，再 qqqaaazzz / kmjp / potato167（从最近3年搜）
+    const from = NOW - 3 * 365 * 24 * 3600
+    userPlan = [
+      ...(ATCODER_USERNAME ? [{ user: ATCODER_USERNAME, from, maxPages: 20 }] : []),
+      { user: 'qqqaaazzz', from, maxPages: 5 },
+      { user: 'kmjp',      from, maxPages: 5 },
+      { user: 'potato167', from, maxPages: 5 },
+    ]
+  }
+
+  for (const { user, from, maxPages } of userPlan) {
+    const subId = await searchUser(user, from, maxPages)
+    if (subId) return await fetchSubmissionCode(contestId, subId)
   }
 
   return ''
