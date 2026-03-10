@@ -348,7 +348,16 @@ export default {
         let newZh = existingZh
         let newEn = existingEn
 
-        if (textToTranslate) {
+        // 检查是否已有 TW 版本（说明是我们自己生成的题目，已翻译过，跳过翻译）
+        if (!Array.isArray(doc.hydroFiles)) {
+          await this.fetchHydroFiles(doc, true)
+        }
+        const hasTWVersion = Array.isArray(doc.hydroFiles) && doc.hydroFiles.some(f => f.name === 'problem_zh_TW.md')
+
+        if (hasTWVersion) {
+          console.log(`[ProblemManager] ↩️ 已有TW版本，跳过翻译: ${doc.docId}`)
+          this.statusMsg = `${doc.docId} 已有TW版本，跳过翻译`
+        } else if (textToTranslate) {
           const transRes = await request('/api/translate', {
             method: 'POST',
             body: JSON.stringify({
@@ -684,6 +693,7 @@ export default {
 
     async fetchHydroFiles(doc, silent = false) {
         if (doc._loadingFiles) return
+        if (Array.isArray(doc.hydroFiles)) return  // 已加载，无需重复请求
         
         console.log(`[ProblemManager] 📂 获取文件列表: ${doc.docId}`)
         doc._loadingFiles = true
