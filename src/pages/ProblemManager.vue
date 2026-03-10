@@ -368,7 +368,7 @@ export default {
           })
           if (transRes.result) {
             newZh = transRes.result
-            newEn = transRes.meta?.english || existingEn || ''
+            newEn = transRes.meta?.english || ''
           }
         }
 
