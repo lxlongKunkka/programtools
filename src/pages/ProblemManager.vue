@@ -355,11 +355,8 @@ export default {
           return true
         }
 
-        // force=true：直接把 doc.content 整体发给 AI（支持重排版）
-        // force=false：提取英文字段或判断纯英文文本
-        const textToTranslate = force
-          ? (doc.content || '')
-          : (existingEn || ((!existingEn && /[a-zA-Z]{5,}/.test(existingZh)) ? existingZh : ''))
+        // 直接把 doc.content 整体发给 AI（支持重排版+翻译）
+        const textToTranslate = doc.content || ''
 
         if (textToTranslate) {
           const transRes = await request('/api/translate', {
