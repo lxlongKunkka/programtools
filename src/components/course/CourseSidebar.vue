@@ -71,6 +71,10 @@
                     @click.stop="$emit('select-chapter', chapter, level, topic)"
                   >
                     <span class="tree-label">{{ chapter.title }}</span>
+                    <span
+                      v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)"
+                      class="tree-count-badge"
+                    >{{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题</span>
                     <div v-if="canEditLevelNode(level)" class="tree-actions">
                       <button
                         class="btn-node-action"
