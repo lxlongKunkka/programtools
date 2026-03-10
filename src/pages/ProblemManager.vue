@@ -473,10 +473,6 @@ export default {
     
     async batchRemovePid() {
       const hasPid = this.selectedDocs.filter(d => d.pid && d.pid.trim())
-      if (hasPid.length === 0) {
-        this.showToastMessage('选中的题目中没有 pid 字段，无需处理')
-        return
-      }
       if (!confirm(`选中 ${this.selectedDocs.length} 个题目中有 ${hasPid.length} 个含 pid 字段，确定批量去除 pid 并修正 sort 吗？`)) return
 
       this.processing = true
