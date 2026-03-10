@@ -36,10 +36,14 @@
     </div>
 
     <div class="form-group">
-      <label>视频链接 (可选):</label>
-      <input v-model="chapter.videoUrl" class="form-input" placeholder="支持 Bilibili 链接 / 纯 BV 号 (如 BV1teP4zUEzN) / COS 视频直链 (.mp4)">
+      <label>视频链接 (可选，每行一个):</label>
+      <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
+        placeholder="每行一个视频链接，支持 Bilibili 链接 / 纯 BV 号（如 BV1teP4zUEzN）/ COS 视频直链（.mp4）"
+        style="resize: vertical; font-family: monospace;"></textarea>
       <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
-        {{ isBilibili(chapter.videoUrl) ? '🎬 已识别为 Bilibili 视频' : '🎥 已识别为直链视频' }}
+        <div v-for="(line, i) in chapter.videoUrl.split('\n').map(s => s.trim()).filter(Boolean)" :key="i">
+          {{ isBilibili(line) ? '🎬' : '🎥' }} 视频{{ i + 1 }}：{{ line.length > 60 ? line.slice(0, 60) + '…' : line }}
+        </div>
       </div>
     </div>
 

@@ -28,7 +28,7 @@
         </select>
       </div>
       
-      <div class="control-group">
+      <div class="control-group control-group-actions">
         <button @click="fetchDocuments" class="btn-refresh">刷新列表</button>
         <button @click="batchProcess" :disabled="processing || selectedDocs.length === 0" class="btn-batch">
           {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签)' }}
@@ -38,6 +38,12 @@
         </button>
         <button @click="batchGenerateReport" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-report">
           {{ processing && processingType === 'report' ? `生成中 (${processedCount}/${selectedDocs.length})` : '批量生成题解' }}
+        </button>
+        <button @click="batchRemovePid" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-pid">
+          {{ processing && processingType === 'pid' ? `去PID中 (${processedCount}/${selectedDocs.length})` : '批量去PID' }}
+        </button>
+        <button @click="batchCleanOtherTags" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-clean">
+          {{ processing && processingType === 'clean-tag' ? `清理中 (${processedCount}/${selectedDocs.length})` : '批量去标签' }}
         </button>
         <button @click="stopProcessing" v-if="processing" class="btn-stop">停止</button>
       </div>
@@ -85,6 +91,7 @@
             <td>
               {{ doc.docId }}
               <span v-if="isRemoteJudge(doc)" class="badge-rj" title="Remote Judge">RJ</span>
+              <span v-if="doc.pid && doc.pid.trim()" class="badge-pid" :title="'pid: ' + doc.pid">pid</span>
             </td>
             <td>{{ doc.domainId }}</td>
             <td>
@@ -124,7 +131,7 @@
             </td>
             <td>
               <div class="actions">
-                <button @click="processOne(doc)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing && doc._processingType === 'smart' }">
+                <button @click="processOne(doc, true)" :disabled="doc._processing" class="btn-small btn-process" :class="{ 'processing': doc._processing && doc._processingType === 'smart' }">
                   {{ (doc._processing && doc._processingType === 'smart') ? '处理中...' : '智能处理' }}
                 </button>
                 <button v-if="doc.contentbak" @click="restoreBackup(doc)" class="btn-small btn-restore">恢复备份</button>
@@ -319,7 +326,7 @@ export default {
     },
 
     // Core logic: Translate -> Extract Title -> Extract Tags -> Remove PID
-    async processOne(doc) {
+    async processOne(doc, force = false) {
       console.log(`[ProblemManager] 🚀 智能处理开始: ${doc.docId} (${doc._id})`)
       doc._processing = true
       doc._processingType = 'smart'
@@ -334,12 +341,22 @@ export default {
         const sourceRaw = doc.contentbak || doc.content || ''
         const { zh: existingZh, en: existingEn } = this.parseContent(sourceRaw)
 
-        // Determine text to translate: use en field if present, else check if plain text is English
-        const isEnglishPlain = !existingEn && /[a-zA-Z]{5,}/.test(existingZh)
-        const textToTranslate = existingEn || (isEnglishPlain ? existingZh : '')
-
         let newZh = existingZh
         let newEn = existingEn
+
+        // 检查 doc.content 本身是否已是双语 JSON（说明已完成翻译，不需要重复处理）
+        const currentParsed = this.parseContent(doc.content || '')
+        const alreadyTranslated = !!(currentParsed.zh && currentParsed.en)
+
+        if (alreadyTranslated && !force) {
+          // 已翻译说明之前已完整处理过（翻译+打标签），批量时直接跳过
+          console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过全部处理: ${doc.docId}`)
+          this.statusMsg = `${doc.docId} 已处理，跳过`
+          return true
+        }
+
+        // 直接把 doc.content 整体发给 AI（支持重排版+翻译）
+        const textToTranslate = doc.content || ''
 
         if (textToTranslate) {
           const transRes = await request('/api/translate', {
@@ -351,7 +368,7 @@ export default {
           })
           if (transRes.result) {
             newZh = transRes.result
-            newEn = transRes.meta?.english || textToTranslate
+            newEn = transRes.meta?.english || ''
           }
         }
 
@@ -393,6 +410,8 @@ export default {
         doc.title = newTitle
         doc.tag = newTags
         doc._modified = true
+        // 标记需要去掉 pid 字段（如果存在）
+        if (doc.pid && doc.pid.trim()) doc._removePid = true
 
         console.log(`[ProblemManager] ✅ 智能处理成功: ${doc.docId}`)
         this.statusMsg = `处理完成: ${doc._id}`
@@ -465,6 +484,60 @@ export default {
       }
     },
     
+    async batchRemovePid() {
+      const hasPid = this.selectedDocs.filter(d => d.pid && d.pid.trim())
+      if (!confirm(`选中 ${this.selectedDocs.length} 个题目中有 ${hasPid.length} 个含 pid 字段，确定批量去除 pid 并修正 sort 吗？`)) return
+
+      this.processing = true
+      this.processingType = 'pid'
+      this.stopFlag = false
+      this.processedCount = 0
+
+      for (const doc of this.selectedDocs) {
+        if (this.stopFlag) break
+        if (!doc.pid || !doc.pid.trim()) {
+          this.processedCount++
+          continue
+        }
+        this.statusMsg = `正在去PID (${this.processedCount + 1}/${this.selectedDocs.length}): ${doc.docId}`
+        doc._removePid = true
+        await this.saveDoc(doc)
+        this.processedCount++
+      }
+
+      this.processing = false
+      this.processingType = ''
+      this.statusMsg = this.stopFlag ? '批量去PID已停止' : `批量去PID完成，共处理 ${hasPid.length} 个题目`
+    },
+
+    async batchCleanOtherTags() {
+      if (!confirm(`确定要清理选中 ${this.selectedDocs.length} 个题目的非 GESP 标签吗？将仅保留我们定义的标签体系。`)) return
+
+      this.processing = true
+      this.processingType = 'clean-tag'
+      this.stopFlag = false
+      this.processedCount = 0
+
+      try {
+        this.statusMsg = `正在清理标签: 0/${this.selectedDocs.length}`
+        const ids = this.selectedDocs.map(d => d._id)
+        const res = await request('/api/documents/batch-clean-tags', {
+          method: 'POST',
+          body: JSON.stringify({ ids })
+        })
+
+        this.processedCount = this.selectedDocs.length
+        this.statusMsg = `批量去标签完成：修改 ${res?.changed || 0} 题，移除 ${res?.removedTags || 0} 个标签`
+
+        await this.fetchDocuments()
+      } catch (e) {
+        this.statusMsg = `批量去标签失败: ${e.message}`
+      } finally {
+        this.processing = false
+        this.processingType = ''
+      }
+    },
+
     async batchGenerateReport() {
       if (!confirm(`确定要为选中的 ${this.selectedDocs.length} 个题目生成题解吗？这将消耗大量 Token 并需要较长时间。`)) return
       
@@ -503,10 +576,15 @@ export default {
             title: doc.title,
             content: doc.content,
             contentbak: doc.contentbak,
-            tag: doc.tag
+            tag: doc.tag,
+            removePid: doc._removePid || false
           })
         })
         doc._modified = false
+        if (doc._removePid) {
+          delete doc.pid
+          delete doc._removePid
+        }
         this.showToastMessage('保存成功')
       } catch (e) {
         this.showToastMessage('保存失败: ' + e.message)
@@ -616,6 +694,7 @@ export default {
 
     async fetchHydroFiles(doc, silent = false) {
         if (doc._loadingFiles) return
+        if (Array.isArray(doc.hydroFiles)) return  // 已加载，无需重复请求
         
         console.log(`[ProblemManager] 📂 获取文件列表: ${doc.docId}`)
         doc._loadingFiles = true
@@ -706,6 +785,11 @@ h2 {
   gap: 10px;
 }
 
+.control-group-actions {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
 .control-group label {
   font-weight: 600;
   color: #546e7a;
@@ -791,6 +875,26 @@ button:active {
 .btn-batch-report:hover {
   background-color: #8e24aa;
   box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.btn-batch-pid {
+  background-color: #e67e22;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(230, 126, 34, 0.2);
+}
+.btn-batch-pid:hover {
+  background-color: #d35400;
+  box-shadow: 0 4px 12px rgba(211, 84, 0, 0.3);
+}
+
+.btn-batch-clean {
+  background-color: #c0392b;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(192, 57, 43, 0.2);
+}
+.btn-batch-clean:hover {
+  background-color: #a93226;
+  box-shadow: 0 4px 12px rgba(169, 50, 38, 0.3);
 }
 
 .btn-stop {
@@ -1113,6 +1217,18 @@ button:active {
   font-weight: bold;
   margin-left: 5px;
   vertical-align: middle;
+}
+.badge-pid {
+  display: inline-block;
+  background: #e67e22;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 5px;
+  vertical-align: middle;
+  cursor: default;
 }
 
 @keyframes pulse {

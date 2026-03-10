@@ -17,6 +17,9 @@
           <span class="tree-icon" @click.stop="group.collapsed = !group.collapsed">{{ group.collapsed ? '▶' : '▼' }}</span>
           <span class="tree-label">{{ group.title || group.name }}</span>
           <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
+          <div v-if="editMode && canCreateLevel(group)" class="tree-actions">
+            <button class="btn-node-action" title="新建课程" @click.stop="$emit('create-level', group)">+</button>
+          </div>
         </div>
 
         <!-- Levels -->
@@ -33,6 +36,12 @@
               <span v-if="isLevelCompletedFn(level)" class="status-dot completed" title="已完成">●</span>
               <span v-else-if="isLevelUnlockedFn(level)" class="status-dot unlocked" title="进行中">●</span>
               <span v-else class="status-dot locked" title="未解锁">●</span>
+              <div v-if="editMode && canCreateLevel(group)" class="tree-actions">
+                <button class="btn-node-action" title="在此前插入课程" @click.stop="$emit('insert-level', group, level)">↰</button>
+              </div>
+              <div v-if="editMode && canEditLevelNode(level)" class="tree-actions">
+                <button class="btn-node-action" title="新建知识点" @click.stop="$emit('create-topic', level)">+</button>
+              </div>
             </div>
 
             <!-- Topics -->
@@ -46,6 +55,10 @@
                   <span v-if="editMode" class="tree-icon" @click.stop="toggleTopicInTree(topic)">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
                   <span class="tree-label">{{ topic.title }}</span>
                   <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
+                  <div v-if="editMode && canEditLevelNode(level)" class="tree-actions">
+                    <button class="btn-node-action" title="在此前插入知识点" @click.stop="$emit('insert-topic', level, getTopicIndex(level, topic))">↰</button>
+                    <button class="btn-node-action" title="新建章节" @click.stop="$emit('create-chapter', level, topic)">+</button>
+                  </div>
                 </div>
 
                 <!-- Chapters in edit mode -->
@@ -58,6 +71,17 @@
                     @click.stop="$emit('select-chapter', chapter, level, topic)"
                   >
                     <span class="tree-label">{{ chapter.title }}</span>
+                    <span
+                      v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)"
+                      class="tree-count-badge"
+                    >{{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题</span>
+                    <div v-if="canEditLevelNode(level)" class="tree-actions">
+                      <button
+                        class="btn-node-action"
+                        title="在此前插入章节"
+                        @click.stop="$emit('insert-chapter', level, topic, getChapterIndex(topic, chapter))"
+                      >↰</button>
+                    </div>
                   </div>
                   <div v-if="!topic.chapters || topic.chapters.length === 0" class="empty-node">无章节</div>
                 </div>
@@ -74,6 +98,7 @@
 
 <script>
 import { isLevelCompleted, isLevelUnlocked } from '../../utils/courseUtils'
+import { canEditLevel, isTeacherOrAdmin } from '../../utils/permissionUtils'
 
 export default {
   name: 'CourseSidebar',
@@ -84,7 +109,7 @@ export default {
     editModeNode: { type: Object, default: null },
     userProgress: { type: Object, default: null }
   },
-  emits: ['select-group', 'select-level', 'select-topic', 'select-chapter'],
+  emits: ['select-group', 'select-level', 'select-topic', 'select-chapter', 'create-level', 'insert-level', 'create-topic', 'insert-topic', 'create-chapter', 'insert-chapter'],
   data() {
     return {
       treeExpandedTopics: {}
@@ -112,6 +137,37 @@ export default {
       // Default to collapsed (false) in edit mode
       if (this.treeExpandedTopics[topic._id] === undefined) return false
       return !!this.treeExpandedTopics[topic._id]
+    },
+    canCreateLevel(group) {
+      if (!this.editMode) return false
+      if (!isTeacherOrAdmin()) return false
+      if (!group) return false
+      if (group.editors && group.editors.length > 0) {
+        try {
+          const user = JSON.parse(localStorage.getItem('user_info') || '{}')
+          const uid = user._id || user.uid
+          if (!uid) return false
+          if (user.role === 'admin') return true
+          return group.editors.some(e => {
+            const id = typeof e === 'object' ? (e._id || e.id) : e
+            return String(id) === String(uid)
+          })
+        } catch {
+          return false
+        }
+      }
+      return true
+    },
+    canEditLevelNode(level) {
+      return this.editMode && canEditLevel(level, this.treeData)
+    },
+    getChapterIndex(topic, chapter) {
+      if (!topic || !topic.chapters) return -1
+      return topic.chapters.findIndex(c => c._id === chapter._id || c.id === chapter.id)
+    },
+    getTopicIndex(level, topic) {
+      if (!level || !level.topics) return -1
+      return level.topics.findIndex(t => t._id === topic._id)
     },
     isLevelCompletedFn(level) {
       return isLevelCompleted(level, this.userProgress, this.treeData)
@@ -216,6 +272,29 @@ export default {
   color: #95a5a6;
 }
 .tree-label { flex: 1; }
+
+.tree-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.btn-node-action {
+  border: 1px solid #dbe3f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.btn-node-action:hover {
+  background: #eef2ff;
+  color: #3730a3;
+  border-color: #c7d2fe;
+}
 
 .tree-count-badge {
   font-size: 11px;

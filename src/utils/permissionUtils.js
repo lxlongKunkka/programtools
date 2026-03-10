@@ -52,7 +52,7 @@ export function isExplicitLevelEditor(level, user) {
  * Returns true if the user can edit the given group.
  * Only admins can edit groups; teachers cannot.
  * @param {object} group - group data object
- * @param {object} user  - user object (pass this.user from Design.vue)
+ * @param {object} user  - user object (pass this.user from CourseEditorPanel/LearningMap)
  */
 export function canEditGroup(group, user) {
   if (!user) return false
@@ -96,7 +96,7 @@ export function canEditLevel(level, treeData) {
 
 /**
  * canEditLevel variant that accepts an explicit user object and groups array.
- * Use this in contexts (like Design.vue) where the user is loaded into component
+ * Use this in contexts (like CourseEditorPanel) where the user is loaded into component
  * data rather than read from localStorage on every call.
  * @param {object} level  - level data object
  * @param {object} user   - user object (this.user)

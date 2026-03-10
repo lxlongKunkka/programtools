@@ -640,6 +640,27 @@ export default {
       
       this.selectNode('level', newLevel)
     },
+    createLevelBefore(group, targetLevel) {
+      if (!group || !targetLevel) return
+      let nextLevel = 1
+      const groupLevels = this.getLevelsForGroup(group.name)
+      if (groupLevels.length > 0) {
+        const maxLevel = Math.max(...groupLevels.map(l => l.level || 0))
+        nextLevel = maxLevel + 1
+      }
+
+      const newLevel = {
+        level: nextLevel,
+        title: '新课程模块',
+        description: '',
+        subject: group.language || 'C++',
+        group: group.name,
+        _id: null,
+        _insertBeforeLevelId: targetLevel._id || null
+      }
+
+      this.selectNode('level', newLevel)
+    },
     createNewTopic(level, insertIndex = -1) {
       // Expand level if collapsed
       level.descCollapsed = false
@@ -969,10 +990,26 @@ export default {
             body: JSON.stringify(this.editingLevel)
           })
         } else {
+          const insertBeforeLevelId = this.editingLevel._insertBeforeLevelId
+          const groupLevels = this.getLevelsForGroup(this.editingLevel.group || '')
+            .sort((a, b) => (a.level || 0) - (b.level || 0))
+          const targetIndex = groupLevels.findIndex(l => l._id === insertBeforeLevelId)
+          const moveUpTimes = targetIndex >= 0 ? (groupLevels.length - targetIndex) : 0
+
           res = await request('/api/course/levels', {
             method: 'POST',
             body: JSON.stringify(this.editingLevel)
           })
+
+          if (res && res._id && moveUpTimes > 0) {
+            for (let i = 0; i < moveUpTimes; i++) {
+              await request(`/api/course/levels/${res._id}/move`, {
+                method: 'POST',
+                body: JSON.stringify({ direction: 'up' })
+              })
+            }
+          }
+
           if (res && res._id) {
               this.editingLevel._id = res._id
               this.selectedNode.id = res._id

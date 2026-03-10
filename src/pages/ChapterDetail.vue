@@ -77,13 +77,23 @@
         </div>
 
         <!-- Video Content Mode -->
-        <div v-if="viewMode === 'video' && chapter.videoUrl">
+        <div v-if="viewMode === 'video' && currentVideo">
+          <!-- 多视频选择器 -->
+          <div v-if="videoList.length > 1" class="video-selector-bar">
+            <button
+              v-for="(url, idx) in videoList"
+              :key="idx"
+              :class="['btn-video-tab', { active: currentVideoIndex === idx }]"
+              @click="currentVideoIndex = idx">
+              {{ isBilibiliVideo(url) ? '🎬' : '🎥' }} 视频{{ idx + 1 }}
+            </button>
+          </div>
           <!-- Bilibili 嵌入（带保护层） -->
-          <template v-if="isBilibiliVideo(chapter.videoUrl)">
+          <template v-if="isBilibiliVideo(currentVideo)">
             <div class="lesson-video-iframe-wrap">
               <iframe
                 ref="bilibiliIframeRef"
-                :src="getBilibiliEmbedUrl(chapter.videoUrl)"
+                :src="getBilibiliEmbedUrl(currentVideo)"
                 class="lesson-video-iframe"
                 frameborder="0"
                 allowfullscreen
@@ -104,7 +114,7 @@
           <template v-else>
             <video
               ref="directVideoRef"
-              :src="chapter.videoUrl"
+              :src="currentVideo"
               controls
               controlsList="nodownload"
               class="direct-video"
@@ -213,6 +223,7 @@ export default {
     return {
       viewMode: 'ppt',
       currentSpeed: 1,
+      currentVideoIndex: 0,
       loading: true,
       level: null,
       allLevels: [],
@@ -260,8 +271,14 @@ export default {
       const tabs = []
       if (this.chapter.resourceUrl) tabs.push('ppt')
       if (this.chapter.content) tabs.push('md')
-      if (this.chapter.videoUrl) tabs.push('video')
+      if (this.videoList.length > 0) tabs.push('video')
       return tabs
+    },
+    videoList() {
+      return (this.chapter?.videoUrl || '').split('\n').map(s => s.trim()).filter(Boolean)
+    },
+    currentVideo() {
+      return this.videoList[this.currentVideoIndex] || ''
     },
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
@@ -325,13 +342,12 @@ export default {
     },
     isChapterCompleted() {
       if (!this.userProgress || !this.chapter) return false
-      // 1. Check explicit completion
-      if (this.userProgress.completedChapters.includes(this.chapter.id)) return true
-      
-      // 2. Check implicit completion (All problems solved)
-      if (this.totalProblems > 0 && this.solvedCount >= this.totalProblems) return true
-      
-      return false
+      // 有必做题目：必须全部做对，completedChapters 标记不能绕过
+      if (this.totalProblems > 0) {
+        return this.solvedCount >= this.totalProblems
+      }
+      // 无题目章节：依赖显式完成标记（点击"我已完成阅读/观看"）
+      return this.userProgress.completedChapters.includes(this.chapter.id)
     },
     hasNextChapter() {
       // Simple check if there's a next chapter in the current level
@@ -623,6 +639,7 @@ export default {
             const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
+            this.currentVideoIndex = 0
             if (chapterDetail.resourceUrl) {
               this.viewMode = 'ppt'
             } else if (chapterDetail.content) {
@@ -1446,6 +1463,34 @@ export default {
   color: #fff;
 }
 .lesson-video-speed-btn.active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+/* 多视频切换选项卡 */
+.video-selector-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0 6px;
+  margin-bottom: 4px;
+}
+.btn-video-tab {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  padding: 5px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btn-video-tab:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.btn-video-tab.active {
   background: #007aff;
   color: #fff;
   border-color: #007aff;
