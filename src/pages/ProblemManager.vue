@@ -393,6 +393,8 @@ export default {
         doc.title = newTitle
         doc.tag = newTags
         doc._modified = true
+        // 标记需要去掉 pid 字段（如果存在）
+        if (doc.pid) doc._removePid = true
 
         console.log(`[ProblemManager] ✅ 智能处理成功: ${doc.docId}`)
         this.statusMsg = `处理完成: ${doc._id}`
@@ -503,10 +505,15 @@ export default {
             title: doc.title,
             content: doc.content,
             contentbak: doc.contentbak,
-            tag: doc.tag
+            tag: doc.tag,
+            removePid: doc._removePid || false
           })
         })
         doc._modified = false
+        if (doc._removePid) {
+          delete doc.pid
+          delete doc._removePid
+        }
         this.showToastMessage('保存成功')
       } catch (e) {
         this.showToastMessage('保存失败: ' + e.message)
