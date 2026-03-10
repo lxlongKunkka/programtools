@@ -12,6 +12,12 @@
         @select-level="l => selectNode('level', l)"
         @select-topic="(t, l) => selectNode('topic', t, l)"
         @select-chapter="selectChapterInTree"
+        @create-level="handleCreateLevel"
+        @insert-level="handleInsertLevel"
+        @create-topic="handleCreateTopic"
+        @insert-topic="handleInsertTopic"
+        @create-chapter="handleCreateChapter"
+        @insert-chapter="handleInsertChapter"
       />
 
       <!-- Right: content area -->
@@ -298,6 +304,46 @@ export default {
       this.$nextTick(() => {
         this.editModeNode = { type: 'chapter', id: chapter._id, docId: chapter.id, levelId: level ? level._id : undefined }
       })
+    },
+    triggerEditorAction(actionName, ...args) {
+      const invoke = () => {
+        const editor = this.$refs.designer
+        if (!editor || typeof editor[actionName] !== 'function') return
+        editor[actionName](...args)
+      }
+
+      if (!this.editMode) {
+        this.editMode = true
+        this.$nextTick(() => this.$nextTick(invoke))
+      } else {
+        this.$nextTick(invoke)
+      }
+    },
+    handleCreateLevel(group) {
+      if (!group) return
+      this.triggerEditorAction('createNewLevel', group)
+    },
+    handleInsertLevel(group, level) {
+      if (!group || !level) return
+      this.triggerEditorAction('createLevelBefore', group, level)
+    },
+    handleCreateTopic(level) {
+      if (!level) return
+      this.triggerEditorAction('createNewTopic', level, -1)
+    },
+    handleInsertTopic(level, insertIndex) {
+      if (!level) return
+      const safeIndex = typeof insertIndex === 'number' ? insertIndex : -1
+      this.triggerEditorAction('createNewTopic', level, safeIndex)
+    },
+    handleCreateChapter(level, topic) {
+      if (!level || !topic) return
+      this.triggerEditorAction('createNewChapter', level, topic, -1)
+    },
+    handleInsertChapter(level, topic, insertIndex) {
+      if (!level || !topic) return
+      const safeIndex = typeof insertIndex === 'number' ? insertIndex : -1
+      this.triggerEditorAction('createNewChapter', level, topic, safeIndex)
     },
 
     selectChapterInTree(chapter, level, topic) {

@@ -10,6 +10,20 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
 
+function parseAllowedGespTagsFromYaml(yamlText) {
+  const set = new Set(['gesp1', 'gesp2', 'gesp3', 'gesp4', 'gesp5', 'gesp6', 'gesp7', 'gesp8', 'gesp9', 'gesp10'])
+  const lines = String(yamlText || '').split(/\r?\n/)
+  for (const line of lines) {
+    const m = line.match(/^\s*-\s+(.+?)\s*(?:#.*)?$/)
+    if (!m) continue
+    const raw = (m[1] || '').trim()
+    if (!raw) continue
+    const tag = raw.replace(/^['"]|['"]$/g, '').trim()
+    if (tag) set.add(tag)
+  }
+  return set
+}
+
 // ============ Helper: Calculate sort value (matches Hydro's sortable function) ============
 function calculateSort(pid, namespaces = {}) {
   if (!pid) return ''
@@ -123,6 +137,56 @@ router.put('/documents/:id', authenticateToken, requireRole('admin'), async (req
     return res.json(updatedDoc)
   } catch (e) {
     console.error('Update document error:', e)
+    return res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/documents/batch-clean-tags', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { ids } = req.body || {}
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids is required' })
+    }
+
+    const yamlPath = `${process.cwd()}/GESP_TAGS.yaml`
+    const yamlText = await fs.promises.readFile(yamlPath, 'utf8')
+    const allowedTags = parseAllowedGespTagsFromYaml(yamlText)
+
+    const docs = await Document.find({ _id: { $in: ids } }).select('_id tag').lean()
+    const updates = []
+    let changedCount = 0
+    let removedCount = 0
+
+    for (const doc of docs) {
+      const oldTags = Array.isArray(doc.tag) ? doc.tag : []
+      const newTags = oldTags.filter(t => allowedTags.has(String(t).trim()))
+      const removed = oldTags.length - newTags.length
+      if (removed > 0) {
+        changedCount++
+        removedCount += removed
+        updates.push({
+          updateOne: {
+            filter: { _id: doc._id },
+            update: { $set: { tag: newTags } }
+          }
+        })
+      }
+    }
+
+    if (updates.length > 0) {
+      await Document.bulkWrite(updates)
+    }
+
+    return res.json({
+      success: true,
+      total: ids.length,
+      found: docs.length,
+      changed: changedCount,
+      removedTags: removedCount,
+      allowedTagCount: allowedTags.size
+    })
+  } catch (e) {
+    console.error('Batch clean tags error:', e)
     return res.status(500).json({ error: e.message })
   }
 })

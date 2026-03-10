@@ -28,7 +28,7 @@
         </select>
       </div>
       
-      <div class="control-group">
+      <div class="control-group control-group-actions">
         <button @click="fetchDocuments" class="btn-refresh">刷新列表</button>
         <button @click="batchProcess" :disabled="processing || selectedDocs.length === 0" class="btn-batch">
           {{ processing && processingType !== 'report' ? `处理中 (${processedCount}/${selectedDocs.length})` : '批量处理选中 (翻译+标签)' }}
@@ -41,6 +41,9 @@
         </button>
         <button @click="batchRemovePid" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-pid">
           {{ processing && processingType === 'pid' ? `去PID中 (${processedCount}/${selectedDocs.length})` : '批量去PID' }}
+        </button>
+        <button @click="batchCleanOtherTags" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-clean">
+          {{ processing && processingType === 'clean-tag' ? `清理中 (${processedCount}/${selectedDocs.length})` : '批量去标签' }}
         </button>
         <button @click="stopProcessing" v-if="processing" class="btn-stop">停止</button>
       </div>
@@ -497,6 +500,34 @@ export default {
       this.statusMsg = this.stopFlag ? '批量去PID已停止' : `批量去PID完成，共处理 ${hasPid.length} 个题目`
     },
 
+    async batchCleanOtherTags() {
+      if (!confirm(`确定要清理选中 ${this.selectedDocs.length} 个题目的非 GESP 标签吗？将仅保留我们定义的标签体系。`)) return
+
+      this.processing = true
+      this.processingType = 'clean-tag'
+      this.stopFlag = false
+      this.processedCount = 0
+
+      try {
+        this.statusMsg = `正在清理标签: 0/${this.selectedDocs.length}`
+        const ids = this.selectedDocs.map(d => d._id)
+        const res = await request('/api/documents/batch-clean-tags', {
+          method: 'POST',
+          body: JSON.stringify({ ids })
+        })
+
+        this.processedCount = this.selectedDocs.length
+        this.statusMsg = `批量去标签完成：修改 ${res?.changed || 0} 题，移除 ${res?.removedTags || 0} 个标签`
+
+        await this.fetchDocuments()
+      } catch (e) {
+        this.statusMsg = `批量去标签失败: ${e.message}`
+      } finally {
+        this.processing = false
+        this.processingType = ''
+      }
+    },
+
     async batchGenerateReport() {
       if (!confirm(`确定要为选中的 ${this.selectedDocs.length} 个题目生成题解吗？这将消耗大量 Token 并需要较长时间。`)) return
       
@@ -743,6 +774,11 @@ h2 {
   gap: 10px;
 }
 
+.control-group-actions {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
 .control-group label {
   font-weight: 600;
   color: #546e7a;
@@ -838,6 +874,16 @@ button:active {
 .btn-batch-pid:hover {
   background-color: #d35400;
   box-shadow: 0 4px 12px rgba(211, 84, 0, 0.3);
+}
+
+.btn-batch-clean {
+  background-color: #c0392b;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(192, 57, 43, 0.2);
+}
+.btn-batch-clean:hover {
+  background-color: #a93226;
+  box-shadow: 0 4px 12px rgba(169, 50, 38, 0.3);
 }
 
 .btn-stop {

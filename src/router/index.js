@@ -41,7 +41,6 @@ const routes = [
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
   { path: '/progress', component: ProgressDashboard, meta: { requiresAuth: true } },
-  { path: '/design', redirect: '/course' },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
