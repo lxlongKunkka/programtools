@@ -307,7 +307,7 @@ export default {
       problemText: '',
       codeOutput: '',
       dataOutput: '',
-      selectedModel: 'gemini-3-flash-preview',
+      selectedModel: 'o4-mini',
       models: [],
       language: 'C++',
       isGenerating: false,
