@@ -949,6 +949,35 @@ export default {
         this.tasks[taskIndex][field] = value
       }
     },
+
+    // 将指定任务的若干字段中的外部图片 URL 代理上传到 COS，防止 AtCoder/CF 防盗链导致图片无法显示
+    async mirrorImages(taskIndex, fields) {
+      const IMG_RE = /!\[([^\]]*)\]\((https?:\/\/(?![^)]*myqcloud\.com)[^)]+)\)/g
+      const urls = new Set()
+      const getVal = (f) => taskIndex === this.currentTaskIndex ? this[f] : (this.tasks[taskIndex]?.[f] || '')
+      for (const f of fields) {
+        const val = getVal(f)
+        if (val) { let m; IMG_RE.lastIndex = 0; while ((m = IMG_RE.exec(val)) !== null) urls.add(m[2]) }
+      }
+      if (!urls.size) return
+      const token = localStorage.getItem('auth_token')
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      const urlMap = {}
+      await Promise.all([...urls].map(async url => {
+        try {
+          const r = await fetch('/api/proxy-image', { method: 'POST', headers, body: JSON.stringify({ url }) })
+          const d = await r.json()
+          if (d.cosUrl) urlMap[url] = d.cosUrl
+        } catch {}
+      }))
+      if (!Object.keys(urlMap).length) return
+      const replace = md => md.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (m, alt, u) => urlMap[u] ? `![${alt}](${urlMap[u]})` : m)
+      for (const f of fields) {
+        const val = getVal(f)
+        if (val) this.saveToTask(taskIndex, f, replace(val))
+      }
+      this.showToastMessage(`✅ 已将 ${Object.keys(urlMap).length} 张图片镜像到 COS`)
+    },
     
     getTaskTitle(task) {
       if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') return task.problemMeta.title
@@ -1455,7 +1484,8 @@ pause
       // 如果当前唯一一个任务且是空的，直接填充而不是新增
       const cur = this.tasks[this.currentTaskIndex]
       if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
-        this.tasks[this.currentTaskIndex] = {
+        const curIdx = this.currentTaskIndex
+        this.tasks[curIdx] = {
           ...cur,
           problemText: data.content || '',
           manualCode: acCode,
@@ -1469,7 +1499,8 @@ pause
           problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
           status: 'pending'
         }
-        this.loadTask(this.currentTaskIndex)
+        this.loadTask(curIdx)
+        this.mirrorImages(curIdx, ['problemText'])
         return
       }
       // 否则新增一个任务
@@ -1489,7 +1520,9 @@ pause
         reportHtml: ''
       }
       this.tasks.push(newTask)
-      this.switchTask(this.tasks.length - 1)
+      const newIdx = this.tasks.length - 1
+      this.switchTask(newIdx)
+      this.mirrorImages(newIdx, ['problemText'])
     },
 
         async autoTranslate(forcedTargetIndex = null) {
@@ -1562,6 +1595,7 @@ pause
                   } else if (ev.type === 'result') {
                     this.saveToTask(taskIndex, 'translationText', ev.result || '')
                     this.saveToTask(taskIndex, 'translationEnglish', ev.english || '')
+                    this.mirrorImages(taskIndex, ['translationText', 'translationEnglish'])
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
                       // 合并策略：tags 始终用最新的；title 只在当前为空/占位符/与rawTitle相同（未翻译）时才更新
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
