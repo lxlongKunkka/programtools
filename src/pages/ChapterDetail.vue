@@ -342,13 +342,12 @@ export default {
     },
     isChapterCompleted() {
       if (!this.userProgress || !this.chapter) return false
-      // 1. Check explicit completion
-      if (this.userProgress.completedChapters.includes(this.chapter.id)) return true
-      
-      // 2. Check implicit completion (All problems solved)
-      if (this.totalProblems > 0 && this.solvedCount >= this.totalProblems) return true
-      
-      return false
+      // 有必做题目：必须全部做对，completedChapters 标记不能绕过
+      if (this.totalProblems > 0) {
+        return this.solvedCount >= this.totalProblems
+      }
+      // 无题目章节：依赖显式完成标记（点击"我已完成阅读/观看"）
+      return this.userProgress.completedChapters.includes(this.chapter.id)
     },
     hasNextChapter() {
       // Simple check if there's a next chapter in the current level
