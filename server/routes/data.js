@@ -1,5 +1,7 @@
 import express from 'express'
 import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import { DIRS, JWT_SECRET, MAIL_CONFIG } from '../config.js'
@@ -148,7 +150,8 @@ router.post('/documents/batch-clean-tags', authenticateToken, requireRole('admin
       return res.status(400).json({ error: 'ids is required' })
     }
 
-    const yamlPath = `${process.cwd()}/GESP_TAGS.yaml`
+    const __dirname = path.dirname(fileURLToPath(import.meta.url))
+    const yamlPath = path.join(__dirname, '../../GESP_TAGS.yaml')
     const yamlText = await fs.promises.readFile(yamlPath, 'utf8')
     const allowedTags = parseAllowedGespTagsFromYaml(yamlText)
 
