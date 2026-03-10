@@ -39,6 +39,9 @@
         <button @click="batchGenerateReport" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-report">
           {{ processing && processingType === 'report' ? `生成中 (${processedCount}/${selectedDocs.length})` : '批量生成题解' }}
         </button>
+        <button @click="batchRemovePid" :disabled="processing || selectedDocs.length === 0" class="btn-batch btn-batch-pid">
+          {{ processing && processingType === 'pid' ? `去PID中 (${processedCount}/${selectedDocs.length})` : '批量去PID' }}
+        </button>
         <button @click="stopProcessing" v-if="processing" class="btn-stop">停止</button>
       </div>
     </div>
@@ -467,6 +470,36 @@ export default {
       }
     },
     
+    async batchRemovePid() {
+      const hasPid = this.selectedDocs.filter(d => d.pid)
+      if (hasPid.length === 0) {
+        this.showToastMessage('选中的题目中没有 pid 字段，无需处理')
+        return
+      }
+      if (!confirm(`选中 ${this.selectedDocs.length} 个题目中有 ${hasPid.length} 个含 pid 字段，确定批量去除 pid 并修正 sort 吗？`)) return
+
+      this.processing = true
+      this.processingType = 'pid'
+      this.stopFlag = false
+      this.processedCount = 0
+
+      for (const doc of this.selectedDocs) {
+        if (this.stopFlag) break
+        if (!doc.pid) {
+          this.processedCount++
+          continue
+        }
+        this.statusMsg = `正在去PID (${this.processedCount + 1}/${this.selectedDocs.length}): ${doc.docId}`
+        doc._removePid = true
+        await this.saveDoc(doc)
+        this.processedCount++
+      }
+
+      this.processing = false
+      this.processingType = ''
+      this.statusMsg = this.stopFlag ? '批量去PID已停止' : `批量去PID完成，共处理 ${hasPid.length} 个题目`
+    },
+
     async batchGenerateReport() {
       if (!confirm(`确定要为选中的 ${this.selectedDocs.length} 个题目生成题解吗？这将消耗大量 Token 并需要较长时间。`)) return
       
@@ -798,6 +831,16 @@ button:active {
 .btn-batch-report:hover {
   background-color: #8e24aa;
   box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.btn-batch-pid {
+  background-color: #e67e22;
+  margin-left: 10px;
+  box-shadow: 0 2px 6px rgba(230, 126, 34, 0.2);
+}
+.btn-batch-pid:hover {
+  background-color: #d35400;
+  box-shadow: 0 4px 12px rgba(211, 84, 0, 0.3);
 }
 
 .btn-stop {
