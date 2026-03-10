@@ -88,6 +88,7 @@
             <td>
               {{ doc.docId }}
               <span v-if="isRemoteJudge(doc)" class="badge-rj" title="Remote Judge">RJ</span>
+              <span v-if="doc.pid && doc.pid.trim()" class="badge-pid" :title="'pid: ' + doc.pid">pid</span>
             </td>
             <td>{{ doc.domainId }}</td>
             <td>
@@ -397,7 +398,7 @@ export default {
         doc.tag = newTags
         doc._modified = true
         // 标记需要去掉 pid 字段（如果存在）
-        if (doc.pid) doc._removePid = true
+        if (doc.pid && doc.pid.trim()) doc._removePid = true
 
         console.log(`[ProblemManager] ✅ 智能处理成功: ${doc.docId}`)
         this.statusMsg = `处理完成: ${doc._id}`
@@ -471,7 +472,7 @@ export default {
     },
     
     async batchRemovePid() {
-      const hasPid = this.selectedDocs.filter(d => d.pid)
+      const hasPid = this.selectedDocs.filter(d => d.pid && d.pid.trim())
       if (hasPid.length === 0) {
         this.showToastMessage('选中的题目中没有 pid 字段，无需处理')
         return
@@ -485,7 +486,7 @@ export default {
 
       for (const doc of this.selectedDocs) {
         if (this.stopFlag) break
-        if (!doc.pid) {
+        if (!doc.pid || !doc.pid.trim()) {
           this.processedCount++
           continue
         }
@@ -1163,6 +1164,18 @@ button:active {
   font-weight: bold;
   margin-left: 5px;
   vertical-align: middle;
+}
+.badge-pid {
+  display: inline-block;
+  background: #e67e22;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 5px;
+  vertical-align: middle;
+  cursor: default;
 }
 
 @keyframes pulse {
