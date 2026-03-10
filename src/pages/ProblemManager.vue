@@ -353,11 +353,10 @@ export default {
         const alreadyTranslated = !!(currentParsed.zh && currentParsed.en)
 
         if (alreadyTranslated) {
-          // 已翻译：直接用 doc.content 里的双语内容，避免 contentbak 覆盖
-          newZh = currentParsed.zh
-          newEn = currentParsed.en
-          console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过翻译: ${doc.docId}`)
-          this.statusMsg = `${doc.docId} 已翻译，跳过`
+          // 已翻译说明之前已完整处理过（翻译+打标签），直接跳过
+          console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过全部处理: ${doc.docId}`)
+          this.statusMsg = `${doc.docId} 已处理，跳过`
+          return true
         } else if (textToTranslate) {
           const transRes = await request('/api/translate', {
             method: 'POST',
