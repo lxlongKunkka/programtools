@@ -348,15 +348,16 @@ export default {
         let newZh = existingZh
         let newEn = existingEn
 
-        // 检查是否已有 TW 版本（说明是我们自己生成的题目，已翻译过，跳过翻译）
-        if (!Array.isArray(doc.hydroFiles)) {
-          await this.fetchHydroFiles(doc, true)
-        }
-        const hasTWVersion = Array.isArray(doc.hydroFiles) && doc.hydroFiles.some(f => f.name === 'problem_zh_TW.md')
+        // 检查 doc.content 本身是否已是双语 JSON（说明已完成翻译，不需要重复处理）
+        const currentParsed = this.parseContent(doc.content || '')
+        const alreadyTranslated = !!(currentParsed.zh && currentParsed.en)
 
-        if (hasTWVersion) {
-          console.log(`[ProblemManager] ↩️ 已有TW版本，跳过翻译: ${doc.docId}`)
-          this.statusMsg = `${doc.docId} 已有TW版本，跳过翻译`
+        if (alreadyTranslated) {
+          // 已翻译：直接用 doc.content 里的双语内容，避免 contentbak 覆盖
+          newZh = currentParsed.zh
+          newEn = currentParsed.en
+          console.log(`[ProblemManager] ↩️ 已翻译(双语JSON)，跳过翻译: ${doc.docId}`)
+          this.statusMsg = `${doc.docId} 已翻译，跳过`
         } else if (textToTranslate) {
           const transRes = await request('/api/translate', {
             method: 'POST',
