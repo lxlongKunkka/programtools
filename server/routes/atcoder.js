@@ -901,7 +901,7 @@ function nodeToMd($, node) {
     })
     return s + '\n'
   }
-  if (tag === 'div' || tag === 'section') {
+  if (tag === 'div' || tag === 'section' || tag === 'center') {
     let s = ''
     node.children.forEach(child => { s += nodeToMd($, child) })
     return s
