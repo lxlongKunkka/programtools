@@ -1542,7 +1542,7 @@ pause
             if (token) headers['Authorization'] = `Bearer ${token}`
             const response = await fetch('/api/translate/stream', {
               method: 'POST', headers,
-              body: JSON.stringify({ text: problemText, model: this.selectedModel })
+              body: JSON.stringify({ text: problemText, model: 'gemini-3-flash-preview' })
             })
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
             const reader = response.body.getReader()
