@@ -291,7 +291,7 @@ export default {
             const title = this.contestTitles[s]
             return {
                 text: title ? `${domain}: ${title}` : s,
-                url: `https://acjudge.com/d/${domain}/exam/${cid}`
+                url: `https://acjudge.com/d/${domain}/contest/${cid}`
             }
         }).filter(Boolean)
     },
