@@ -1624,7 +1624,7 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
 // Add a Chapter to a Topic
 router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { id, title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, optional, insertIndex } = req.body
+    const { id, title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, homeworkIds, examIds, optional, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1648,6 +1648,8 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       videoUrl: videoUrl || '',
       problemIds: storedProblemIds,
       optionalProblemIds: storedOptionalProblemIds,
+      homeworkIds: (homeworkIds || []).map(String),
+      examIds: (examIds || []).map(String),
       optional: !!optional 
     }
 

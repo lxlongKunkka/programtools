@@ -1464,45 +1464,37 @@ export default {
                if (topic && topic.chapters && topic.chapters.length > 0) {
                    // Find the newly created chapter to update local state immediately
                    let newCh = null
-                   // Try to find by title (most reliable for immediate match)
                    const matches = topic.chapters.filter(c => c.title === this.editingChapter.title)
                    if (matches.length > 0) {
-                       // Pick the last one found (assuming it's the newest)
                        newCh = matches[matches.length - 1]
                    }
                    
                    if (newCh) {
-                       // Update the current editing object in place so subsequent calls (like generate) use the real ID
+                       // Update editing object in place — keep user's content, just assign real DB ids
                        this.editingChapter._id = newCh._id
-                       this.editingChapter.id = newCh._id
+                       this.editingChapter.id = newCh.id  // docId like "1-2-3", not _id
                        this.editingChapter.isNew = false
-                       
-                       // Also update selectedNode data if it exists
-                       if (this.selectedNode && this.selectedNode.data) {
-                           this.selectedNode.data._id = newCh._id
-                           this.selectedNode.data.id = newCh._id
-                           this.selectedNode.data.isNew = false
-                       }
+                       // Point selectedNode to the real id so rebindSelection can find it
+                       this.selectedNode = { type: 'chapter', id: newCh._id }
                    }
 
-                   this.fetchData().then(() => {
-                       this.showToastMessage('章节创建成功')
-                       this.$emit('data-changed')
-                       // Re-select the node in the new tree to ensure we have the fresh object
-                       if (newCh) {
-                           const newLevel = this.levels.find(l => l._id === this.editingLevelForChapter._id)
-                           if (newLevel) {
-                               const newTopic = newLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
-                               if (newTopic) {
-                                   const freshChapter = newTopic.chapters.find(c => c._id === newCh._id)
-                                   if (freshChapter) {
-                                       this.selectNode('chapter', freshChapter, newLevel, newTopic)
-                                   }
-                               }
+                   // Await fetchData so isSaving stays true and prevents any accidental re-save
+                   await this.fetchData()
+                   this.showToastMessage('章节创建成功')
+                   this.$emit('data-changed')
+                   // After tree refresh, update context references without re-selecting
+                   // (which would wipe editingChapter.content)
+                   if (newCh) {
+                       const newLevel = this.levels.find(l => l._id === this.editingLevelForChapter._id)
+                       if (newLevel) {
+                           this.editingLevelForChapter = newLevel
+                           const newTopic = newLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
+                           if (newTopic) {
+                               this.editingTopicForChapter = newTopic
                            }
                        }
-                   })
-                   return // Stop here as we are refreshing
+                   }
+                   return // Done
                }
            }
         } else {
