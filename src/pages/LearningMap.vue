@@ -184,7 +184,10 @@ export default {
         ])
         this.userProgress = progressData
         this.buildTree(groupsData, levelsData)
-        this.restoreSelection()
+        // 编辑模式时不恢复选中（编辑器内部自行处理 rebindSelection，避免覆盖 editModeNode）
+        if (!this.editMode) {
+          this.restoreSelection()
+        }
       } catch (e) {
         console.error('Failed to fetch course data', e)
       } finally {
