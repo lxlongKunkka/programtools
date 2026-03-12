@@ -112,6 +112,30 @@
       </div>
     </div>
 
+    <div class="form-group">
+      <label>关联作业 (逗号分隔, 格式: domainId:contestId):</label>
+      <input v-model="chapter.homeworkIdsStr" class="form-input" placeholder="例如: class1:hw1, class2:hw2">
+      <div v-if="homeworkLinks && homeworkLinks.length > 0" class="problem-links-preview">
+        <a v-for="(link, idx) in homeworkLinks" :key="idx" :href="link.url" target="_blank"
+           class="problem-link-tag"
+           style="background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+          {{ link.text }} ↗
+        </a>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>关联考试 (逗号分隔, 格式: domainId:contestId):</label>
+      <input v-model="chapter.examIdsStr" class="form-input" placeholder="例如: class1:exam1, class2:exam2">
+      <div v-if="examLinks && examLinks.length > 0" class="problem-links-preview">
+        <a v-for="(link, idx) in examLinks" :key="idx" :href="link.url" target="_blank"
+           class="problem-link-tag"
+           style="background-color: #fdf2f8; border: 1px solid #f5d0fe; color: #701a75;">
+          {{ link.text }} ↗
+        </a>
+      </div>
+    </div>
+
     <div class="form-group checkbox-group">
       <label>
         <input type="checkbox" v-model="chapter.optional"> 选做章节 (Optional)
@@ -136,6 +160,8 @@ export default {
     aiRequirements:           { type: String,   default: '' },
     problemLinks:             { type: Array,    default: () => [] },
     optionalProblemLinks:     { type: Array,    default: () => [] },
+    homeworkLinks:            { type: Array,    default: () => [] },
+    examLinks:                { type: Array,    default: () => [] },
     onResetAi:                { type: Function, default: () => {} },
     onGenerateLessonPlan:     { type: Function, default: () => {} },
     onGeneratePpt:            { type: Function, default: () => {} },

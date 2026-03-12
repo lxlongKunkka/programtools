@@ -124,6 +124,8 @@
             v-model:aiRequirements="aiRequirements"
             :problemLinks="problemLinks"
             :optionalProblemLinks="optionalProblemLinks"
+            :homeworkLinks="homeworkLinks"
+            :examLinks="examLinks"
             :onResetAi="resetAiStatus"
             :onGenerateLessonPlan="generateLessonPlan"
             :onGeneratePpt="generatePPT"
@@ -248,6 +250,38 @@ export default {
             return {
                 text: s,
                 url: `https://acjudge.com/d/${domain}/p/${pid}`
+            }
+        }).filter(Boolean)
+    },
+    homeworkLinks() {
+        if (!this.editingChapter || !this.editingChapter.homeworkIdsStr) return []
+        return this.editingChapter.homeworkIdsStr.split(/[,，]/).map(s => {
+            s = s.trim()
+            if (!s) return null
+            let domain = 'system'
+            let cid = s
+            if (s.includes(':')) {
+                [domain, cid] = s.split(':')
+            }
+            return {
+                text: s,
+                url: `https://acjudge.com/d/${domain}/homework/${cid}`
+            }
+        }).filter(Boolean)
+    },
+    examLinks() {
+        if (!this.editingChapter || !this.editingChapter.examIdsStr) return []
+        return this.editingChapter.examIdsStr.split(/[,，]/).map(s => {
+            s = s.trim()
+            if (!s) return null
+            let domain = 'system'
+            let cid = s
+            if (s.includes(':')) {
+                [domain, cid] = s.split(':')
+            }
+            return {
+                text: s,
+                url: `https://acjudge.com/d/${domain}/exam/${cid}`
             }
         }).filter(Boolean)
     },
@@ -535,10 +569,15 @@ export default {
           return p.docId
         }).join(', ')
 
+        const homeworkIdsStr = (chapter.homeworkIds || []).join(', ')
+        const examIdsStr = (chapter.examIds || []).join(', ')
+
         this.editingChapter = {
           ...chapter,
           problemIdsStr,
           optionalProblemIdsStr,
+          homeworkIdsStr,
+          examIdsStr,
           optional: !!chapter.optional,
           contentType: chapter.contentType || 'markdown',
           resourceUrl: chapter.resourceUrl || '',
@@ -1349,6 +1388,12 @@ export default {
         const optionalProblemIds = (this.editingChapter.optionalProblemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
+        const homeworkIds = (this.editingChapter.homeworkIdsStr || '')
+          .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+
+        const examIds = (this.editingChapter.examIdsStr || '')
+          .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+
         const chapterData = {
           id: this.editingChapter.id,
           title: this.editingChapter.title,
@@ -1358,6 +1403,8 @@ export default {
           videoUrl: this.editingChapter.videoUrl || '',
           problemIds: problemIds,
           optionalProblemIds: optionalProblemIds,
+          homeworkIds: homeworkIds,
+          examIds: examIds,
           optional: this.editingChapter.optional,
           insertIndex: this.editingChapter._insertIndex
         }

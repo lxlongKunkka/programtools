@@ -1598,7 +1598,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 // Update a Chapter in a Topic
 router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, homeworkIds, examIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1621,6 +1621,8 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     // Store problemIds directly as strings
     const storedProblemIds = (problemIds || []).map(String)
     const storedOptionalProblemIds = (optionalProblemIds || []).map(String)
+    const storedHomeworkIds = (homeworkIds || []).map(String)
+    const storedExamIds = (examIds || []).map(String)
 
     targetChapter.title = title
     targetChapter.content = content
@@ -1629,6 +1631,8 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     targetChapter.videoUrl = videoUrl || ''
     targetChapter.problemIds = storedProblemIds
     targetChapter.optionalProblemIds = storedOptionalProblemIds
+    targetChapter.homeworkIds = storedHomeworkIds
+    targetChapter.examIds = storedExamIds
     targetChapter.optional = !!optional
     
     await level.save()
@@ -1840,7 +1844,7 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'te
 // Update a Chapter
 router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, problemIds, optionalProblemIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, problemIds, optionalProblemIds, homeworkIds, examIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -1849,6 +1853,8 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['a
     
     const resolvedIds = (problemIds || []).map(String)
     const resolvedOptionalIds = (optionalProblemIds || []).map(String)
+    const resolvedHomeworkIds = (homeworkIds || []).map(String)
+    const resolvedExamIds = (examIds || []).map(String)
 
     chapter.title = title
     chapter.content = content
@@ -1856,6 +1862,8 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['a
     chapter.resourceUrl = resourceUrl || ''
     chapter.problemIds = resolvedIds
     chapter.optionalProblemIds = resolvedOptionalIds
+    chapter.homeworkIds = resolvedHomeworkIds
+    chapter.examIds = resolvedExamIds
     chapter.optional = !!optional
     
     // No renumbering needed for update unless we support moving chapters (not yet)

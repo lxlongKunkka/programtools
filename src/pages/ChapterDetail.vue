@@ -198,6 +198,34 @@
           </div>
         </div>
 
+        <!-- Homework Section -->
+        <div v-if="chapter.homeworkIds && chapter.homeworkIds.length > 0" class="homework-section" style="margin-top: 24px; border-top: 1px dashed #fde68a; padding-top: 16px;">
+          <div class="problems-header" style="margin-bottom: 12px;">
+            <h3>📝 关联作业</h3>
+          </div>
+          <div class="contest-link-list">
+            <div v-for="hid in chapter.homeworkIds" :key="hid" class="contest-link-item">
+              <a :href="getContestLink(hid, 'homework')" target="_blank" class="btn-action btn-homework">
+                <span class="icon">📋</span> {{ hid }}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exam Section -->
+        <div v-if="chapter.examIds && chapter.examIds.length > 0" class="exam-section" style="margin-top: 24px; border-top: 1px dashed #f5d0fe; padding-top: 16px;">
+          <div class="problems-header" style="margin-bottom: 12px;">
+            <h3>📊 关联考试</h3>
+          </div>
+          <div class="contest-link-list">
+            <div v-for="eid in chapter.examIds" :key="eid" class="contest-link-item">
+              <a :href="getContestLink(eid, 'exam')" target="_blank" class="btn-action btn-exam">
+                <span class="icon">📊</span> {{ eid }}
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div v-if="isChapterCompleted" class="chapter-complete-msg">
           🎉 恭喜！本章已完成。
           <button @click="goToNextChapter" class="btn-next" v-if="hasNextChapter">下一章 →</button>
@@ -673,6 +701,15 @@ export default {
         return `https://acjudge.com/d/${problem.domainId}/p/${problem.docId}`
       }
       return '#'
+    },
+    getContestLink(idStr, type) {
+      if (!idStr) return '#'
+      let domain = 'system'
+      let cid = idStr
+      if (idStr.includes(':')) {
+        [domain, cid] = idStr.split(':')
+      }
+      return `https://acjudge.com/d/${domain}/${type}/${cid}`
     },
     getHtmlUrl(url) {
       if (!url) return ''
@@ -1249,6 +1286,40 @@ export default {
   color: #aaa;
   cursor: not-allowed;
   border-color: #eee;
+}
+
+.btn-homework {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+  box-shadow: 0 2px 5px rgba(251, 191, 36, 0.15);
+}
+.btn-homework:hover {
+  background-color: #fde68a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(251, 191, 36, 0.25);
+}
+
+.btn-exam {
+  background-color: #fdf4ff;
+  color: #701a75;
+  border-color: #e9d5ff;
+  box-shadow: 0 2px 5px rgba(192, 86, 220, 0.15);
+}
+.btn-exam:hover {
+  background-color: #f3e8ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(192, 86, 220, 0.25);
+}
+
+.contest-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contest-link-item {
+  display: flex;
 }
 
 .icon {
