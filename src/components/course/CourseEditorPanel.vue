@@ -158,7 +158,7 @@ import {
 export default {
   name: 'CourseEditorPanel',
   components: { GroupEditor, LevelEditor, TopicEditor, ChapterEditor },
-  emits: ['close'],
+  emits: ['close', 'data-changed'],
   props: {
     initialNode: { type: Object, default: null }
   },
@@ -942,6 +942,7 @@ export default {
             
             this.showToastMessage('保存分组成功')
             this.fetchData()
+            this.$emit('data-changed')
         } catch (e) {
             this.showToastMessage('保存分组失败: ' + e.message)
         } finally {
@@ -954,6 +955,7 @@ export default {
             await request(`/api/course/groups/${id}`, { method: 'DELETE' })
             this.showToastMessage('删除分组成功')
             this.fetchData()
+            this.$emit('data-changed')
             this.selectedNode = null
         } catch (e) {
             this.showToastMessage('删除分组失败: ' + e.message)
@@ -968,6 +970,7 @@ export default {
             })
             this.showToastMessage('移动成功')
             this.fetchData()
+            this.$emit('data-changed')
         } catch (e) {
             this.showToastMessage('移动失败: ' + e.message)
         }
@@ -1124,6 +1127,7 @@ export default {
         this.editingTopic.chapters = []
         
         await this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('清空章节失败: ' + e.message)
       }
@@ -1394,6 +1398,7 @@ export default {
 
                    this.fetchData().then(() => {
                        this.showToastMessage('章节创建成功')
+                       this.$emit('data-changed')
                        // Re-select the node in the new tree to ensure we have the fresh object
                        if (newCh) {
                            const newLevel = this.levels.find(l => l._id === this.editingLevelForChapter._id)
@@ -1421,6 +1426,7 @@ export default {
         
         this.showToastMessage('保存章节成功')
         await this.fetchData()
+        this.$emit('data-changed')
       } catch (e) {
         this.showToastMessage('保存章节失败: ' + e.message)
       } finally {
@@ -1433,6 +1439,7 @@ export default {
         await request(`/api/course/levels/${levelId}/topics/${topicId}/chapters/${chapterId}`, { method: 'DELETE' })
         this.showToastMessage('删除章节成功')
         this.fetchData()
+        this.$emit('data-changed')
         this.selectedNode = null
       } catch (e) {
         this.showToastMessage('删除章节失败: ' + e.message)
@@ -1450,6 +1457,7 @@ export default {
         })
         this.showToastMessage('移动成功')
         this.fetchData()
+        this.$emit('data-changed')
         // Note: Selection might be lost or stale after fetch, ideally we re-select
       } catch (e) {
         this.showToastMessage('移动失败: ' + e.message)
