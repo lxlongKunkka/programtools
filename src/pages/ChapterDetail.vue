@@ -742,6 +742,7 @@ export default {
       }
       const pathSegment = type === 'exam' ? 'contest' : type
       return `https://acjudge.com/d/${domain}/${pathSegment}/${cid}`
+    },
     async fetchContestInfos() {
       const ids = [
         ...(this.chapter.homeworkIds || []).map(id => ({ id, type: 'homework' })),
