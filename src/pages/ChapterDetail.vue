@@ -1,14 +1,14 @@
 <template>
   <div class="chapter-detail-container">
     <div class="header-nav">
-      <button @click="$router.push('/course')" class="btn-back">�?学习地图</button>
+      <button @click="$router.push('/course')" class="btn-back">← 学习地图</button>
       <button v-if="currentTopic" @click="goBackToTopic" class="btn-back-topic">📚 {{ currentTopic.title }}</button>
       <span v-if="level && chapter" class="nav-title">{{ chapter.title }}</span>
-      <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章�?/button>
+      <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
     </div>
 
-    <div v-if="loading" class="loading">加载�?..</div>
-    <div v-else-if="!chapter" class="error">章节不存�?/div>
+    <div v-if="loading" class="loading">加载中...</div>
+    <div v-else-if="!chapter" class="error">章节不存在</div>
     <div v-else class="content-wrapper">
       
       <!-- Left: Tutorial Content -->
@@ -40,7 +40,7 @@
            
            <div class="controls-bar">
              <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
-               {{ isMaximized ? '退出全�? : '全屏显示' }}
+               {{ isMaximized ? '退出全屏' : '全屏显示' }}
              </button>
            </div>
            <iframe :src="getHtmlUrl(chapter.resourceUrl)" class="courseware-iframe" allowfullscreen></iframe>
@@ -59,7 +59,7 @@
               <button @click="adjustFontSize(-2)" class="btn-control" title="减小字体">A-</button>
               <button @click="adjustFontSize(2)" class="btn-control" title="增大字体">A+</button>
               <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
-                {{ isMaximized ? '退出全�? : '全屏显示' }}
+                {{ isMaximized ? '退出全屏' : '全屏显示' }}
               </button>
             </div>
 
@@ -70,7 +70,7 @@
                 
                 <div v-if="parsedSteps.length > visibleSteps" class="step-action">
                   <button @click="showNextStep" class="btn-next-step">
-                    点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) �?
+                    点击继续阅读 ({{ visibleSteps }}/{{ parsedSteps.length }}) ↓
                   </button>
                 </div>
             </div>
@@ -78,7 +78,7 @@
 
         <!-- Video Content Mode -->
         <div v-if="viewMode === 'video' && currentVideo">
-          <!-- 多视频选择�?-->
+          <!-- 多视频选择器 -->
           <div v-if="videoList.length > 1" class="video-selector-bar">
             <button
               v-for="(url, idx) in videoList"
@@ -101,13 +101,13 @@
                 allow="autoplay; encrypted-media; fullscreen"
                 sandbox="allow-scripts allow-same-origin allow-presentation allow-modals allow-fullscreen">
               </iframe>
-              <!-- 拦截顶部 B�?Logo/标题点击，防止跳�?-->
+              <!-- 拦截顶部 B站 Logo/标题点击，防止跳转 -->
               <div class="bilibili-click-blocker bilibili-click-blocker-top"></div>
               <!-- 透明遗罩：拦截右键，左键穿透给 iframe -->
               <div class="bilibili-rclick-blocker" @contextmenu.prevent @mousedown="handleBilibiliOverlay"></div>
             </div>
             <div class="lesson-video-toolbar">
-              <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">�?全屏播放</button>
+              <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
             </div>
           </template>
           <!-- 直链视频 -->
@@ -142,7 +142,7 @@
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
             </div>
-            <span class="progress-text">{{ solvedCount }} / {{ totalProblems }} 已解�?/span>
+            <span class="progress-text">{{ solvedCount }} / {{ totalProblems }} 已解决</span>
           </div>
 
           <div class="problem-list">
@@ -154,10 +154,10 @@
               </div>
               <div class="problem-actions">
                 <a :href="getProblemLink(problem)" target="_blank" class="btn-action btn-challenge">
-                  <span class="icon">🚀</span> 去挑�?
+                  <span class="icon">🚀</span> 去挑战
                 </a>
                 <button @click="checkStatus(problem)" class="btn-action btn-check" :disabled="checking === problem._id">
-                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状�? }}
+                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状态' }}
                 </button>
               </div>
             </div>
@@ -178,10 +178,10 @@
               </div>
               <div class="problem-actions">
                 <a :href="getProblemLink(problem)" target="_blank" class="btn-action btn-challenge">
-                  <span class="icon">🚀</span> 去挑�?
+                  <span class="icon">🚀</span> 去挑战
                 </a>
                 <button @click="checkStatus(problem)" class="btn-action btn-check" :disabled="checking === problem._id">
-                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状�? }}
+                  <span class="icon">🔄</span> {{ checking === problem._id ? '检查中...' : '检查状态' }}
                 </button>
               </div>
             </div>
@@ -190,10 +190,10 @@
 
         <div v-if="totalProblems === 0" class="reading-section">
           <h3>学习任务</h3>
-          <p>请仔细阅读左侧教程内容，观看相关视频�?/p>
+          <p>请仔细阅读左侧教程内容，观看相关视频。</p>
           <div v-if="!isChapterCompleted" class="action-area">
             <button @click="completeReading" class="btn-complete-reading" :disabled="submitting">
-              {{ submitting ? '提交�?..' : '我已完成阅读/观看' }}
+              {{ submitting ? '提交中...' : '我已完成阅读/观看' }}
             </button>
           </div>
         </div>
@@ -210,15 +210,15 @@
                 <span v-if="contestInfo[hid] && contestInfo[hid].score !== null"
                       class="status-badge solved">得分: {{ contestInfo[hid].score }}</span>
                 <span v-else-if="contestInfo[hid] && !contestInfo[hid].attend"
-                      class="status-badge unsolved">未参�?/span>
+                      class="status-badge unsolved">未参加</span>
               </div>
               <div class="problem-actions">
                 <a :href="getContestLink(hid, 'homework')" target="_blank" class="btn-action btn-homework">
-                  <span class="icon">📋</span> 去作�?
+                  <span class="icon">📋</span> 去作业
                 </a>
                 <button @click="checkContestScore(hid, 'homework')" class="btn-action btn-check"
                         :disabled="checkingContest === hid">
-                  <span class="icon">🔄</span> {{ checkingContest === hid ? '查询�?..' : '查看分数' }}
+                  <span class="icon">🔄</span> {{ checkingContest === hid ? '查询中...' : '查看分数' }}
                 </button>
               </div>
             </div>
@@ -237,7 +237,7 @@
                 <span v-if="contestInfo[eid] && contestInfo[eid].score !== null"
                       class="status-badge solved">得分: {{ contestInfo[eid].score }}</span>
                 <span v-else-if="contestInfo[eid] && !contestInfo[eid].attend"
-                      class="status-badge unsolved">未参�?/span>
+                      class="status-badge unsolved">未参加</span>
               </div>
               <div class="problem-actions">
                 <a :href="getContestLink(eid, 'exam')" target="_blank" class="btn-action btn-exam">
@@ -245,7 +245,7 @@
                 </a>
                 <button @click="checkContestScore(eid, 'exam')" class="btn-action btn-check"
                         :disabled="checkingContest === eid">
-                  <span class="icon">🔄</span> {{ checkingContest === eid ? '查询�?..' : '查看分数' }}
+                  <span class="icon">🔄</span> {{ checkingContest === eid ? '查询中...' : '查看分数' }}
                 </button>
               </div>
             </div>
@@ -253,8 +253,8 @@
         </div>
 
         <div v-if="isChapterCompleted" class="chapter-complete-msg">
-          🎉 恭喜！本章已完成�?
-          <button @click="goToNextChapter" class="btn-next" v-if="hasNextChapter">下一�?�?/button>
+          🎉 恭喜！本章已完成。
+          <button @click="goToNextChapter" class="btn-next" v-if="hasNextChapter">下一章 →</button>
         </div>
       </div>
 
@@ -402,7 +402,7 @@ export default {
       if (this.totalProblems > 0) {
         return this.solvedCount >= this.totalProblems
       }
-      // 无题目章节：依赖显式完成标记（点�?我已完成阅读/观看"�?
+      // 无题目章节：依赖显式完成标记（点击"我已完成阅读/观看"）
       return this.userProgress.completedChapters.includes(this.chapter.id)
     },
     hasNextChapter() {
@@ -471,25 +471,25 @@ export default {
     isBilibiliVideo(url) {
       if (!url) return false
       const s = url.trim()
-      // �?BV 号，�?BV1teP4zUEzN
+      // 纯 BV 号，如 BV1teP4zUEzN
       if (/^BV[a-zA-Z0-9]+$/.test(s)) return true
       return s.includes('bilibili.com') || s.includes('b23.tv')
     },
     getBilibiliEmbedUrl(url) {
       if (!url) return ''
       const s = url.trim()
-      // �?BV �?
+      // 纯 BV 号
       if (/^BV[a-zA-Z0-9]+$/.test(s)) {
         return `//player.bilibili.com/player.html?bvid=${s}&high_quality=1&danmaku=0`
       }
-      // 已经是嵌入链�?
+      // 已经是嵌入链接
       if (s.includes('player.bilibili.com')) return s
-      // URL 中提�?BV �?
+      // URL 中提取 BV 号
       const bvMatch = s.match(/BV[a-zA-Z0-9]+/)
       if (bvMatch) {
         return `//player.bilibili.com/player.html?bvid=${bvMatch[0]}&high_quality=1&danmaku=0`
       }
-      // av �?
+      // av 号
       const avMatch = s.match(/av(\d+)/i)
       if (avMatch) {
         return `//player.bilibili.com/player.html?aid=${avMatch[1]}&high_quality=1&danmaku=0`
@@ -813,12 +813,12 @@ export default {
         
         if (res.passed) {
           this.userProgress = res.progress
-          this.showToastMessage('恭喜！检测到已通过�?)
+          this.showToastMessage('恭喜！检测到已通过！')
         } else {
           this.showToastMessage(res.message || '未检测到通过记录，请先去完成题目')
         }
       } catch (e) {
-        this.showToastMessage('检查失�? ' + e.message)
+        this.showToastMessage('检查失败: ' + e.message)
       } finally {
         this.checking = null
       }
@@ -928,7 +928,7 @@ export default {
             query: { lid: nextLevelId }
         })
       } else {
-        this.showToastMessage('这是本课程的最后一�?)
+        this.showToastMessage('这是本课程的最后一章')
       }
     },
     adjustFontSize(delta) {
@@ -1515,7 +1515,7 @@ export default {
   margin-bottom: 4px;
 }
 
-/* Bilibili 视频保护�?*/
+/* Bilibili 视频保护层 */
 .lesson-video-iframe-wrap {
   position: relative;
   width: 100%;
@@ -1535,12 +1535,12 @@ export default {
 .bilibili-rclick-blocker {
   position: absolute;
   top: 0; left: 0; right: 0;
-  bottom: 28%; /* 露出底部播放器控件栏＋倒速弹出面�?*/
+  bottom: 28%; /* 露出底部播放器控件栏＋倒速弹出面板 */
   z-index: 3;
   background: transparent;
   pointer-events: auto;
 }
-/* 拦截 B站顶�?Logo/标题点击区域 */
+/* 拦截 B站顶部 Logo/标题点击区域 */
 .bilibili-click-blocker {
   position: absolute;
   left: 0;
@@ -1554,7 +1554,7 @@ export default {
   top: 0;
   height: 12%;
 }
-/* 底部工具�?*/
+/* 底部工具栏 */
 .lesson-video-toolbar {
   background: #1a1a2e;
   border-radius: 0 0 8px 8px;
@@ -1603,7 +1603,7 @@ export default {
   color: #fff;
   border-color: #007aff;
 }
-/* 多视频切换选项�?*/
+/* 多视频切换选项卡 */
 .video-selector-bar {
   display: flex;
   gap: 8px;
