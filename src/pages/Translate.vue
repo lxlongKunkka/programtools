@@ -300,7 +300,6 @@ try {
         if (data.prompt) this.prompt = data.prompt
         if (data.result) this.result = data.result
         if (data.englishResult) this.englishResult = data.englishResult
-        if (data.model) this.model = data.model
     }
     this.history = JSON.parse(localStorage.getItem('translate_history') || '[]')
 
