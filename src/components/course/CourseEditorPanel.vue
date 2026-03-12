@@ -172,6 +172,7 @@ export default {
     },
     'editingChapter._id'() {
       this.fetchContestTitles()
+      this.fetchProblemTitles()
     }
   },
   data() {
@@ -221,7 +222,8 @@ export default {
       // Auto-save state
       isSelecting: false,
       isSaving: false,
-      contestTitles: {}  // { [id]: string } cache for homework/exam titles
+      contestTitles: {},  // { [id]: string } cache for homework/exam titles
+      problemTitles: {}   // { [id]: string } cache for problem titles
     }
   },
   computed: {
@@ -235,8 +237,9 @@ export default {
             if (s.includes(':')) {
                 [domain, pid] = s.split(':')
             }
+            const title = this.problemTitles[s]
             return {
-                text: s,
+                text: title ? `${domain}:${pid}: ${title}` : s,
                 url: `https://acjudge.com/d/${domain}/p/${pid}`
             }
         }).filter(Boolean)
@@ -251,8 +254,9 @@ export default {
             if (s.includes(':')) {
                 [domain, pid] = s.split(':')
             }
+            const title = this.problemTitles[s]
             return {
-                text: s,
+                text: title ? `${domain}:${pid}: ${title}` : s,
                 url: `https://acjudge.com/d/${domain}/p/${pid}`
             }
         }).filter(Boolean)
@@ -601,6 +605,22 @@ export default {
       this.$nextTick(() => {
           this.isSelecting = false
       })
+    },
+    async fetchProblemTitles() {
+      const ids = [
+        ...(this.editingChapter.problemIdsStr || '').split(/[,，]/),
+        ...(this.editingChapter.optionalProblemIdsStr || '').split(/[,，]/)
+      ].map(s => s.trim()).filter(Boolean)
+      if (!ids.length) return
+      await Promise.all(ids.map(async (id) => {
+        if (this.problemTitles[id]) return
+        try {
+          const res = await request(`/api/course/problem-info?id=${encodeURIComponent(id)}`)
+          if (res.title) {
+            this.problemTitles = { ...this.problemTitles, [id]: res.title }
+          }
+        } catch { /* ignore */ }
+      }))
     },
     async fetchContestTitles() {
       const ids = [

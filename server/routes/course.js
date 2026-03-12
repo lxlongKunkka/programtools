@@ -1270,6 +1270,35 @@ router.get('/contest-info', authenticateToken, async (req, res) => {
   }
 })
 
+// GET /api/course/problem-info?id=domain:pid
+router.get('/problem-info', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.query
+    if (!id) return res.status(400).json({ error: 'Missing id' })
+
+    let domain = 'system'
+    let pid = id
+    if (id.includes(':')) {
+      const colonIdx = id.indexOf(':')
+      domain = id.slice(0, colonIdx)
+      pid = id.slice(colonIdx + 1)
+    }
+
+    let doc = null
+    if (!isNaN(pid)) {
+      doc = await Document.findOne({ domainId: domain, docId: Number(pid) }).select('title')
+    }
+    if (!doc) {
+      doc = await Document.findOne({ domainId: domain, pid }).select('title')
+    }
+
+    res.json({ title: doc?.title || null })
+  } catch (e) {
+    console.error('[problem-info]', e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Helper to check group edit permission
 async function checkGroupPermission(user, groupName) {
   if (user.role === 'admin' || user.priv === -1) return true
