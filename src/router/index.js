@@ -19,7 +19,6 @@ import GespTool from '../pages/GespTool.vue'
 import GespMap from '../pages/GespMap.vue'
 import GameSudoku from '../pages/GameSudoku.vue'
 import SokobanGame from '../pages/SokobanGame.vue'
-import YearEndSummary from '../pages/YearEndSummary.vue'
 import ProgressDashboard from '../pages/ProgressDashboard.vue'
 import request from '../utils/request'
 
@@ -45,8 +44,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/atcoder', redirect: '/solvedata' },
-  { path: '/summary', component: YearEndSummary }
+  { path: '/atcoder', redirect: '/solvedata' }
 ]
 
 const router = createRouter({

@@ -32,8 +32,7 @@ import {
   TOPIC_PLAN_PROMPT,
   TOPIC_DESC_PROMPT,
   HYDRO_REFINE_PROMPT,
-  ANSWER_GEN_PROMPT,
-  SUMMARY_PROMPT
+  ANSWER_GEN_PROMPT
 } from '../prompts.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -3462,76 +3461,6 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('Generate Report Error:', error)
     res.status(500).json({ error: error.message })
-  }
-})
-
-router.post('/summary', authenticateToken, checkModelPermission, async (req, res) => {
-  try {
-    const { role, keywords, achievements, challenges, plans, style, length, model, temperature } = req.body
-    
-    // 构造用户输入
-    const userContent = `
-【基本信息】
-- 岗位：${role || '未填写'}
-- 年度关键词：${keywords || '无'}
-- 风格：${style || '正式严谨'}
-- 字数：${length || '800字'}左右
-
-【主要成就】
-${achievements || '（暂无具体描述）'}
-
-【遇到的挑战与反思】
-${challenges || '（暂无具体描述）'}
-
-【未来规划】
-${plans || '（暂无具体描述）'}
-`
-
-    const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
-    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
-
-    const messages = [
-      { role: 'system', content: SUMMARY_PROMPT },
-      { role: 'user', content: userContent }
-    ]
-
-    const payload = {
-      model: model || 'gemini-3-flash-preview',
-      messages,
-      temperature: temperature !== undefined ? Number(temperature) : 0.7, 
-      max_tokens: 32767
-    }
-    res.locals.logModel = payload.model
-
-    const resp = await axios.post(apiUrl, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      timeout: 600000
-    })
-
-    const data = resp.data
-    let content = ''
-    try {
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
-      } else if (data.choices && data.choices[0] && data.choices[0].text) {
-        content = data.choices[0].text
-      } else {
-        content = JSON.stringify(data)
-      }
-    } catch (e) {
-      content = JSON.stringify(data)
-    }
-
-    return res.json({ result: content })
-
-  } catch (err) {
-    console.error('Summary error:', err?.response?.data || err.message || err)
-    const message = err?.response?.data || err.message || 'unknown error'
-    return res.status(500).json({ error: 'Summary generation failed', detail: message })
   }
 })
 
