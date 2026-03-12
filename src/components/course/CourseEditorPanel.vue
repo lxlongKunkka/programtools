@@ -169,6 +169,9 @@ export default {
     // Phase A: real-time sync when parent changes the cursor while editor is open
     initialNode(newVal) {
       if (newVal && !this.loadingCourses) this.applyInitialNode()
+    },
+    'editingChapter._id'() {
+      this.fetchContestTitles()
     }
   },
   data() {
@@ -217,7 +220,8 @@ export default {
       
       // Auto-save state
       isSelecting: false,
-      isSaving: false
+      isSaving: false,
+      contestTitles: {}  // { [id]: string } cache for homework/exam titles
     }
   },
   computed: {
@@ -264,7 +268,7 @@ export default {
                 [domain, cid] = s.split(':')
             }
             return {
-                text: s,
+                text: this.contestTitles[s] || s,
                 url: `https://acjudge.com/d/${domain}/homework/${cid}`
             }
         }).filter(Boolean)
@@ -280,7 +284,7 @@ export default {
                 [domain, cid] = s.split(':')
             }
             return {
-                text: s,
+                text: this.contestTitles[s] || s,
                 url: `https://acjudge.com/d/${domain}/exam/${cid}`
             }
         }).filter(Boolean)
@@ -595,6 +599,22 @@ export default {
       this.$nextTick(() => {
           this.isSelecting = false
       })
+    },
+    async fetchContestTitles() {
+      const ids = [
+        ...(this.editingChapter.homeworkIdsStr || '').split(/[,，]/).map(s => ({ id: s.trim(), type: 'homework' })),
+        ...(this.editingChapter.examIdsStr || '').split(/[,，]/).map(s => ({ id: s.trim(), type: 'exam' }))
+      ].filter(({ id }) => id)
+      if (!ids.length) return
+      await Promise.all(ids.map(async ({ id, type }) => {
+        if (this.contestTitles[id]) return  // already cached
+        try {
+          const res = await request(`/api/course/contest-info?id=${encodeURIComponent(id)}&type=${type}`)
+          if (res.title && res.title !== id) {
+            this.contestTitles = { ...this.contestTitles, [id]: res.title }
+          }
+        } catch { /* ignore */ }
+      }))
     },
     async fetchChapterContent(chapterId, force = false) {
         // Check if we are currently editing this chapter before starting
