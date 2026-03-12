@@ -72,9 +72,9 @@
                   >
                     <span class="tree-label">{{ chapter.title }}</span>
                     <span
-                      v-if="(chapter.problemIds && chapter.problemIds.length > 0) || (chapter.optionalProblemIds && chapter.optionalProblemIds.length > 0)"
+                      v-if="chapterBadgeText(chapter)"
                       class="tree-count-badge"
-                    >{{ (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0) }}题</span>
+                    >{{ chapterBadgeText(chapter) }}</span>
                     <div v-if="canEditLevelNode(level)" class="tree-actions">
                       <button
                         class="btn-node-action"
@@ -160,6 +160,16 @@ export default {
     },
     canEditLevelNode(level) {
       return this.editMode && canEditLevel(level, this.treeData)
+    },
+    chapterBadgeText(chapter) {
+      const parts = []
+      const problems = (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0)
+      if (problems > 0) parts.push(problems + '题')
+      const hw = chapter.homeworkIds ? chapter.homeworkIds.length : 0
+      if (hw > 0) parts.push(hw + '作业')
+      const ex = chapter.examIds ? chapter.examIds.length : 0
+      if (ex > 0) parts.push(ex + '考试')
+      return parts.join(' ')
     },
     getChapterIndex(topic, chapter) {
       if (!topic || !topic.chapters) return -1

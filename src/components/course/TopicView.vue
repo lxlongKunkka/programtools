@@ -41,7 +41,7 @@
           </h4>
           <p class="chapter-id">
             Chapter {{ chapter.id }}
-            <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span>
+            <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span><span v-if="chapter.homeworkIds && chapter.homeworkIds.length > 0"> · {{ chapter.homeworkIds.length }} 作业</span><span v-if="chapter.examIds && chapter.examIds.length > 0"> · {{ chapter.examIds.length }} 考试</span>
           </p>
         </div>
         <button
