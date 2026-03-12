@@ -1506,6 +1506,7 @@ export default {
         }
         
         this.showToastMessage('保存章节成功')
+        this.fetchContestTitles()
         await this.fetchData()
         this.$emit('data-changed')
       } catch (e) {
