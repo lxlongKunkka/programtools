@@ -41,7 +41,7 @@
           </h4>
           <p class="chapter-id">
             Chapter {{ chapter.id }}
-            <span v-if="getChapterProblemCount(chapter) > 0"> · {{ getChapterProblemCount(chapter) }} 题</span><span v-if="chapter.homeworkIds && chapter.homeworkIds.length > 0"> · {{ chapter.homeworkIds.length }} 作业</span><span v-if="chapter.examIds && chapter.examIds.length > 0"> · {{ chapter.examIds.length }} 考试</span>
+            <span v-if="chapterTotalCount(chapter) > 0"> · {{ chapterTotalCount(chapter) }} 题</span>
           </p>
         </div>
         <button
@@ -76,10 +76,11 @@ export default {
   name: 'TopicView',
   components: { LearnersSection },
   props: {
-    topic:        { type: Object, required: true },
-    level:        { type: Object, required: true },
-    userProgress: { type: Object, default: null },
-    treeData:     { type: Array,  default: () => [] }
+    topic:                { type: Object, required: true },
+    level:                { type: Object, required: true },
+    userProgress:         { type: Object, default: null },
+    treeData:             { type: Array,  default: () => [] },
+    contestProblemCounts: { type: Object, default: () => ({}) }
   },
   emits: ['go-to-chapter', 'enter-edit-chapter', 'select-level', 'select-group', 'view-learner', 'enter-edit'],
   computed: {
@@ -95,8 +96,11 @@ export default {
     isChapterUnlockedFn(chapter) {
       return isChapterUnlocked(this.level, chapter, this.userProgress, this.treeData)
     },
-    chapterStatusClass(chapter) {
-      return getChapterStatusClass(this.level, chapter, this.userProgress, this.treeData)
+    chapterTotalCount(chapter) {
+      const direct = getChapterProblemCount(chapter)
+      const hw = (chapter.homeworkIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
+      const ex = (chapter.examIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
+      return direct + hw + ex
     },
     onChapterClick(chapter) {
       if (this.chapterStatusClass(chapter) !== 'status-locked') {

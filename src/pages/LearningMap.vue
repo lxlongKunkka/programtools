@@ -61,6 +61,7 @@
             :level="selectedLevel"
             :user-progress="userProgress"
             :tree-data="treeData"
+            :contest-problem-counts="contestProblemCounts"
             @go-to-chapter="goToChapter"
             @enter-edit-chapter="enterEditModeForChapter"
             @select-level="l => selectNode('level', l)"
@@ -215,7 +216,31 @@ export default {
       try {
         const result = await request(`/api/course/contest-problem-counts?ids=${idList.map(encodeURIComponent).join(',')}`)
         this.contestProblemCounts = result
+        this.updateTreeCounts()
       } catch { /* ignore */ }
+    },
+
+    updateTreeCounts() {
+      this.treeData.forEach(g => {
+        let groupCount = 0
+        ;(g.levels || []).forEach(l => {
+          let levelCount = 0
+          ;(l.topics || []).forEach(t => {
+            let topicCount = 0
+            ;(t.chapters || []).forEach(c => {
+              topicCount += (c.problemIds ? c.problemIds.length : 0)
+              topicCount += (c.optionalProblemIds ? c.optionalProblemIds.length : 0)
+              ;(c.homeworkIds || []).forEach(id => { topicCount += (this.contestProblemCounts[id] || 0) })
+              ;(c.examIds || []).forEach(id => { topicCount += (this.contestProblemCounts[id] || 0) })
+            })
+            t.problemCount = topicCount
+            levelCount += topicCount
+          })
+          l.problemCount = levelCount
+          groupCount += levelCount
+        })
+        g.problemCount = groupCount
+      })
     },
 
     buildTree(groups, levels) {
@@ -260,6 +285,8 @@ export default {
             ;(t.chapters || []).forEach(c => {
               topicCount += (c.problemIds ? c.problemIds.length : 0)
               topicCount += (c.optionalProblemIds ? c.optionalProblemIds.length : 0)
+              ;(c.homeworkIds || []).forEach(id => { topicCount += (this.contestProblemCounts[id] || 0) })
+              ;(c.examIds || []).forEach(id => { topicCount += (this.contestProblemCounts[id] || 0) })
             })
             t.problemCount = topicCount
             levelCount += topicCount
