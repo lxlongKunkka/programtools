@@ -196,14 +196,26 @@ export default {
     },
 
     buildTree(groups, levels) {
+      // 保留旧的展开/折叠状态，刷新后不重置
+      const oldGroupCollapsed = {}
+      const oldLevelCollapsed = {}
+      ;(this.treeData || []).forEach(g => {
+        oldGroupCollapsed[g.name] = g.collapsed
+        ;(g.levels || []).forEach(l => {
+          if (l._id) oldLevelCollapsed[l._id] = l.collapsed
+        })
+      })
+
       const groupMap = {}
       groups.forEach(g => {
-        groupMap[g.name] = { ...g, levels: [], collapsed: true, problemCount: 0 }
+        const wasCollapsed = oldGroupCollapsed[g.name]
+        groupMap[g.name] = { ...g, levels: [], collapsed: wasCollapsed !== undefined ? wasCollapsed : true, problemCount: 0 }
       })
       levels.forEach(l => {
+        const wasCollapsed = l._id && oldLevelCollapsed[l._id] !== undefined ? oldLevelCollapsed[l._id] : true
         const levelData = {
           ...l,
-          collapsed: true,
+          collapsed: wasCollapsed,
           problemCount: 0,
           topics: (l.topics || []).map(t => ({ ...t, problemCount: 0 }))
         }
