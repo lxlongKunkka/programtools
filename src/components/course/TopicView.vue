@@ -96,6 +96,9 @@ export default {
     isChapterUnlockedFn(chapter) {
       return isChapterUnlocked(this.level, chapter, this.userProgress, this.treeData)
     },
+    chapterStatusClass(chapter) {
+      return getChapterStatusClass(this.level, chapter, this.userProgress, this.treeData)
+    },
     chapterTotalCount(chapter) {
       const direct = getChapterProblemCount(chapter)
       const hw = (chapter.homeworkIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
