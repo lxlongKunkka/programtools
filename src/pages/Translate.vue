@@ -272,7 +272,7 @@ computed: {
     modelOptions() {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
-      return all.filter(m => m.id === 'gemini-3-flash-preview' || m.id === 'gemini-2.5-flash')
+      return all.filter(m => m.id === 'gemini-3-flash-preview')
     },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
