@@ -1270,6 +1270,39 @@ router.get('/contest-info', authenticateToken, async (req, res) => {
   }
 })
 
+// GET /api/course/contest-problem-counts?ids=domain:id1,domain:id2,...
+// Returns { 'domain:id': N } map of problem counts (pids.length) for each contest/homework
+router.get('/contest-problem-counts', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.query
+    if (!ids) return res.json({})
+    const idList = ids.split(',').map(s => s.trim()).filter(Boolean)
+    const result = {}
+    await Promise.all(idList.map(async (idStr) => {
+      const colonIdx = idStr.indexOf(':')
+      if (colonIdx === -1) return
+      const domain = idStr.slice(0, colonIdx)
+      const contestId = idStr.slice(colonIdx + 1)
+      try {
+        let doc = null
+        if (mongoose.Types.ObjectId.isValid(contestId) && contestId.length === 24) {
+          doc = await Document.findOne({ _id: new mongoose.Types.ObjectId(contestId), domainId: domain }, 'pids')
+        }
+        if (!doc) {
+          const numId = Number(contestId)
+          if (!isNaN(numId)) {
+            doc = await Document.findOne({ domainId: domain, docId: numId }, 'pids')
+          }
+        }
+        if (doc) result[idStr] = (doc.pids || []).length
+      } catch { /* ignore individual errors */ }
+    }))
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // GET /api/course/problem-info?id=domain:pid
 router.get('/problem-info', authenticateToken, async (req, res) => {
   try {

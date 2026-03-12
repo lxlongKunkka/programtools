@@ -103,11 +103,12 @@ import { canEditLevel, isTeacherOrAdmin } from '../../utils/permissionUtils'
 export default {
   name: 'CourseSidebar',
   props: {
-    treeData:     { type: Array,  default: () => [] },
-    selectedNode: { type: Object, default: null },
-    editMode:     { type: Boolean, default: false },
-    editModeNode: { type: Object, default: null },
-    userProgress: { type: Object, default: null }
+    treeData:             { type: Array,  default: () => [] },
+    selectedNode:         { type: Object, default: null },
+    editMode:             { type: Boolean, default: false },
+    editModeNode:         { type: Object, default: null },
+    userProgress:         { type: Object, default: null },
+    contestProblemCounts: { type: Object, default: () => ({}) }
   },
   emits: ['select-group', 'select-level', 'select-topic', 'select-chapter', 'create-level', 'insert-level', 'create-topic', 'insert-topic', 'create-chapter', 'insert-chapter'],
   data() {
@@ -162,14 +163,21 @@ export default {
       return this.editMode && canEditLevel(level, this.treeData)
     },
     chapterBadgeText(chapter) {
-      const parts = []
-      const problems = (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0)
-      if (problems > 0) parts.push(problems + '题')
-      const hw = chapter.homeworkIds ? chapter.homeworkIds.length : 0
-      if (hw > 0) parts.push(hw + '作业')
-      const ex = chapter.examIds ? chapter.examIds.length : 0
-      if (ex > 0) parts.push(ex + '考试')
-      return parts.join(' ')
+      const direct = (chapter.problemIds ? chapter.problemIds.length : 0) + (chapter.optionalProblemIds ? chapter.optionalProblemIds.length : 0)
+      const hwProblems = (chapter.homeworkIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
+      const exProblems = (chapter.examIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
+      const total = direct + hwProblems + exProblems
+      if (!total) {
+        // counts not loaded yet — fall back to showing contest count
+        const hw = chapter.homeworkIds ? chapter.homeworkIds.length : 0
+        const ex = chapter.examIds ? chapter.examIds.length : 0
+        if (!hw && !ex) return ''
+        const parts = []
+        if (hw > 0) parts.push(hw + '作业')
+        if (ex > 0) parts.push(ex + '考试')
+        return parts.join(' ')
+      }
+      return total + '题'
     },
     getChapterIndex(topic, chapter) {
       if (!topic || !topic.chapters) return -1

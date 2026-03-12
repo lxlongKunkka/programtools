@@ -8,6 +8,7 @@
         :edit-mode="editMode"
         :edit-mode-node="editModeNode"
         :user-progress="userProgress"
+        :contest-problem-counts="contestProblemCounts"
         @select-group="g => selectNode('group', g, null, true)"
         @select-level="l => selectNode('level', l)"
         @select-topic="(t, l) => selectNode('topic', t, l)"
@@ -110,6 +111,7 @@ export default {
       selectedNode: null,
       selectedData: null,
       selectedLevel: null,
+      contestProblemCounts: {},
       // Learner modal state
       showLearnerModal: false,
       selectedLearner: null,
@@ -184,6 +186,7 @@ export default {
         ])
         this.userProgress = progressData
         this.buildTree(groupsData, levelsData)
+        this.fetchContestProblemCounts()
         // 编辑模式时不恢复选中（编辑器内部自行处理 rebindSelection，避免覆盖 editModeNode）
         if (!this.editMode) {
           this.restoreSelection()
@@ -193,6 +196,26 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+
+    async fetchContestProblemCounts() {
+      const ids = new Set()
+      this.treeData.forEach(g => {
+        ;(g.levels || []).forEach(l => {
+          ;(l.topics || []).forEach(t => {
+            ;(t.chapters || []).forEach(c => {
+              ;(c.homeworkIds || []).forEach(id => { if (id) ids.add(id) })
+              ;(c.examIds || []).forEach(id => { if (id) ids.add(id) })
+            })
+          })
+        })
+      })
+      const idList = [...ids]
+      if (!idList.length) return
+      try {
+        const result = await request(`/api/course/contest-problem-counts?ids=${idList.map(encodeURIComponent).join(',')}`)
+        this.contestProblemCounts = result
+      } catch { /* ignore */ }
     },
 
     buildTree(groups, levels) {
