@@ -203,11 +203,24 @@
           <div class="problems-header" style="margin-bottom: 12px;">
             <h3>📝 关联作业</h3>
           </div>
-          <div class="contest-link-list">
-            <div v-for="hid in chapter.homeworkIds" :key="hid" class="contest-link-item">
-              <a :href="getContestLink(hid, 'homework')" target="_blank" class="btn-action btn-homework">
-                <span class="icon">📋</span> {{ hid }}
-              </a>
+          <div class="problem-list">
+            <div v-for="hid in chapter.homeworkIds" :key="hid" class="problem-item">
+              <div class="problem-info">
+                <span class="problem-title">{{ contestInfo[hid] ? contestInfo[hid].title : hid }}</span>
+                <span v-if="contestInfo[hid] && contestInfo[hid].score !== null"
+                      class="status-badge solved">得分: {{ contestInfo[hid].score }}</span>
+                <span v-else-if="contestInfo[hid] && !contestInfo[hid].attend"
+                      class="status-badge unsolved">未参加</span>
+              </div>
+              <div class="problem-actions">
+                <a :href="getContestLink(hid, 'homework')" target="_blank" class="btn-action btn-homework">
+                  <span class="icon">📋</span> 去作业
+                </a>
+                <button @click="checkContestScore(hid, 'homework')" class="btn-action btn-check"
+                        :disabled="checkingContest === hid">
+                  <span class="icon">🔄</span> {{ checkingContest === hid ? '查询中...' : '查看分数' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -217,11 +230,24 @@
           <div class="problems-header" style="margin-bottom: 12px;">
             <h3>📊 关联考试</h3>
           </div>
-          <div class="contest-link-list">
-            <div v-for="eid in chapter.examIds" :key="eid" class="contest-link-item">
-              <a :href="getContestLink(eid, 'exam')" target="_blank" class="btn-action btn-exam">
-                <span class="icon">📊</span> {{ eid }}
-              </a>
+          <div class="problem-list">
+            <div v-for="eid in chapter.examIds" :key="eid" class="problem-item">
+              <div class="problem-info">
+                <span class="problem-title">{{ contestInfo[eid] ? contestInfo[eid].title : eid }}</span>
+                <span v-if="contestInfo[eid] && contestInfo[eid].score !== null"
+                      class="status-badge solved">得分: {{ contestInfo[eid].score }}</span>
+                <span v-else-if="contestInfo[eid] && !contestInfo[eid].attend"
+                      class="status-badge unsolved">未参加</span>
+              </div>
+              <div class="problem-actions">
+                <a :href="getContestLink(eid, 'exam')" target="_blank" class="btn-action btn-exam">
+                  <span class="icon">📊</span> 去考试
+                </a>
+                <button @click="checkContestScore(eid, 'exam')" class="btn-action btn-check"
+                        :disabled="checkingContest === eid">
+                  <span class="icon">🔄</span> {{ checkingContest === eid ? '查询中...' : '查看分数' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -261,7 +287,9 @@ export default {
       isMaximized: false,
       fontSize: 18,
       checking: null,
-      visibleSteps: 1
+      visibleSteps: 1,
+      contestInfo: {},      // { [id]: { title, score, attend } }
+      checkingContest: null // id of contest being queried
     }
   },
   watch: {
@@ -685,6 +713,9 @@ export default {
             }
             throw err
         }
+        // Fetch contest/homework titles and user scores in background
+        this.contestInfo = {}
+        this.fetchContestInfos()
       } catch (e) {
         this.showToastMessage('加载失败: ' + e.message)
       } finally {
@@ -710,6 +741,39 @@ export default {
         [domain, cid] = idStr.split(':')
       }
       return `https://acjudge.com/d/${domain}/${type}/${cid}`
+    },
+    async fetchContestInfos() {
+      const ids = [
+        ...(this.chapter.homeworkIds || []).map(id => ({ id, type: 'homework' })),
+        ...(this.chapter.examIds || []).map(id => ({ id, type: 'exam' }))
+      ]
+      if (!ids.length) return
+      await Promise.all(ids.map(async ({ id, type }) => {
+        try {
+          const res = await request(`/api/course/contest-info?id=${encodeURIComponent(id)}&type=${type}`)
+          this.contestInfo = { ...this.contestInfo, [id]: res }
+        } catch (e) {
+          this.contestInfo = { ...this.contestInfo, [id]: { title: id, score: null, attend: false } }
+        }
+      }))
+    },
+    async checkContestScore(id, type) {
+      this.checkingContest = id
+      try {
+        const res = await request(`/api/course/contest-info?id=${encodeURIComponent(id)}&type=${type}`)
+        this.contestInfo = { ...this.contestInfo, [id]: res }
+        if (res.score !== null) {
+          this.showToastMessage(`${res.title}: ${res.score} 分`)
+        } else if (!res.attend) {
+          this.showToastMessage('暂无参加记录')
+        } else {
+          this.showToastMessage('暂无得分记录')
+        }
+      } catch (e) {
+        this.showToastMessage('查询失败: ' + e.message)
+      } finally {
+        this.checkingContest = null
+      }
     },
     getHtmlUrl(url) {
       if (!url) return ''

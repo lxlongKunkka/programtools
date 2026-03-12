@@ -10,6 +10,7 @@ import UserProgress from '../models/UserProgress.js'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
 import Submission from '../models/Submission.js'
+import ContestStatus from '../models/ContestStatus.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -1211,6 +1212,63 @@ router.get('/submission/best', authenticateToken, async (req, res) => {
 })
 
 // --- Admin Routes ---
+
+// Get contest/homework info and user score
+// GET /api/course/contest-info?id=domain:contestId&type=homework|exam
+router.get('/contest-info', authenticateToken, async (req, res) => {
+  try {
+    const { id, type } = req.query
+    if (!id) return res.status(400).json({ error: 'Missing id' })
+
+    const colonIdx = id.indexOf(':')
+    if (colonIdx === -1) return res.status(400).json({ error: 'Invalid id format, expected domain:contestId' })
+
+    const domain = id.slice(0, colonIdx)
+    const contestId = id.slice(colonIdx + 1)
+    // docType: 60 = Homework, 30 = Contest/Exam
+    const docType = type === 'exam' ? 30 : 60
+
+    // Find contest document — try ObjectId first (24-char hex), then numeric docId
+    let contestDoc = null
+    if (mongoose.Types.ObjectId.isValid(contestId) && contestId.length === 24) {
+      contestDoc = await Document.findOne({ _id: new mongoose.Types.ObjectId(contestId), domainId: domain })
+    }
+    if (!contestDoc) {
+      const numId = Number(contestId)
+      if (!isNaN(numId)) {
+        contestDoc = await Document.findOne({ domainId: domain, docId: numId, docType })
+      }
+    }
+
+    if (!contestDoc) {
+      return res.json({ title: id, score: null, attend: false })
+    }
+
+    // Get user's contest status (score)
+    const userId = req.user.id
+    const docIdForStatus = contestDoc.docId
+    const resolvedDocType = contestDoc.docType != null ? contestDoc.docType : docType
+
+    const userStatus = await ContestStatus.findOne({
+      domainId: domain,
+      docType: resolvedDocType,
+      docId: docIdForStatus,
+      uid: userId
+    })
+
+    const score = userStatus?.score ?? (userStatus?.totalScore ?? null)
+    const attend = !!(userStatus?.attend || userStatus?.startTime)
+
+    res.json({
+      title: contestDoc.title || id,
+      score,
+      attend,
+    })
+  } catch (e) {
+    console.error('[contest-info]', e)
+    res.status(500).json({ error: e.message })
+  }
+})
 
 // Helper to check group edit permission
 async function checkGroupPermission(user, groupName) {
