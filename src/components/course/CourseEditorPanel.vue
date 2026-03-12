@@ -267,8 +267,9 @@ export default {
             if (s.includes(':')) {
                 [domain, cid] = s.split(':')
             }
+            const title = this.contestTitles[s]
             return {
-                text: this.contestTitles[s] || s,
+                text: title ? `${domain}: ${title}` : s,
                 url: `https://acjudge.com/d/${domain}/homework/${cid}`
             }
         }).filter(Boolean)
@@ -283,8 +284,9 @@ export default {
             if (s.includes(':')) {
                 [domain, cid] = s.split(':')
             }
+            const title = this.contestTitles[s]
             return {
-                text: this.contestTitles[s] || s,
+                text: title ? `${domain}: ${title}` : s,
                 url: `https://acjudge.com/d/${domain}/exam/${cid}`
             }
         }).filter(Boolean)

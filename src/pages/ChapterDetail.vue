@@ -206,7 +206,7 @@
           <div class="problem-list">
             <div v-for="hid in chapter.homeworkIds" :key="hid" class="problem-item">
               <div class="problem-info">
-                <span class="problem-title">{{ contestInfo[hid] ? contestInfo[hid].title : hid }}</span>
+                <span class="problem-title">{{ contestInfo[hid] ? (hid.split(':')[0] + ': ' + contestInfo[hid].title) : hid }}</span>
                 <span v-if="contestInfo[hid] && contestInfo[hid].score !== null"
                       class="status-badge solved">得分: {{ contestInfo[hid].score }}</span>
                 <span v-else-if="contestInfo[hid] && !contestInfo[hid].attend"
@@ -233,7 +233,7 @@
           <div class="problem-list">
             <div v-for="eid in chapter.examIds" :key="eid" class="problem-item">
               <div class="problem-info">
-                <span class="problem-title">{{ contestInfo[eid] ? contestInfo[eid].title : eid }}</span>
+                <span class="problem-title">{{ contestInfo[eid] ? (eid.split(':')[0] + ': ' + contestInfo[eid].title) : eid }}</span>
                 <span v-if="contestInfo[eid] && contestInfo[eid].score !== null"
                       class="status-badge solved">得分: {{ contestInfo[eid].score }}</span>
                 <span v-else-if="contestInfo[eid] && !contestInfo[eid].attend"
