@@ -1,4 +1,4 @@
-import urllib.request, urllib.parse, http.cookiejar, re, json
+import urllib.request, urllib.parse, http.cookiejar, re
 
 BASE = 'http://nflsoi.cc:10611'
 jar = http.cookiejar.CookieJar()
@@ -7,31 +7,26 @@ opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
 data = urllib.parse.urlencode({'uname': 'wfbczx', 'password': '123456'}).encode()
 opener.open(f'{BASE}/login', data)
 
-# Check contest problems page content
-r = opener.open(f'{BASE}/contest/69ad79c783d6583e0f6d26cd/problems')
-html = r.read().decode()
-print('Page length:', len(html))
+# 1. Problem detail page - look for category tags
+r2 = opener.open(f'{BASE}/p/35353?tid=69ad79c783d6583e0f6d26cd')
+html2 = r2.read().decode()
+# Find problem__tags section
+idx = html2.find('problem__tags')
+if idx > 0:
+    print('problem__tags in detail:', html2[idx-50:idx+300])
+else:
+    print('No problem__tags in detail page')
+# Try alternative tag patterns
+for pat in ['tag-link', 'category', 'difficulty']:
+    m = re.search(r'class="[^"]*' + pat + r'[^"]*"[^>]*>(.*?)</', html2, re.DOTALL)
+    if m: print(f'{pat}:', m.group(1)[:100])
 
-# Check if UiContext has problem data
-m = re.search(r'window\.UiContext\s*=\s*({.*?})\s*</script>', html, re.DOTALL)
-if m:
-    try:
-        ctx = json.loads(m.group(1))
-        print('UiContext keys:', list(ctx.keys()))
-        # Look for pids or tdoc
-        if 'tdoc' in ctx: print('tdoc:', str(ctx['tdoc'])[:300])
-        if 'pdict' in ctx: print('pdict keys:', list(ctx['pdict'].keys())[:10])
-        if 'attended' in ctx: print('attended:', ctx['attended'])
-    except: print('UiContext parse failed')
+# 2. Full problem bank row (with tags)
+r3 = opener.open(f'{BASE}/p?page=1')
+html3 = r3.read().decode()
+rows3 = re.findall(r'<tr[^>]*>(.*?)</tr>', html3, re.DOTALL)
+print('\n--- Full bank row 2 ---')
+print(rows3[2][:800] if len(rows3) > 2 else 'N/A')
 
-# All hrefs containing numbers (potential problem links)
-all_hrefs = re.findall(r'href="([^"]+)"', html)
-num_hrefs = [h for h in all_hrefs if re.search(r'/\d+', h)]
-print('Numeric hrefs:', num_hrefs[:20])
 
-# Check all table rows
-table_rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL)
-print(f'Table rows: {len(table_rows)}')
-for row in table_rows[:3]:
-    print('Row snippet:', row[:200])
 

@@ -218,12 +218,23 @@ export async function fetchHydroNflsoiContest(url) {
     const pid = m[1]
     if (seen.has(pid)) return
     seen.add(pid)
-    const title = $(el).text().trim() || pid
+    // 获取标题：<b>A</b>&nbsp;&nbsp;Pie Progress → 去掉 <b> 标签
+    const $a = $(el)
+    $a.find('b').remove()
+    const title = $a.text().replace(/\s+/g, ' ').trim() || pid
+    // 获取同一行的标签：紧随 <a> 的 ul.problem__tags
+    const $td = $a.closest('td')
+    const tags = []
+    $td.find('a.problem__tag-link').each((_, tagEl) => {
+      const t = $(tagEl).text().trim()
+      if (t) tags.push(t)
+    })
     problems.push({
       label: String.fromCharCode(65 + problems.length),
       title,
       taskId: pid,
       url: `${BASE}${href}`,
+      tags,
     })
   })
 
@@ -336,12 +347,23 @@ export async function fetchHydroNflsoiProblemBank(url) {
       if (!m) return
       const pid = m[1]
       if (problems.some(p => p.taskId === pid)) return  // 去重
-      const title = $(el).text().trim() || pid
+      // 获取标题（去掉粗体 pid 前缀）
+      const $a = $(el)
+      $a.find('b').remove()
+      const title = $a.text().replace(/\s+/g, ' ').trim() || pid
+      // 获取同一格里的标签
+      const $td = $a.closest('td')
+      const tags = []
+      $td.find('a.problem__tag-link').each((_, tagEl) => {
+        const t = $(tagEl).text().trim()
+        if (t) tags.push(t)
+      })
       problems.push({
         label: String(problems.length + 1),
         title,
         taskId: pid,
         url: `${BASE}/p/${pid}`,
+        tags,
       })
     })
 

@@ -1425,7 +1425,7 @@ pause
         for (const p of problems) {
           this.fetchProgress = `正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`
           try {
-            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label)
+            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label, p.tags || [])
             added++
           } catch { /* 单题失败不阻断 */ }
         }
@@ -1448,7 +1448,7 @@ pause
       }
     },
 
-    async addProblemAsTask(url, fallbackTitle, contestLabel) {
+    async addProblemAsTask(url, fallbackTitle, contestLabel, prefetchedTags = []) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const editorial = data.editorial || ''
       const acCode = data.acCode || ''
@@ -1475,6 +1475,8 @@ pause
         const cleanTitle = title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim()
         title = `[${contestId}${label}] ${cleanTitle}`
       }
+      // titleFixed: 当从源站爬取到标签时，title 和 tags 均不应被 AI 覆盖
+      const titleFixed = prefetchedTags.length > 0
       // atcoderTitle: 已格式化的标题（如 [ABC235B] xxx），用于 problem.yaml
       const atcoderTitle = atcoderMatch ? title : null
       // sourceUrl: AtCoder 原题链接，用于 problem_en.md 头部
@@ -1497,7 +1499,7 @@ pause
           serverPureCode: '',
           dataOutput: '',
           additionalFile,
-          problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+          problemMeta: { title: title, rawTitle: title, tags: prefetchedTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
           status: 'pending'
         }
         this.loadTask(curIdx)
@@ -1517,7 +1519,7 @@ pause
         translationText: '',
         translationEnglish: '',
         additionalFile,
-        problemMeta: { title: title, rawTitle: title, ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+        problemMeta: { title: title, rawTitle: title, tags: prefetchedTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -1605,10 +1607,15 @@ pause
                       // title 未被用户修改时（空/占位符/与rawTitle相同）允许 AI 覆盖
                       // 但若 rawTitle 本身已含中文（如 NFLSOJ 源站就是中文标题），则不允许 AI 覆盖
                       const hasChinese = (s) => /[\u4e00-\u9fa5]/.test(s || '')
-                      const isPlaceholder = !existingTitle || existingTitle === '题目标题' || (existingTitle === rawTitle && !hasChinese(rawTitle))
+                      const isPlaceholder = !existingMeta.titleFixed && (
+                        !existingTitle || existingTitle === '题目标题' || (existingTitle === rawTitle && !hasChinese(rawTitle))
+                      )
                       const newMeta = {
                         ...existingMeta,
-                        tags: ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || []),
+                        // titleFixed 时完全保留源站 tags 和 title，不让 AI 覆盖
+                        tags: existingMeta.titleFixed
+                          ? (existingMeta.tags || [])
+                          : (ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || [])),
                         title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle,
                       }
                       this.saveToTask(taskIndex, 'problemMeta', newMeta)
