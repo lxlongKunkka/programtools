@@ -144,12 +144,15 @@ function parseContestId(url) {
 }
 
 function parseProblemIds(url) {
-  // 比赛题目：/contest/{contestId}/problem/{pid}
-  const m = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
-  if (m) return { contestId: m[1], pid: m[2] }
+  // 比赛题目（Hydro 实际格式）：/p/{pid}?tid={contestId}
+  const m1 = url.match(/\/p\/([a-zA-Z0-9_]+)[^?]*[?&]tid=([a-zA-Z0-9]+)/)
+  if (m1) return { pid: m1[1], contestId: m1[2] }
+  // 旧格式兼容：/contest/{contestId}/problem/{pid}
+  const m2 = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
+  if (m2) return { contestId: m2[1], pid: m2[2] }
   // 独立题目：/p/{pid}
-  const m2 = url.match(/\/p\/([a-zA-Z0-9_]+)/)
-  if (m2) return { contestId: null, pid: m2[1] }
+  const m3 = url.match(/\/p\/([a-zA-Z0-9_]+)/)
+  if (m3) return { contestId: null, pid: m3[1] }
   return null
 }
 
@@ -184,7 +187,7 @@ export async function fetchHydroNflsoiContest(url) {
         label: String.fromCharCode(65 + i),
         title: pdoc.title || `Problem ${i + 1}`,
         taskId: String(pid),
-        url: `${BASE}/contest/${contestId}/problem/${pid}`,
+        url: `${BASE}/p/${pid}?tid=${contestId}`,
       }
     })
     if (problems.length > 0) {
@@ -196,8 +199,8 @@ export async function fetchHydroNflsoiContest(url) {
     }
   }
 
-  // HTML 降级解析
-  const html = await hydroGet(`/contest/${contestId}`)
+  // HTML 降级解析（从 /contest/{id}/problems 抓取题目链接）
+  const html = await hydroGet(`/contest/${contestId}/problems`)
   const $ = load(html)
 
   const contestTitle =
@@ -205,22 +208,22 @@ export async function fetchHydroNflsoiContest(url) {
     $('title').text().split('-')[0].trim() ||
     `Contest ${contestId}`
 
+  // Hydro OJ 比赛题目链接格式：href="/p/{pid}?tid={contestId}"
   const problems = []
-  $('table tbody tr').each((i, row) => {
-    const cells = $(row).find('td')
-    if (cells.length < 2) return
-    const label = $(cells[0]).text().trim()
-    const titleA = $(cells[1]).find('a')
-    const title = titleA.text().trim() || $(cells[1]).text().trim()
-    const href = titleA.attr('href') || ''
-    if (!title) return
-    const pidMatch = href.match(/\/problem\/([a-zA-Z0-9_]+)/)
-    const pid = pidMatch ? pidMatch[1] : `p${i + 1}`
+  const seen = new Set()
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || ''
+    const m = href.match(/^\/p\/([a-zA-Z0-9_]+)\?tid=([a-zA-Z0-9]+)$/)
+    if (!m) return
+    const pid = m[1]
+    if (seen.has(pid)) return
+    seen.add(pid)
+    const title = $(el).text().trim() || pid
     problems.push({
-      label: label || String.fromCharCode(65 + i),
+      label: String.fromCharCode(65 + problems.length),
       title,
       taskId: pid,
-      url: href.startsWith('http') ? href : `${BASE}${href}`,
+      url: `${BASE}${href}`,
     })
   })
 
@@ -233,9 +236,9 @@ export async function fetchHydroNflsoiContest(url) {
  */
 export async function fetchHydroNflsoiProblem(url) {
   const ids = parseProblemIds(url)
-  if (!ids) throw new Error('无法从 URL 中解析题目地址，格式应为 /contest/{id}/problem/{pid} 或 /p/{pid}')
+  if (!ids) throw new Error('无法从 URL 中解析题目地址，格式应为 /p/{pid}?tid={contestId} 或 /p/{pid}')
   const { contestId, pid } = ids
-  const apiPath = contestId ? `/contest/${contestId}/problem/${pid}` : `/p/${pid}`
+  const apiPath = contestId ? `/p/${pid}?tid=${contestId}` : `/p/${pid}`
 
   // HTML 解析（此 Hydro 实例不支持 ?json=1 API）
   const html = await hydroGet(apiPath)
