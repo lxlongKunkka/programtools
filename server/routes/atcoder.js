@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
-import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem } from './hydro_nflsoi.js'
+import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem, fetchHydroNflsoiProblemBank } from './hydro_nflsoi.js'
 
 const router = express.Router()
 
@@ -63,7 +63,14 @@ router.get('/contest', authenticateToken, async (req, res) => {
     if (platform === 'codeforces') return res.json(await fetchCodeforcesContest(url))
     if (platform === 'htoj') return res.json(await fetchHtojContest(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojContest(url))
-    if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiContest(url))
+    if (platform === 'hydro_nflsoi') {
+      // /p（无具体 pid）为题库批量列表，/contest/{id} 为比赛
+      const parsedUrl = new URL(url)
+      if (/^\/p\/?$/.test(parsedUrl.pathname)) {
+        return res.json(await fetchHydroNflsoiProblemBank(url))
+      }
+      return res.json(await fetchHydroNflsoiContest(url))
+    }
     return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ / Hydro OJ' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
