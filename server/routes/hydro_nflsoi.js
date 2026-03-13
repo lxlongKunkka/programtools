@@ -51,10 +51,10 @@ async function fetchContestZipCodes(contestId) {
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir) continue
     // 匹配 _P{pid}_ 部分（pid 可能是数字或字母数字）
-    const m = name.match(/_P([a-zA-Z0-9]+)_R[a-f0-9]+_S(\d+)@/)
+    const m = name.match(/_P([a-zA-Z0-9]+)_R[a-f0-9]+_S\d+@(\d+)/)
     if (!m) continue
     const pidKey = m[1]          // 如 "5510"
-    const score = parseInt(m[2]) // 如 100
+    const score = parseInt(m[2]) // @后面才是真正的分数，如 S1@100 → 100
     const existing = best.get(pidKey)
     if (existing && existing.score >= score) continue
     const code = await file.async('string')
