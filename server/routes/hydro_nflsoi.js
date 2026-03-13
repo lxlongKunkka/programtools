@@ -321,7 +321,7 @@ async function fetchHydroNflsoiAcCode(contestId, pid) {
           console.log(`[hydro-nflsoi] zip 获取到 AC 代码 pid=${pid} len=${cleaned.length}`)
           return cleaned
         }
-        console.log(`[hydro-nflsoi] zip 中无 pid=${pid} 的提交`)
+        console.log(`[hydro-nflsoi] zip 中无 pid=${pid}(key=${pidKey}) 的提交，codeMap keys: [${[...codeMap.keys()].join(',')}]`)
       }
     } catch (e) {
       console.warn('[hydro-nflsoi] zip 获取失败，降级至记录列表:', e.message)
