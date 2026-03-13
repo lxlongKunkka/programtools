@@ -116,8 +116,8 @@ async function hydroGet(urlPath) {
     timeout: 15000,
   })
   if (r.status === 403) throw new Error('Hydro OJ access denied (403), check account permissions')
-  if (r.status === 404) throw new Error(`Hydro OJ ?????????404?? ${urlPath}`)
-  if (r.status >= 400) throw new Error(`Hydro OJ ????????TTP ${r.status}`)
+  if (r.status === 404) throw new Error(`Hydro OJ page not found (404): ${urlPath}`)
+  if (r.status >= 400) throw new Error(`Hydro OJ request failed, HTTP ${r.status}`)
   return r.data
 }
 
