@@ -20,6 +20,7 @@ let sessionExpireAt = 0  // Unix ms
 
 // ─── 比赛代码 ZIP 缓存（contestId → Map<pid, code>）─────────────────────────
 const zipCodeCache = new Map()
+const zipRawNamesCache = new Map() // contestId → 全部文件名（调试用）
 
 /**
  * 下载比赛代码 zip（/contest/{id}/code），解析所有文件，按 pid 取最高分提交。
