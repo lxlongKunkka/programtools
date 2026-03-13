@@ -416,11 +416,19 @@ export default {
                     const isMatch = isCurrent(key) || isCurrent(data.chapterId)
                     
                     if (isMatch) {
+                            // For PPT tasks: backend sends back resourceUrl + real chapterId
+                            // Correct editingChapter._id if backend found a different chapter (title fallback)
+                            if (data.type === 'ppt' && data.chapterId && String(data.chapterId) !== String(this.editingChapter._id)) {
+                                console.log(`[ai_task_complete] Correcting editingChapter._id from ${this.editingChapter._id} to ${data.chapterId}`)
+                                this.editingChapter._id = data.chapterId
+                                if (this.selectedNode) this.selectedNode = { type: 'chapter', id: data.chapterId }
+                            }
+
                             // Optimistic update from event data
                             if (data.resourceUrl) {
                                 this.editingChapter.resourceUrl = data.resourceUrl
                                 this.editingChapter.contentType = 'html'
-                                this.updateChapterInTree(data.chapterId, { 
+                                this.updateChapterInTree(data.chapterId || key, { 
                                     contentType: 'html',
                                     resourceUrl: data.resourceUrl
                                 })

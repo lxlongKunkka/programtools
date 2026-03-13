@@ -2867,6 +2867,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                           clientKey,
                           type: 'ppt',
                           status: 'success',
+                          resourceUrl: relativePath,
                           message: 'PPT 生成完成'
                       });
                   } catch (updateErr) {
@@ -2878,6 +2879,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                           clientKey,
                           type: 'ppt',
                           status: 'success',
+                          resourceUrl: relativePath,
                           message: 'PPT 生成完成'
                       });
                   }
