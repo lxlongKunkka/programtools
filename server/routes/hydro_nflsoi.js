@@ -144,9 +144,21 @@ function parseContestId(url) {
 }
 
 function parseProblemIds(url) {
-  const m = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
-  if (m) return { contestId: m[1], pid: m[2] }
+  // 比赛题目（Hydro 实际格式）：/p/{pid}?tid={contestId}
+  const m1 = url.match(/\/p\/([a-zA-Z0-9_]+)[^?]*[?&]tid=([a-zA-Z0-9]+)/)
+  if (m1) return { pid: m1[1], contestId: m1[2] }
+  // 旧格式兼容：/contest/{contestId}/problem/{pid}
+  const m2 = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
+  if (m2) return { contestId: m2[1], pid: m2[2] }
+  // 独立题目：/p/{pid}
+  const m3 = url.match(/\/p\/([a-zA-Z0-9_]+)/)
+  if (m3) return { contestId: null, pid: m3[1] }
   return null
+}
+
+/** 判断 URL 是否为题库（/p 列表页，不含具体 pid） */
+function isProblemBank(url) {
+  return /\/p(?:\?.*)?$/.test(new URL(url).pathname)
 }
 
 // ─── 核心抓取函数 ─────────────────────────────────────────────────────────────
@@ -158,7 +170,8 @@ export async function fetchHydroNflsoiContest(url) {
   const contestId = parseContestId(url)
   if (!contestId) throw new Error('无法从 URL 中解析 Hydro OJ 比赛 ID')
 
-  // 直接 HTML 解析 /contest/{id}/problems，该页面包含标签信息
+  // 直接 HTML 解析（/contest/{id}/problems），以便同时获取标签信息
+  // HTML 降级解析（从 /contest/{id}/problems 抓取题目链接）
   const html = await hydroGet(`/contest/${contestId}/problems`)
   const $ = load(html)
 
@@ -167,20 +180,21 @@ export async function fetchHydroNflsoiContest(url) {
     $('title').text().split('-')[0].trim() ||
     `Contest ${contestId}`
 
+  // Hydro OJ 比赛题目链接格式：href="/p/{pid}?tid={contestId}"
   const problems = []
   const seen = new Set()
   $('a[href]').each((_, el) => {
     const href = $(el).attr('href') || ''
-    // 匹配 /p/{pid}?tid={contestId} 或 /contest/{id}/problem/{pid}
-    const m1 = href.match(/\/p\/([a-zA-Z0-9_]+)[^?]*[?&]tid=([a-zA-Z0-9]+)/)
-    const m2 = href.match(/\/contest\/[a-zA-Z0-9]+\/problem\/([a-zA-Z0-9_]+)/)
-    const pid = m1 ? m1[1] : (m2 ? m2[1] : null)
-    if (!pid || seen.has(pid)) return
+    const m = href.match(/^\/p\/([a-zA-Z0-9_]+)\?tid=([a-zA-Z0-9]+)$/)
+    if (!m) return
+    const pid = m[1]
+    if (seen.has(pid)) return
     seen.add(pid)
-
+    // 获取标题：<b>A</b>&nbsp;&nbsp;Pie Progress → 去掉 <b> 标签
     const $a = $(el)
     $a.find('b').remove()
     const title = $a.text().replace(/\s+/g, ' ').trim() || pid
+    // 获取同一行的标签：紧随 <a> 的 ul.problem__tags
     const $td = $a.closest('td')
     const tags = []
     $td.find('a.problem__tag-link').each((_, tagEl) => {
@@ -191,7 +205,7 @@ export async function fetchHydroNflsoiContest(url) {
       label: String.fromCharCode(65 + problems.length),
       title,
       taskId: pid,
-      url: `${BASE}/contest/${contestId}/problem/${pid}`,
+      url: `${BASE}${href}`,
       tags,
     })
   })
@@ -205,54 +219,11 @@ export async function fetchHydroNflsoiContest(url) {
  */
 export async function fetchHydroNflsoiProblem(url) {
   const ids = parseProblemIds(url)
-  if (!ids) throw new Error('无法从 URL 中解析题目地址，格式应为 /contest/{id}/problem/{pid}')
+  if (!ids) throw new Error('无法从 URL 中解析题目地址，格式应为 /p/{pid}?tid={contestId} 或 /p/{pid}')
   const { contestId, pid } = ids
-  const apiPath = `/contest/${contestId}/problem/${pid}`
+  const apiPath = contestId ? `/p/${pid}?tid=${contestId}` : `/p/${pid}`
 
-  // 优先 JSON API：Hydro 的 pdoc.content 是原始 Markdown，质量最高
-  let data
-  try {
-    data = await hydroGetJson(apiPath)
-  } catch (e) {
-    console.warn('[hydro-nflsoi] JSON API 失败，降级至 HTML 解析:', e.message)
-  }
-
-  if (data?.pdoc) {
-    const { pdoc } = data
-    const title = pdoc.title || pid
-    let content = pdoc.content || ''
-
-    // Hydro content 有两种格式：
-    //   1. 纯 Markdown 字符串
-    //   2. JSON 对象 {"zh": "...", "en": "..."}（多语言）
-    if (typeof content === 'string' && content.trimStart().startsWith('{')) {
-      try {
-        const obj = JSON.parse(content)
-        content = obj.zh || obj['zh-CN'] || obj.default || obj.en || Object.values(obj)[0] || ''
-      } catch {}
-    }
-
-    if (content) {
-      const cfg = pdoc.config || {}
-      const limits = [
-        cfg.time ? `**时间限制**: ${cfg.time}ms` : '',
-        cfg.memory ? `**内存限制**: ${cfg.memory}MB` : '',
-      ].filter(Boolean).join(' / ')
-      const fullContent = `# ${title}\n\n${limits ? `> ${limits}\n\n` : ''}${content}`
-
-      let acCode = ''
-      try {
-        const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
-        acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid, contestId), timeout])
-      } catch (e) {
-        console.warn('[hydro-nflsoi] AC code skipped:', e.message)
-      }
-
-      return { title, content: fullContent, url, acCode }
-    }
-  }
-
-  // HTML 降级解析
+  // HTML 解析（此 Hydro 实例不支持 ?json=1 API）
   const html = await hydroGet(apiPath)
   const $ = load(html)
 
@@ -266,7 +237,7 @@ export async function fetchHydroNflsoiProblem(url) {
   let acCode = ''
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
-    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid, contestId), timeout])
+    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid), timeout])
   } catch (e) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
@@ -277,60 +248,115 @@ export async function fetchHydroNflsoiProblem(url) {
 // ─── AC 代码抓取 ─────────────────────────────────────────────────────────────
 
 /**
- * 从 Hydro OJ 比赛中获取指定题目的一份 AC C++ 代码
+ * 从 Hydro OJ 获取指定题目的一份 AC C++ 代码（HTML 爬取，该实例不支持 ?json=1）
  *
- * Hydro API:
- *   GET /record?json=1&tid={tid}&pid={pid}&status=1
- *   → rdocs[]: [{ _id, lang, ... }]
- *
- *   GET /record/{recordId}?json=1
- *   → rdoc.code: 源码字符串
+ * 流程：
+ *   1. GET /record?pid={pid}&status=1[&tid={tid}]  → HTML，解析 href="/record/{hex}"
+ *   2. GET /record/{hex}  → HTML，从 <pre><code> 中提取代码
  *
  * status=1 = Accepted（Hydro 约定）
- * lang 优先选 C++（cc / c++／cpp 等包含 c 的关键词）
  */
-async function fetchHydroNflsoiAcCode(contestId, pid, tid) {
-  console.log(`[hydro-nflsoi] 查询 AC 提交 tid=${tid} pid=${pid}`)
+async function fetchHydroNflsoiAcCode(contestId, pid) {
+  console.log(`[hydro-nflsoi] 查询 AC 提交 contestId=${contestId} pid=${pid}`)
 
-  // Hydro 的 /record 列表接口支持 json=1，返回 { rdocs: [...], ... }
-  let rdocs = []
+  // 构造记录列表 URL
+  let listPath = `/record?pid=${encodeURIComponent(pid)}&status=1`
+  if (contestId) listPath += `&tid=${encodeURIComponent(contestId)}`
+
+  let listHtml
   try {
-    const data = await hydroGetJson(`/record?tid=${encodeURIComponent(tid)}&pid=${encodeURIComponent(pid)}&status=1`)
-    rdocs = data?.rdocs || []
-    console.log(`[hydro-nflsoi] AC 提交数量: ${rdocs.length}`)
+    listHtml = await hydroGet(listPath)
   } catch (e) {
     console.warn('[hydro-nflsoi] 查询提交列表失败:', e.message)
     return ''
   }
 
-  if (!rdocs.length) return ''
-
-  // 优先选 C++ 提交（lang 字段通常为 'cc' / 'cc.cc17' / 'c++' 等）
-  const sorted = [...rdocs].sort((a, b) => {
-    const aC = /^c[c+]/i.test(a.lang || '') ? -1 : 1
-    const bC = /^c[c+]/i.test(b.lang || '') ? -1 : 1
-    return aC - bC
-  })
+  // 从 HTML 中提取记录 href
+  const hrefMatches = [...listHtml.matchAll(/href="(\/record\/[a-f0-9]+)"/g)]
+  const hrefs = hrefMatches.map(m => m[1])
+  console.log(`[hydro-nflsoi] AC 提交链接数量: ${hrefs.length}`)
+  if (!hrefs.length) return ''
 
   // 尝试前3条，取第一条能拿到代码的
-  for (const rdoc of sorted.slice(0, 3)) {
-    const rid = rdoc._id || rdoc.id
-    if (!rid) continue
+  for (const href of hrefs.slice(0, 3)) {
     try {
-      const detail = await hydroGetJson(`/record/${rid}`)
-      const code = detail?.rdoc?.code || ''
-      if (code) {
-        // 去掉常见文件重定向行（freopen）
+      const detailHtml = await hydroGet(href)
+      const $d = load(detailHtml)
+      // 代码在 <pre><code class="language-..."> 中，cheerio .text() 自动 HTML 反转义
+      const code = $d('pre code').first().text().trim()
+      if (code && code.length > 10) {
         const cleaned = code.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '')
-        console.log(`[hydro-nflsoi] 获取到 AC 代码 rid=${rid} lang=${rdoc.lang} len=${cleaned.length}`)
+        console.log(`[hydro-nflsoi] 获取到 AC 代码 href=${href} len=${cleaned.length}`)
         return cleaned
       }
     } catch (e) {
-      console.warn(`[hydro-nflsoi] 获取提交详情失败 rid=${rid}:`, e.message)
+      console.warn(`[hydro-nflsoi] 获取提交详情失败 ${href}:`, e.message)
     }
   }
 
   return ''
+}
+
+// ─── 题库批量获取 ─────────────────────────────────────────────────────────────
+
+/**
+ * 抓取 Hydro OJ 题库（/p）所有题目列表（多页）
+ * 返回格式与 fetchHydroNflsoiContest 相同，便于前端统一渲染
+ */
+export async function fetchHydroNflsoiProblemBank(url) {
+  const problems = []
+  let page = 1
+  let maxPage = 1
+
+  while (page <= maxPage) {
+    const html = await hydroGet(`/p?page=${page}`)
+    const $ = load(html)
+
+    // 解析题目链接：href="/p/{pid}"
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href') || ''
+      const m = href.match(/^\/p\/([a-zA-Z0-9_]+)$/)
+      if (!m) return
+      const pid = m[1]
+      if (problems.some(p => p.taskId === pid)) return  // 去重
+      // 获取标题（去掉粗体 pid 前缀）
+      const $a = $(el)
+      $a.find('b').remove()
+      const title = $a.text().replace(/\s+/g, ' ').trim() || pid
+      // 获取同一格里的标签
+      const $td = $a.closest('td')
+      const tags = []
+      $td.find('a.problem__tag-link').each((_, tagEl) => {
+        const t = $(tagEl).text().trim()
+        if (t) tags.push(t)
+      })
+      problems.push({
+        label: String(problems.length + 1),
+        title,
+        taskId: pid,
+        url: `${BASE}/p/${pid}`,
+        tags,
+      })
+    })
+
+    // 首页解析总页数（查找分页导航中最大页码）
+    if (page === 1) {
+      const pageNums = [...$('a[href]').map((_, el) => {
+        const m = ($(el).attr('href') || '').match(/[?&]page=(\d+)/)
+        return m ? parseInt(m[1]) : 0
+      }).get()]
+      maxPage = Math.max(1, ...pageNums)
+      console.log(`[hydro-nflsoi] 题库共 ${maxPage} 页`)
+    }
+    page++
+  }
+
+  if (!problems.length) throw new Error('未找到题目，题库可能为空或无权访问')
+  return {
+    contestId: 'problem_bank',
+    contestTitle: 'NFLSOI 题库',
+    problems,
+  }
 }
 
 // ─── HTML → Markdown 转换 ─────────────────────────────────────────────────────
