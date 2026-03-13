@@ -284,10 +284,20 @@ export async function fetchHydroNflsoiProblem(url) {
 
   const content = parseHydroHTML($, title)
 
+  // 从页面提取真实数字 pid（P13075 是别名，zip 里存的是真实 id 如 5449）
+  // 提交链接格式：/p/{realPid}/submit 或 /p/{realPid}?tid=...
+  const realPid =
+    $('a[href]').toArray().map(el => $(el).attr('href'))
+      .map(h => h?.match(/\/p\/(\d+)(?:\/|\?|$)/)?.[1])
+      .find(Boolean) || pid
+  if (realPid !== pid) {
+    console.log('[hydro-nflsoi] 解析到真实 pid: ' + pid + ' -> ' + realPid)
+  }
+
   let acCode = ''
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
-    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid), timeout])
+    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, realPid), timeout])
   } catch (e) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
