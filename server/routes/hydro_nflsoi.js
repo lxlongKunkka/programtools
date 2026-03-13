@@ -1,10 +1,10 @@
 /**
  * server/routes/hydro_nflsoi.js
- * nflsoi.cc:10611?????Hydro ???????????????
+ * nflsoi.cc:10611（基于 Hydro 框架）比赛与题目抓取
  *
- * URL ???:
- *   ???:  http://nflsoi.cc:10611/contest/{contestId}
- *   ???:  http://nflsoi.cc:10611/contest/{contestId}/problem/{pid}
+ * URL 格式:
+ *   比赛:  http://nflsoi.cc:10611/contest/{contestId}
+ *   题目:  http://nflsoi.cc:10611/contest/{contestId}/problem/{pid}
  */
 
 import axios from 'axios'
@@ -13,20 +13,20 @@ import { HYDRO_NFLSOI_USER, HYDRO_NFLSOI_PWD } from '../config.js'
 
 const BASE = 'http://nflsoi.cc:10611'
 
-// ?????? Session ?????ydro ??? sid cookie?????????????????????????????????????????????????????????????????????????
+// ─── Session 缓存（Hydro 使用 sid cookie）────────────────────────────────────
 let cachedCookies = ''
 let sessionExpireAt = 0  // Unix ms
 
-/** ????????session cookie */
+/** 登录并缓存 session cookie */
 async function getSession() {
   const now = Date.now()
   if (cachedCookies && now < sessionExpireAt) return cachedCookies
 
   if (!HYDRO_NFLSOI_USER || !HYDRO_NFLSOI_PWD) {
-    throw new Error('Missing HYDRO_NFLSOI_USER / HYDRO_NFLSOI_PWD, please configure in server/.env')
+    throw new Error('未配置 HYDRO_NFLSOI_USER / HYDRO_NFLSOI_PWD，请在 server/.env 中配置')
   }
 
-  // Step 1: ???????????? CSRF Token?????Hydro ????????
+  // Step 1: 获取登录页，提取 CSRF Token（部分 Hydro 版本需要）
   let csrfToken = ''
   let loginPageCookies = ''
   try {
@@ -49,10 +49,10 @@ async function getSession() {
       if (m) csrfToken = m[1]
     }
   } catch (e) {
-    console.warn('[hydro-nflsoi] ?????????????????????:', e.message)
+    console.warn('[hydro-nflsoi] 获取登录页失败，继续尝试登录:', e.message)
   }
 
-  // Step 2: POST ???
+  // Step 2: POST 登录
   const formFields = { uname: HYDRO_NFLSOI_USER, password: HYDRO_NFLSOI_PWD }
   if (csrfToken) formFields.csrf_token = csrfToken
 
@@ -72,15 +72,15 @@ async function getSession() {
 
   const setCookies = r.headers['set-cookie'] || []
   if (!setCookies.length) {
-    // Hydro ??????????????200 + JSON ?????token
+    // Hydro 有时在登录成功后以 200 + JSON 返回新 token
     const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data)
-    if (body.includes('"error"') || body.includes('???')) {
-      throw new Error('Hydro OJ login failed: wrong credentials or account locked')
+    if (body.includes('"error"') || body.includes('错误')) {
+      throw new Error('Hydro OJ 登录失败：用户名或密码错误')
     }
-    throw new Error('Hydro OJ ???????????? session cookie')
+    throw new Error('Hydro OJ 登录失败：未收到 session cookie')
   }
 
-  // ???????????cookie??ydro ?????session ??CSRF cookie ?????????
+  // 合并登录前后的 cookie（Hydro 可能将 session 和 CSRF cookie 分两次下发）
   const allCookieMap = new Map()
   ;[loginPageCookies, ...setCookies.map(c => c.split(';')[0])]
     .filter(Boolean)
@@ -89,12 +89,12 @@ async function getSession() {
       if (k && v !== undefined) allCookieMap.set(k.trim(), v.trim())
     })
   cachedCookies = [...allCookieMap.entries()].map(([k, v]) => `${k}=${v}`).join('; ')
-  sessionExpireAt = now + 4 * 60 * 60 * 1000  // ??? 4 ???
-  console.log('[hydro-nflsoi] login success, session cached')
+  sessionExpireAt = now + 4 * 60 * 60 * 1000  // 缓存 4 小时
+  console.log('[hydro-nflsoi] 登录成功，session 已缓存')
   return cachedCookies
 }
 
-/** ???????Headers */
+/** 构造请求 Headers */
 function makeHeaders(cookies, extra = {}) {
   return {
     Cookie: cookies,
@@ -105,7 +105,7 @@ function makeHeaders(cookies, extra = {}) {
   }
 }
 
-/** ??? HTML ????????? session??/
+/** 通用 HTML 请求（自动带 session）*/
 async function hydroGet(urlPath) {
   const cookies = await getSession()
   const r = await axios.get(BASE + urlPath, {
@@ -115,14 +115,28 @@ async function hydroGet(urlPath) {
     validateStatus: s => s < 600,
     timeout: 15000,
   })
-  if (r.status === 403) throw new Error('Hydro OJ access denied (403), check account permissions')
-  if (r.status === 404) throw new Error(`Hydro OJ page not found (404): ${urlPath}`)
-  if (r.status >= 400) throw new Error(`Hydro OJ request failed, HTTP ${r.status}`)
+  if (r.status === 403) throw new Error('Hydro OJ 无权访问（403），请检查账号权限')
+  if (r.status === 404) throw new Error(`Hydro OJ 页面不存在（404）: ${urlPath}`)
+  if (r.status >= 400) throw new Error(`Hydro OJ 请求失败，HTTP ${r.status}`)
   return r.data
 }
 
+/** JSON API 请求（Hydro 支持 ?json=1 返回 JSON）*/
+async function hydroGetJson(urlPath) {
+  const cookies = await getSession()
+  const sep = urlPath.includes('?') ? '&' : '?'
+  const r = await axios.get(BASE + urlPath + sep + 'json=1', {
+    headers: makeHeaders(cookies, { Accept: 'application/json, */*' }),
+    validateStatus: s => s < 600,
+    timeout: 15000,
+  })
+  if (r.status === 403) throw new Error('Hydro OJ 无权访问（403）')
+  if (r.status === 404) throw new Error(`Hydro OJ 页面不存在（404）: ${urlPath}`)
+  if (r.status >= 400) throw new Error(`Hydro OJ 请求失败，HTTP ${r.status}`)
+  return typeof r.data === 'string' ? JSON.parse(r.data) : r.data
+}
 
-// ?????? URL ??? ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+// ─── URL 解析 ─────────────────────────────────────────────────────────────────
 
 function parseContestId(url) {
   const m = url.match(/\/contest\/([a-zA-Z0-9]+)/)
@@ -130,32 +144,21 @@ function parseContestId(url) {
 }
 
 function parseProblemIds(url) {
-  // ????????ydro ?????????/p/{pid}?tid={contestId}
-  const m1 = url.match(/\/p\/([a-zA-Z0-9_]+)[^?]*[?&]tid=([a-zA-Z0-9]+)/)
-  if (m1) return { pid: m1[1], contestId: m1[2] }
-  // ?????????/contest/{contestId}/problem/{pid}
-  const m2 = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
-  if (m2) return { contestId: m2[1], pid: m2[2] }
-  // ????????p/{pid}
-  const m3 = url.match(/\/p\/([a-zA-Z0-9_]+)/)
-  if (m3) return { contestId: null, pid: m3[1] }
+  const m = url.match(/\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
+  if (m) return { contestId: m[1], pid: m[2] }
   return null
 }
 
-/** ??? URL ?????????/p ???????????? pid??*/
-function isProblemBank(url) {
-  return /\/p(?:\?.*)?$/.test(new URL(url).pathname)
-}
-
-// ?????? ????????? ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+// ─── 核心抓取函数 ─────────────────────────────────────────────────────────────
 
 /**
- * ??? Hydro OJ ?????????????? */
+ * 抓取 Hydro OJ 比赛信息和题目列表
+ */
 export async function fetchHydroNflsoiContest(url) {
   const contestId = parseContestId(url)
-  if (!contestId) throw new Error('?????URL ?????Hydro OJ ??? ID')
+  if (!contestId) throw new Error('无法从 URL 中解析 Hydro OJ 比赛 ID')
 
-  // ?????? JSON API??ydro ??? ?json=1???????????  // 直接 HTML 解析（/contest/{id}/problems），同时获取标签信息
+  // 直接 HTML 解析 /contest/{id}/problems，该页面包含标签信息
   const html = await hydroGet(`/contest/${contestId}/problems`)
   const $ = load(html)
 
@@ -164,21 +167,20 @@ export async function fetchHydroNflsoiContest(url) {
     $('title').text().split('-')[0].trim() ||
     `Contest ${contestId}`
 
-  // Hydro OJ ??????????????ref="/p/{pid}?tid={contestId}"
   const problems = []
   const seen = new Set()
   $('a[href]').each((_, el) => {
     const href = $(el).attr('href') || ''
-    const m = href.match(/^\/p\/([a-zA-Z0-9_]+)\?tid=([a-zA-Z0-9]+)$/)
-    if (!m) return
-    const pid = m[1]
-    if (seen.has(pid)) return
+    // 匹配 /p/{pid}?tid={contestId} 或 /contest/{id}/problem/{pid}
+    const m1 = href.match(/\/p\/([a-zA-Z0-9_]+)[^?]*[?&]tid=([a-zA-Z0-9]+)/)
+    const m2 = href.match(/\/contest\/[a-zA-Z0-9]+\/problem\/([a-zA-Z0-9_]+)/)
+    const pid = m1 ? m1[1] : (m2 ? m2[1] : null)
+    if (!pid || seen.has(pid)) return
     seen.add(pid)
-    // ????????b>A</b>&nbsp;&nbsp;Pie Progress ????? <b> ???
+
     const $a = $(el)
     $a.find('b').remove()
     const title = $a.text().replace(/\s+/g, ' ').trim() || pid
-    // ?????????????????<a> ??ul.problem__tags
     const $td = $a.closest('td')
     const tags = []
     $td.find('a.problem__tag-link').each((_, tagEl) => {
@@ -189,25 +191,69 @@ export async function fetchHydroNflsoiContest(url) {
       label: String.fromCharCode(65 + problems.length),
       title,
       taskId: pid,
-      url: `${BASE}${href}`,
+      url: `${BASE}/contest/${contestId}/problem/${pid}`,
       tags,
     })
   })
 
-  if (problems.length === 0) throw new Error('??????????????????????????????')
+  if (problems.length === 0) throw new Error('未找到题目列表，比赛可能不存在或无权访问')
   return { contestId, contestTitle, problems }
 }
 
 /**
- * ??? Hydro OJ ?????????
+ * 抓取 Hydro OJ 题目完整内容
  */
 export async function fetchHydroNflsoiProblem(url) {
   const ids = parseProblemIds(url)
-  if (!ids) throw new Error('?????URL ???????????????????/p/{pid}?tid={contestId} ??/p/{pid}')
+  if (!ids) throw new Error('无法从 URL 中解析题目地址，格式应为 /contest/{id}/problem/{pid}')
   const { contestId, pid } = ids
-  const apiPath = contestId ? `/p/${pid}?tid=${contestId}` : `/p/${pid}`
+  const apiPath = `/contest/${contestId}/problem/${pid}`
 
-  // HTML ?????? Hydro ?????????json=1 API??  const html = await hydroGet(apiPath)
+  // 优先 JSON API：Hydro 的 pdoc.content 是原始 Markdown，质量最高
+  let data
+  try {
+    data = await hydroGetJson(apiPath)
+  } catch (e) {
+    console.warn('[hydro-nflsoi] JSON API 失败，降级至 HTML 解析:', e.message)
+  }
+
+  if (data?.pdoc) {
+    const { pdoc } = data
+    const title = pdoc.title || pid
+    let content = pdoc.content || ''
+
+    // Hydro content 有两种格式：
+    //   1. 纯 Markdown 字符串
+    //   2. JSON 对象 {"zh": "...", "en": "..."}（多语言）
+    if (typeof content === 'string' && content.trimStart().startsWith('{')) {
+      try {
+        const obj = JSON.parse(content)
+        content = obj.zh || obj['zh-CN'] || obj.default || obj.en || Object.values(obj)[0] || ''
+      } catch {}
+    }
+
+    if (content) {
+      const cfg = pdoc.config || {}
+      const limits = [
+        cfg.time ? `**时间限制**: ${cfg.time}ms` : '',
+        cfg.memory ? `**内存限制**: ${cfg.memory}MB` : '',
+      ].filter(Boolean).join(' / ')
+      const fullContent = `# ${title}\n\n${limits ? `> ${limits}\n\n` : ''}${content}`
+
+      let acCode = ''
+      try {
+        const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
+        acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid, contestId), timeout])
+      } catch (e) {
+        console.warn('[hydro-nflsoi] AC code skipped:', e.message)
+      }
+
+      return { title, content: fullContent, url, acCode }
+    }
+  }
+
+  // HTML 降级解析
+  const html = await hydroGet(apiPath)
   const $ = load(html)
 
   const title =
@@ -220,7 +266,7 @@ export async function fetchHydroNflsoiProblem(url) {
   let acCode = ''
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
-    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid), timeout])
+    acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, pid, contestId), timeout])
   } catch (e) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
@@ -228,117 +274,73 @@ export async function fetchHydroNflsoiProblem(url) {
   return { title, content, url, acCode }
 }
 
-// ?????? AC ?????? ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+// ─── AC 代码抓取 ─────────────────────────────────────────────────────────────
 
+/**
+ * 从 Hydro OJ 比赛中获取指定题目的一份 AC C++ 代码
+ *
+ * Hydro API:
+ *   GET /record?json=1&tid={tid}&pid={pid}&status=1
+ *   → rdocs[]: [{ _id, lang, ... }]
+ *
+ *   GET /record/{recordId}?json=1
+ *   → rdoc.code: 源码字符串
+ *
+ * status=1 = Accepted（Hydro 约定）
+ * lang 优先选 C++（cc / c++／cpp 等包含 c 的关键词）
+ */
+async function fetchHydroNflsoiAcCode(contestId, pid, tid) {
+  console.log(`[hydro-nflsoi] 查询 AC 提交 tid=${tid} pid=${pid}`)
 
-// Fetch AC code for a problem by scraping /record?pid=...&status=1 (HTML)
-async function fetchHydroNflsoiAcCode(contestId, pid) {
-  console.log(`[hydro-nflsoi] ??? AC ??? contestId=${contestId} pid=${pid}`)
-
-  // ??????????URL
-  let listPath = `/record?pid=${encodeURIComponent(pid)}&status=1`
-  if (contestId) listPath += `&tid=${encodeURIComponent(contestId)}`
-
-  let listHtml
+  // Hydro 的 /record 列表接口支持 json=1，返回 { rdocs: [...], ... }
+  let rdocs = []
   try {
-    listHtml = await hydroGet(listPath)
+    const data = await hydroGetJson(`/record?tid=${encodeURIComponent(tid)}&pid=${encodeURIComponent(pid)}&status=1`)
+    rdocs = data?.rdocs || []
+    console.log(`[hydro-nflsoi] AC 提交数量: ${rdocs.length}`)
   } catch (e) {
-    console.warn('[hydro-nflsoi] ????????????:', e.message)
+    console.warn('[hydro-nflsoi] 查询提交列表失败:', e.message)
     return ''
   }
 
-  // ??HTML ????????href
-  const hrefMatches = [...listHtml.matchAll(/href="(\/record\/[a-f0-9]+)"/g)]
-  const hrefs = hrefMatches.map(m => m[1])
-  console.log(`[hydro-nflsoi] AC ?????????: ${hrefs.length}`)
-  if (!hrefs.length) return ''
+  if (!rdocs.length) return ''
 
-  // iterate first 3 submissions
-  for (const href of hrefs.slice(0, 3)) {
+  // 优先选 C++ 提交（lang 字段通常为 'cc' / 'cc.cc17' / 'c++' 等）
+  const sorted = [...rdocs].sort((a, b) => {
+    const aC = /^c[c+]/i.test(a.lang || '') ? -1 : 1
+    const bC = /^c[c+]/i.test(b.lang || '') ? -1 : 1
+    return aC - bC
+  })
+
+  // 尝试前3条，取第一条能拿到代码的
+  for (const rdoc of sorted.slice(0, 3)) {
+    const rid = rdoc._id || rdoc.id
+    if (!rid) continue
     try {
-      const detailHtml = await hydroGet(href)
-      const $d = load(detailHtml)
-      // extract code from <pre><code>
-      const code = $d('pre code').first().text().trim()
-      if (code && code.length > 10) {
+      const detail = await hydroGetJson(`/record/${rid}`)
+      const code = detail?.rdoc?.code || ''
+      if (code) {
+        // 去掉常见文件重定向行（freopen）
         const cleaned = code.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '')
-        console.log(`[hydro-nflsoi] ?????AC ??? href=${href} len=${cleaned.length}`)
+        console.log(`[hydro-nflsoi] 获取到 AC 代码 rid=${rid} lang=${rdoc.lang} len=${cleaned.length}`)
         return cleaned
       }
     } catch (e) {
-      console.warn(`[hydro-nflsoi] ???????????? ${href}:`, e.message)
+      console.warn(`[hydro-nflsoi] 获取提交详情失败 rid=${rid}:`, e.message)
     }
   }
 
   return ''
 }
 
-// ?????? ????????? ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+// ─── HTML → Markdown 转换 ─────────────────────────────────────────────────────
 
 /**
- * ??? Hydro OJ ?????p????????????????? * ????????fetchHydroNflsoiContest ?????????????????
+ * 将 Hydro 题目页面 HTML 转换为 Markdown
+ * Hydro 使用 KaTeX 渲染公式，原始 LaTeX 在 <annotation encoding="application/x-tex"> 中
  */
-export async function fetchHydroNflsoiProblemBank(url) {
-  const problems = []
-  let page = 1
-  let maxPage = 1
-
-  while (page <= maxPage) {
-    const html = await hydroGet(`/p?page=${page}`)
-    const $ = load(html)
-
-    // ???????????ref="/p/{pid}"
-    $('a[href]').each((_, el) => {
-      const href = $(el).attr('href') || ''
-      const m = href.match(/^\/p\/([a-zA-Z0-9_]+)$/)
-      if (!m) return
-      const pid = m[1]
-      if (problems.some(p => p.taskId === pid)) return  // ???
-      // ??????????????pid ?????      const $a = $(el)
-      $a.find('b').remove()
-      const title = $a.text().replace(/\s+/g, ' ').trim() || pid
-      // ??????????????      const $td = $a.closest('td')
-      const tags = []
-      $td.find('a.problem__tag-link').each((_, tagEl) => {
-        const t = $(tagEl).text().trim()
-        if (t) tags.push(t)
-      })
-      problems.push({
-        label: String(problems.length + 1),
-        title,
-        taskId: pid,
-        url: `${BASE}/p/${pid}`,
-        tags,
-      })
-    })
-
-    // ??????????????????????????????
-    if (page === 1) {
-      const pageNums = [...$('a[href]').map((_, el) => {
-        const m = ($(el).attr('href') || '').match(/[?&]page=(\d+)/)
-        return m ? parseInt(m[1]) : 0
-      }).get()]
-      maxPage = Math.max(1, ...pageNums)
-      console.log(`[hydro-nflsoi] total pages: ${maxPage}`)
-    }
-    page++
-  }
-
-  if (!problems.length) throw new Error('No problems found in problem bank')
-  return {
-    contestId: 'problem_bank',
-    contestTitle: 'NFLSOI ???',
-    problems,
-  }
-}
-
-// ?????? HTML ??Markdown ??? ??????????????????????????????????????????????????????????????????????????????????????????????????????????
-
-/**
- * ??Hydro ?????? HTML ?????Markdown
- * Hydro ??? KaTeX ???????????LaTeX ??<annotation encoding="application/x-tex"> ?? */
 function parseHydroHTML($, title) {
-  // Hydro ?????????
+  // Hydro 题目内容容器
   let $root = $('.problem-content, .typo, .markdown-body').first()
   if (!$root.length) $root = $('main, article').first()
   if (!$root.length) return `# ${title}\n\n${$('body').text().trim()}`
@@ -349,9 +351,10 @@ function parseHydroHTML($, title) {
 
     if (el.type === 'text') return el.data || ''
 
-    // KaTeX HTML ?????????????????????????????    if (tag === 'span' && $el.hasClass('katex-html')) return ''
+    // KaTeX HTML 渲染层（渲染后视觉用，跳过以避免乱码）
+    if (tag === 'span' && $el.hasClass('katex-html')) return ''
 
-    // KaTeX ???????????<annotation> ?????? LaTeX
+    // KaTeX 公式容器：提取 <annotation> 中的原始 LaTeX
     if (tag === 'span' && ($el.hasClass('katex') || $el.hasClass('katex-display'))) {
       const isDisplay = $el.hasClass('katex-display') || $el.closest('.katex-display').length > 0
       const latex = $el.find('annotation[encoding="application/x-tex"]').first().text().trim()
@@ -399,7 +402,7 @@ function parseHydroHTML($, title) {
       const fullSrc = src.startsWith('/') ? BASE + src : src
       return `\n![${alt}](${fullSrc})\n`
     }
-    // ???????????
+    // 容器节点：递归
     return processChildren(el)
   }
 
