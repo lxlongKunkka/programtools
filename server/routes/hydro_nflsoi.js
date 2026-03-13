@@ -44,25 +44,20 @@ async function fetchContestZipCodes(contestId) {
 
   const zip = await JSZip.loadAsync(r.data)
 
-  // 按 pid 收集最高分提交：filename → U{uid}_P{pid}_R{rid}_S{score}@{rank}...
-  // pid 在 zip 中为纯数字（如 P5510 → key 5510），taskId 存的是 P5510，匹配时去 P 前缀
-  const best = new Map()  // pidKey → { score, code }
+  // 只收集 AC 提交（S1 = Accepted）：filename → U{uid}_P{pid}_R{rid}_S1@{score}.{lang}...
+  const codeMap = new Map()  // pidKey → code
+
+  const allNames = Object.keys(zip.files).filter(n => !zip.files[n].dir)
+  console.log(`[hydro-nflsoi] zip 文件列表 contestId=${contestId}:\n` + allNames.join('\n'))
 
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir) continue
-    // 匹配 _P{pid}_ 部分（pid 可能是数字或字母数字）
-    const m = name.match(/_P([a-zA-Z0-9]+)_R[a-f0-9]+_S\d+@(\d+)/)
+    // 只处理 AC（S1）提交，格式：U{uid}_P{pid}_R{rid}_S1@{score}.{lang}.{langid}
+    const m = name.match(/_P([a-zA-Z0-9]+)_R[0-9a-zA-Z]+_S1@/)
     if (!m) continue
-    const pidKey = m[1]          // 如 "5510"
-    const score = parseInt(m[2]) // @后面才是真正的分数，如 S1@100 → 100
-    const existing = best.get(pidKey)
-    if (existing && existing.score >= score) continue
+    const pidKey = m[1]  // 如 "479"，对应 taskId "P479" 去掉 P 前缀
+    if (codeMap.has(pidKey)) continue  // 同一题已有 AC，跳过
     const code = await file.async('string')
-    best.set(pidKey, { score, code })
-  }
-
-  const codeMap = new Map()
-  for (const [pidKey, { code }] of best) {
     codeMap.set(pidKey, code)
   }
 
