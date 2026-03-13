@@ -48,7 +48,8 @@ async function fetchContestZipCodes(contestId) {
   const codeMap = new Map()  // pidKey → code
 
   const allNames = Object.keys(zip.files).filter(n => !zip.files[n].dir)
-  console.log(`[hydro-nflsoi] zip 文件列表 contestId=${contestId}:\n` + allNames.join('\n'))
+  zipRawNamesCache.set(contestId, allNames)
+  console.log('[hydro-nflsoi] zip 文件列表 contestId=' + contestId + ':\n' + allNames.join('\n'))
 
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir) continue
@@ -291,7 +292,10 @@ export async function fetchHydroNflsoiProblem(url) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
 
-  return { title, content, url, acCode }
+  // 调试：返回 zip 文件名，方便前端 F12 查看
+  const zipFiles = contestId ? (zipRawNamesCache.get(contestId) || null) : null
+
+  return { title, content, url, acCode, zipFiles }
 }
 
 // ─── AC 代码抓取 ─────────────────────────────────────────────────────────────
