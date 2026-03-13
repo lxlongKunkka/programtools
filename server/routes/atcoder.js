@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
+import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem } from './hydro_nflsoi.js'
 
 const router = express.Router()
 
@@ -22,6 +23,7 @@ function detectPlatform(url) {
   if (/atcoder\.jp/i.test(url)) return 'atcoder'
   if (/codeforces\.com/i.test(url)) return 'codeforces'
   if (/htoj\.com\.cn/i.test(url)) return 'htoj'
+  if (/nflsoi\.cc:10611/i.test(url)) return 'hydro_nflsoi'
   if (/nflsoi\.cc/i.test(url)) return 'nflsoj'
   return 'unknown'
 }
@@ -31,7 +33,7 @@ const ALLOWED_HOSTS = [
   /^([\w-]+\.)?atcoder\.jp$/i,
   /^([\w-]+\.)?codeforces\.com$/i,
   /^([\w-]+\.)?htoj\.com\.cn$/i,
-  /^nflsoi\.cc$/i,
+  /^nflsoi\.cc$/i,  // 同时覆盖 :20035 (SYZOJ) 和 :10611 (Hydro)
 ]
 function isAllowedUrl(urlStr) {
   try {
@@ -61,7 +63,8 @@ router.get('/contest', authenticateToken, async (req, res) => {
     if (platform === 'codeforces') return res.json(await fetchCodeforcesContest(url))
     if (platform === 'htoj') return res.json(await fetchHtojContest(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojContest(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ' })
+    if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiContest(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ / Hydro OJ' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
     const code = err.response?.status
@@ -84,7 +87,8 @@ router.get('/problem', authenticateToken, async (req, res) => {
     if (platform === 'codeforces') return res.json(await fetchCodeforcesProblem(url))
     if (platform === 'htoj') return res.json(await fetchHtojProblem(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojProblem(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ' })
+    if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiProblem(url))
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / NFLSOJ / Hydro OJ' })
   } catch (err) {
     console.error(`[${platform}] problem fetch error:`, err.message)
     const code = err.response?.status

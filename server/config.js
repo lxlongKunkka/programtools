@@ -37,6 +37,10 @@ export const HTOJ_PWD = process.env.HTOJ_PWD || ''
 export const NFLSOJ_USER = process.env.NFLSOJ_USER || ''
 export const NFLSOJ_PWD = process.env.NFLSOJ_PWD || ''
 
+// Hydro OJ (nflsoi.cc:10611, Hydro 框架) 账号，用于抓取比赛题目
+export const HYDRO_NFLSOI_USER = process.env.HYDRO_NFLSOI_USER || ''
+export const HYDRO_NFLSOI_PWD = process.env.HYDRO_NFLSOI_PWD || ''
+
 // CORS 允许的源，生产环境应在 .env 中配置；未配置则不限制来源
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
