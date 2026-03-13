@@ -9,6 +9,7 @@
 
 import axios from 'axios'
 import { load } from 'cheerio'
+import JSZip from 'jszip'
 import { HYDRO_NFLSOI_USER, HYDRO_NFLSOI_PWD } from '../config.js'
 
 const BASE = 'http://nflsoi.cc:10611'
@@ -16,6 +17,59 @@ const BASE = 'http://nflsoi.cc:10611'
 // ─── Session 缓存（Hydro 使用 sid cookie）────────────────────────────────────
 let cachedCookies = ''
 let sessionExpireAt = 0  // Unix ms
+
+// ─── 比赛代码 ZIP 缓存（contestId → Map<pid, code>）─────────────────────────
+const zipCodeCache = new Map()
+
+/**
+ * 下载比赛代码 zip（/contest/{id}/code），解析所有文件，按 pid 取最高分提交。
+ * 文件名格式：U{uid}_P{pid}_R{rid}_S{score}@{rank}.{lang}.{langid}
+ * 结果按 contestId 缓存，一场比赛只下载一次。
+ */
+async function fetchContestZipCodes(contestId) {
+  if (zipCodeCache.has(contestId)) return zipCodeCache.get(contestId)
+
+  const cookies = await getSession()
+  const r = await axios.get(`${BASE}/contest/${contestId}/code`, {
+    headers: makeHeaders(cookies),
+    responseType: 'arraybuffer',
+    validateStatus: s => s < 600,
+    timeout: 60000,
+  })
+
+  if (r.status !== 200) {
+    console.warn(`[hydro-nflsoi] zip 下载失败 contestId=${contestId} status=${r.status}`)
+    return null
+  }
+
+  const zip = await JSZip.loadAsync(r.data)
+
+  // 按 pid 收集最高分提交：filename → U{uid}_P{pid}_R{rid}_S{score}@{rank}...
+  // pid 在 zip 中为纯数字（如 P5510 → key 5510），taskId 存的是 P5510，匹配时去 P 前缀
+  const best = new Map()  // pidKey → { score, code }
+
+  for (const [name, file] of Object.entries(zip.files)) {
+    if (file.dir) continue
+    // 匹配 _P{pid}_ 部分（pid 可能是数字或字母数字）
+    const m = name.match(/_P([a-zA-Z0-9]+)_R[a-f0-9]+_S(\d+)@/)
+    if (!m) continue
+    const pidKey = m[1]          // 如 "5510"
+    const score = parseInt(m[2]) // 如 100
+    const existing = best.get(pidKey)
+    if (existing && existing.score >= score) continue
+    const code = await file.async('string')
+    best.set(pidKey, { score, code })
+  }
+
+  const codeMap = new Map()
+  for (const [pidKey, { code }] of best) {
+    codeMap.set(pidKey, code)
+  }
+
+  console.log(`[hydro-nflsoi] zip 解析完成 contestId=${contestId} 共 ${codeMap.size} 道题有提交`)
+  zipCodeCache.set(contestId, codeMap)
+  return codeMap
+}
 
 /** 登录并缓存 session cookie */
 async function getSession() {
@@ -259,7 +313,27 @@ export async function fetchHydroNflsoiProblem(url) {
 async function fetchHydroNflsoiAcCode(contestId, pid) {
   console.log(`[hydro-nflsoi] 查询 AC 提交 contestId=${contestId} pid=${pid}`)
 
-  // 构造记录列表 URL
+  // 优先从比赛代码 ZIP 获取（避免 403，一场比赛只下载一次）
+  if (contestId) {
+    try {
+      const codeMap = await fetchContestZipCodes(contestId)
+      if (codeMap) {
+        // taskId 存储为 'P5510'，zip 中 pidKey 为 '5510'，两种格式都尝试
+        const pidKey = pid.replace(/^P/i, '')
+        const code = codeMap.get(pidKey) || codeMap.get(pid)
+        if (code) {
+          const cleaned = code.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '')
+          console.log(`[hydro-nflsoi] zip 获取到 AC 代码 pid=${pid} len=${cleaned.length}`)
+          return cleaned
+        }
+        console.log(`[hydro-nflsoi] zip 中无 pid=${pid} 的提交`)
+      }
+    } catch (e) {
+      console.warn('[hydro-nflsoi] zip 获取失败，降级至记录列表:', e.message)
+    }
+  }
+
+  // 降级：从提交记录列表 HTML 获取 AC 代码
   let listPath = `/record?pid=${encodeURIComponent(pid)}&status=1`
   if (contestId) listPath += `&tid=${encodeURIComponent(contestId)}`
 
