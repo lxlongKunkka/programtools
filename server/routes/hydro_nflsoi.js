@@ -334,7 +334,7 @@ export async function fetchHydroNflsoiProblem(url) {
     $('title').text().split('-')[0].trim() ||
     pid
 
-  const content = parseHydroHTML($, title)
+  const content = parseHydroHTML($, title, apiPath)
 
   // 从页面提取真实数字 pid（P13075 是别名，zip 里存的是真实 id 如 5449）
   // 提交链接格式：/p/{realPid}/submit 或 /p/{realPid}?tid=...
@@ -529,7 +529,7 @@ export async function fetchHydroNflsoiProblemBank(url) {
  * 将 Hydro 题目页面 HTML 转换为 Markdown
  * Hydro 使用 KaTeX 渲染公式，原始 LaTeX 在 <annotation encoding="application/x-tex"> 中
  */
-function parseHydroHTML($, title) {
+function parseHydroHTML($, title, apiPath = '') {
   // Hydro 题目内容容器
   let $root = $('.problem-content, .typo, .markdown-body').first()
   if (!$root.length) $root = $('main, article').first()
@@ -589,7 +589,16 @@ function parseHydroHTML($, title) {
       const src = $el.attr('src') || ''
       const alt = $el.attr('alt') || ''
       if (!src) return ''
-      const fullSrc = src.startsWith('/') ? BASE + src : src
+      let fullSrc
+      if (src.startsWith('http://') || src.startsWith('https://')) {
+        fullSrc = src
+      } else if (src.startsWith('/')) {
+        fullSrc = BASE + src
+      } else {
+        // 相对路径（如 ./file/xxx.png），基于当前页面路径解析
+        const basePath = apiPath.split('?')[0].replace(/\/[^\/]*$/, '/')
+        fullSrc = BASE + basePath + src
+      }
       return `\n![${alt}](${fullSrc})\n`
     }
     // 容器节点：递归
