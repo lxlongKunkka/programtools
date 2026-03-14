@@ -336,12 +336,17 @@ export async function fetchHydroNflsoiProblem(url) {
 
   const content = parseHydroHTML($, title, apiPath)
 
-  // 从页面提取真实数字 pid（P13075 是别名，zip 里存的是真实 id 如 5449）
-  // 提交链接格式：/p/{realPid}/submit 或 /p/{realPid}?tid=...
-  const realPid =
-    $('a[href]').toArray().map(el => $(el).attr('href'))
+  // 从页面提取真实数字 pid（P12695 是别名，zip/附件里存的是真实 docId 如 5073）
+  // 优先从页面内嵌 JSON 提取 "docId"，其次从 <a href> 中匹配
+  let realPid = pid
+  const docIdMatch = html.match(/"docId"\s*:\s*(\d+)/)
+  if (docIdMatch) {
+    realPid = docIdMatch[1]
+  } else {
+    realPid = $('a[href]').toArray().map(el => $(el).attr('href'))
       .map(h => h?.match(/\/p\/(\d+)(?:\/|\?|$)/)?.[1])
       .find(Boolean) || pid
+  }
   if (realPid !== pid) {
     console.log('[hydro-nflsoi] 解析到真实 pid: ' + pid + ' -> ' + realPid)
   }
@@ -362,22 +367,37 @@ export async function fetchHydroNflsoiProblem(url) {
     console.warn('[hydro-nflsoi] 图片替换跳过:', e.message)
   }
 
-  // 检测并下载附件（Hydro 格式：/p/{pid}/file/{filename}）
+  // 检测并下载附件
+  // Hydro 将附件信息嵌入页面 JSON：additional_file:[{_id,name,...}]
+  // 实际下载路径：/p/{numericPid}/file/{filename}
   let additionalFile = null
   try {
-    // 从题目页面找附件链接：href 包含 /p/.../file/ 的 <a>
-    const addLink = $('a[href]').toArray()
-      .map(el => $(el).attr('href'))
-      .find(h => h && /\/p\/[^/]+\/file\//.test(h))
-    if (addLink) {
-      const fullPath = addLink.startsWith('http') ? new URL(addLink).pathname : addLink
-      const buffer = await hydroGetBinary(fullPath)
+    // 方式1：从页面内嵌 JSON 中提取 additional_file 列表（最可靠）
+    let attachFilename = null
+    const afMatch = html.match(/"additional_file"\s*:\s*\[([^\]]+)\]/)
+    if (afMatch) {
+      const firstId = afMatch[1].match(/"_id"\s*:\s*"([^"]+)"/)
+      if (firstId) attachFilename = firstId[1]
+    }
+    // 方式2：从 href 中找（兜底，兼容部分 Hydro 版本直接渲染 <a> 的情况）
+    if (!attachFilename) {
+      const addLink = $('a[href]').toArray()
+        .map(el => $(el).attr('href') || '')
+        .find(h => /\/p\/[^/]+\/file\//.test(h) || /\.\/\d+\/file\//.test(h))
+      if (addLink) {
+        attachFilename = addLink.split('/').pop()
+      }
+    }
+
+    if (attachFilename) {
+      const dlPath = `/p/${realPid}/file/${attachFilename}`
+      const buffer = await hydroGetBinary(dlPath)
       additionalFile = {
         filename: 'sample.zip',
         base64: buffer.toString('base64'),
         size: buffer.length,
       }
-      console.log(`[hydro-nflsoi] 附件下载成功: ${addLink} (${buffer.length} bytes)`)
+      console.log(`[hydro-nflsoi] 附件下载成功: ${dlPath} (${buffer.length} bytes)`)
     }
   } catch (e) {
     console.warn('[hydro-nflsoi] 附件下载跳过:', e.message)
