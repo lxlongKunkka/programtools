@@ -427,6 +427,15 @@ export async function fetchHydroNflsoiProblem(url) {
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
     acCode = await Promise.race([fetchHydroNflsoiAcCode(contestId, realPid), timeout])
+    // 清理文件重定向语句（freopen / fopen 读写文件，竞赛提交时常见但测评不需要）
+    if (acCode) {
+      acCode = acCode
+        .split('\n')
+        .filter(line => !/freopen\s*\(|fopen\s*\(/.test(line))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')  // 连续空行压缩为最多两行
+        .trim()
+    }
   } catch (e) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
