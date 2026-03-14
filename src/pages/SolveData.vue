@@ -1169,9 +1169,15 @@ export default {
           // 3. 添加题目描述
           const hasSample = !!(task.additionalFile && task.additionalFile.base64)
           const sampleSuffix = hasSample ? '\n\n[sample](file://sample.zip)' : ''
-          folder.file('problem.md', task.problemText, zipOptions)
-          folder.file('problem_zh_TW.md', task.problemText + sampleSuffix, zipOptions)
-          if (task.translationText) folder.file('problem_zh.md', this.applyTitleToTranslation(task.translationText, task.problemMeta?.title) + sampleSuffix, zipOptions)
+          // 时限/内存信息头（写入 problem.md 系列）
+          const tlBatch = task.problemMeta?.timeLimit
+          const mlBatch = task.problemMeta?.memoryLimit
+          const limitPrefixBatch = (tlBatch || mlBatch)
+            ? `**时间限制：${tlBatch ?? '-'}ms　内存限制：${mlBatch ?? '-'}MB**\n\n`
+            : ''
+          folder.file('problem.md', limitPrefixBatch + task.problemText, zipOptions)
+          folder.file('problem_zh_TW.md', limitPrefixBatch + task.problemText + sampleSuffix, zipOptions)
+          if (task.translationText) folder.file('problem_zh.md', limitPrefixBatch + this.applyTitleToTranslation(task.translationText, task.problemMeta?.title) + sampleSuffix, zipOptions)
           if (task.translationEnglish) {
             const enContent = task.problemMeta?.sourceUrl
               ? `原题链接：${task.problemMeta.sourceUrl}\n\n${task.translationEnglish}`
@@ -1189,13 +1195,7 @@ export default {
           const yamlContent = this.generateProblemYaml(task.problemMeta, task.problemText, task.translationText)
           folder.file('problem.yaml', yamlContent, zipOptions)
 
-          // 5b. 生成 testdata/config.yaml（来自原题时间/内存限制）
-          if (task.problemMeta?.timeLimit || task.problemMeta?.memoryLimit) {
-            const tl = task.problemMeta.timeLimit || 1000
-            const ml = task.problemMeta.memoryLimit || 256
-            const configYaml = `type: default\nsubtasks:\n  - time: ${tl}ms\n    memory: ${ml}MB\n    score: 100\n`
-            folder.file('testdata/config.yaml', configYaml, zipOptions)
-          }
+
           
           // 6. 添加运行脚本
           folder.file('run.py', this.generateRunScript(lang), zipOptions)
@@ -2506,26 +2506,23 @@ pause
         const yamlContent = this.generateProblemYaml()
         zip.file('problem.yaml', yamlContent, zipOptions)
 
-        // 生成 testdata/config.yaml（来自原题时间/内存限制）
-        const metaForConfig = this.problemMeta
-        if (metaForConfig?.timeLimit || metaForConfig?.memoryLimit) {
-          const tl = metaForConfig.timeLimit || 1000
-          const ml = metaForConfig.memoryLimit || 256
-          const configYaml = `type: default\nsubtasks:\n  - time: ${tl}ms\n    memory: ${ml}MB\n    score: 100\n`
-          zip.file('testdata/config.yaml', configYaml, zipOptions)
-        }
-
         // 如果有翻译内容则一并打包
         const curTaskForSample = this.tasks[this.currentTaskIndex]
         const hasSampleZip = !!(curTaskForSample?.additionalFile?.base64)
         const sampleSuffix = hasSampleZip ? '\n\n[sample](file://sample.zip)' : ''
+        // 时限/内存信息头（写入 problem 系列 md）
+        const tlSingle = this.problemMeta?.timeLimit
+        const mlSingle = this.problemMeta?.memoryLimit
+        const limitPrefixSingle = (tlSingle || mlSingle)
+          ? `**时间限制：${tlSingle ?? '-'}ms　内存限制：${mlSingle ?? '-'}MB**\n\n`
+          : ''
         if (this.problemText && this.problemText.trim()) {
-          zip.file('problem_zh_TW.md', this.problemText + sampleSuffix, zipOptions)
+          zip.file('problem_zh_TW.md', limitPrefixSingle + this.problemText + sampleSuffix, zipOptions)
         }
         if (this.translationText && this.translationText.trim()) {
-          zip.file('problem_zh.md', this.applyTitleToTranslation(this.translationText, this.problemMeta?.title) + sampleSuffix, zipOptions)
+          zip.file('problem_zh.md', limitPrefixSingle + this.applyTitleToTranslation(this.translationText, this.problemMeta?.title) + sampleSuffix, zipOptions)
         } else if (this.problemText && this.problemText.trim()) {
-          zip.file('problem_zh.md', this.problemText + sampleSuffix, zipOptions)
+          zip.file('problem_zh.md', limitPrefixSingle + this.problemText + sampleSuffix, zipOptions)
         }
         if (this.translationEnglish && this.translationEnglish.trim()) {
           const enContent = this.problemMeta?.sourceUrl
