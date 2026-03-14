@@ -444,28 +444,33 @@ export async function fetchHydroNflsoiProblem(url) {
   // 实际下载路径：/p/{numericPid}/file/{filename}
   let additionalFile = null
   try {
-    // 方式1：从页面内嵌 JSON 中提取 additional_file 列表（最可靠）
+    // 方式1：从页面内嵌 JSON 中提取 additional_file 列表，优先选 .zip 文件
     let attachFilename = null
-    const afMatch = html.match(/"additional_file"\s*:\s*\[([^\]]+)\]/)
+    const afMatch = html.match(/"additional_file"\s*:\s*\[([^\]]{0,2000})\]/)
     if (afMatch) {
-      const firstId = afMatch[1].match(/"_id"\s*:\s*"([^"]+)"/)
-      if (firstId) attachFilename = firstId[1]
+      // 提取所有 _id 字段
+      const allIds = [...afMatch[1].matchAll(/"_id"\s*:\s*"([^"]+)"/g)].map(m => m[1])
+      // 优先选 .zip，其次选第一个
+      attachFilename = allIds.find(id => /\.zip$/i.test(id)) || allIds[0] || null
+      console.log(`[hydro-nflsoi] additional_file 列表: ${allIds.join(', ')} → 选择: ${attachFilename}`)
     }
-    // 方式2：从 href 中找（兜底，兼容部分 Hydro 版本直接渲染 <a> 的情况）
+    // 方式2：从题面 href 中找 .zip 链接（兜底）
     if (!attachFilename) {
-      const addLink = $('a[href]').toArray()
+      const allLinks = $('a[href]').toArray()
         .map(el => $(el).attr('href') || '')
-        .find(h => /\/p\/[^/]+\/file\//.test(h) || /\.\/\d+\/file\//.test(h))
-      if (addLink) {
-        attachFilename = addLink.split('/').pop()
-      }
+        .filter(h => /\/p\/[^/]+\/file\//.test(h) || /\.\/\d+\/file\//.test(h))
+      // 优先 .zip，否则取第一个
+      const chosen = allLinks.find(h => /\.zip$/i.test(h)) || allLinks[0]
+      if (chosen) attachFilename = chosen.split('/').pop()
     }
 
     if (attachFilename) {
       const dlPath = `/p/${realPid}/file/${attachFilename}`
       const buffer = await hydroGetBinary(dlPath)
+      // 保留原始文件名（而不是统一叫 sample.zip）
+      const displayName = attachFilename.endsWith('.zip') ? attachFilename : 'sample.zip'
       additionalFile = {
-        filename: 'sample.zip',
+        filename: displayName,
         base64: buffer.toString('base64'),
         size: buffer.length,
       }
