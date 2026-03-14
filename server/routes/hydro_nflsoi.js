@@ -353,6 +353,33 @@ export async function fetchHydroNflsoiProblem(url) {
   }
   if (tags.length) console.log(`[hydro-nflsoi] 提取到标签: ${tags.join(', ')}`)
 
+  // 提取时间限制（ms）和内存限制（MB）
+  let timeLimit = null
+  let memoryLimit = null
+  // 方式1：从内嵌 JSON 提取 "timeLimit" / "memoryLimit" 字段
+  const tlMatch = html.match(/"timeLimit"\s*:\s*(\d+)/)
+  if (tlMatch) timeLimit = parseInt(tlMatch[1])
+  const mlMatch = html.match(/"memoryLimit"\s*:\s*(\d+)/)
+  if (mlMatch) {
+    const raw = parseInt(mlMatch[1])
+    // 根据数量级判断单位：> 100000 通常是 bytes，> 1024 是 KB，否则是 MB
+    if (raw > 100000) memoryLimit = Math.round(raw / 1048576)
+    else if (raw > 1024) memoryLimit = Math.round(raw / 1024)
+    else memoryLimit = raw
+  }
+  // 方式2：从页面文本提取（中文 Hydro 实例通常显示"时间限制: 1000ms"）
+  if (!timeLimit) {
+    const tlDom = $('body').text().match(/时间?[限制]*\s*[:：]\s*(\d+)\s*ms/i)
+      || $('body').text().match(/Time\s*Limit\s*[:：]\s*(\d+)\s*ms/i)
+    if (tlDom) timeLimit = parseInt(tlDom[1])
+  }
+  if (!memoryLimit) {
+    const mlDom = $('body').text().match(/内存[限制]*\s*[:：]\s*(\d+)\s*(?:M|MB|MiB)/i)
+      || $('body').text().match(/Memory\s*Limit\s*[:：]\s*(\d+)\s*(?:M|MB|MiB)/i)
+    if (mlDom) memoryLimit = parseInt(mlDom[1])
+  }
+  console.log(`[hydro-nflsoi] 时间限制: ${timeLimit ?? '未找到'}ms, 内存限制: ${memoryLimit ?? '未找到'}MB`)
+
   // 从页面提取真实数字 pid（P12695 是别名，zip/附件里存的是真实 docId 如 5073）
   // 优先从页面内嵌 JSON 提取 "docId"，其次从 <a href> 中匹配
   let realPid = pid
@@ -423,7 +450,7 @@ export async function fetchHydroNflsoiProblem(url) {
   // 调试：返回 zip 文件名，方便前端 F12 查看
   const zipFiles = contestId ? (zipRawNamesCache.get(contestId) || null) : null
 
-  return { title, content: finalContent, url, acCode, zipFiles, additionalFile, tags }
+  return { title, content: finalContent, url, acCode, zipFiles, additionalFile, tags, timeLimit, memoryLimit }
 }
 
 // ─── AC 代码抓取 ─────────────────────────────────────────────────────────────

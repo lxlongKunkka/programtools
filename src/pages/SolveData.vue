@@ -1186,6 +1186,13 @@ export default {
           // 5. 添加 problem.yaml (使用完整生成逻辑)
           const yamlContent = this.generateProblemYaml(task.problemMeta, task.problemText, task.translationText)
           folder.file('problem.yaml', yamlContent, zipOptions)
+
+          // 5b. 生成 testdata/config.yaml（来自原题时间/内存限制）
+          if (task.problemMeta?.timeLimit || task.problemMeta?.memoryLimit) {
+            const tl = task.problemMeta.timeLimit || 1000
+            const ml = task.problemMeta.memoryLimit || 256
+            folder.file('testdata/config.yaml', `time: ${tl}ms\nmemory: ${ml}m\n`, zipOptions)
+          }
           
           // 6. 添加运行脚本
           folder.file('run.py', this.generateRunScript(lang), zipOptions)
@@ -1461,6 +1468,8 @@ pause
       const additionalFile = data.additionalFile || null
       // 后端直接返回的标签（如 Hydro OJ 单题），优先级低于调用方传入的 prefetchedTags
       const finalTags = prefetchedTags.length ? prefetchedTags : (data.tags || [])
+      const timeLimit = data.timeLimit || null
+      const memoryLimit = data.memoryLimit || null
       if (acCode) {
         this.showToastMessage('✅ 已自动抓取 AC 代码')
       } else if (editorial) {
@@ -1509,7 +1518,7 @@ pause
           serverPureCode: '',
           dataOutput: '',
           additionalFile,
-          problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+          problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}), ...(timeLimit ? { timeLimit } : {}), ...(memoryLimit ? { memoryLimit } : {}) },
           status: 'pending'
         }
         this.loadTask(curIdx)
@@ -1529,7 +1538,7 @@ pause
         translationText: '',
         translationEnglish: '',
         additionalFile,
-        problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+        problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}), ...(timeLimit ? { timeLimit } : {}), ...(memoryLimit ? { memoryLimit } : {}) },
         reportHtml: ''
       }
       this.tasks.push(newTask)
@@ -2491,6 +2500,14 @@ pause
         console.log('当前 problemMeta:', this.problemMeta)
         const yamlContent = this.generateProblemYaml()
         zip.file('problem.yaml', yamlContent, zipOptions)
+
+        // 生成 testdata/config.yaml（来自原题时间/内存限制）
+        const metaForConfig = this.problemMeta
+        if (metaForConfig?.timeLimit || metaForConfig?.memoryLimit) {
+          const tl = metaForConfig.timeLimit || 1000
+          const ml = metaForConfig.memoryLimit || 256
+          zip.file('testdata/config.yaml', `time: ${tl}ms\nmemory: ${ml}m\n`, zipOptions)
+        }
 
         // 如果有翻译内容则一并打包
         const curTaskForSample = this.tasks[this.currentTaskIndex]
