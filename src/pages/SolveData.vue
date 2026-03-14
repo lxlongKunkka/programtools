@@ -121,6 +121,8 @@
             :title="tasks[currentTaskIndex].additionalFile.base64 ? '点击下载 ' + tasks[currentTaskIndex].additionalFile.filename : '附件（本次会话后需重新获取）'"
             @click="tasks[currentTaskIndex].additionalFile.base64 && downloadSampleZip()"
           >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ Math.round(tasks[currentTaskIndex].additionalFile.size / 1024) }} KB)</span>
+          <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱ {{ problemMeta.timeLimit }}ms</span>
+          <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
         </div>
         <div class="detail-actions">
           <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
@@ -3375,6 +3377,18 @@ python data_generator.py
 .sample-zip-badge.has-base64:hover {
   background: #ffe7ba;
   border-color: #ffa940;
+}
+.problem-limit-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .detail-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
