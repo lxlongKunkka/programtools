@@ -115,6 +115,12 @@
           <div class="meta-tags" v-if="problemMeta && problemMeta.tags && problemMeta.tags.length">
             <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
           </div>
+          <span
+            v-if="tasks[currentTaskIndex]?.additionalFile"
+            :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 }]"
+            :title="tasks[currentTaskIndex].additionalFile.base64 ? '点击下载 ' + tasks[currentTaskIndex].additionalFile.filename : '附件（本次会话后需重新获取）'"
+            @click="tasks[currentTaskIndex].additionalFile.base64 && downloadSampleZip()"
+          >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ Math.round(tasks[currentTaskIndex].additionalFile.size / 1024) }} KB)</span>
         </div>
         <div class="detail-actions">
           <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
@@ -2391,6 +2397,21 @@ pause
       }
     },
     
+    downloadSampleZip() {
+      const af = this.tasks[this.currentTaskIndex]?.additionalFile
+      if (!af?.base64) return
+      const binaryStr = atob(af.base64)
+      const bytes = new Uint8Array(binaryStr.length)
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+      const blob = new Blob([bytes], { type: 'application/zip' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = af.filename
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+
     async runAndDownload() {
       // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
       const hasCode = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
@@ -3313,6 +3334,26 @@ python data_generator.py
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
+}
+.sample-zip-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #fff7e6;
+  color: #ad6800;
+  border: 1px solid #ffd591;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+.sample-zip-badge.has-base64 {
+  cursor: pointer;
+}
+.sample-zip-badge.has-base64:hover {
+  background: #ffe7ba;
+  border-color: #ffa940;
 }
 .detail-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
