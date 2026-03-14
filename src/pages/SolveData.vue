@@ -1193,7 +1193,8 @@ export default {
           if (task.problemMeta?.timeLimit || task.problemMeta?.memoryLimit) {
             const tl = task.problemMeta.timeLimit || 1000
             const ml = task.problemMeta.memoryLimit || 256
-            folder.file('testdata/config.yaml', `time: ${tl}ms\nmemory: ${ml}m\n`, zipOptions)
+            const configYaml = `type: default\nsubtasks:\n  - time: ${tl}ms\n    memory: ${ml}MB\n    score: 100\n`
+            folder.file('testdata/config.yaml', configYaml, zipOptions)
           }
           
           // 6. 添加运行脚本
@@ -2510,7 +2511,8 @@ pause
         if (metaForConfig?.timeLimit || metaForConfig?.memoryLimit) {
           const tl = metaForConfig.timeLimit || 1000
           const ml = metaForConfig.memoryLimit || 256
-          zip.file('testdata/config.yaml', `time: ${tl}ms\nmemory: ${ml}m\n`, zipOptions)
+          const configYaml = `type: default\nsubtasks:\n  - time: ${tl}ms\n    memory: ${ml}MB\n    score: 100\n`
+          zip.file('testdata/config.yaml', configYaml, zipOptions)
         }
 
         // 如果有翻译内容则一并打包

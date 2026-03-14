@@ -357,44 +357,25 @@ export async function fetchHydroNflsoiProblem(url) {
   let timeLimit = null
   let memoryLimit = null
 
-  // DEBUG: 打印页面里所有含 time/memory 字样的 JSON 片段，帮助确认字段名
-  const debugSnippets = (html.match(/["'](?:time|memory)[^"']{0,20}["']\s*:\s*["'\d][^,\n]{0,30}/gi) || []).slice(0, 8)
-  console.log(`[hydro-nflsoi] DEBUG time/memory fields: ${JSON.stringify(debugSnippets)}`)
+  // 方式1: 从内嵌 JSON config 对象提取（最准确）
+  // Hydro 页面嵌入 JSON 结构: {"config":{"time":"5000ms","memory":"1024m",...}}
+  const configBlockMatch = html.match(/"config"\s*:\s*\{([^}]{0,300})\}/)
+  if (configBlockMatch) {
+    const block = configBlockMatch[1]
+    const tlm = block.match(/"time"\s*:\s*"(\d+)\s*ms"/)
+    if (tlm) timeLimit = parseInt(tlm[1])
+    const mlm = block.match(/"memory"\s*:\s*"(\d+)\s*(?:mib|mb|m)"/i)
+    if (mlm) memoryLimit = parseInt(mlm[1])
+    console.log(`[hydro-nflsoi] config block: ${block.slice(0, 100)}`)
+  }
 
-  // 方式1a: "timeLimit": 1000 (数字，部分 Hydro 版本)
-  const tlMatch1 = html.match(/"timeLimit"\s*:\s*(\d+)/)
-  if (tlMatch1) timeLimit = parseInt(tlMatch1[1])
-
-  // 方式1b: "time": "1000ms" (字符串，Hydro config 格式)
+  // 方式2: 全局搜索 "timeLimit"/"memoryLimit" 数字字段（部分 Hydro 版本）
   if (!timeLimit) {
-    const m = html.match(/"time"\s*:\s*"(\d+)\s*ms"/)
+    const m = html.match(/"timeLimit"\s*:\s*(\d+)/)
     if (m) timeLimit = parseInt(m[1])
   }
-
-  // 方式1c: "time": 1000 (数字)
-  if (!timeLimit) {
-    const m = html.match(/"time"\s*:\s*(\d+)(?!\s*[":])/)
-    if (m) timeLimit = parseInt(m[1])
-  }
-
-  // 方式2a: "memoryLimit": 262144 (数字，需判断单位)
-  const mlMatch1 = html.match(/"memoryLimit"\s*:\s*(\d+)/)
-  if (mlMatch1) {
-    const raw = parseInt(mlMatch1[1])
-    if (raw > 100000) memoryLimit = Math.round(raw / 1048576)
-    else if (raw > 1024) memoryLimit = Math.round(raw / 1024)
-    else memoryLimit = raw
-  }
-
-  // 方式2b: "memory": "256m" / "256mb" / "256MB"
   if (!memoryLimit) {
-    const m = html.match(/"memory"\s*:\s*"(\d+)\s*(?:mib|mb|m)"/i)
-    if (m) memoryLimit = parseInt(m[1])
-  }
-
-  // 方式2c: "memory": 256 (数字，MB)
-  if (!memoryLimit) {
-    const m = html.match(/"memory"\s*:\s*(\d+)(?!\s*[":])/)
+    const m = html.match(/"memoryLimit"\s*:\s*(\d+)/)
     if (m) {
       const raw = parseInt(m[1])
       if (raw > 100000) memoryLimit = Math.round(raw / 1048576)
@@ -403,15 +384,25 @@ export async function fetchHydroNflsoiProblem(url) {
     }
   }
 
-  // 方式3: 从页面可见文本提取（中文 Hydro 实例显示"时间限制: 1000ms"）
+  // 方式3: 全局搜索 "time":"Xms" / "memory":"Xm"
   if (!timeLimit) {
-    const m = $('body').text().match(/时间?[限制]*\s*[:：]\s*(\d+)\s*ms/i)
-      || $('body').text().match(/Time\s*Limit\s*[:：]?\s*(\d+)\s*ms/i)
+    const m = html.match(/"time"\s*:\s*"(\d+)\s*ms"/)
     if (m) timeLimit = parseInt(m[1])
   }
   if (!memoryLimit) {
-    const m = $('body').text().match(/内存[限制]*\s*[:：]\s*(\d+)\s*(?:M|MB|MiB)/i)
-      || $('body').text().match(/Memory\s*Limit\s*[:：]?\s*(\d+)\s*(?:M|MB|MiB)/i)
+    const m = html.match(/"memory"\s*:\s*"(\d+)\s*(?:mib|mb|m)"/i)
+    if (m) memoryLimit = parseInt(m[1])
+  }
+
+  // 方式4: 从页面可见文本提取（Hydro 题目信息栏显示 "⏱ 5000ms  💾 1024MiB"）
+  if (!timeLimit) {
+    const bodyText = $('body').text()
+    const m = bodyText.match(/(\d+)\s*ms/) // 信息栏时间
+    if (m) timeLimit = parseInt(m[1])
+  }
+  if (!memoryLimit) {
+    const bodyText = $('body').text()
+    const m = bodyText.match(/(\d+)\s*(?:MiB|MB|M)(?!\w)/)
     if (m) memoryLimit = parseInt(m[1])
   }
 
