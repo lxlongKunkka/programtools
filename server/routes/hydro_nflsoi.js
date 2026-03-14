@@ -336,6 +336,23 @@ export async function fetchHydroNflsoiProblem(url) {
 
   const content = parseHydroHTML($, title, apiPath)
 
+  // 提取标签：优先从内嵌 JSON "tag" 字段，回退到 DOM a.problem__tag-link
+  const tags = []
+  const tagMatch = html.match(/"tag"\s*:\s*(\[[^\]]*\])/)
+  if (tagMatch) {
+    try {
+      const parsed = JSON.parse(tagMatch[1])
+      if (Array.isArray(parsed)) tags.push(...parsed.filter(t => typeof t === 'string' && t.trim()))
+    } catch {}
+  }
+  if (!tags.length) {
+    $('a.problem__tag-link').each((_, el) => {
+      const t = $(el).text().trim()
+      if (t) tags.push(t)
+    })
+  }
+  if (tags.length) console.log(`[hydro-nflsoi] 提取到标签: ${tags.join(', ')}`)
+
   // 从页面提取真实数字 pid（P12695 是别名，zip/附件里存的是真实 docId 如 5073）
   // 优先从页面内嵌 JSON 提取 "docId"，其次从 <a href> 中匹配
   let realPid = pid
@@ -406,7 +423,7 @@ export async function fetchHydroNflsoiProblem(url) {
   // 调试：返回 zip 文件名，方便前端 F12 查看
   const zipFiles = contestId ? (zipRawNamesCache.get(contestId) || null) : null
 
-  return { title, content: finalContent, url, acCode, zipFiles, additionalFile }
+  return { title, content: finalContent, url, acCode, zipFiles, additionalFile, tags }
 }
 
 // ─── AC 代码抓取 ─────────────────────────────────────────────────────────────

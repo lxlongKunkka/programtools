@@ -1459,6 +1459,8 @@ pause
       const editorial = data.editorial || ''
       const acCode = data.acCode || ''
       const additionalFile = data.additionalFile || null
+      // 后端直接返回的标签（如 Hydro OJ 单题），优先级低于调用方传入的 prefetchedTags
+      const finalTags = prefetchedTags.length ? prefetchedTags : (data.tags || [])
       if (acCode) {
         this.showToastMessage('✅ 已自动抓取 AC 代码')
       } else if (editorial) {
@@ -1482,7 +1484,7 @@ pause
         title = `[${contestId}${label}] ${cleanTitle}`
       }
       // titleFixed: 当从源站爬取到标签时，title 和 tags 均不应被 AI 覆盖
-      const titleFixed = prefetchedTags.length > 0
+      const titleFixed = finalTags.length > 0
       // atcoderTitle: 已格式化的标题（如 [ABC235B] xxx），用于 problem.yaml
       const atcoderTitle = atcoderMatch ? title : null
       // sourceUrl: AtCoder 原题链接，用于 problem_en.md 头部
@@ -1505,7 +1507,7 @@ pause
           serverPureCode: '',
           dataOutput: '',
           additionalFile,
-          problemMeta: { title: title, rawTitle: title, tags: prefetchedTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+          problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
           status: 'pending'
         }
         this.loadTask(curIdx)
@@ -1525,7 +1527,7 @@ pause
         translationText: '',
         translationEnglish: '',
         additionalFile,
-        problemMeta: { title: title, rawTitle: title, tags: prefetchedTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
+        problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}) },
         reportHtml: ''
       }
       this.tasks.push(newTask)
