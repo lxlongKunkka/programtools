@@ -10,7 +10,9 @@
 import axios from 'axios'
 import { load } from 'cheerio'
 import JSZip from 'jszip'
+import path from 'path'
 import { HYDRO_NFLSOI_USER, HYDRO_NFLSOI_PWD } from '../config.js'
+import { uploadImageToCos } from '../utils/cosUploader.js'
 
 const BASE = 'http://nflsoi.cc:10611'
 
@@ -156,6 +158,21 @@ function makeHeaders(cookies, extra = {}) {
   }
 }
 
+/** 二进制下载（用于图片、附件等），返回 Buffer */
+async function hydroGetBinary(urlPath) {
+  const cookies = await getSession()
+  const r = await axios.get(BASE + urlPath, {
+    headers: makeHeaders(cookies),
+    responseType: 'arraybuffer',
+    validateStatus: s => s < 600,
+    timeout: 30000,
+  })
+  if (r.status === 403) throw new Error(`Hydro OJ 无权下载（403）: ${urlPath}`)
+  if (r.status === 404) throw new Error(`Hydro OJ 文件不存在（404）: ${urlPath}`)
+  if (r.status >= 400) throw new Error(`Hydro OJ 下载失败，HTTP ${r.status}`)
+  return Buffer.from(r.data)
+}
+
 /** 通用 HTML 请求（自动带 session）*/
 async function hydroGet(urlPath) {
   const cookies = await getSession()
@@ -185,6 +202,40 @@ async function hydroGetJson(urlPath) {
   if (r.status === 404) throw new Error(`Hydro OJ 页面不存在（404）: ${urlPath}`)
   if (r.status >= 400) throw new Error(`Hydro OJ 请求失败，HTTP ${r.status}`)
   return typeof r.data === 'string' ? JSON.parse(r.data) : r.data
+}
+
+// ─── 图片代理：下载 Hydro OJ 图片（需要 session）并上传 COS ──────────────────────
+
+/**
+ * 将 markdown 中所有 nflsoi.cc:10611 域名的图片，带 session 下载后上传 COS，替换链接。
+ * 失败时保留原链接。
+ */
+async function replaceHydroImages(markdown) {
+  const imgRe = /!\[([^\]]*)\]\((https?:\/\/nflsoi\.cc:10611\/[^)]+)\)/g
+  const matches = []
+  let m
+  while ((m = imgRe.exec(markdown)) !== null) {
+    matches.push({ full: m[0], alt: m[1], src: m[2] })
+  }
+  if (!matches.length) return markdown
+
+  let result = markdown
+  for (const { full, alt, src } of matches) {
+    try {
+      const urlPath = src.replace(/^https?:\/\/nflsoi\.cc:10611/, '')
+      const buffer = await hydroGetBinary(urlPath)
+      const ext = path.extname(urlPath.split('?')[0]) || '.png'
+      const fileName = `hydro_nflsoi_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`
+      const cosUrl = await uploadImageToCos(buffer, fileName)
+      if (cosUrl) {
+        result = result.replace(full, `![${alt}](${cosUrl})`)
+        console.log(`[hydro-nflsoi] 图片已上传 COS: ${src} → ${cosUrl}`)
+      }
+    } catch (e) {
+      console.warn(`[hydro-nflsoi] 图片上传跳过: ${src}`, e.message)
+    }
+  }
+  return result
 }
 
 // ─── URL 解析 ─────────────────────────────────────────────────────────────────
@@ -303,10 +354,39 @@ export async function fetchHydroNflsoiProblem(url) {
     console.warn('[hydro-nflsoi] AC code skipped:', e.message)
   }
 
+  // 图片上传 COS（替换 nflsoi.cc:10611 域名图片为 COS 链接）
+  let finalContent = content
+  try {
+    finalContent = await replaceHydroImages(content)
+  } catch (e) {
+    console.warn('[hydro-nflsoi] 图片替换跳过:', e.message)
+  }
+
+  // 检测并下载附件（Hydro 格式：/p/{pid}/file/{filename}）
+  let additionalFile = null
+  try {
+    // 从题目页面找附件链接：href 包含 /p/.../file/ 的 <a>
+    const addLink = $('a[href]').toArray()
+      .map(el => $(el).attr('href'))
+      .find(h => h && /\/p\/[^/]+\/file\//.test(h))
+    if (addLink) {
+      const fullPath = addLink.startsWith('http') ? new URL(addLink).pathname : addLink
+      const buffer = await hydroGetBinary(fullPath)
+      additionalFile = {
+        filename: 'sample.zip',
+        base64: buffer.toString('base64'),
+        size: buffer.length,
+      }
+      console.log(`[hydro-nflsoi] 附件下载成功: ${addLink} (${buffer.length} bytes)`)
+    }
+  } catch (e) {
+    console.warn('[hydro-nflsoi] 附件下载跳过:', e.message)
+  }
+
   // 调试：返回 zip 文件名，方便前端 F12 查看
   const zipFiles = contestId ? (zipRawNamesCache.get(contestId) || null) : null
 
-  return { title, content, url, acCode, zipFiles }
+  return { title, content: finalContent, url, acCode, zipFiles, additionalFile }
 }
 
 // ─── AC 代码抓取 ─────────────────────────────────────────────────────────────

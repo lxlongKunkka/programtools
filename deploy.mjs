@@ -39,7 +39,7 @@ run('git push', 'Push 到 GitHub')
 ssh(`cd ${REMOTE_DIR} && git fetch origin && git reset --hard origin/main`, '远程 git pull')
 ssh(`cd ${REMOTE_DIR} && npm install --silent`, '安装依赖（含 devDependencies）')
 ssh(`cd ${REMOTE_DIR} && npm run build`, '服务器端构建前端 (vite build)')
-ssh(`cd ${REMOTE_DIR} && pm2 restart all --update-env`, 'PM2 重启服务')
+ssh(`cd ${REMOTE_DIR} && pm2 restart tools --update-env`, 'PM2 重启服务')
 ssh(`pm2 list`, '查看服务状态')
 
 console.log('\n✅ 部署完成！')
