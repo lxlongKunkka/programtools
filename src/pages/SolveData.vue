@@ -1473,10 +1473,10 @@ pause
 
       // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
       let title = data.title || fallbackTitle || url
-      // 去除纯数字题号："35260. 平面树" → "平面树"
-      title = title.replace(/^\d+\.\s*/, '')
-      // 去除字母题号中的点号："A. 鸭子与按钮" → "A 鸭子与按钮"（NFLSOJ 等竞赛题常见格式）
-      title = title.replace(/^([A-Za-z][A-Za-z0-9]*)\. /, '$1 ')
+      // 去除数字/字母数字混合题号："35260. 平面树"→"平面树"、"#P1030. 排列"→"排列"、"P1030. 排列"→"排列"
+      title = title.replace(/^#?[A-Za-z]*\d+\.\s*/, '')
+      // 去除纯字母题号中的点号："A. 鸭子与按钮" → "A 鸭子与按钮"（NFLSOJ 等竞赛题常见格式）
+      title = title.replace(/^([A-Za-z])\. /, '$1 ')
       const atcoderMatch = url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/[^/]+_([a-z0-9]+)/i)
       if (atcoderMatch) {
         const contestId = atcoderMatch[1].toUpperCase() // e.g. ABC235
