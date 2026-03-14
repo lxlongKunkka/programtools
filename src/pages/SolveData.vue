@@ -1484,6 +1484,8 @@ pause
 
       // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
       let title = data.title || fallbackTitle || url
+      // 去除开头的分数前缀："100 #18876. 曼哈顿配对" → "#18876. 曼哈顿配对"
+      title = title.replace(/^\d+\s+/, '')
       // 去除数字/字母数字混合题号："35260. 平面树"→"平面树"、"#P1030. 排列"→"排列"、"P1030. 排列"→"排列"
       title = title.replace(/^#?[A-Za-z]*\d+\.\s*/, '')
       // 去除纯字母题号中的点号："A. 鸭子与按钮" → "A 鸭子与按钮"（NFLSOJ 等竞赛题常见格式）
