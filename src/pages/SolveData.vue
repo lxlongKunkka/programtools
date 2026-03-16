@@ -44,12 +44,24 @@
   <div class="task-info-bar">
     <span class="task-count-label">共 {{ tasks.length }} 个任务</span>
     <div class="task-bulk-right">
+      <input
+        ref="folderImporter"
+        type="file"
+        webkitdirectory
+        directory
+        multiple
+        style="display:none"
+        @change="handleFolderImport"
+      />
       <label class="mode-label">生成模式:</label>
       <select v-model="batchMode" class="mode-select">
         <option value="code_data">仅代码和数据</option>
         <option value="code_data_report">代码、数据和报告</option>
         <option value="report_only">仅解题报告</option>
       </select>
+      <button class="btn-secondary btn-sm" @click="openFolderImport" :disabled="isBatchRunning">
+        📥 导入目录
+      </button>
       <button class="btn-primary btn-sm" @click="runBatch" :disabled="isBatchRunning">
         {{ isBatchRunning ? '⏳ 处理中...' : '🚀 批量生成' }}
       </button>
@@ -849,6 +861,88 @@ export default {
       }
       this.tasks.push(newTask)
       this.switchTask(this.tasks.length - 1)
+    },
+
+    openFolderImport() {
+      if (this.isBatchRunning) return
+      const input = this.$refs.folderImporter
+      if (!input) return
+      input.value = ''
+      input.click()
+    },
+
+    async handleFolderImport(event) {
+      const files = Array.from(event?.target?.files || [])
+      if (!files.length) return
+
+      try {
+        const groups = new Map()
+        for (const file of files) {
+          const relativePath = file.webkitRelativePath || file.name
+          const parts = relativePath.split('/').filter(Boolean)
+          if (parts.length < 2) continue
+          const fileName = parts[parts.length - 1]
+          const folderKey = parts.slice(0, -1).join('/')
+          if (!groups.has(folderKey)) groups.set(folderKey, {})
+          groups.get(folderKey)[fileName] = file
+        }
+
+        const folderEntries = [...groups.entries()]
+          .filter(([, fileMap]) => fileMap['problem.md'] && (fileMap['std.cpp'] || fileMap['source.cpp']))
+          .sort((a, b) => {
+            const aBase = a[0].split('/').pop() || a[0]
+            const bBase = b[0].split('/').pop() || b[0]
+            const aMatch = aBase.match(/^(\d+)/)
+            const bMatch = bBase.match(/^(\d+)/)
+            const aNum = aMatch ? Number(aMatch[1]) : Number.MAX_SAFE_INTEGER
+            const bNum = bMatch ? Number(bMatch[1]) : Number.MAX_SAFE_INTEGER
+            if (aNum !== bNum) return aNum - bNum
+            return aBase.localeCompare(bBase, 'zh-CN')
+          })
+
+        if (!folderEntries.length) {
+          this.showToastMessage('未发现可导入的题目目录，需要同时包含 problem.md 与 std.cpp')
+          return
+        }
+
+        const importedTasks = []
+        for (const [folderKey, fileMap] of folderEntries) {
+          const folderName = folderKey.split('/').pop() || folderKey
+          const problemText = await fileMap['problem.md'].text()
+          const codeFile = fileMap['std.cpp'] || fileMap['source.cpp']
+          const manualCode = codeFile ? await codeFile.text() : ''
+          const heading = String(problemText || '').split('\n').map(line => line.trim()).find(Boolean) || ''
+          const derivedTitle = heading.replace(/^#\s*/, '').trim() || folderName.replace(/^\d+[-_]?/, '')
+          importedTasks.push({
+            id: Date.now() + importedTasks.length,
+            status: 'pending',
+            problemText,
+            manualCode,
+            referenceText: '',
+            codeOutput: '',
+            serverPureCode: '',
+            dataOutput: '',
+            translationText: '',
+            translationEnglish: '',
+            problemMeta: {
+              title: derivedTitle,
+              rawTitle: derivedTitle,
+              sourceFolder: folderName,
+            },
+            reportHtml: ''
+          })
+        }
+
+        const current = this.tasks[0]
+        const currentEmpty = this.tasks.length === 1 && current && !current.problemText?.trim() && !current.manualCode?.trim()
+        this.tasks = currentEmpty ? importedTasks : [...this.tasks, ...importedTasks]
+        this.currentTaskIndex = 0
+        this.loadTask(0)
+        this.showToastMessage(`已导入 ${importedTasks.length} 道题目到任务列表`)
+      } catch (e) {
+        console.error('Folder import failed:', e)
+        this.showToastMessage('导入目录失败: ' + e.message)
+      }
     },
     
     removeTask(index) {
