@@ -1,0 +1,17 @@
+QQ答疑群：281607840
+《算法训练营》刷题题单：
+https://vjudge.net/article/2652
+https://vjudge.net/article/2642
+vjudge汇集了30多个OJ的题目，只需要注册vjudge账号即可刷这些OJ的题目，非常方便。
+但是vjudge有时不稳定，需要使用VPN或者等待网站正常。
+如果出现打不开情况，也可以直接到以下网站刷题。
+
+p开头的题目为洛谷题目：  https://www.luogu.com.cn/
+poj开头的题目为北大题目：http://poj.org
+hdu开头的题目为杭电题目：http://acm.hdu.edu.cn/
+
+配套视频：http://m.study.163.com/provider/480000002227476/index.htm?share=2&shareId=480000002227476
+喜欢用b站的朋友，也可以在b站报名算法训练营配套视频课程。
+1.【动态规划算法秘籍】动态规划算法一网打尽，全面系统讲解各种动态规划算法，算法精讲+刷题实战 https://www.bilibili.com/cheese/play/ss4440
+2.【算法训练营集训入门篇】全面系统讲解算法知识体系，完美图解，通俗易懂，保姆级算法入门课程，算法精讲+刷题实战，配套书+源码+课件+视频，提供随时答疑服务 https://www.bilibili.com/cheese/play/ss6535 
+3.【算法训练营集训进阶篇】全套算法进阶课程来了，打造扎实基本功，算法精讲+刷题实战，配套书+源码+课件+视频，提供随时答疑服务 https://www.bilibili.com/cheese/play/ss6658
