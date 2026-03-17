@@ -9,6 +9,7 @@
       <select v-model="selectedModel">
         <option v-for="m in (models && models.length ? models : [
           { id: 'o4-mini', name: 'o4-mini' },
+          { id: 'gpt-5.4', name: 'gpt-5.4' },
           { id: 'o3-mini', name: 'o3-mini' },
           { id: 'o2-mini', name: 'o2-mini' },
           { id: 'o1-mini', name: 'o1-mini' },
@@ -492,6 +493,20 @@ export default {
     }
   },
   methods: {
+    isExplainCodeMode(taskIndex = this.currentTaskIndex) {
+      const task = this.tasks?.[taskIndex]
+      const manualCode = task?.manualCode ?? this.manualCode
+      return !!manualCode?.trim()
+    },
+
+    getSolveDataModel(taskIndex = this.currentTaskIndex) {
+      return this.isExplainCodeMode(taskIndex) ? 'gemini-3-flash-preview' : this.selectedModel
+    },
+
+    getMetaReportModel() {
+      return 'gemini-3-flash-preview'
+    },
+
     extractCodeFromProblem() {
       if (!this.problemText) return
       
@@ -1132,7 +1147,7 @@ export default {
                     method: 'POST',
                     body: JSON.stringify({
                       text: this.tasks[i].problemText,
-                      model: this.selectedModel
+                      model: this.getMetaReportModel()
                     })
                   })
                   if (metaRes) {
@@ -1197,7 +1212,7 @@ export default {
           code: pureCode,
           reference: task.referenceText || '',  // ✅ 传递 editorial 参考
           solutionPlan: solutionPlan,
-          model: this.selectedModel,
+          model: this.getMetaReportModel(),
           language: this.language
         })
         
@@ -1812,6 +1827,8 @@ pause
       const taskSnap = this.tasks[targetIndex]
       const problemText = taskSnap?.problemText || this.problemText
       const manualCode = taskSnap?.manualCode || ''
+      const isExplainMode = !!manualCode.trim()
+      const solutionModel = this.getSolveDataModel(targetIndex)
       
       this.isGenerating = 'code'
       this.generationStatus = '正在生成题解代码...'
@@ -1828,35 +1845,31 @@ pause
         }
         
         let requests = []
-        
-        // 1. 请求生成代码 - 优化 Prompt 构建（使用快照变量，不受任务切换影响）
-        let promptText = problemText
-        let hasReference = false
-        
-        // 如果 manualCode 存在，提取纯代码并作为参考
-        if (manualCode.trim()) {
-             const pureCode = this.extractPureCode(manualCode)
-             if (pureCode) {
-                 promptText += `\n\n【用户提供的参考代码】\n\`\`\`${this.language === 'C++' ? 'cpp' : 'python'}\n${pureCode}\n\`\`\`\n\n`
-                 hasReference = true
-             }
-        }
-        
-        // 统一添加生成要求
-        if (hasReference) {
-             promptText += `请基于上述参考内容编写详细的解题教案。要求：\n1. 不要直接复制参考代码，请重新编写一份代码风格优良、注释详尽的标准 AC 代码\n2. 生成完整的 Markdown 格式解题报告（算法分析、代码实现、复杂度分析等）\n3. 代码应具有良好的可读性：变量命名规范、逻辑清晰、适当添加注释\n4. 在代码实现部分前添加 <!-- AC_CODE --> 标记以便提取`
-        }
 
-        requests.push(
-          request('/api/solution', {
-            method: 'POST',
-            body: JSON.stringify({
-              text: promptText,
-              model: this.selectedModel,
-              language: this.language
-            })
-        }).then(res => ({ type: 'code', data: res }))
-        )
+        if (isExplainMode) {
+          requests.push(
+            request('/api/solve', {
+              method: 'POST',
+              body: JSON.stringify({
+                text: problemText,
+                acCode: manualCode,
+                model: solutionModel,
+                language: this.language
+              })
+            }).then(res => ({ type: 'code', data: res }))
+          )
+        } else {
+          requests.push(
+            request('/api/solution', {
+              method: 'POST',
+              body: JSON.stringify({
+                text: problemText,
+                model: solutionModel,
+                language: this.language
+              })
+            }).then(res => ({ type: 'code', data: res }))
+          )
+        }
         
         // 2. 如果元数据尚未完整（翻译完成后通常已有），则请求生成元数据
         if (!this.hasValidMeta) {
@@ -1866,7 +1879,7 @@ pause
               body: JSON.stringify({
                 // 优先使用 tasks[targetIndex] 的翻译，避免任务切换影响
                 text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : problemText,
-                model: this.selectedModel
+                model: this.getMetaReportModel()
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
            )
@@ -1927,6 +1940,7 @@ pause
       
       // 检查 manualCode 是否存在
       const manualContent = this.manualCode.trim()
+      const solutionModel = this.getSolveDataModel(targetIndex)
       
       this.codeOutput = ''
       this.serverPureCode = ''
@@ -1957,7 +1971,7 @@ pause
               body: JSON.stringify({
                 text: this.problemText,
                 acCode: manualContent,
-                model: this.selectedModel,
+                model: solutionModel,
                 language: this.language
               })
             }).then(res => {
@@ -1971,7 +1985,7 @@ pause
               method: 'POST',
               body: JSON.stringify({
                 text: this.problemText,
-                model: this.selectedModel,
+                model: solutionModel,
                 language: this.language
               })
             }).then(res => {
@@ -2066,7 +2080,7 @@ pause
                   // 从 tasks[targetIndex] 读取，防止任务切换后读到错误内容
                   text: this.tasks[targetIndex]?.translationText || this.tasks[targetIndex]?.problemText || this.problemText,
                   solution: this.tasks[targetIndex]?.codeOutput,
-                  model: this.selectedModel
+                  model: this.getMetaReportModel()
                 })
               }).then(res => {
                   this.generationSteps.meta = 'success'
@@ -2201,7 +2215,7 @@ pause
               body: JSON.stringify({
                 text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : textForData,
                 solution: this.tasks[targetIndex]?.codeOutput,
-                model: this.selectedModel
+                model: this.getMetaReportModel()
               })
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
            )
@@ -2262,7 +2276,7 @@ pause
           body: JSON.stringify({
             text: textToUse,
             solution: latestSnap?.codeOutput || '',
-            model: this.selectedModel
+            model: this.getMetaReportModel()
           })
         })
         
@@ -2451,7 +2465,7 @@ pause
           code: pureCode,
           reference: referenceToSend,
           solutionPlan: solutionPlan,
-          model: this.selectedModel,
+          model: this.getMetaReportModel(),
           language: this.language
         })
         

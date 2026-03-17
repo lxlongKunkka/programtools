@@ -13,7 +13,6 @@ try {
 
 export function checkModelPermission(req, res, next) {
   const modelId = req.body.model
-  // Default model if not specified, usually handled in route, but good to know
   
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
@@ -33,18 +32,19 @@ export function checkModelPermission(req, res, next) {
     if (modelId && modelId !== 'gemini-2.0-flash' && modelId !== 'gemini-2.5-flash') {
       return res.status(403).json({ error: 'Access denied: Current plan only supports gemini-2.0-flash and gemini-2.5-flash' })
     }
-    // If no model specified, the route usually defaults. 
-    // We should probably enforce the default in the route or here.
-    // But the route code I saw does `model || 'o4-mini'`. 
-    // I should probably inject the forced model here if I can, or let the route handle it.
-    // Better to reject if they try to use something else.
   }
 
-  // Existing logic for admin-only models in models.json
   if (modelId) {
     const modelConfig = MODELS_CONFIG.find(m => m.id === modelId)
-    if (modelConfig && modelConfig.role === 'admin' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Access denied: Admin role required for this model' })
+    if (modelConfig) {
+      if (modelConfig.role === 'admin' && userRole !== 'admin') {
+        return res.status(403).json({ error: 'Access denied: Admin role required for this model' })
+      }
+
+      const hasPremiumAccess = userRole === 'premium' || userRole === 'teacher' || userRole === 'admin'
+      if (modelConfig.role === 'premium' && !hasPremiumAccess) {
+        return res.status(403).json({ error: 'Access denied: Premium plan required for this model' })
+      }
     }
   }
   

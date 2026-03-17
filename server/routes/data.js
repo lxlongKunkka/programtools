@@ -201,17 +201,24 @@ router.get('/models', async (req, res) => {
     let data = JSON.parse(txt)
 
     const authHeader = req.headers['authorization']
-    let isAdmin = false
+    let userRole = 'guest'
     if (authHeader) {
       const token = authHeader.split(' ')[1]
       try {
         const decoded = jwt.verify(token, JWT_SECRET)
-        if (decoded.role === 'admin') isAdmin = true
+        userRole = decoded.role || 'user'
       } catch (e) {}
     }
 
+    const hasPremiumAccess = userRole === 'premium' || userRole === 'teacher' || userRole === 'admin'
+    const isAdmin = userRole === 'admin'
+
     if (!isAdmin) {
       data = data.filter(m => m.role !== 'admin')
+    }
+
+    if (!hasPremiumAccess) {
+      data = data.filter(m => m.role !== 'premium')
     }
 
     return res.json(data)
