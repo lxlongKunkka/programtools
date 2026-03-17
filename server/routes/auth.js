@@ -9,10 +9,20 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// 登录限速：同一 IP 15 分钟内最多 10 次
+function normalizeLoginIdentifier(value) {
+  if (typeof value !== 'string') return ''
+  return value.trim().toLowerCase()
+}
+
+// 登录限速：同一 IP + 用户名 15 分钟内最多 10 次失败尝试
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const username = normalizeLoginIdentifier(req.body?.username) || '__anonymous__'
+    return `${req.ip}:${username}`
+  },
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '登录尝试过于频繁，请 15 分钟后重试' }

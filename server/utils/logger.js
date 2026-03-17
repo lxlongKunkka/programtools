@@ -30,7 +30,7 @@ export async function appendUsageLog(entry) {
 
 export const requestLogger = async (req, res, next) => {
   const start = Date.now()
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
+  const ip = req.ip || req.socket.remoteAddress || ''
   const ua = req.headers['user-agent'] || ''
   const method = req.method
   const pathName = req.path

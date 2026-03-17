@@ -47,6 +47,20 @@ export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   : null
 export const DEBUG_LOG = (process.env.DEBUG_LOG === '1' || process.env.DEBUG === 'true')
 
+function parseTrustProxy(value) {
+  if (value === undefined || value === '') return false
+
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1') return true
+  if (normalized === 'false' || normalized === '0') return false
+
+  if (/^\d+$/.test(normalized)) return Number(normalized)
+
+  return value
+}
+
+export const TRUST_PROXY = parseTrustProxy(process.env.TRUST_PROXY)
+
 export const MAIL_CONFIG = {
   host: process.env.MAIL_HOST,
   port: Number(process.env.MAIL_PORT || 465),

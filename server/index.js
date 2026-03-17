@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { PORT, YUN_API_KEY, DEBUG_LOG, ALLOWED_ORIGINS } from './config.js'
+import { PORT, YUN_API_KEY, DEBUG_LOG, ALLOWED_ORIGINS, TRUST_PROXY } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
 import { createServer } from 'http'
 import { setupSocket } from './socket/index.js'
@@ -37,6 +37,8 @@ import './db.js' // Establishes hydroConn and appConn
 const app = express()
 const httpServer = createServer(app)
 setupSocket(httpServer)
+
+app.set('trust proxy', TRUST_PROXY)
 
 app.use(cors({
   origin: (origin, callback) => {
