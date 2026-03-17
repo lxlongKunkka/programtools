@@ -5,10 +5,7 @@
 <div class="toolbar-container">
 <div class="toolbar">
 <div class="toolbar-left">
-<label class="label">模型:</label>
-<select v-model="model">
-<option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
-</select>
+<span class="label">模型: gemini-3-flash-preview</span>
 </div>
 <div class="toolbar-right">
 <button @click="translate()" :disabled="loading || !prompt.trim()" class="btn-primary">
@@ -225,7 +222,6 @@
 
 <script>
 import request from '../utils/request'
-import { getModels } from '../utils/models'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { marked } from 'marked'
 
@@ -244,8 +240,6 @@ result: '',
 englishResult: '',
 loading: false,
 streamCharsCount: 0,
-model: 'gemini-3-flash-preview',
-rawModelOptions: [],
 urlInput: '',
 urlLoading: false,
 showHistory: false,
@@ -261,19 +255,6 @@ tasks: [
 }
 },
 computed: {
-    user() {
-      try {
-        return JSON.parse(localStorage.getItem('user_info'))
-      } catch (e) { return null }
-    },
-    isPremium() {
-      return this.user && (this.user.role === 'admin' || this.user.role === 'premium' || this.user.role === 'teacher' || this.user.priv === -1)
-    },
-    modelOptions() {
-      const all = this.rawModelOptions || []
-      if (this.isPremium) return all
-      return all.filter(m => m.id === 'gemini-3-flash-preview')
-    },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
     }
@@ -285,7 +266,6 @@ watch: {
     },
     result(val) { this.updateCurrentTask('result', val); this.saveState() },
     englishResult(val) { this.updateCurrentTask('englishResult', val); this.saveState() },
-    model(val) { this.saveState() },
     tasks: {
       handler(val) { localStorage.setItem('translate_tasks', JSON.stringify(val)) },
       deep: true
@@ -314,19 +294,8 @@ try {
         }
       }
     } catch (e) { console.error('Failed to load tasks', e) }
-
-const list = await getModels()
-if (Array.isArray(list)) this.rawModelOptions = list
-      
-      if (this.modelOptions.length > 0) {
-        // If saved model is not in list (and not premium), fallback
-        const current = this.modelOptions.find(m => m.id === this.model)
-        if (!current) {
-          this.model = this.modelOptions[0].id
-        }
-      }
 } catch (e) {
-console.warn('failed to load models', e)
+console.warn('failed to initialize translate page', e)
 }
 },
 methods: {
@@ -334,8 +303,7 @@ methods: {
         localStorage.setItem('translate_storage', JSON.stringify({
             prompt: this.prompt,
             result: this.result,
-            englishResult: this.englishResult,
-            model: this.model
+            englishResult: this.englishResult
         }))
     },
     startResize() {
@@ -378,7 +346,7 @@ try {
   if (token) headers['Authorization'] = `Bearer ${token}`
   const response = await fetch('/api/translate/stream', {
     method: 'POST', headers,
-    body: JSON.stringify({ text: this.prompt, model: this.model })
+    body: JSON.stringify({ text: this.prompt, model: 'gemini-3-flash-preview' })
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   const reader = response.body.getReader()
