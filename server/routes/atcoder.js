@@ -1,7 +1,7 @@
 import express from 'express'
 import axios from 'axios'
 import { load } from 'cheerio'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
@@ -108,8 +108,8 @@ router.get('/problem', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /api/atcoder/debug-ac?url=...  (临时调试接口，测试 AC 代码抓取流程)
-router.get('/debug-ac', async (req, res) => {
+// GET /api/atcoder/debug-ac?url=...  (仅管理员可访问的临时调试接口)
+router.get('/debug-ac', authenticateToken, requireRole('admin'), async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
 

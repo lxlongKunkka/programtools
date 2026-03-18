@@ -28,6 +28,44 @@ export async function appendUsageLog(entry) {
   }
 }
 
+const SENSITIVE_LOG_PATHS = new Set([
+  '/api/login',
+  '/api/register',
+])
+
+const SENSITIVE_FIELD_RE = /(pass(word)?|token|secret|authorization|cookie|jwt|api[-_]?key|key)$/i
+
+function redactString(value) {
+  return String(value)
+    .replace(/("(?:pass(?:word)?|token|secret|authorization|cookie|jwt|api[-_]?key)"\s*:\s*")([^"]*)(")/gi, '$1[REDACTED]$3')
+    .replace(/((?:pass(?:word)?|token|secret|authorization|cookie|jwt|api[-_]?key)=)([^&\s]+)/gi, '$1[REDACTED]')
+    .replace(/(Bearer\s+)[A-Za-z0-9\-._~+/]+=*/gi, '$1[REDACTED]')
+}
+
+function redactValue(value) {
+  if (value == null) return value
+  if (Array.isArray(value)) return value.map(redactValue)
+  if (typeof value === 'string') return redactString(value)
+  if (typeof value !== 'object') return value
+
+  const output = {}
+  for (const [key, val] of Object.entries(value)) {
+    output[key] = SENSITIVE_FIELD_RE.test(key) ? '[REDACTED]' : redactValue(val)
+  }
+  return output
+}
+
+function serializeForLog(value, { redactAll = false } = {}) {
+  try {
+    if (redactAll) return '[REDACTED]'
+    const sanitized = redactValue(value)
+    const serialized = typeof sanitized === 'string' ? sanitized : JSON.stringify(sanitized)
+    return (serialized || '').slice(0, 5000)
+  } catch {
+    return redactAll ? '[REDACTED]' : ''
+  }
+}
+
 export const requestLogger = async (req, res, next) => {
   const start = Date.now()
   const ip = req.ip || req.socket.remoteAddress || ''
@@ -39,6 +77,7 @@ export const requestLogger = async (req, res, next) => {
   const isApi = pathName && pathName.startsWith('/api/')
   const isPage = pathName === '/' || pathName === '/index.html'
   const isCourseware = pathName && (pathName.startsWith('/public/courseware/') || pathName.startsWith('/api/public/courseware/'))
+  const isSensitivePath = SENSITIVE_LOG_PATHS.has(pathName)
   
   const shouldLog = isApi || isPage || isCourseware
   if (!shouldLog) return next()
@@ -66,20 +105,8 @@ export const requestLogger = async (req, res, next) => {
         }
       } catch {}
       // 序列化请求/响应内容（限制长度，避免日志过大）
-      const bodyText = (() => {
-        try {
-          const b = req.body
-          const s = typeof b === 'string' ? b : JSON.stringify(b)
-          return (s || '').slice(0, 5000)
-        } catch { return '' }
-      })()
-      const respText = (() => {
-        try {
-          const c = chunks.length ? chunks[chunks.length - 1] : null
-          const s = typeof c === 'string' ? c : JSON.stringify(c)
-          return (s || '').slice(0, 5000)
-        } catch { return '' }
-      })()
+      const bodyText = serializeForLog(req.body, { redactAll: isSensitivePath })
+      const respText = serializeForLog(chunks.length ? chunks[chunks.length - 1] : null, { redactAll: isSensitivePath })
 
       const entry = {
         ts: nowISO(),
