@@ -8,12 +8,12 @@ import mongoose from 'mongoose'
 import { fileURLToPath } from 'url'
 import nodemailer from 'nodemailer'
 import JSZip from 'jszip'
-import COS from 'cos-nodejs-sdk-v5'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
-import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, COS_CONFIG, HYDRO_CONFIG } from '../config.js'
+import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, HYDRO_CONFIG } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
+import { isCosConfigured, uploadTextToCos } from '../utils/cosClient.js'
 import { proxyImageToCos } from '../utils/cosUploader.js'
 import { debugLog } from '../utils/logger.js'
 import { getIO } from '../socket/index.js'
@@ -40,37 +40,12 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
-// Initialize COS
-let cos = null
-if (COS_CONFIG.SecretId && COS_CONFIG.SecretKey && COS_CONFIG.Bucket && COS_CONFIG.Region) {
-    cos = new COS({
-        SecretId: COS_CONFIG.SecretId,
-        SecretKey: COS_CONFIG.SecretKey
-    })
-}
-
 async function uploadToCos(key, content) {
-    if (!cos) {
+  if (!isCosConfigured()) {
         throw new Error('COS not configured')
     }
-    return new Promise((resolve, reject) => {
-        cos.putObject({
-            Bucket: COS_CONFIG.Bucket,
-            Region: COS_CONFIG.Region,
-            Key: key,
-            Body: content,
-            ContentType: 'text/html; charset=utf-8'
-        }, function(err, data) {
-            if (err) return reject(err)
-            
-            // Construct URL
-            let url = `https://${COS_CONFIG.Bucket}.cos.${COS_CONFIG.Region}.myqcloud.com/${key}`
-            if (COS_CONFIG.Domain) {
-                url = `${COS_CONFIG.Domain}/${key}`
-            }
-            resolve(url)
-        })
-    })
+  const result = await uploadTextToCos(key, content)
+  return result.url
 }
 
 let currentHydroCookie = HYDRO_CONFIG.COOKIE
@@ -2066,7 +2041,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           let relativePath;
 
           // Try COS Upload first
-          if (cos) {
+          if (isCosConfigured()) {
               let cosKey = `courseware/${safeLevel}/${safeTopic}/${safeChapter}`;
               if (safeGroup) {
                   cosKey = `courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;
@@ -2728,7 +2703,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           let relativePath;
           
           // Try COS Upload first
-          if (cos) {
+          if (isCosConfigured()) {
               let cosKey = '';
               if (safeGroup) {
                   cosKey = `courseware/${safeGroup}/${safeLevel}/${safeTopic}/${safeChapter}`;

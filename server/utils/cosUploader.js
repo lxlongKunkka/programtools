@@ -1,13 +1,7 @@
-import COS from 'cos-nodejs-sdk-v5';
 import axios from 'axios';
 import { COS_CONFIG } from '../config.js';
 import path from 'path';
-
-// 初始化 COS 客户端
-const cos = new COS({
-  SecretId: COS_CONFIG.SecretId,
-  SecretKey: COS_CONFIG.SecretKey,
-});
+import { buildCosObjectUrl, isCosConfigured, uploadObjectToCos } from './cosClient.js';
 
 /**
  * 上传图片到腾讯云 COS
@@ -16,7 +10,7 @@ const cos = new COS({
  * @returns {Promise<string>} 返回图片 URL
  */
 export async function uploadImageToCos(imageBuffer, fileName) {
-  if (!COS_CONFIG.SecretId || !COS_CONFIG.SecretKey || !COS_CONFIG.Bucket) {
+  if (!isCosConfigured()) {
     console.warn('[COS上传] 配置不完整，跳过图片上传');
     console.warn('[COS上传] SecretId:', !!COS_CONFIG.SecretId, 'SecretKey:', !!COS_CONFIG.SecretKey, 'Bucket:', COS_CONFIG.Bucket);
     return null;
@@ -33,39 +27,15 @@ export async function uploadImageToCos(imageBuffer, fileName) {
     console.log(`[COS上传] 开始上传: ${cosKey}, 大小: ${imageBuffer.length} 字节`);
 
     // 上传到 COS
-    const result = await new Promise((resolve, reject) => {
-      cos.putObject({
-        Bucket: COS_CONFIG.Bucket,
-        Region: COS_CONFIG.Region,
-        Key: cosKey,
-        Body: imageBuffer,
-        ContentType: getImageContentType(ext),
-      }, (err, data) => {
-        if (err) {
-          console.error('[COS上传] 上传失败:', err);
-          reject(err);
-        } else {
-          console.log('[COS上传] SDK 返回:', data);
-          resolve(data);
-        }
-      });
-    });
+    const result = await uploadObjectToCos({
+      key: cosKey,
+      body: imageBuffer,
+      contentType: getImageContentType(ext)
+    })
+    console.log('[COS上传] 直传返回:', result)
 
     // 返回图片 URL
-    let finalUrl;
-    // 如果配置了自定义域名，使用自定义域名 + 文件路径
-    if (COS_CONFIG.Domain) {
-      // 移除开头的 http:// 或 https://（如果有）
-      let domain = COS_CONFIG.Domain.replace(/^https?:\/\//, '');
-      // 确保以 / 结尾
-      domain = domain.endsWith('/') ? domain : domain + '/';
-      finalUrl = `https://${domain}${cosKey}`;
-      console.log(`[COS上传] 使用自定义域名: ${finalUrl}`);
-    } else {
-      // 使用 COS SDK 返回的 Location
-      finalUrl = result.Location.startsWith('http') ? result.Location : `https://${result.Location}`;
-      console.log(`[COS上传] 使用 COS Location: ${finalUrl}`);
-    }
+    const finalUrl = result.url || buildCosObjectUrl(cosKey)
 
     console.log(`[COS上传] 最终 URL: ${finalUrl}`);
     return finalUrl;
@@ -166,7 +136,7 @@ export async function processSingleImage(src, index) {
  * @returns {Promise<string|null>}
  */
 export async function proxyImageToCos(url) {
-  if (!COS_CONFIG.SecretId || !COS_CONFIG.SecretKey || !COS_CONFIG.Bucket) return null
+  if (!isCosConfigured()) return null
   const imageBuffer = await downloadImage(url)
   if (!imageBuffer) return null
   const ext = getImageExtension(url)
@@ -175,22 +145,12 @@ export async function proxyImageToCos(url) {
   const randomStr = Math.random().toString(36).substring(2, 13)
   const cosKey = `translate-images/${dateStr}/${randomStr}${ext}`
   try {
-    const result = await new Promise((resolve, reject) => {
-      cos.putObject({
-        Bucket: COS_CONFIG.Bucket,
-        Region: COS_CONFIG.Region,
-        Key: cosKey,
-        Body: imageBuffer,
-        ContentType: getImageContentType(ext),
-      }, (err, data) => err ? reject(err) : resolve(data))
+    const result = await uploadObjectToCos({
+      key: cosKey,
+      body: imageBuffer,
+      contentType: getImageContentType(ext)
     })
-    let finalUrl
-    if (COS_CONFIG.Domain) {
-      const domain = COS_CONFIG.Domain.replace(/^https?:\/\//, '').replace(/\/$/, '')
-      finalUrl = `https://${domain}/${cosKey}`
-    } else {
-      finalUrl = result.Location.startsWith('http') ? result.Location : `https://${result.Location}`
-    }
+    const finalUrl = result.url || buildCosObjectUrl(cosKey)
     console.log(`[proxy-image] ${url} → ${finalUrl}`)
     return finalUrl
   } catch (e) {
