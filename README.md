@@ -17,6 +17,27 @@ npm run dev
 npm run server
 ```
 
+## 部署
+
+常规部署：
+
+```powershell
+npm run deploy
+```
+
+如需在部署时一并轮换 JWT_SECRET：
+
+```powershell
+npm run deploy:rotate-jwt
+```
+
+这会执行以下动作：
+
+- 本地 `server/.env` 生成新的 `JWT_SECRET`
+- 远端 `server/.env` 同步同一值
+- `pm2 restart tools --update-env` 使新密钥生效
+- 所有旧 JWT 立即失效，用户需要重新登录
+
 ## 后端环境变量（server/.env）
 
 需要在 `server/.env` 中配置以下变量：
