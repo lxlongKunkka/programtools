@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>ProgramTools Importer</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 16px;
+      width: 320px;
+      color: #1f2937;
+      background: #f7f7f2;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+    }
+    select, button {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    button {
+      margin-top: 10px;
+      border: 0;
+      background: #14532d;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:disabled {
+      background: #94a3b8;
+      cursor: wait;
+    }
+    #status {
+      margin-top: 12px;
+      white-space: pre-wrap;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #374151;
+      min-height: 48px;
+    }
+  </style>
+</head>
+<body>
+  <h1>多站点导入 SolveData</h1>
+  <p>在支持的网站页面点击下方按钮，扩展会自动识别站点并导入当前题目或比赛。</p>
+  <select id="targetOrigin">
+    <option value="https://ai.acjudge.com">生产站点 https://ai.acjudge.com</option>
+    <option value="https://acjudge.com">旧站点 https://acjudge.com</option>
+    <option value="http://localhost:5173">本地开发 http://localhost:5173</option>
+  </select>
+  <button id="importButton">导入当前页面</button>
+  <div id="status">等待开始</div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -131,8 +131,8 @@
           <span
             v-if="tasks[currentTaskIndex]?.additionalFile"
             :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 }]"
-            :title="tasks[currentTaskIndex].additionalFile.base64 ? '点击下载 ' + tasks[currentTaskIndex].additionalFile.filename : '附件（本次会话后需重新获取）'"
-            @click="tasks[currentTaskIndex].additionalFile.base64 && downloadSampleZip()"
+            :title="getAdditionalFileTitle(tasks[currentTaskIndex].additionalFile)"
+            @click="openAdditionalFile()"
           >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ Math.round(tasks[currentTaskIndex].additionalFile.size / 1024) }} KB)</span>
           <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱ {{ problemMeta.timeLimit }}ms</span>
           <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
@@ -392,6 +392,9 @@ export default {
   mounted() {
     // 动态加载后端提供的模型列表
     this.loadModels()
+
+    window.addEventListener('message', this.handleExtensionImportMessage)
+    window.addEventListener('storage', this.handleExtensionStorageChange)
     
     // 尝试从 localStorage 恢复任务列表
     try {
@@ -409,6 +412,12 @@ export default {
     // 恢复上次输入的 URL
     const savedUrl = localStorage.getItem('solve_fetch_url')
     if (savedUrl) this.fetchUrl = savedUrl
+
+    this.consumePendingExtensionImport()
+  },
+  beforeUnmount() {
+    window.removeEventListener('message', this.handleExtensionImportMessage)
+    window.removeEventListener('storage', this.handleExtensionStorageChange)
   },
   watch: {
     // 监听当前任务数据的变化，同步到 tasks 数组
@@ -493,6 +502,228 @@ export default {
     }
   },
   methods: {
+    getPendingExtensionImportKey(requestId) {
+      return `programtools_pending_solvedata_import:${requestId}`
+    },
+
+    getPendingExtensionImportPointerKey() {
+      return 'programtools_pending_solvedata_import_latest'
+    },
+
+    getPendingExtensionImportResultKey(requestId) {
+      return `programtools_pending_solvedata_import_result:${requestId}`
+    },
+
+    markExtensionImportResult(requestId, ok, error = '') {
+      if (!requestId) return
+      localStorage.setItem(this.getPendingExtensionImportResultKey(requestId), JSON.stringify({ ok, error, ts: Date.now() }))
+    },
+
+    isSingleProblemUrl(url) {
+      return (
+        /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
+        /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
+        /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
+        /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
+        /nflsoi\.cc[^/]*\/contest\/\d+\/problem\/\d+/i.test(url) ||
+        /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url) ||
+        /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
+      )
+    },
+
+    async importTasksFromUrl(url, options = {}) {
+      const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null
+
+      try {
+        if (this.isSingleProblemUrl(url)) throw new Error('single_problem')
+
+        onProgress?.('获取比赛题目列表...')
+        const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
+        const problems = contestData.problems || []
+        if (problems.length === 0) throw new Error('比赛中没有找到题目')
+
+        let added = 0
+        for (const p of problems) {
+          onProgress?.(`正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`)
+          try {
+            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label, p.tags || [])
+            added++
+          } catch {
+            // 单题失败不阻断整场导入
+          }
+        }
+
+        if (added === 0) {
+          throw new Error('比赛题目导入失败')
+        }
+
+        return {
+          kind: 'url',
+          mode: 'contest',
+          added,
+          total: problems.length,
+          contestTitle: contestData.title || '',
+          url,
+        }
+      } catch (contestErr) {
+        onProgress?.('获取题目内容...')
+        await this.addProblemAsTask(url)
+        return {
+          kind: 'url',
+          mode: 'problem',
+          added: 1,
+          total: 1,
+          url,
+        }
+      }
+    },
+
+    normalizeExtensionImportRequest(rawPayload) {
+      if (rawPayload?.kind && rawPayload?.payload) return rawPayload
+      return {
+        kind: 'task',
+        payload: rawPayload,
+      }
+    },
+
+    async applyExtensionImportRequest(rawPayload) {
+      const requestPayload = this.normalizeExtensionImportRequest(rawPayload)
+
+      if (requestPayload.kind === 'task') {
+        this.importTaskFromExtension(requestPayload.payload)
+        return { kind: 'task', mode: 'problem' }
+      }
+
+      if (requestPayload.kind === 'url') {
+        const url = requestPayload.payload?.url?.trim()
+        if (!url) {
+          throw new Error('扩展导入缺少题目链接')
+        }
+        return await this.importTasksFromUrl(url)
+      }
+
+      throw new Error('不支持的扩展导入类型')
+    },
+
+    getExtensionImportSuccessMessage(result) {
+      if (result?.kind === 'url' && result.mode === 'contest') {
+        return `✅ 已从 Edge 扩展导入 ${result.added} 道题目`
+      }
+      if (result?.kind === 'url') {
+        return '✅ 已从 Edge 扩展导入题目链接'
+      }
+      return '✅ 已从 Edge 扩展导入题目'
+    },
+
+    async consumePendingExtensionImport() {
+      const pointerKey = this.getPendingExtensionImportPointerKey()
+      const requestId = localStorage.getItem(pointerKey)
+      if (!requestId) return false
+
+      const payloadKey = this.getPendingExtensionImportKey(requestId)
+      const rawPayload = localStorage.getItem(payloadKey)
+      if (!rawPayload) return false
+
+      try {
+        const payload = JSON.parse(rawPayload)
+        const result = await this.applyExtensionImportRequest(payload)
+        this.markExtensionImportResult(requestId, true)
+        localStorage.removeItem(payloadKey)
+        localStorage.removeItem(pointerKey)
+        this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+        return true
+      } catch (error) {
+        console.error('Pending extension import failed:', error)
+        this.markExtensionImportResult(requestId, false, error.message)
+        this.showToastMessage('扩展导入失败: ' + error.message)
+        return false
+      }
+    },
+
+    handleExtensionStorageChange(event) {
+      if (event.key !== this.getPendingExtensionImportPointerKey()) return
+      this.consumePendingExtensionImport()
+    },
+
+    normalizeExtensionTask(payload) {
+      const title = (payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题').trim()
+      return {
+        id: Date.now() + Math.random(),
+        status: 'pending',
+        problemText: payload?.content || '',
+        manualCode: payload?.acCode || '',
+        referenceText: '',
+        codeOutput: '',
+        serverPureCode: '',
+        dataOutput: '',
+        translationText: '',
+        translationEnglish: '',
+        additionalFile: payload?.additionalFile || null,
+        problemMeta: {
+          title,
+          rawTitle: title,
+          sourceUrl: payload?.url || '',
+          importedVia: 'edge-extension',
+          ...(payload?.timeLimit ? { timeLimit: payload.timeLimit } : {}),
+          ...(payload?.memoryLimit ? { memoryLimit: payload.memoryLimit } : {})
+        },
+        reportHtml: ''
+      }
+    },
+
+    importTaskFromExtension(payload) {
+      if (!payload?.content || !payload?.url) {
+        throw new Error('扩展导入数据缺少题面或题目链接')
+      }
+
+      const importedTask = this.normalizeExtensionTask(payload)
+      const current = this.tasks[0]
+      const currentEmpty = this.tasks.length === 1 && current && !current.problemText?.trim() && !current.manualCode?.trim()
+
+      if (currentEmpty) {
+        this.tasks = [importedTask]
+        this.currentTaskIndex = 0
+        this.loadTask(0)
+        this.mirrorImages(0, ['problemText'])
+        return
+      }
+
+      this.tasks.push(importedTask)
+      const newIndex = this.tasks.length - 1
+      this.switchTask(newIndex)
+      this.mirrorImages(newIndex, ['problemText'])
+    },
+
+    async handleExtensionImportMessage(event) {
+      const data = event?.data
+      if (event.source !== window) return
+      if (!data || data.source !== 'programtools-edge-extension') return
+      if (data.type !== 'programtools-import-solvedata') return
+
+      try {
+        const result = await this.applyExtensionImportRequest(data.payload)
+        this.markExtensionImportResult(data.requestId, true)
+        window.postMessage({
+          source: 'programtools-solvedata-page',
+          type: 'programtools-import-solvedata-result',
+          requestId: data.requestId,
+          ok: true,
+        }, window.location.origin)
+        this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+      } catch (error) {
+        console.error('Extension import failed:', error)
+        this.markExtensionImportResult(data.requestId, false, error.message)
+        window.postMessage({
+          source: 'programtools-solvedata-page',
+          type: 'programtools-import-solvedata-result',
+          requestId: data.requestId,
+          ok: false,
+          error: error.message,
+        }, window.location.origin)
+        this.showToastMessage('扩展导入失败: ' + error.message)
+      }
+    },
+
     isExplainCodeMode(taskIndex = this.currentTaskIndex) {
       const task = this.tasks?.[taskIndex]
       const manualCode = task?.manualCode ?? this.manualCode
@@ -1529,46 +1760,19 @@ pause
       this.fetchProgress = ''
       const url = this.fetchUrl.trim()
       try {
-        // 判断是否为单题链接，若是则跳过比赛列表获取
-        const isSingleProblem = (
-          /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
-          /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
-          /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
-          /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
-          /nflsoi\.cc[^/]*\/contest\/\d+\/problem\/\d+/i.test(url) ||
-          /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url) ||
-          /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
-        )
-        if (isSingleProblem) throw new Error('single_problem')
-
-        // 尝试作为比赛链接
-        this.fetchProgress = '获取比赛题目列表...'
-        const contestData = await request(`/api/atcoder/contest?url=${encodeURIComponent(url)}`)
-        const problems = contestData.problems || []
-        if (problems.length === 0) throw new Error('比赛中没有找到题目')
-        // 都加入任务列表
-        let added = 0
-        for (const p of problems) {
-          this.fetchProgress = `正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`
-          try {
-            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label, p.tags || [])
-            added++
-          } catch { /* 单题失败不阻断 */ }
-        }
+        const result = await this.importTasksFromUrl(url, {
+          onProgress: (message) => {
+            this.fetchProgress = message
+          }
+        })
         this.fetchUrl = ''
         this.fetchProgress = ''
-        this.showToastMessage(`✅ 已添加 ${added} 道题目到任务列表`)
-      } catch (contestErr) {
-        // 试为单题链接
-        this.fetchProgress = '获取题目内容...'
-        try {
-          await this.addProblemAsTask(url)
-          this.fetchUrl = ''
-          this.fetchProgress = ''
-        } catch (e) {
-          this.fetchUrlError = e.message || '获取失败，请检查链接是否正确'
-          this.fetchProgress = ''
+        if (result.mode === 'contest') {
+          this.showToastMessage(`✅ 已添加 ${result.added} 道题目到任务列表`)
         }
+      } catch (e) {
+        this.fetchUrlError = e.message || '获取失败，请检查链接是否正确'
+        this.fetchProgress = ''
       } finally {
         this.isFetchingUrl = false
       }
@@ -2521,6 +2725,25 @@ pause
       if (window.innerWidth < 768) {
         const outputPanel = this.$el.querySelector('.output-panel')
         if (outputPanel) outputPanel.scrollIntoView({ behavior: 'smooth' })
+      }
+    },
+
+    getAdditionalFileTitle(additionalFile) {
+      if (!additionalFile) return ''
+      if (additionalFile.base64) return '点击下载 ' + additionalFile.filename
+      if (additionalFile.sourceUrl) return '当前未缓存二进制，点击打开原始附件链接'
+      return '附件（本次会话后需重新获取）'
+    },
+
+    openAdditionalFile() {
+      const af = this.tasks[this.currentTaskIndex]?.additionalFile
+      if (!af) return
+      if (af.base64) {
+        this.downloadSampleZip()
+        return
+      }
+      if (af.sourceUrl) {
+        window.open(af.sourceUrl, '_blank', 'noopener')
       }
     },
     

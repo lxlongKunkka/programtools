@@ -40,6 +40,7 @@ export const NFLSOJ_PWD = process.env.NFLSOJ_PWD || ''
 // 梦熊联盟 (mna.wang, SYZOJ 风格) 账号，用于抓取比赛题目、附件和 AC 代码
 export const MNA_USER = process.env.MNA_USER || ''
 export const MNA_PWD = process.env.MNA_PWD || ''
+export const MNA_HTTP_PROXY = process.env.MNA_HTTP_PROXY || ''
 
 // Hydro OJ (nflsoi.cc:10611, Hydro 框架) 账号，用于抓取比赛题目
 export const HYDRO_NFLSOI_USER = process.env.HYDRO_NFLSOI_USER || ''

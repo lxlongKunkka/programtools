@@ -1,13 +1,15 @@
 import axios from 'axios'
 import { createHash } from 'crypto'
 import { load } from 'cheerio'
-import { MNA_USER, MNA_PWD } from '../config.js'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+import { MNA_USER, MNA_PWD, MNA_HTTP_PROXY } from '../config.js'
 
 const BASE = 'https://mna.wang'
 const LOGIN_SALT = 'syzoj2_xxx'
 
 let cachedCookies = ''
 let sessionExpireAt = 0
+const mnaProxyAgent = MNA_HTTP_PROXY ? new HttpsProxyAgent(MNA_HTTP_PROXY) : null
 
 function normalizeUrl(urlOrPath, baseUrl = BASE) {
   try {
@@ -77,6 +79,17 @@ function makeHeaders(cookies = '', extra = {}) {
   }
 }
 
+function makeRequestOptions(extra = {}) {
+  return {
+    ...(mnaProxyAgent ? {
+      httpAgent: mnaProxyAgent,
+      httpsAgent: mnaProxyAgent,
+      proxy: false,
+    } : {}),
+    ...extra,
+  }
+}
+
 async function getSession() {
   const now = Date.now()
   if (cachedCookies && now < sessionExpireAt) return cachedCookies
@@ -89,7 +102,7 @@ async function getSession() {
   const resp = await axios.post(
     `${BASE}/api/login`,
     new URLSearchParams({ username: MNA_USER, password }).toString(),
-    {
+    makeRequestOptions({
       headers: makeHeaders('', {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-Requested-With': 'XMLHttpRequest',
@@ -97,7 +110,7 @@ async function getSession() {
       maxRedirects: 0,
       validateStatus: status => status < 600,
       timeout: 15000,
-    }
+    })
   )
 
   if (resp.data?.error_code !== 1) {
@@ -115,13 +128,13 @@ async function getSession() {
 
 async function mnaGet(path) {
   const cookies = await getSession()
-  const resp = await axios.get(normalizeUrl(path), {
+  const resp = await axios.get(normalizeUrl(path), makeRequestOptions({
     headers: makeHeaders(cookies),
     responseType: 'text',
     transformResponse: [data => data],
     validateStatus: status => status < 600,
     timeout: 20000,
-  })
+  }))
 
   if (resp.status === 403) throw new Error('梦熊联盟无权访问（403），请检查账号权限')
   if (resp.status === 404) throw new Error(`梦熊联盟页面不存在（404）: ${path}`)
@@ -131,12 +144,12 @@ async function mnaGet(path) {
 
 async function mnaGetBinary(path) {
   const cookies = await getSession()
-  const resp = await axios.get(normalizeUrl(path), {
+  const resp = await axios.get(normalizeUrl(path), makeRequestOptions({
     headers: makeHeaders(cookies),
     responseType: 'arraybuffer',
     validateStatus: status => status < 600,
     timeout: 30000,
-  })
+  }))
 
   if (resp.status === 403) throw new Error('梦熊联盟无权下载（403）')
   if (resp.status === 404) throw new Error(`梦熊联盟文件不存在（404）: ${path}`)

@@ -70,6 +70,144 @@ function htojHeaders(token) {
 
 const HTOJ_API = 'https://api.htoj.com.cn'
 
+function buildQuery(params) {
+  const search = new URLSearchParams()
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      search.set(key, String(value))
+    }
+  })
+  return search.toString()
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function extractFilename(contentDisposition, fallback = 'attachment.zip') {
+  if (contentDisposition) {
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1])
+      } catch {
+        return utf8Match[1]
+      }
+    }
+
+    const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+    if (plainMatch?.[1]) return plainMatch[1]
+  }
+
+  try {
+    const pathname = new URL(fallback).pathname || ''
+    const last = pathname.split('/').filter(Boolean).pop()
+    if (last) return decodeURIComponent(last)
+  } catch {
+    // ignore URL parse failure and fall back to raw string below
+  }
+
+  return fallback
+}
+
+function normalizeAttachmentUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return ''
+  return rawUrl.trim().replace(/[),.;]+$/, '')
+}
+
+function extractAttachmentUrlFromText(text) {
+  if (!text || typeof text !== 'string') return ''
+
+  const patterns = [
+    /<a[^>]+href=["'](https?:\/\/[^"']+\/code-community\/file\/[^"']+)["'][^>]*>\s*附件\s*<\/a>/i,
+    /\[[^\]]*附件[^\]]*\]\((https?:\/\/[^)]+\/code-community\/file\/[^)]+)\)/i,
+    /(https?:\/\/[^\s"'<>]+\/code-community\/file\/[^\s"'<>]+\.(?:zip|rar|7z|tar|gz))/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match?.[1]) return normalizeAttachmentUrl(match[1])
+  }
+
+  return ''
+}
+
+async function downloadAdditionalFile(fileUrl) {
+  const resp = await axios.get(fileUrl, {
+    responseType: 'arraybuffer',
+    timeout: 15000,
+    validateStatus: status => status >= 200 && status < 400,
+    headers: {
+      'Referer': 'https://htoj.com.cn/',
+      'User-Agent': 'Mozilla/5.0 ProgramTools/1.0'
+    }
+  })
+
+  const buffer = Buffer.from(resp.data)
+  const filename = extractFilename(resp.headers?.['content-disposition'], fileUrl)
+
+  return {
+    filename,
+    base64: buffer.toString('base64'),
+    size: buffer.length,
+    sourceUrl: fileUrl,
+  }
+}
+
+async function fetchAcceptedSubmissionCode({ pid, cid, tid, gid }, token) {
+  const headers = htojHeaders(token)
+  const pageSize = 20
+  const maxPages = 5
+
+  const requestWithRetry = async (requester, label) => {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const response = await requester()
+      const errMsg = response.data?.errMsg || ''
+      if (response.data?.errCode === 0) return response
+      if (/访问太频繁/.test(errMsg) && attempt < 3) {
+        await sleep(600 * attempt)
+        continue
+      }
+      throw new Error(`${label}失败: errCode=${response.data?.errCode}, ${errMsg}`)
+    }
+
+    throw new Error(`${label}失败: 重试次数过多`)
+  }
+
+  for (let currentPage = 1; currentPage <= maxPages; currentPage += 1) {
+    const query = buildQuery({ cid, pid, tid, gid, currentPage, limit: pageSize })
+    const listResp = await requestWithRetry(
+      () => axios.get(
+        `${HTOJ_API}/api/code-community/api/get-submission-list?${query}`,
+        { headers, timeout: 10000 }
+      ),
+      '获取提交列表'
+    )
+
+    const records = listResp.data?.data?.records || []
+    const accepted = records.find(item => item?.status?.id === 0)
+    if (accepted?.submitId) {
+      const detailResp = await requestWithRetry(
+        () => axios.get(
+          `${HTOJ_API}/api/code-community/api/get-submission-detail?submitId=${accepted.submitId}`,
+          { headers, timeout: 10000 }
+        ),
+        '获取提交详情'
+      )
+
+      return {
+        submitId: accepted.submitId,
+        language: detailResp.data?.data?.language || accepted.language || '',
+        code: (detailResp.data?.data?.userCode || '').trim()
+      }
+    }
+
+    if (records.length < pageSize) break
+  }
+
+  return null
+}
+
 // ─── 比赛抓取 ─────────────────────────────────────────────────────────────────
 
 /**
@@ -89,9 +227,13 @@ function parseHtojProblemIds(url) {
   const pidM = url.match(/[?&]pid=(\d+)/)
   const cidM = url.match(/[?&]cid=(\d+)/)
   const problemIdM = url.match(/[?&]problemId=(\d+)/)
+  const tidM = url.match(/[?&]tid=(\d+)/)
+  const gidM = url.match(/[?&]gid=(\d+)/)
   return {
     pid: pidM?.[1] || problemIdM?.[1] || null,
-    cid: cidM?.[1] || null
+    cid: cidM?.[1] || null,
+    tid: tidM?.[1] || null,
+    gid: gidM?.[1] || null,
   }
 }
 
@@ -135,7 +277,7 @@ async function fetchHtojContest(url) {
 
 /** 拉取单道题目完整内容 */
 async function fetchHtojProblem(url) {
-  const { pid, cid } = parseHtojProblemIds(url)
+  const { pid, cid, tid, gid } = parseHtojProblemIds(url)
   if (!pid) throw new Error('无法从 URL 中解析题目 ID (pid/problemId)')
   if (!cid) throw new Error('核桃OJ 题目必须提供比赛 ID (cid) 参数')
 
@@ -170,11 +312,40 @@ async function fetchHtojProblem(url) {
     ? `> ${limits}\n\n${content}`
     : content
 
+  let additionalFile = null
+  const attachmentUrl = extractAttachmentUrlFromText(content)
+  if (attachmentUrl) {
+    try {
+      additionalFile = await downloadAdditionalFile(attachmentUrl)
+      console.log(`[htoj] 附件下载成功: ${additionalFile.filename} (${additionalFile.size} bytes)`)
+    } catch (error) {
+      console.warn('[htoj] 附件下载失败，回退为 sourceUrl:', error.message)
+      additionalFile = {
+        filename: extractFilename('', attachmentUrl),
+        size: 0,
+        sourceUrl: attachmentUrl,
+      }
+    }
+  }
+
+  let acCode = ''
+  try {
+    const acceptedSubmission = await fetchAcceptedSubmissionCode({ pid, cid, tid, gid }, token)
+    acCode = acceptedSubmission?.code || ''
+    if (acCode) {
+      console.log(`[htoj] 已抓取用户代码 pid=${pid} cid=${cid}, length=${acCode.length}`)
+    }
+  } catch (error) {
+    console.warn('[htoj] AC code skipped:', error.message)
+  }
+
   return {
     title,
     content: fullContent,
     url,
     problemId: base.problemId || '',  // P11715
+    acCode,
+    additionalFile,
     timeLimit: ojDetail.timeLimit,
     memoryLimit: ojDetail.memoryLimit,
     source: base.source?.name || ''
