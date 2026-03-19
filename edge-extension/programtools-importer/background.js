@@ -20,11 +20,11 @@ function isHtojContestUrl(url) {
 }
 
 function isNflsoiProblemUrl(url) {
-  return /https?:\/\/nflsoi\.cc(?::\d+)?\/(contest\/\d+\/problem\/\d+|p\/[a-z0-9_]+)/i.test(url || '')
+  return /https?:\/\/nflsoi\.cc(?::\d+)?\/(contest\/[a-z0-9]+\/problem\/[a-z0-9_]+|p\/[a-z0-9_]+)/i.test(url || '')
 }
 
 function isNflsoiContestUrl(url) {
-  return /https?:\/\/nflsoi\.cc(?::\d+)?\/contest\/\d+(?:\/problems)?\/?(?:\?.*)?$/i.test(url || '')
+  return /https?:\/\/nflsoi\.cc(?::\d+)?\/contest\/[a-z0-9]+(?:\/problems)?\/?(?:\?.*)?$/i.test(url || '')
 }
 
 function getImportContext(url) {

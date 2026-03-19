@@ -88,7 +88,7 @@
       <div class="task-list">
         <div
           v-for="(task, index) in tasks"
-          :key="index"
+          :key="task.id"
           :class="['task-item', { active: currentTaskIndex === index }]"
           @click="switchTask(index)"
         >
@@ -374,7 +374,7 @@ export default {
       
       tasks: [
         {
-          id: Date.now(),
+          id: Date.now() + Math.random(),
           status: 'pending', // pending, processing, completed, failed
           problemText: '',
           manualCode: '',
@@ -502,6 +502,41 @@ export default {
     }
   },
   methods: {
+    createTaskId() {
+      return Date.now() + Math.random()
+    },
+
+    ensureExtensionImportRequestState() {
+      if (!this._activeExtensionImportRequestIds) {
+        this._activeExtensionImportRequestIds = new Set()
+      }
+      if (!this._completedExtensionImportRequestIds) {
+        this._completedExtensionImportRequestIds = new Map()
+      }
+    },
+
+    tryStartExtensionImportRequest(requestId) {
+      if (!requestId) return true
+      this.ensureExtensionImportRequestState()
+      const now = Date.now()
+      const completedAt = this._completedExtensionImportRequestIds.get(requestId)
+      if (this._activeExtensionImportRequestIds.has(requestId)) return false
+      if (completedAt && now - completedAt < 10 * 60 * 1000) return false
+      this._activeExtensionImportRequestIds.add(requestId)
+      return true
+    },
+
+    finishExtensionImportRequest(requestId, completed = false) {
+      if (!requestId) return
+      this.ensureExtensionImportRequestState()
+      this._activeExtensionImportRequestIds.delete(requestId)
+      if (!completed) return
+      this._completedExtensionImportRequestIds.set(requestId, Date.now())
+      if (this._completedExtensionImportRequestIds.size <= 100) return
+      const oldestKey = this._completedExtensionImportRequestIds.keys().next().value
+      if (oldestKey) this._completedExtensionImportRequestIds.delete(oldestKey)
+    },
+
     getPendingExtensionImportKey(requestId) {
       return `programtools_pending_solvedata_import:${requestId}`
     },
@@ -525,7 +560,7 @@ export default {
         /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
         /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
         /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
-        /nflsoi\.cc[^/]*\/contest\/\d+\/problem\/\d+/i.test(url) ||
+        /nflsoi\.cc[^/]*\/contest\/[a-z0-9]+\/problem\/[a-z0-9_]+/i.test(url) ||
         /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url) ||
         /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
       )
@@ -619,10 +654,14 @@ export default {
       const pointerKey = this.getPendingExtensionImportPointerKey()
       const requestId = localStorage.getItem(pointerKey)
       if (!requestId) return false
+      if (!this.tryStartExtensionImportRequest(requestId)) return false
 
       const payloadKey = this.getPendingExtensionImportKey(requestId)
       const rawPayload = localStorage.getItem(payloadKey)
-      if (!rawPayload) return false
+      if (!rawPayload) {
+        this.finishExtensionImportRequest(requestId, false)
+        return false
+      }
 
       try {
         const payload = JSON.parse(rawPayload)
@@ -631,11 +670,13 @@ export default {
         localStorage.removeItem(payloadKey)
         localStorage.removeItem(pointerKey)
         this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+        this.finishExtensionImportRequest(requestId, true)
         return true
       } catch (error) {
         console.error('Pending extension import failed:', error)
         this.markExtensionImportResult(requestId, false, error.message)
         this.showToastMessage('扩展导入失败: ' + error.message)
+        this.finishExtensionImportRequest(requestId, false)
         return false
       }
     },
@@ -648,7 +689,7 @@ export default {
     normalizeExtensionTask(payload) {
       const title = (payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题').trim()
       return {
-        id: Date.now() + Math.random(),
+        id: this.createTaskId(),
         status: 'pending',
         problemText: payload?.content || '',
         manualCode: payload?.acCode || '',
@@ -699,6 +740,7 @@ export default {
       if (event.source !== window) return
       if (!data || data.source !== 'programtools-edge-extension') return
       if (data.type !== 'programtools-import-solvedata') return
+      if (!this.tryStartExtensionImportRequest(data.requestId)) return
 
       try {
         const result = await this.applyExtensionImportRequest(data.payload)
@@ -710,6 +752,7 @@ export default {
           ok: true,
         }, window.location.origin)
         this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+        this.finishExtensionImportRequest(data.requestId, true)
       } catch (error) {
         console.error('Extension import failed:', error)
         this.markExtensionImportResult(data.requestId, false, error.message)
@@ -721,6 +764,7 @@ export default {
           error: error.message,
         }, window.location.origin)
         this.showToastMessage('扩展导入失败: ' + error.message)
+        this.finishExtensionImportRequest(data.requestId, false)
       }
     },
 
@@ -1092,7 +1136,7 @@ export default {
     
     addNewTask() {
       const newTask = {
-        id: Date.now(),
+        id: this.createTaskId(),
         status: 'pending',
         problemText: '',
         manualCode: '',
@@ -1160,7 +1204,7 @@ export default {
           const heading = String(problemText || '').split('\n').map(line => line.trim()).find(Boolean) || ''
           const derivedTitle = heading.replace(/^#\s*/, '').trim() || folderName.replace(/^\d+[-_]?/, '')
           importedTasks.push({
-            id: Date.now() + importedTasks.length,
+            id: this.createTaskId(),
             status: 'pending',
             problemText,
             manualCode,
@@ -1216,7 +1260,7 @@ export default {
       const remaining = this.tasks.filter(t => t.status !== 'completed')
       if (remaining.length === 0) {
         // 全都是已完成，保留一个空任务
-        this.tasks = [{ id: Date.now(), status: 'pending', problemText: '', manualCode: '', referenceText: '', codeOutput: '', serverPureCode: '', dataOutput: '', translationText: '', translationEnglish: '', problemMeta: null, reportHtml: '' }]
+        this.tasks = [{ id: this.createTaskId(), status: 'pending', problemText: '', manualCode: '', referenceText: '', codeOutput: '', serverPureCode: '', dataOutput: '', translationText: '', translationEnglish: '', problemMeta: null, reportHtml: '' }]
         this.currentTaskIndex = 0
         this.loadTask(0)
       } else {
@@ -1233,7 +1277,7 @@ export default {
     clearAllTasks() {
       if (!confirm('确认清空所有任务？此操作不可撤销。')) return
       const emptyTask = {
-        id: Date.now(), status: 'pending',
+        id: this.createTaskId(), status: 'pending',
         problemText: '', manualCode: '', referenceText: '',
         codeOutput: '', serverPureCode: '', dataOutput: '',
         translationText: '', translationEnglish: '',
@@ -1846,7 +1890,7 @@ pause
       }
       // 否则新增一个任务
       const newTask = {
-        id: Date.now() + Math.random(),
+        id: this.createTaskId(),
         status: 'pending',
         problemText: data.content || '',
         manualCode: acCode,

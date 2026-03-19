@@ -9,8 +9,8 @@ function getPageContext(url) {
   if (/https:\/\/atcoder\.jp\/contests\/[^/?#]+\/?(?:\?.*)?$/i.test(url || '')) return { site: 'AtCoder', mode: 'contest', strategy: 'url' }
   if (/https:\/\/htoj\.com\.cn\/cpp\/oj\/problem\/detail\?[^#]*\bpid=\d+/i.test(url || '')) return { site: '核桃 OJ', mode: 'problem', strategy: 'url' }
   if (/https:\/\/htoj\.com\.cn\/cpp\/oj\/contest\/detail(?:\/problem)?\?[^#]*\bcid=\d+/i.test(url || '')) return { site: '核桃 OJ', mode: 'contest', strategy: 'url' }
-  if (/https?:\/\/nflsoi\.cc(?::\d+)?\/(contest\/\d+\/problem\/\d+|p\/[a-z0-9_]+)/i.test(url || '')) return { site: 'NFLSOI', mode: 'problem', strategy: 'url' }
-  if (/https?:\/\/nflsoi\.cc(?::\d+)?\/contest\/\d+(?:\/problems)?\/?(?:\?.*)?$/i.test(url || '')) return { site: 'NFLSOI', mode: 'contest', strategy: 'url' }
+  if (/https?:\/\/nflsoi\.cc(?::\d+)?\/(contest\/[a-z0-9]+\/problem\/[a-z0-9_]+|p\/[a-z0-9_]+)/i.test(url || '')) return { site: 'NFLSOI', mode: 'problem', strategy: 'url' }
+  if (/https?:\/\/nflsoi\.cc(?::\d+)?\/contest\/[a-z0-9]+(?:\/problems)?\/?(?:\?.*)?$/i.test(url || '')) return { site: 'NFLSOI', mode: 'contest', strategy: 'url' }
   return null
 }
 
