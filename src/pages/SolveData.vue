@@ -1536,7 +1536,8 @@ pause
           /luogu\.com\.cn\/problem\/[A-Z0-9]/i.test(url) ||
           /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
           /nflsoi\.cc[^/]*\/contest\/\d+\/problem\/\d+/i.test(url) ||
-          /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url)
+          /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url) ||
+          /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
         )
         if (isSingleProblem) throw new Error('single_problem')
 

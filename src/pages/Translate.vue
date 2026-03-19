@@ -435,6 +435,7 @@ isContestUrl(url) {
   if (/atcoder\.jp\/contests\/[^/]+\/?$/.test(url)) return true
   if (/codeforces\.com\/contest(s)?\/\d+\/?$/.test(url)) return true
   if (/codeforces\.com\/gym\/\d+\/?$/.test(url)) return true
+  if (/mna\.wang\/contest\/\d+\/?$/i.test(url)) return true
   return false
 },
 
@@ -478,7 +479,8 @@ async fetchUrl() {
   // 明确的单题链接，直接跳过比赛流程（与 SolveData.isSingleProblem 逻辑一致）
   const isSingleProblem = (
     /atcoder\.jp\/contests\/[^/]+\/tasks\/[^/]+_[a-z0-9][^/]*$/i.test(url) ||
-    /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url)
+    /codeforces\.com\/(contest|gym)\/\d+\/problem\//i.test(url) ||
+    /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
   )
   try {
     if (!isSingleProblem && this.isContestUrl(url)) {
