@@ -6,9 +6,15 @@ tools for my job
 快速开始：
 
 ```powershell
-cd d:\software\test\programtools
+cd d:\webapp\programtools
 npm install
 npm run dev
+```
+
+运行最小自动化测试：
+
+```powershell
+npm test
 ```
 
 ## 后端运行
@@ -37,6 +43,30 @@ npm run deploy:rotate-jwt
 - 远端 `server/.env` 同步同一值
 - `pm2 restart tools --update-env` 使新密钥生效
 - 所有旧 JWT 立即失效，用户需要重新登录
+
+## 依赖安全维护（2026-03-19）
+
+本轮修复完成了后端生产依赖的集中清理，部署前本地执行 `npm audit --omit=dev` 已为 0 风险。
+
+本次调整包含：
+
+- 移除 `cos-nodejs-sdk-v5`，改为项目内的直传实现 [server/utils/cosClient.js](server/utils/cosClient.js)
+- 升级 `express` 到 `^4.22.1`
+- 升级 `socket.io` 和 `socket.io-client` 到 `^4.8.3`
+- 使用 `package.json` 中的 `overrides` 固定安全版本：`body-parser 1.20.4`、`qs 6.14.2`、`socket.io-parser 4.2.6`
+
+这样做的原因：
+
+- `cos-nodejs-sdk-v5` 依赖链过深，且包含已知高风险传递依赖，继续保留会长期拖累审计结果
+- `express` 生态里部分安全修复依赖上游子包版本，单纯升级顶层包不一定足够，因此保留 `overrides` 作为兜底
+
+后续维护建议：
+
+- 依赖升级后优先执行 `npm audit --omit=dev`
+- 提交前优先执行 `npm test`
+- 如升级 `express`、`socket.io` 或上传链路，至少回归以下能力：MNA 抓取、附件下载、COS 上传、AI 路由、实时推送
+- 若未来需要扩展 COS 能力，优先在 [server/utils/cosClient.js](server/utils/cosClient.js) 内补能力，不要重新引入旧 SDK
+- 发布前固定执行 `npm run build`
 
 ## 后端环境变量（server/.env）
 
