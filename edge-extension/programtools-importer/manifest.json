@@ -26,7 +26,6 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_title": "导入题目到 SolveData"
   },
   "content_scripts": [

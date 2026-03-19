@@ -3,6 +3,8 @@ async function getActiveTab() {
   return tab
 }
 
+const DEFAULT_TARGET_ORIGIN = 'https://ai.acjudge.com'
+
 function isAtcoderProblemUrl(url) {
   return /https:\/\/atcoder\.jp\/contests\/[^/]+\/tasks\/[^/?#]+/i.test(url || '')
 }
@@ -517,31 +519,39 @@ async function importSupportedUrl(activeTab, targetOrigin, context) {
   }
 }
 
+async function handleImportCurrentPage(targetOrigin = DEFAULT_TARGET_ORIGIN) {
+  const activeTab = await getActiveTab()
+  const context = getImportContext(activeTab?.url)
+  if (!context) {
+    throw new Error('请先打开支持的网站页面。目前支持 MNA、AtCoder、核桃 OJ、NFLSOI')
+  }
+
+  if (context.strategy === 'scrape' && context.mode === 'problem') {
+    return importSingleProblem(activeTab, targetOrigin)
+  }
+
+  if (context.strategy === 'scrape' && context.mode === 'contest') {
+    return importContest(activeTab, targetOrigin)
+  }
+
+  return importSupportedUrl(activeTab, targetOrigin, context)
+}
+
+async function flashActionBadge(tabId, text, color) {
+  if (!tabId) return
+  await chrome.action.setBadgeBackgroundColor({ tabId, color })
+  await chrome.action.setBadgeText({ tabId, text })
+  setTimeout(() => {
+    chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {})
+  }, 3000)
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!['PROGRAMTOOLS_IMPORT_CURRENT_PAGE', 'PROGRAMTOOLS_IMPORT_CURRENT_MNA_PAGE'].includes(message?.type)) return false
 
   ;(async () => {
     try {
-      const activeTab = await getActiveTab()
-
-      const context = getImportContext(activeTab?.url)
-      if (!context) {
-        throw new Error('请先打开支持的网站页面。目前支持 MNA、AtCoder、核桃 OJ、NFLSOI')
-      }
-
-      if (context.strategy === 'scrape' && context.mode === 'problem') {
-        const result = await importSingleProblem(activeTab, message.targetOrigin)
-        sendResponse(result)
-        return
-      }
-
-      if (context.strategy === 'scrape' && context.mode === 'contest') {
-        const result = await importContest(activeTab, message.targetOrigin)
-        sendResponse(result)
-        return
-      }
-
-      const result = await importSupportedUrl(activeTab, message.targetOrigin, context)
+      const result = await handleImportCurrentPage(message.targetOrigin || DEFAULT_TARGET_ORIGIN)
       sendResponse(result)
     } catch (error) {
       sendResponse({ ok: false, error: error.message || 'unknown error' })
@@ -549,4 +559,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   })()
 
   return true
+})
+
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    const result = await handleImportCurrentPage(DEFAULT_TARGET_ORIGIN)
+    await flashActionBadge(tab?.id, 'OK', '#166534')
+    const title = result?.mode === 'contest'
+      ? `已导入比赛到 ${DEFAULT_TARGET_ORIGIN}`
+      : `已导入题目到 ${DEFAULT_TARGET_ORIGIN}`
+    chrome.action.setTitle({ tabId: tab?.id, title }).catch(() => {})
+  } catch (error) {
+    await flashActionBadge(tab?.id, 'ERR', '#b91c1c')
+    chrome.action.setTitle({
+      tabId: tab?.id,
+      title: error?.message || '导入失败',
+    }).catch(() => {})
+  }
 })
