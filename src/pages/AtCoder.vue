@@ -221,7 +221,7 @@
 <script>
 import request from '../utils/request'
 import { getModels } from '../utils/models'
-import JSZip from 'jszip'
+import { loadJsZip } from '../utils/loadJsZip'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 
 const STEPS = [
@@ -541,6 +541,7 @@ export default {
     },
 
     async downloadAll() {
+      const JSZip = await loadJsZip()
       const zip = new JSZip()
       let count = 0
 

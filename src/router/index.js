@@ -1,26 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../pages/Home.vue'
-import Translate from '../pages/Translate.vue'
-import Checker from '../pages/Checker.vue'
-import Solution from '../pages/Solution.vue'
-import SolveData from '../pages/SolveData.vue'
-import Chat from '../pages/Chat.vue'
-import Login from '../pages/Login.vue'
-import Profile from '../pages/Profile.vue'
-import Admin from '../pages/Admin.vue'
-import ProblemManager from '../pages/ProblemManager.vue'
-import Typing from '../pages/Typing.vue'
-import LearningMap from '../pages/LearningMap.vue'
-import ChapterDetail from '../pages/ChapterDetail.vue'
-import DailyProblem from '../pages/DailyProblem.vue'
-import SolutionReport from '../pages/SolutionReport.vue'
-import PromptEditor from '../pages/PromptEditor.vue'
-import GespTool from '../pages/GespTool.vue'
-import GespMap from '../pages/GespMap.vue'
-import GameSudoku from '../pages/GameSudoku.vue'
-import SokobanGame from '../pages/SokobanGame.vue'
-import ProgressDashboard from '../pages/ProgressDashboard.vue'
 import request from '../utils/request'
+
+const Home = () => import('../pages/Home.vue')
+const Translate = () => import('../pages/Translate.vue')
+const Checker = () => import('../pages/Checker.vue')
+const Solution = () => import('../pages/Solution.vue')
+const SolveData = () => import('../pages/SolveData.vue')
+const Chat = () => import('../pages/Chat.vue')
+const Login = () => import('../pages/Login.vue')
+const Profile = () => import('../pages/Profile.vue')
+const Admin = () => import('../pages/Admin.vue')
+const ProblemManager = () => import('../pages/ProblemManager.vue')
+const Typing = () => import('../pages/Typing.vue')
+const LearningMap = () => import('../pages/LearningMap.vue')
+const ChapterDetail = () => import('../pages/ChapterDetail.vue')
+const DailyProblem = () => import('../pages/DailyProblem.vue')
+const SolutionReport = () => import('../pages/SolutionReport.vue')
+const PromptEditor = () => import('../pages/PromptEditor.vue')
+const GespTool = () => import('../pages/GespTool.vue')
+const GespMap = () => import('../pages/GespMap.vue')
+const GameSudoku = () => import('../pages/GameSudoku.vue')
+const SokobanGame = () => import('../pages/SokobanGame.vue')
+const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [
   { path: '/', component: Home },

@@ -149,7 +149,7 @@ import ChapterEditor from '../editor/ChapterEditor.vue'
 import { SUBJECTS_CONFIG, getRealSubject, filterLevels } from '../../utils/courseConfig'
 import { getModels } from '../../utils/models'
 import { io } from 'socket.io-client'
-import JSZip from 'jszip'
+import { loadJsZip } from '../../utils/loadJsZip'
 import {
   canEditGroup as _canEditGroup,
   canEditLevelWithUser as _canEditLevelWithUser,
@@ -1319,6 +1319,7 @@ export default {
     async downloadTopicMaterials() {
       if (!this.isAdmin) return this.showToastMessage('无权操作')
       if (!this.editingTopic || !this.editingTopic.chapters) return
+      const JSZip = await loadJsZip()
       const zip = new JSZip()
       const topicTitle = this.sanitizeFileName(this.editingTopic.title)
       this.showToastMessage('正在打包下载...')
@@ -1334,6 +1335,7 @@ export default {
     async downloadLevelMaterials() {
       if (!this.isAdmin) return this.showToastMessage('无权操作')
       if (!this.editingLevel || !this.editingLevel.topics) return
+      const JSZip = await loadJsZip()
       const zip = new JSZip()
       const levelTitle = this.sanitizeFileName(this.editingLevel.title)
       this.showToastMessage('正在打包下载...')
@@ -1354,6 +1356,7 @@ export default {
     async downloadGroupMaterials() {
       if (!this.isAdmin) return this.showToastMessage('无权操作')
       if (!this.editingGroup || !this.editingGroup.name) return
+      const JSZip = await loadJsZip()
       const zip = new JSZip()
       const groupName = this.sanitizeFileName(this.editingGroup.name)
       this.showToastMessage('正在打包下载...')

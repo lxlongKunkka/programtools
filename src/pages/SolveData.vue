@@ -76,38 +76,16 @@
   <div class="main-layout">
 
     <!-- Task list (260px) -->
-    <div class="task-list-panel">
-      <div class="task-list-header">
-        <span>任务列表</span>
-        <div style="display:flex;gap:4px">
-          <button @click="addNewTask" class="btn-icon" title="添加新任务">➕</button>
-          <button @click="clearCompletedTasks" class="btn-icon" title="清除已完成" style="color:#10b981">✅</button>
-          <button @click="clearAllTasks" class="btn-icon" title="清空任务列表" style="color:#ef4444">🗑️</button>
-        </div>
-      </div>
-      <div class="task-list">
-        <div
-          v-for="(task, index) in tasks"
-          :key="task.id"
-          :class="['task-item', { active: currentTaskIndex === index }]"
-          @click="switchTask(index)"
-        >
-          <div class="task-status-dot" :class="task.status"></div>
-          <div class="task-info">
-            <div class="task-title">{{ getTaskTitle(task) }}</div>
-            <div class="task-meta">{{ getTaskStatusText(task) }}</div>
-          </div>
-          <div class="step-dots">
-            <span class="dot" :class="{ done: !!task.translationText }" title="翻译"></span>
-            <span class="dot" :class="{ done: !!task.codeOutput }" title="题解"></span>
-            <span class="dot" :class="{ done: !!task.dataOutput }" title="数据"></span>
-            <span class="dot" :class="{ done: !!task.reportHtml }" title="报告"></span>
-          </div>
-          <button @click.stop="resetTaskStatus(index)" v-if="task.status === 'completed'" class="btn-icon-small" title="重置为等待中">↺</button>
-          <button @click.stop="removeTask(index)" class="btn-icon-small">✕</button>
-        </div>
-      </div>
-    </div>
+    <TaskListPanel
+      :tasks="tasks"
+      :current-task-index="currentTaskIndex"
+      @add-task="addNewTask"
+      @clear-completed="clearCompletedTasks"
+      @clear-all="clearAllTasks"
+      @switch-task="switchTask"
+      @reset-task-status="resetTaskStatus"
+      @remove-task="removeTask"
+    />
 
     <!-- Detail panel -->
     <div class="detail-panel">
@@ -317,10 +295,21 @@
 import { nextTick } from 'vue'
 import request from '../utils/request'
 import { getModels } from '../utils/models'
+import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
+import { loadJsZip } from '../utils/loadJsZip'
+import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
+import { buildBatchReportRequest, getPendingBatchTaskEntries, runBatchTasks } from '../modules/solvedata/batchHelpers'
+import { blobToBase64, createBatchExportBundle } from '../modules/solvedata/exportHelpers'
+import { buildMetaRequestPayload, buildSolutionReportPayload, buildSolutionRequestConfig, createInitialGenerationSteps, mergeGeneratedMeta, resolveDataGenerationInput } from '../modules/solvedata/generationHelpers'
+import { createExtensionImportedTask, createFetchedProblemTask, getExtensionImportSuccessMessage, mergeImportedTasks, normalizeExtensionImportRequest, readFolderImportedTasks } from '../modules/solvedata/importHelpers'
+import { buildReportAutoSolutionPrompt, extractStreamingFieldPreview, hasResolvedMetaTitle, mergeTranslationMeta } from '../modules/solvedata/translationReportHelpers'
 
 export default {
   name: 'SolveData',
   inject: ['showToastMessage'],
+  components: {
+    TaskListPanel,
+  },
   data() {
     return {
       leftWidth: 40,
@@ -372,21 +361,7 @@ export default {
         meta: 'pending'
       },
       
-      tasks: [
-        {
-          id: Date.now() + Math.random(),
-          status: 'pending', // pending, processing, completed, failed
-          problemText: '',
-          manualCode: '',
-          codeOutput: '',
-          dataOutput: '',
-          translationText: '',
-          translationEnglish: '',
-          serverPureCode: '',
-          problemMeta: null,
-          reportHtml: ''
-        }
-      ]
+      tasks: [createEmptyTask()]
     }
   },
   mounted() {
@@ -495,7 +470,7 @@ export default {
     },
     // 翻译完成后就应该有 title + tags，此后不需要再单独调用 /api/generate-problem-meta
     hasValidMeta() {
-      return !!(this.problemMeta && this.problemMeta.tags && this.problemMeta.tags.length > 0)
+      return hasValidTaskMeta({ problemMeta: this.problemMeta })
     },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
@@ -503,7 +478,7 @@ export default {
   },
   methods: {
     createTaskId() {
-      return Date.now() + Math.random()
+      return createTaskId()
     },
 
     ensureExtensionImportRequestState() {
@@ -613,16 +588,8 @@ export default {
       }
     },
 
-    normalizeExtensionImportRequest(rawPayload) {
-      if (rawPayload?.kind && rawPayload?.payload) return rawPayload
-      return {
-        kind: 'task',
-        payload: rawPayload,
-      }
-    },
-
     async applyExtensionImportRequest(rawPayload) {
-      const requestPayload = this.normalizeExtensionImportRequest(rawPayload)
+      const requestPayload = normalizeExtensionImportRequest(rawPayload)
 
       if (requestPayload.kind === 'task') {
         this.importTaskFromExtension(requestPayload.payload)
@@ -638,16 +605,6 @@ export default {
       }
 
       throw new Error('不支持的扩展导入类型')
-    },
-
-    getExtensionImportSuccessMessage(result) {
-      if (result?.kind === 'url' && result.mode === 'contest') {
-        return `✅ 已从 Edge 扩展导入 ${result.added} 道题目`
-      }
-      if (result?.kind === 'url') {
-        return '✅ 已从 Edge 扩展导入题目链接'
-      }
-      return '✅ 已从 Edge 扩展导入题目'
     },
 
     async consumePendingExtensionImport() {
@@ -669,7 +626,7 @@ export default {
         this.markExtensionImportResult(requestId, true)
         localStorage.removeItem(payloadKey)
         localStorage.removeItem(pointerKey)
-        this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+        this.showToastMessage(getExtensionImportSuccessMessage(result))
         this.finishExtensionImportRequest(requestId, true)
         return true
       } catch (error) {
@@ -686,30 +643,37 @@ export default {
       this.consumePendingExtensionImport()
     },
 
-    normalizeExtensionTask(payload) {
-      const title = (payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题').trim()
-      return {
-        id: this.createTaskId(),
-        status: 'pending',
-        problemText: payload?.content || '',
-        manualCode: payload?.acCode || '',
-        referenceText: '',
-        codeOutput: '',
-        serverPureCode: '',
-        dataOutput: '',
-        translationText: '',
-        translationEnglish: '',
-        additionalFile: payload?.additionalFile || null,
-        problemMeta: {
-          title,
-          rawTitle: title,
-          sourceUrl: payload?.url || '',
-          importedVia: 'edge-extension',
-          ...(payload?.timeLimit ? { timeLimit: payload.timeLimit } : {}),
-          ...(payload?.memoryLimit ? { memoryLimit: payload.memoryLimit } : {})
-        },
-        reportHtml: ''
+    applyImportedTasks(importedTasks, options = {}) {
+      const result = mergeImportedTasks({
+        tasks: this.tasks,
+        currentTaskIndex: this.currentTaskIndex,
+        importedTasks,
+      })
+
+      this.tasks = result.tasks
+
+      let targetIndex = result.lastImportedIndex
+      if (options.activate === 'first') {
+        targetIndex = 0
+      } else if (typeof options.activateIndex === 'number') {
+        targetIndex = options.activateIndex
       }
+
+      if (targetIndex >= 0) {
+        if (targetIndex === this.currentTaskIndex) {
+          this.loadTask(targetIndex)
+        } else {
+          this.switchTask(targetIndex)
+        }
+      }
+
+      if (options.mirrorProblemText) {
+        for (const index of result.importedIndices) {
+          this.mirrorImages(index, ['problemText'])
+        }
+      }
+
+      return result
     },
 
     importTaskFromExtension(payload) {
@@ -717,22 +681,8 @@ export default {
         throw new Error('扩展导入数据缺少题面或题目链接')
       }
 
-      const importedTask = this.normalizeExtensionTask(payload)
-      const current = this.tasks[0]
-      const currentEmpty = this.tasks.length === 1 && current && !current.problemText?.trim() && !current.manualCode?.trim()
-
-      if (currentEmpty) {
-        this.tasks = [importedTask]
-        this.currentTaskIndex = 0
-        this.loadTask(0)
-        this.mirrorImages(0, ['problemText'])
-        return
-      }
-
-      this.tasks.push(importedTask)
-      const newIndex = this.tasks.length - 1
-      this.switchTask(newIndex)
-      this.mirrorImages(newIndex, ['problemText'])
+      const importedTask = createExtensionImportedTask(payload)
+      this.applyImportedTasks([importedTask], { mirrorProblemText: true })
     },
 
     async handleExtensionImportMessage(event) {
@@ -751,7 +701,7 @@ export default {
           requestId: data.requestId,
           ok: true,
         }, window.location.origin)
-        this.showToastMessage(this.getExtensionImportSuccessMessage(result))
+        this.showToastMessage(getExtensionImportSuccessMessage(result))
         this.finishExtensionImportRequest(data.requestId, true)
       } catch (error) {
         console.error('Extension import failed:', error)
@@ -1135,20 +1085,7 @@ export default {
     },
     
     addNewTask() {
-      const newTask = {
-        id: this.createTaskId(),
-        status: 'pending',
-        problemText: '',
-        manualCode: '',
-        referenceText: '',
-        codeOutput: '',
-        serverPureCode: '',
-        dataOutput: '',
-        translationText: '',
-        translationEnglish: '',
-        problemMeta: null,
-        reportHtml: ''
-      }
+      const newTask = createEmptyTask()
       this.tasks.push(newTask)
       this.switchTask(this.tasks.length - 1)
     },
@@ -1166,68 +1103,14 @@ export default {
       if (!files.length) return
 
       try {
-        const groups = new Map()
-        for (const file of files) {
-          const relativePath = file.webkitRelativePath || file.name
-          const parts = relativePath.split('/').filter(Boolean)
-          if (parts.length < 2) continue
-          const fileName = parts[parts.length - 1]
-          const folderKey = parts.slice(0, -1).join('/')
-          if (!groups.has(folderKey)) groups.set(folderKey, {})
-          groups.get(folderKey)[fileName] = file
-        }
+        const importedTasks = await readFolderImportedTasks(files)
 
-        const folderEntries = [...groups.entries()]
-          .filter(([, fileMap]) => fileMap['problem.md'] && (fileMap['std.cpp'] || fileMap['source.cpp']))
-          .sort((a, b) => {
-            const aBase = a[0].split('/').pop() || a[0]
-            const bBase = b[0].split('/').pop() || b[0]
-            const aMatch = aBase.match(/^(\d+)/)
-            const bMatch = bBase.match(/^(\d+)/)
-            const aNum = aMatch ? Number(aMatch[1]) : Number.MAX_SAFE_INTEGER
-            const bNum = bMatch ? Number(bMatch[1]) : Number.MAX_SAFE_INTEGER
-            if (aNum !== bNum) return aNum - bNum
-            return aBase.localeCompare(bBase, 'zh-CN')
-          })
-
-        if (!folderEntries.length) {
+        if (!importedTasks.length) {
           this.showToastMessage('未发现可导入的题目目录，需要同时包含 problem.md 与 std.cpp')
           return
         }
 
-        const importedTasks = []
-        for (const [folderKey, fileMap] of folderEntries) {
-          const folderName = folderKey.split('/').pop() || folderKey
-          const problemText = await fileMap['problem.md'].text()
-          const codeFile = fileMap['std.cpp'] || fileMap['source.cpp']
-          const manualCode = codeFile ? await codeFile.text() : ''
-          const heading = String(problemText || '').split('\n').map(line => line.trim()).find(Boolean) || ''
-          const derivedTitle = heading.replace(/^#\s*/, '').trim() || folderName.replace(/^\d+[-_]?/, '')
-          importedTasks.push({
-            id: this.createTaskId(),
-            status: 'pending',
-            problemText,
-            manualCode,
-            referenceText: '',
-            codeOutput: '',
-            serverPureCode: '',
-            dataOutput: '',
-            translationText: '',
-            translationEnglish: '',
-            problemMeta: {
-              title: derivedTitle,
-              rawTitle: derivedTitle,
-              sourceFolder: folderName,
-            },
-            reportHtml: ''
-          })
-        }
-
-        const current = this.tasks[0]
-        const currentEmpty = this.tasks.length === 1 && current && !current.problemText?.trim() && !current.manualCode?.trim()
-        this.tasks = currentEmpty ? importedTasks : [...this.tasks, ...importedTasks]
-        this.currentTaskIndex = 0
-        this.loadTask(0)
+        this.applyImportedTasks(importedTasks, { activate: 'first' })
         this.showToastMessage(`已导入 ${importedTasks.length} 道题目到任务列表`)
       } catch (e) {
         console.error('Folder import failed:', e)
@@ -1238,7 +1121,7 @@ export default {
     removeTask(index) {
       if (this.tasks.length <= 1) {
         // 如果只剩一个，清空内容而不是删除
-        this.tasks[0] = { ...this.tasks[0], problemText: '', manualCode: '', referenceText: '', status: 'pending', codeOutput: '', dataOutput: '', translationText: '', translationEnglish: '', serverPureCode: '' }
+        this.tasks[0] = createEmptyTask({ id: this.tasks[0].id })
         this.loadTask(0)
         return
       }
@@ -1260,7 +1143,7 @@ export default {
       const remaining = this.tasks.filter(t => t.status !== 'completed')
       if (remaining.length === 0) {
         // 全都是已完成，保留一个空任务
-        this.tasks = [{ id: this.createTaskId(), status: 'pending', problemText: '', manualCode: '', referenceText: '', codeOutput: '', serverPureCode: '', dataOutput: '', translationText: '', translationEnglish: '', problemMeta: null, reportHtml: '' }]
+        this.tasks = [createEmptyTask()]
         this.currentTaskIndex = 0
         this.loadTask(0)
       } else {
@@ -1276,13 +1159,7 @@ export default {
 
     clearAllTasks() {
       if (!confirm('确认清空所有任务？此操作不可撤销。')) return
-      const emptyTask = {
-        id: this.createTaskId(), status: 'pending',
-        problemText: '', manualCode: '', referenceText: '',
-        codeOutput: '', serverPureCode: '', dataOutput: '',
-        translationText: '', translationEnglish: '',
-        problemMeta: null, reportHtml: ''
-      }
+      const emptyTask = createEmptyTask()
       this.tasks = [emptyTask]
       this.currentTaskIndex = 0
       this.loadTask(0)
@@ -1371,125 +1248,77 @@ export default {
       this.showToastMessage(`✅ 已将 ${Object.keys(urlMap).length} 张图片镜像到 COS`)
     },
     
-    getTaskTitle(task) {
-      if (task.problemMeta && task.problemMeta.title && task.problemMeta.title !== '题目标题') return task.problemMeta.title
-      if (task.problemMeta && task.problemMeta.rawTitle) return task.problemMeta.rawTitle
-      if (task.problemText) {
-        const lines = task.problemText.split('\n').filter(l => l.trim())
-        if (lines.length > 0) return lines[0].slice(0, 20) + (lines[0].length > 20 ? '...' : '')
-      }
-      return '新任务 ' + new Date(task.id).toLocaleTimeString()
-    },
-    
-    getTaskStatusText(task) {
-      const map = {
-        'pending': '等待中',
-        'processing': '处理中...',
-        'completed': '已完成',
-        'failed': '失败'
-      }
-      return map[task.status] || '未知'
-    },
-    
     async runBatch() {
       if (this.isBatchRunning) return
-      
-      const pendingTasks = this.tasks.map((t, i) => ({t, i})).filter(item => item.t.status === 'pending' || item.t.status === 'failed')
-      
+
+      const pendingTasks = getPendingBatchTaskEntries(this.tasks)
+
       if (pendingTasks.length === 0) {
         this.showToastMessage('没有待处理的任务')
         return
       }
-      
+
       this.isBatchRunning = true
-      
-      for (const item of pendingTasks) {
-        const { i } = item
-        this.switchTask(i)
-        
-        // 标记为处理中
-        this.tasks[i].status = 'processing'
-        
-        try {
-          // 根据模式选择执行逻辑
-          if (this.batchMode === 'report_only') {
-             // 仅生成报告模式：跳过 generateAll，直接生成报告
-             // 注意：如果需要元数据（标题），可能需要单独请求，或者依赖报告生成时的逻辑
-             // 这里我们尝试先生成元数据（如果缺失），以便下载时有正确的文件名
-             if (!this.hasValidMeta) {
-                try {
-                  const metaRes = await request('/api/generate-problem-meta', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      text: this.tasks[i].problemText,
-                      model: this.getMetaReportModel()
-                    })
+
+      try {
+        await runBatchTasks({
+          tasks: this.tasks,
+          batchMode: this.batchMode,
+          switchTask: async (index) => {
+            this.switchTask(index)
+          },
+          markTaskStatus: (index, status) => {
+            if (this.tasks[index]) this.tasks[index].status = status
+          },
+          handleReportOnlyTask: async (index) => {
+            if (!hasValidTaskMeta(this.tasks[index])) {
+              try {
+                const metaRes = await request('/api/generate-problem-meta', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    text: this.tasks[index].problemText,
+                    model: this.getMetaReportModel()
                   })
-                  if (metaRes) {
-                    const existingMeta = this.tasks[i]?.problemMeta || {}
-                    this.saveToTask(i, 'problemMeta', { ...existingMeta, ...metaRes })
-                  }
-                } catch (e) { console.warn('Meta generation failed in report-only mode', e) }
-             }
-             
-             await this.generateReportForBatch(i)
-          } else {
-             // 标准模式：生成代码、数据、翻译
-             // generateAll 内部会根据 batchMode 决定是否生成报告，所以这里不需要再次调用
-             const success = await this.generateAll()
-             if (!success) throw new Error('Generation failed')
-          }
-          
-          this.tasks[i].status = 'completed'
-        } catch (e) {
-          console.error(`Task ${i} failed:`, e)
-          this.tasks[i].status = 'failed'
-        }
-        
-        // 简单的延时，避免请求过快
-        await new Promise(r => setTimeout(r, 1000))
+                })
+                if (metaRes) {
+                  const existingMeta = this.tasks[index]?.problemMeta || {}
+                  this.saveToTask(index, 'problemMeta', { ...existingMeta, ...metaRes })
+                }
+              } catch (e) {
+                console.warn('Meta generation failed in report-only mode', e)
+              }
+            }
+
+            await this.generateReportForBatch(index)
+          },
+          handleStandardTask: async () => {
+            const success = await this.generateAll()
+            if (!success) throw new Error('Generation failed')
+          },
+          onTaskError: (index, error) => {
+            console.error(`Task ${index} failed:`, error)
+          },
+          delayMs: 1000,
+        })
+
+        this.showToastMessage('批量任务处理完成！')
+      } finally {
+        this.isBatchRunning = false
       }
-      
-      this.isBatchRunning = false
-      this.showToastMessage('批量任务处理完成！')
     },
     
     async generateReportForBatch(index) {
       const task = this.tasks[index]
-      if (!task.problemText) return
+      const payload = buildBatchReportRequest(task, {
+        extractPureCode: (content) => this.extractPureCode(content),
+        model: this.getMetaReportModel(),
+        language: this.language,
+      })
+
+      if (!payload) return
       
       try {
-        // 使用与单个生成相同的完整逻辑
-        let codeContent = (task.codeOutput && task.codeOutput.trim()) ? task.codeOutput : task.manualCode;
-        let pureCode = '';
-        let solutionPlan = '';
-        
-        // 检查是否为 AI 生成的完整 Markdown 题解
-        const isMarkdownSolution = codeContent && (
-          codeContent.includes('## 算法思路') || 
-          codeContent.includes('## 代码实现') || 
-          codeContent.includes('**算法思路**')
-        );
-
-        if (isMarkdownSolution) {
-          solutionPlan = codeContent;
-        }
-        // 优先使用服务端已提取的纯净代码，其次 extractPureCode()
-        pureCode = (task.serverPureCode && task.serverPureCode.trim())
-          ? task.serverPureCode
-          : (this.extractPureCode(codeContent || '') || '');
-        if (!pureCode) {
-          pureCode = '用户未提供代码，请根据题目描述生成标准 AC 代码，并添加详细中文注释。';
-        }
-        
-        const res = await request.post('/api/solution-report', {
-          problem: task.translationText || task.problemText,
-          code: pureCode,
-          reference: task.referenceText || '',  // ✅ 传递 editorial 参考
-          solutionPlan: solutionPlan,
-          model: this.getMetaReportModel(),
-          language: this.language
-        })
+        const res = await request.post('/api/solution-report', payload)
         
         if (res.html) {
           this.tasks[index].reportHtml = res.html
@@ -1509,182 +1338,33 @@ export default {
       try {
         let JSZip
         try {
-          const module = await import('jszip')
-          JSZip = module.default || module
+          JSZip = await loadJsZip()
         } catch (e) {
           console.error('Failed to load JSZip', e)
           this.showToastMessage('下载组件加载失败')
           return
         }
         
-        const masterZip = new JSZip()
-        // 修正 ZIP 文件时间戳为东八区 (UTC+8)
-        // 使用 toLocaleString 获取北京时间的本地表示，确保无论客户端时区如何，Date 对象的本地时间组件都等于北京时间
-        const now = new Date()
-        const beijingString = now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })
-        const targetTime = new Date(beijingString)
-        const zipOptions = { date: targetTime }
-        
-        for (let i = 0; i < completedTasks.length; i++) {
-          const task = completedTasks[i]
-          // 智能提取标题
-          const title = this.getSmartTitle(task.problemMeta, task.translationText || task.problemText, task.id)
-          
-          // 添加序号前缀 (01, 02, ...)
-          const prefix = String(i + 1).padStart(2, '0')
-          const folderName = `${prefix}_${title}`
-          const folder = masterZip.folder(folderName)
-          
-          // 1. 提取代码
-          // 简单的语言检测 (优先检查 codeOutput 中的标记)
-          const { ext, lang } = this.detectLanguage(task.codeOutput)
-          
-          const contentToSave = this.getBestCodeContent(task.codeOutput, task.manualCode)
-          
-          const stdFileName = lang === 'Java' ? 'Main.java' : `std.${ext}`
-          folder.file(stdFileName, contentToSave, zipOptions)
-          
-          // 2. 添加数据生成脚本
-          const script = this.processDataScript(task.dataOutput, lang)
-          if (script) {
-            folder.file('data_generator.py', script, zipOptions)
-          }
-          
-          // 3. 添加题目描述
-          const hasSample = !!(task.additionalFile && task.additionalFile.base64)
-          const sampleSuffix = hasSample ? '\n\n[sample](file://sample.zip)' : ''
-          // 时限/内存信息头（写入 problem.md 系列）
-          const tlBatch = task.problemMeta?.timeLimit
-          const mlBatch = task.problemMeta?.memoryLimit
-          const limitPrefixBatch = (tlBatch || mlBatch)
-            ? `**时间限制：${tlBatch ?? '-'}ms　内存限制：${mlBatch ?? '-'}MB**\n\n`
-            : ''
-          folder.file('problem.md', limitPrefixBatch + task.problemText, zipOptions)
-          folder.file('problem_zh_TW.md', limitPrefixBatch + task.problemText + sampleSuffix, zipOptions)
-          if (task.translationText) folder.file('problem_zh.md', limitPrefixBatch + this.applyTitleToTranslation(task.translationText, task.problemMeta?.title) + sampleSuffix, zipOptions)
-          if (task.translationEnglish) {
-            const enContent = task.problemMeta?.sourceUrl
-              ? `原题链接：${task.problemMeta.sourceUrl}\n\n${task.translationEnglish}`
-              : task.translationEnglish
-            folder.file('problem_en.md', enContent + sampleSuffix, zipOptions)
-          }
-          
-          // 4. 添加解题报告
-          if (task.reportHtml) {
-            const reportName = `${title}.html`
-            folder.file(reportName, task.reportHtml, zipOptions)
-          }
-          
-          // 5. 添加 problem.yaml (使用完整生成逻辑)
-          const yamlContent = this.generateProblemYaml(task.problemMeta, task.problemText, task.translationText)
-          folder.file('problem.yaml', yamlContent, zipOptions)
+        const { blob, zipName } = await createBatchExportBundle({
+          JSZip,
+          completedTasks,
+          helperApi: {
+            storage: localStorage,
+            getSmartTitle: (meta, text, id) => this.getSmartTitle(meta, text, id),
+            detectLanguage: (codeOutput) => this.detectLanguage(codeOutput),
+            getBestCodeContent: (codeOutput, manualCode) => this.getBestCodeContent(codeOutput, manualCode),
+            processDataScript: (scriptContent, language) => this.processDataScript(scriptContent, language),
+            applyTitleToTranslation: (text, metaTitle) => this.applyTitleToTranslation(text, metaTitle),
+            generateProblemYaml: (meta, pText, tText) => this.generateProblemYaml(meta, pText, tText),
+            generateRunScript: (lang) => this.generateRunScript(lang),
+            generateBatScript: (lang) => this.generateBatScript(lang),
+          },
+        })
 
-
-          
-          // 6. 添加运行脚本
-          folder.file('run.py', this.generateRunScript(lang), zipOptions)
-          folder.file('run.bat', this.generateBatScript(lang), zipOptions)
-
-          // 7. 添加 solution.md (原始代码输出)
-          if (task.codeOutput && task.codeOutput.trim()) {
-            folder.file('solution.md', task.codeOutput, zipOptions)
-          }
-
-          // 8. 附加文件（如 NFLSOJ sample.zip），放入 additional_file/ 子目录
-          if (task.additionalFile && task.additionalFile.base64) {
-            try {
-              const binaryStr = atob(task.additionalFile.base64)
-              const bytes = new Uint8Array(binaryStr.length)
-              for (let j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j)
-              folder.file('additional_file/sample.zip', bytes, zipOptions)
-            } catch (e) {
-              console.warn('Failed to add sample.zip to zip:', e)
-            }
-          }
-        }
-
-        // 添加批量运行脚本 (包含运行任务和提取报告)
-        const runAllBat = `@echo off
-chcp 65001
-title Batch Runner & Report Extractor
-
-echo ==========================================
-echo      1. Running All Tasks
-echo ==========================================
-echo.
-
-for /d %%D in (*) do (
-    if exist "%%D\\run.py" (
-        if exist "%%D\\data_generator.py" (
-            echo ------------------------------------------
-            echo Running in: %%D
-            echo ------------------------------------------
-            pushd "%%D"
-            python run.py
-            popd
-            echo.
-        ) else (
-            echo ------------------------------------------
-            echo Skipping %%D (No data_generator.py)
-            echo ------------------------------------------
-        )
-    )
-)
-
-echo.
-echo ==========================================
-echo      2. Extracting HTML Reports
-echo ==========================================
-echo.
-
-for /d %%D in (*) do (
-    if exist "%%D\\*.html" (
-        pushd "%%D"
-        for %%F in (*.html) do (
-            echo Extracting: %%D\\%%F -^> %%D.html
-            copy "%%F" "..\\%%D.html" >nul
-        )
-        popd
-    )
-)
-
-echo.
-echo ==========================================
-echo      All Operations Completed
-echo ==========================================
-pause
-`
-        masterZip.file('run_all_tasks.bat', runAllBat, zipOptions)
-        
-        const blob = await masterZip.generateAsync({ type: 'blob' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        
-        // 生成带用户名和时间戳的文件名
-        let username = 'user'
-        try {
-          const userInfoStr = localStorage.getItem('user_info')
-          if (userInfoStr) {
-            const userInfo = JSON.parse(userInfoStr)
-            if (userInfo && (userInfo.uname || userInfo.username)) {
-              username = userInfo.uname || userInfo.username
-            }
-          }
-        } catch (e) { console.warn('Failed to get username', e) }
-        
-        const taskCount = completedTasks.length
-        // 使用之前计算的 targetTime (北京时间) 作为文件名时间戳
-        const downloadTime = targetTime
-        const dateStr = downloadTime.getFullYear() +
-          String(downloadTime.getMonth() + 1).padStart(2, '0') +
-          String(downloadTime.getDate()).padStart(2, '0') + '_' +
-          String(downloadTime.getHours()).padStart(2, '0') +
-          String(downloadTime.getMinutes()).padStart(2, '0') +
-          String(downloadTime.getSeconds()).padStart(2, '0')
-          
-        const zipName = `batch_export_${username}_${taskCount}tasks_${dateStr}.zip`
-        
+
         a.download = zipName
         document.body.appendChild(a) // Firefox requires appending to body
         a.click()
@@ -1693,18 +1373,7 @@ pause
 
         // 静默发送邮件：将 zip 转为 base64 并调用后端
         try {
-          const base64 = await (async () => {
-            const reader = new FileReader()
-            const p = new Promise((resolve, reject) => {
-              reader.onload = () => resolve(reader.result)
-              reader.onerror = reject
-            })
-            reader.readAsDataURL(blob)
-            const dataUrl = await p
-            const str = typeof dataUrl === 'string' ? dataUrl : ''
-            const commaIdx = str.indexOf(',')
-            return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
-          })()
+          const base64 = await blobToBase64(blob)
 
           const filename = zipName
           const subject = `SolveData 批量导出: ${zipName}`
@@ -1824,13 +1493,13 @@ pause
 
     async addProblemAsTask(url, fallbackTitle, contestLabel, prefetchedTags = []) {
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
-      const editorial = data.editorial || ''
-      const acCode = data.acCode || ''
-      const additionalFile = data.additionalFile || null
-      // 后端直接返回的标签（如 Hydro OJ 单题），优先级低于调用方传入的 prefetchedTags
-      const finalTags = prefetchedTags.length ? prefetchedTags : (data.tags || [])
-      const timeLimit = data.timeLimit || null
-      const memoryLimit = data.memoryLimit || null
+      const { editorial, acCode, additionalFile, task } = createFetchedProblemTask({
+        url,
+        data,
+        fallbackTitle,
+        contestLabel,
+        prefetchedTags,
+      })
       if (acCode) {
         this.showToastMessage('✅ 已自动抓取 AC 代码')
       } else if (editorial) {
@@ -1841,73 +1510,7 @@ pause
         this.showToastMessage(`📦 已下载附加文件 ${additionalFile.filename} (${sizeKb} KB)`)
       }
 
-      // 格式化 AtCoder 题目标题为 [ABC235B] Climbing Takahashi
-      let title = data.title || fallbackTitle || url
-      // 去除开头的分数前缀："100 #18876. 曼哈顿配对" → "#18876. 曼哈顿配对"
-      title = title.replace(/^\d+\s+/, '')
-      // 去除数字/字母数字混合题号："35260. 平面树"→"平面树"、"#P1030. 排列"→"排列"、"P1030. 排列"→"排列"
-      title = title.replace(/^#?[A-Za-z]*\d+\.\s*/, '')
-      // 去除纯字母题号中的点号："A. 鸭子与按钮" → "A 鸭子与按钮"（NFLSOJ 等竞赛题常见格式）
-      title = title.replace(/^([A-Za-z])\. /, '$1 ')
-      const atcoderMatch = url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/[^/]+_([a-z0-9]+)/i)
-      if (atcoderMatch) {
-        const contestId = atcoderMatch[1].toUpperCase() // e.g. ABC235
-        const label = atcoderMatch[2].toUpperCase()     // e.g. B
-        // 去掉 "B - " 或 "B. " 前缀，只保留纯标题
-        const cleanTitle = title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim()
-        title = `[${contestId}${label}] ${cleanTitle}`
-      }
-      // titleFixed: 当从源站爬取到标签时，title 和 tags 均不应被 AI 覆盖
-      const titleFixed = finalTags.length > 0
-      // atcoderTitle: 已格式化的标题（如 [ABC235B] xxx），用于 problem.yaml
-      const atcoderTitle = atcoderMatch ? title : null
-      // sourceUrl: AtCoder 原题链接，用于 problem_en.md 头部
-      const sourceUrl = atcoderMatch ? url : null
-      // htojLabel: 比赛中的题目序号（A/B/C/D），用于 problem.yaml 标题前缀
-      const isHtoj = /htoj\.com\.cn/i.test(url)
-      const htojLabel = (isHtoj && contestLabel) ? String(contestLabel).trim() : null
-      // 如果当前唯一一个任务且是空的，直接填充而不是新增
-      const cur = this.tasks[this.currentTaskIndex]
-      if (this.tasks.length === 1 && cur && !cur.problemText.trim()) {
-        const curIdx = this.currentTaskIndex
-        this.tasks[curIdx] = {
-          ...cur,
-          problemText: data.content || '',
-          manualCode: acCode,
-          referenceText: editorial,
-          translationText: '',
-          translationEnglish: '',
-          codeOutput: '',
-          serverPureCode: '',
-          dataOutput: '',
-          additionalFile,
-          problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}), ...(timeLimit ? { timeLimit } : {}), ...(memoryLimit ? { memoryLimit } : {}) },
-          status: 'pending'
-        }
-        this.loadTask(curIdx)
-        this.mirrorImages(curIdx, ['problemText'])
-        return
-      }
-      // 否则新增一个任务
-      const newTask = {
-        id: this.createTaskId(),
-        status: 'pending',
-        problemText: data.content || '',
-        manualCode: acCode,
-        referenceText: editorial,
-        codeOutput: '',
-        serverPureCode: '',
-        dataOutput: '',
-        translationText: '',
-        translationEnglish: '',
-        additionalFile,
-        problemMeta: { title: title, rawTitle: title, tags: finalTags, ...(titleFixed ? { titleFixed: true } : {}), ...(atcoderTitle ? { atcoderTitle } : {}), ...(sourceUrl ? { sourceUrl } : {}), ...(htojLabel ? { htojLabel } : {}), ...(timeLimit ? { timeLimit } : {}), ...(memoryLimit ? { memoryLimit } : {}) },
-        reportHtml: ''
-      }
-      this.tasks.push(newTask)
-      const newIdx = this.tasks.length - 1
-      this.switchTask(newIdx)
-      this.mirrorImages(newIdx, ['problemText'])
+      this.applyImportedTasks([task], { mirrorProblemText: true })
     },
 
         async autoTranslate(forcedTargetIndex = null) {
@@ -1951,55 +1554,16 @@ pause
                     charsReceived += ev.text.length
                     if (isOnTask()) this.generationStatus = `正在翻译... 已收到 ${charsReceived} 字`
                     rawBuffer += ev.text
-                    // 流式提取 translation 字段内容（仅当前任务显示预览）
-                    if (translationStart === -1) {
-                      const m = rawBuffer.match(/"translation"\s*:\s*"/)
-                      if (m) translationStart = m.index + m[0].length
-                    }
-                    if (translationStart !== -1 && isOnTask()) {
-                      const partial = rawBuffer.slice(translationStart)
-                      // 逐字符解析 JSON 字符串，遇到未转义的 " 为止
-                      let i = 0, preview = ''
-                      while (i < partial.length) {
-                        if (partial[i] === '\\' && i + 1 < partial.length) {
-                          const next = partial[i + 1]
-                          if (next === 'n') preview += '\n'
-                          else if (next === '"') preview += '"'
-                          else if (next === '\\') preview += '\\'
-                          else if (next === 't') preview += '\t'
-                          else preview += next
-                          i += 2
-                        } else if (partial[i] === '"') {
-                          break
-                        } else {
-                          preview += partial[i++]
-                        }
-                      }
-                      if (preview) this.translationText = preview
-                    }
+                    const previewState = extractStreamingFieldPreview(rawBuffer, 'translation', translationStart)
+                    translationStart = previewState.startOffset
+                    if (previewState.preview && isOnTask()) this.translationText = previewState.preview
                   } else if (ev.type === 'result') {
                     this.saveToTask(taskIndex, 'translationText', ev.result || '')
                     this.saveToTask(taskIndex, 'translationEnglish', ev.english || '')
                     this.mirrorImages(taskIndex, ['translationText', 'translationEnglish'])
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
-                      // 合并策略：tags 始终用最新的；title 只在当前为空/占位符/与rawTitle相同（未翻译）时才更新
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
-                      const existingTitle = existingMeta.title
-                      const rawTitle = existingMeta.rawTitle
-                      // title 未被用户修改时（空/占位符/与rawTitle相同）允许 AI 覆盖
-                      // 但若 rawTitle 本身已含中文（如 NFLSOJ 源站就是中文标题），则不允许 AI 覆盖
-                      const hasChinese = (s) => /[\u4e00-\u9fa5]/.test(s || '')
-                      const isPlaceholder = !existingMeta.titleFixed && (
-                        !existingTitle || existingTitle === '题目标题' || (existingTitle === rawTitle && !hasChinese(rawTitle))
-                      )
-                      const newMeta = {
-                        ...existingMeta,
-                        // titleFixed 时完全保留源站 tags 和 title，不让 AI 覆盖
-                        tags: existingMeta.titleFixed
-                          ? (existingMeta.tags || [])
-                          : (ev.meta.tags && ev.meta.tags.length ? ev.meta.tags : (existingMeta.tags || [])),
-                        title: isPlaceholder ? (ev.meta.title || existingTitle || '') : existingTitle,
-                      }
+                      const newMeta = mergeTranslationMeta(existingMeta, ev.meta)
                       this.saveToTask(taskIndex, 'problemMeta', newMeta)
                       if (isOnTask()) console.log('从翻译结果中提取到元数据:', newMeta)
                     }
@@ -2093,43 +1657,31 @@ pause
           this.generationStatus = '翻译完成，正在生成题解代码...'
         }
         
-        let requests = []
+        const requests = []
+        const solutionRequest = buildSolutionRequestConfig({
+          problemText,
+          manualCode,
+          model: solutionModel,
+          language: this.language,
+        })
 
-        if (isExplainMode) {
-          requests.push(
-            request('/api/solve', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: problemText,
-                acCode: manualCode,
-                model: solutionModel,
-                language: this.language
-              })
-            }).then(res => ({ type: 'code', data: res }))
-          )
-        } else {
-          requests.push(
-            request('/api/solution', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: problemText,
-                model: solutionModel,
-                language: this.language
-              })
-            }).then(res => ({ type: 'code', data: res }))
-          )
-        }
+        requests.push(
+          request(solutionRequest.endpoint, {
+            method: 'POST',
+            body: JSON.stringify(solutionRequest.payload)
+          }).then(res => ({ type: 'code', data: res }))
+        )
         
         // 2. 如果元数据尚未完整（翻译完成后通常已有），则请求生成元数据
         if (!this.hasValidMeta) {
            requests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
-              body: JSON.stringify({
-                // 优先使用 tasks[targetIndex] 的翻译，避免任务切换影响
-                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : problemText,
-                model: this.getMetaReportModel()
-              })
+              body: JSON.stringify(buildMetaRequestPayload({
+                task: this.tasks[targetIndex],
+                fallbackText: problemText,
+                model: this.getMetaReportModel(),
+              }))
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
            )
         }
@@ -2143,7 +1695,7 @@ pause
               if (res.data.pureCode) this.saveToTask(targetIndex, 'serverPureCode', res.data.pureCode)
            } else if (res.type === 'meta') {
               const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
+              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data))
            }
         }
         this.generationStatus = '✅ 题解代码生成完成'
@@ -2176,13 +1728,7 @@ pause
       }
       
       // 重置所有步骤状态
-      this.generationSteps = {
-        translate: 'pending',
-        solution: 'pending',
-        report: 'pending',
-        data: 'pending',
-        meta: 'pending'
-      }
+      this.generationSteps = createInitialGenerationSteps()
       
       // 注意：这里不清空 translationText，因为如果已经有了就不需要重新生成
       // this.translationText = '' 
@@ -2214,36 +1760,23 @@ pause
         this.generationSteps.solution = 'processing'
 
         // 有 AC 代码时走 /api/solve（解读注释模式），否则走 /api/solution（自主生成模式）
-        const solutionPromise = manualContent
-          ? request('/api/solve', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: this.problemText,
-                acCode: manualContent,
-                model: solutionModel,
-                language: this.language
-              })
-            }).then(res => {
-              this.generationSteps.solution = 'success'
-              return res
-            }).catch(err => {
-              this.generationSteps.solution = 'failed'
-              throw err
-            })
-          : request('/api/solution', {
-              method: 'POST',
-              body: JSON.stringify({
-                text: this.problemText,
-                model: solutionModel,
-                language: this.language
-              })
-            }).then(res => {
-              this.generationSteps.solution = 'success'
-              return res
-            }).catch(err => {
-              this.generationSteps.solution = 'failed'
-              throw err
-            })
+        const solutionRequest = buildSolutionRequestConfig({
+          problemText: this.problemText,
+          manualCode: manualContent,
+          model: solutionModel,
+          language: this.language,
+        })
+
+        const solutionPromise = request(solutionRequest.endpoint, {
+          method: 'POST',
+          body: JSON.stringify(solutionRequest.payload)
+        }).then(res => {
+          this.generationSteps.solution = 'success'
+          return res
+        }).catch(err => {
+          this.generationSteps.solution = 'failed'
+          throw err
+        })
         
         // 等待题解完成 (这是后续步骤的核心依赖)
         const solutionRes = await solutionPromise
@@ -2286,14 +1819,14 @@ pause
         }
         
         // 3a. 数据生成 - 从 tasks[targetIndex] 读取代码，防止任务切换竞态
-        const taskCodeOutput = this.tasks[targetIndex]?.serverPureCode || this.tasks[targetIndex]?.codeOutput || ''
-        let codeForData = ''
-        if (manualContent) {
-            codeForData = this.extractPureCode(manualContent) || manualContent
-        } else if (taskCodeOutput) {
-            codeForData = this.extractPureCode(taskCodeOutput) || taskCodeOutput
-        }
-        const textForDataAll = this.tasks[targetIndex]?.problemText || this.problemText
+        const dataInputs = resolveDataGenerationInput({
+          taskSnapshot: {
+            ...this.tasks[targetIndex],
+            manualCode: manualContent || this.tasks[targetIndex]?.manualCode || '',
+          },
+          extractPureCode: (content) => this.extractPureCode(content),
+        })
+        const textForDataAll = dataInputs.text
         
         this.generationSteps.data = 'processing'
         parallelRequests.push(
@@ -2302,7 +1835,7 @@ pause
             body: JSON.stringify({
               text: textForDataAll,
               model: this.selectedModel,
-              code: codeForData
+              code: dataInputs.code
             })
           }).then(res => {
               this.generationSteps.data = 'success'
@@ -2325,12 +1858,12 @@ pause
             parallelRequests.push(
               request('/api/generate-problem-meta', {
                 method: 'POST',
-                body: JSON.stringify({
-                  // 从 tasks[targetIndex] 读取，防止任务切换后读到错误内容
-                  text: this.tasks[targetIndex]?.translationText || this.tasks[targetIndex]?.problemText || this.problemText,
+                body: JSON.stringify(buildMetaRequestPayload({
+                  task: this.tasks[targetIndex],
+                  fallbackText: this.problemText,
                   solution: this.tasks[targetIndex]?.codeOutput,
-                  model: this.getMetaReportModel()
-                })
+                  model: this.getMetaReportModel(),
+                }))
               }).then(res => {
                   this.generationSteps.meta = 'success'
                   // 立即更新元数据
@@ -2338,12 +1871,7 @@ pause
                       try {
                           const meta = res
                           const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-                          if (!existingMeta.title || existingMeta.title === '题目标题') {
-                              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
-                          } else {
-                              const { title, ...rest } = meta
-                              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...rest })
-                          }
+                          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta))
                       } catch (e) { console.error('Meta update error', e) }
                   }
                   return { type: 'meta', data: res }
@@ -2374,12 +1902,7 @@ pause
                     try {
                         const meta = res.data
                         const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-                        if (!existingMeta.title || existingMeta.title === '题目标题') {
-                            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...meta })
-                        } else {
-                            const { title, ...rest } = meta
-                            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...rest })
-                        }
+                    this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta))
                     } catch (e) {
                         console.error('解析元数据失败', e)
                     }
@@ -2413,21 +1936,16 @@ pause
       // すべての入力を await より前に tasks[] から確定する（タスク切り替え競合防止）
       const targetIndex = this.currentTaskIndex
       const taskSnapshot = this.tasks[targetIndex]
-      const hasManualCode = !!(taskSnapshot?.manualCode?.trim())
-      const textForData = hasManualCode
-        ? (taskSnapshot?.problemText || '请根据代码逻辑生成测试数据')
-        : (taskSnapshot?.problemText || '')
+      const dataInputs = resolveDataGenerationInput({
+        taskSnapshot,
+        extractPureCode: (content) => this.extractPureCode(content),
+      })
+      const textForData = dataInputs.text
 
       if (!textForData.trim()) {
         this.showToastMessage('请先输入题目描述')
         return
       }
-
-      // codeForData も await 前に確定する（await 後は this.codeOutput が別タスクのものになる可能性がある）
-      const rawCodeForData = hasManualCode
-        ? taskSnapshot?.manualCode
-        : (taskSnapshot?.serverPureCode || taskSnapshot?.codeOutput || '')
-      const codeForData = this.extractPureCode(rawCodeForData || '') || rawCodeForData || ''
 
       this.isGenerating = 'data'
       this.generationStatus = '正在生成数据脚本...'
@@ -2451,7 +1969,7 @@ pause
             body: JSON.stringify({
               text: textForData,
               model: this.selectedModel,
-              code: codeForData
+              code: dataInputs.code
             })
           }).then(res => ({ type: 'data', data: res }))
         )
@@ -2461,11 +1979,12 @@ pause
            requests.push(
             request('/api/generate-problem-meta', {
               method: 'POST',
-              body: JSON.stringify({
-                text: (this.tasks[targetIndex]?.translationText?.trim()) ? this.tasks[targetIndex].translationText : textForData,
+              body: JSON.stringify(buildMetaRequestPayload({
+                task: this.tasks[targetIndex],
+                fallbackText: textForData,
                 solution: this.tasks[targetIndex]?.codeOutput,
-                model: this.getMetaReportModel()
-              })
+                model: this.getMetaReportModel(),
+              }))
             }).then(res => ({ type: 'meta', data: res })).catch(e => ({ type: 'meta', data: null }))
            )
         }
@@ -2478,7 +1997,7 @@ pause
               this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
            } else if (res.type === 'meta') {
               const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-              this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res.data })
+              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data))
            }
         }
         this.generationStatus = '✅ 数据脚本生成完成'
@@ -2508,7 +2027,7 @@ pause
         await this.autoTranslate(targetIndex)
         // autoTranslate 内部已将 ev.meta.title/tags 写入 tasks[targetIndex].problemMeta
         const metaAfterTranslate = this.tasks[targetIndex]?.problemMeta
-        if (metaAfterTranslate?.title && metaAfterTranslate.title !== '题目标题') {
+        if (hasResolvedMetaTitle(metaAfterTranslate)) {
           this.showToastMessage('✅ 标题已更新: ' + metaAfterTranslate.title)
           this.generationStatus = ''
           return
@@ -2531,7 +2050,7 @@ pause
         
         if (res && res.title && res.title.trim()) {
           const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-          this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, ...res })
+          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res))
           this.showToastMessage('✅ 标题已更新: ' + res.title)
         } else {
           console.warn('[generateTitle] AI 未返回标题，原始内容:', res?.rawContent)
@@ -2660,18 +2179,17 @@ pause
             this.showToastMessage('正在自动生成题解思路...')
             this.generationStatus = '正在自动生成题解思路...'
             try {
-                let promptText = taskSnap.problemText
-                if (taskSnap.referenceText?.trim()) {
-                    promptText += `\n\n【参考解法/思路】\n${taskSnap.referenceText.trim()}\n\n请参考上述思路（如果有）编写 AC 代码。`
-                }
+            const promptText = buildReportAutoSolutionPrompt(taskSnap)
+            const solutionRequest = buildSolutionRequestConfig({
+              problemText: promptText,
+              manualCode: '',
+              model: this.selectedModel,
+              language: this.language
+            })
 
-                const solutionRes = await request('/api/solution', {
+            const solutionRes = await request(solutionRequest.endpoint, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        text: promptText,
-                        model: this.selectedModel,
-                        language: this.language
-                    })
+              body: JSON.stringify(solutionRequest.payload)
                 })
                 if (solutionRes && solutionRes.result) {
                     this.saveToTask(taskIdx, 'codeOutput', solutionRes.result)
@@ -2684,39 +2202,23 @@ pause
             }
         }
 
-        // 检测是否为完整 Markdown 教案
-        const isMarkdownSolution = codeContent && (
-          codeContent.includes('## 算法思路') ||
-          codeContent.includes('## 代码实现') ||
-          codeContent.includes('**算法思路**')
-        );
-        const solutionPlan = isMarkdownSolution ? codeContent : '';
-
         // 优先使用服务端已提取的纯净代码，其次 extractPureCode()
         // 重新读 tasks[taskIdx] 获取可能刚写入的 serverPureCode
         const latestSnap = this.tasks[taskIdx]
-        let pureCode = (latestSnap?.serverPureCode?.trim())
-          ? latestSnap.serverPureCode
-          : (this.extractPureCode(codeContent || '') || '');
-        if (!pureCode) {
-          pureCode = '用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。';
-        }
-        
-        const problemDesc = latestSnap?.translationText || taskSnap.problemText;
-        let referenceToSend = solutionPlan;
-        if (!referenceToSend && taskSnap.referenceText?.trim()) {
-           referenceToSend = taskSnap.referenceText.trim();
-        }
+        const reportPayload = buildSolutionReportPayload({
+          task: {
+            ...latestSnap,
+            problemText: latestSnap?.problemText || taskSnap.problemText,
+            codeOutput: codeContent,
+          },
+          extractPureCode: (content) => this.extractPureCode(content),
+          model: this.getMetaReportModel(),
+          language: this.language,
+          codeFallbackMessage: '用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。',
+        })
 
         this.generationStatus = '正在渲染解题报告...'
-        const res = await request.post('/api/solution-report', {
-          problem: problemDesc,
-          code: pureCode,
-          reference: referenceToSend,
-          solutionPlan: solutionPlan,
-          model: this.getMetaReportModel(),
-          language: this.language
-        })
+        const res = await request.post('/api/solution-report', reportPayload)
         
         if (res.html) {
           this.saveToTask(taskIdx, 'reportHtml', res.html)
@@ -2843,7 +2345,7 @@ pause
         
         console.log('✓ 代码提取成功')
         
-        const JSZip = (await import('jszip')).default
+        const JSZip = await loadJsZip()
         const zip = new JSZip()
         // 修正 ZIP 文件时间戳为东八区 (UTC+8)
         const now = new Date()

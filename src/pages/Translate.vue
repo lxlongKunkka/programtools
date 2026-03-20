@@ -224,6 +224,7 @@
 import request from '../utils/request'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { marked } from 'marked'
+import { loadJsZip } from '../utils/loadJsZip'
 
 export default {
   name: 'Translate',
@@ -816,7 +817,7 @@ async downloadBatch() {
   const completed = this.tasks.filter(t => t.status === 'completed' && (t.result || t.englishResult))
   if (!completed.length) { this.showToastMessage('没有已完成的翻译'); return }
   try {
-    const JSZip = (await import('jszip')).default
+    const JSZip = await loadJsZip()
     const zip = new JSZip()
     completed.forEach((task, i) => {
       const title = this.getTaskTitle(task).replace(/[\/\\?%*:|"<>]/g, '_')

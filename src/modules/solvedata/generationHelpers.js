@@ -1,0 +1,108 @@
+export function createInitialGenerationSteps() {
+  return {
+    translate: 'pending',
+    solution: 'pending',
+    report: 'pending',
+    data: 'pending',
+    meta: 'pending',
+  }
+}
+
+export function hasMarkdownSolution(codeContent) {
+  if (!codeContent) return false
+  return (
+    codeContent.includes('## 算法思路') ||
+    codeContent.includes('## 代码实现') ||
+    codeContent.includes('**算法思路**')
+  )
+}
+
+export function buildSolutionRequestConfig({ problemText, manualCode, model, language }) {
+  const isExplainMode = !!String(manualCode || '').trim()
+  return isExplainMode
+    ? {
+        endpoint: '/api/solve',
+        payload: {
+          text: problemText,
+          acCode: manualCode,
+          model,
+          language,
+        },
+      }
+    : {
+        endpoint: '/api/solution',
+        payload: {
+          text: problemText,
+          model,
+          language,
+        },
+      }
+}
+
+export function buildMetaRequestPayload({ task, fallbackText, model, solution = '' }) {
+  return {
+    text: task?.translationText?.trim() ? task.translationText : (fallbackText || task?.problemText || ''),
+    ...(solution ? { solution } : {}),
+    model,
+  }
+}
+
+export function mergeGeneratedMeta(existingMeta, meta) {
+  if (!meta) return existingMeta || {}
+  const safeExistingMeta = existingMeta || {}
+  if (!safeExistingMeta.title || safeExistingMeta.title === '题目标题') {
+    return { ...safeExistingMeta, ...meta }
+  }
+
+  const { title, ...rest } = meta
+  return { ...safeExistingMeta, ...rest }
+}
+
+export function resolveDataGenerationInput({ taskSnapshot, extractPureCode }) {
+  const hasManualCode = !!taskSnapshot?.manualCode?.trim()
+  const text = hasManualCode
+    ? (taskSnapshot?.problemText || '请根据代码逻辑生成测试数据')
+    : (taskSnapshot?.problemText || '')
+
+  const rawCode = hasManualCode
+    ? taskSnapshot?.manualCode
+    : (taskSnapshot?.serverPureCode || taskSnapshot?.codeOutput || '')
+
+  return {
+    hasManualCode,
+    text,
+    rawCode,
+    code: extractPureCode(rawCode || '') || rawCode || '',
+  }
+}
+
+export function buildSolutionReportPayload({
+  task,
+  extractPureCode,
+  model,
+  language,
+  codeFallbackMessage = '用户未提供代码，请根据题目描述生成标准 AC 代码，并添加详细中文注释。',
+  referenceFallback = '',
+}) {
+  if (!task?.problemText) return null
+
+  const codeContent = (task.codeOutput && task.codeOutput.trim()) ? task.codeOutput : task.manualCode
+  const solutionPlan = hasMarkdownSolution(codeContent) ? codeContent : ''
+
+  let pureCode = (task.serverPureCode && task.serverPureCode.trim())
+    ? task.serverPureCode
+    : (extractPureCode(codeContent || '') || '')
+
+  if (!pureCode) {
+    pureCode = codeFallbackMessage
+  }
+
+  return {
+    problem: task.translationText || task.problemText,
+    code: pureCode,
+    reference: solutionPlan || task.referenceText || referenceFallback,
+    solutionPlan,
+    model,
+    language,
+  }
+}

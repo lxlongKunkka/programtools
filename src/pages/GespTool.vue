@@ -128,7 +128,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { marked } from 'marked'
-import JSZip from 'jszip'
+import { loadJsZip } from '../utils/loadJsZip'
 
 const activeTab = ref('pdf')
 const htmlInput = ref('')
@@ -328,6 +328,7 @@ const processBatch = async () => {
 }
 
 const downloadBatchZip = async () => {
+  const JSZip = await loadJsZip()
   const zip = new JSZip()
   let count = 0
   const usedNames = new Set()
@@ -664,6 +665,7 @@ const downloadZip = async () => {
   if (currentTitle) result.value.title = currentTitle
   // --------------------------------------------------
 
+  const JSZip = await loadJsZip()
   const zip = new JSZip()
   
   // 1. problem.yaml
