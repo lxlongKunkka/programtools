@@ -70,6 +70,20 @@ function extractAssignedJsString(source, variableName) {
   }
 }
 
+function isIgnorableProblemLink(href = '', text = '') {
+  const normalizedHref = href.trim()
+  const normalizedText = text.replace(/\s+/g, ' ').trim()
+
+  if (!normalizedHref) return true
+  if (/\/download\/additional_file/.test(normalizedHref)) return true
+  if (/#[a-z0-9_-]+$/i.test(normalizedHref)) return true
+  if (/\/(contest|course)\/\d+\/(submissions|ranklist)(\?|$)/i.test(normalizedHref)) return true
+  if (/\/(contest|course)\/submission\/\d+/i.test(normalizedHref)) return true
+  if (/^(返回课程|返回比赛|提交|提交记录|排行榜)$/.test(normalizedText)) return true
+
+  return false
+}
+
 function makeHeaders(cookies = '', extra = {}) {
   return {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -162,9 +176,51 @@ function parseMnaContestId(url) {
   return match ? match[1] : null
 }
 
+function parseMnaCourseId(url) {
+  const match = url.match(/mna\.wang\/course\/(\d+)/i)
+  return match ? match[1] : null
+}
+
 function parseMnaProblemIds(url) {
   const match = url.match(/mna\.wang\/contest\/(\d+)\/problem\/(\d+)/i)
   return match ? { contestId: match[1], problemNumber: match[2] } : null
+}
+
+function parseMnaCourseProblemIds(url) {
+  const match = url.match(/mna\.wang\/course\/(\d+)\/problem\/(\d+)/i)
+  return match ? { courseId: match[1], problemNumber: match[2] } : null
+}
+
+function parseMnaCollection(url) {
+  const contestId = parseMnaContestId(url)
+  if (contestId) return { type: 'contest', id: contestId }
+
+  const courseId = parseMnaCourseId(url)
+  if (courseId) return { type: 'course', id: courseId }
+
+  return null
+}
+
+function parseMnaProblemLocator(url) {
+  const contestIds = parseMnaProblemIds(url)
+  if (contestIds) {
+    return {
+      type: 'contest',
+      groupId: contestIds.contestId,
+      problemNumber: contestIds.problemNumber,
+    }
+  }
+
+  const courseIds = parseMnaCourseProblemIds(url)
+  if (courseIds) {
+    return {
+      type: 'course',
+      groupId: courseIds.courseId,
+      problemNumber: courseIds.problemNumber,
+    }
+  }
+
+  return null
 }
 
 function getNodeText($, node, pageUrl) {
@@ -180,7 +236,7 @@ function getNodeText($, node, pageUrl) {
     if (node.tagName?.toLowerCase() === 'a') {
       const href = $(node).attr('href') || ''
       const text = $(node).text().trim()
-      if (!href || /\/download\/additional_file/.test(href)) return text
+      if (isIgnorableProblemLink(href, text)) return text && !href ? text : ''
       return text ? `[${text}](${normalizeUrl(href, pageUrl)})` : normalizeUrl(href, pageUrl)
     }
     return $(node).text()
@@ -196,7 +252,7 @@ function getNodeText($, node, pageUrl) {
   if (tag === 'a') {
     const href = $(node).attr('href') || ''
     const text = node.children.map(child => getNodeText($, child, pageUrl)).join('').trim()
-    if (!href || /\/download\/additional_file/.test(href)) return text
+    if (isIgnorableProblemLink(href, text)) return text && !href ? text : ''
     return text ? `[${text}](${normalizeUrl(href, pageUrl)})` : normalizeUrl(href, pageUrl)
   }
 
@@ -248,8 +304,8 @@ function nodeToMd($, node, pageUrl) {
   }
   if (tag === 'a') {
     const href = $(node).attr('href') || ''
-    if (/\/download\/additional_file/.test(href)) return ''
     const text = getNodeText($, node, pageUrl).replace(/\s+/g, ' ').trim()
+    if (isIgnorableProblemLink(href, text)) return ''
     if (!text) return ''
     return `[${text}](${normalizeUrl(href, pageUrl)})`
   }
@@ -366,17 +422,14 @@ async function fetchMnaAcCode(contestId, problemNumber) {
   return ''
 }
 
-export async function fetchMnaContest(url) {
-  const contestId = parseMnaContestId(url)
-  if (!contestId) throw new Error('无法从 URL 中解析梦熊联盟比赛 ID')
-
-  const html = await mnaGet(`/contest/${contestId}`)
+async function fetchMnaCollectionProblems(type, id) {
+  const html = await mnaGet(`/${type}/${id}`)
   const $ = load(html)
   const problemMap = new Map()
 
-  $(`a[href*="/contest/${contestId}/problem/"]`).each((_, link) => {
+  $(`a[href*="/${type}/${id}/problem/"]`).each((_, link) => {
     const href = $(link).attr('href') || ''
-    const match = href.match(new RegExp(`/contest/${contestId}/problem/(\\d+)`))
+    const match = href.match(new RegExp(`/${type}/${id}/problem/(\\d+)`))
     if (!match) return
     const taskId = match[1]
     const title = $(link).text().replace(/\s+/g, ' ').trim()
@@ -390,22 +443,21 @@ export async function fetchMnaContest(url) {
   })
 
   const problems = [...problemMap.values()].sort((left, right) => Number(left.taskId) - Number(right.taskId))
-  if (!problems.length) throw new Error('未找到题目列表，比赛可能不存在或尚未开始')
+  if (!problems.length) {
+    throw new Error(type === 'course' ? '未找到课程题目列表，课程可能不存在或无可见题目' : '未找到题目列表，比赛可能不存在或尚未开始')
+  }
 
+  const titleSuffix = type === 'course' ? ' - 课程' : ' - 比赛'
   const contestTitle =
-    $('title').text().split(' - 比赛')[0].trim() ||
+    $('title').text().split(titleSuffix)[0].trim() ||
     $('h1').first().text().replace(/\s+/g, ' ').trim() ||
-    `mna-${contestId}`
+    `mna-${id}`
 
-  return { contestId, contestTitle, problems }
+  return { contestId: id, contestTitle, problems }
 }
 
-export async function fetchMnaProblem(url) {
-  const ids = parseMnaProblemIds(url)
-  if (!ids) throw new Error('无法从 URL 中解析梦熊联盟题目地址，格式应为 /contest/{id}/problem/{number}')
-
-  const { contestId, problemNumber } = ids
-  const pageUrl = `${BASE}/contest/${contestId}/problem/${problemNumber}`
+async function fetchMnaProblemPage(type, groupId, problemNumber) {
+  const pageUrl = `${BASE}/${type}/${groupId}/problem/${problemNumber}`
   const html = await mnaGet(pageUrl)
   const $ = load(html)
 
@@ -419,7 +471,7 @@ export async function fetchMnaProblem(url) {
     try {
       const resp = await mnaGetBinary(additionalHref)
       additionalFile = {
-        filename: extractFilename(resp.headers['content-disposition'], `additional_file_${contestId}_${problemNumber}.zip`),
+        filename: extractFilename(resp.headers['content-disposition'], `additional_file_${groupId}_${problemNumber}.zip`),
         base64: Buffer.from(resp.data).toString('base64'),
         size: Buffer.byteLength(resp.data),
       }
@@ -429,11 +481,13 @@ export async function fetchMnaProblem(url) {
   }
 
   let acCode = ''
-  try {
-    const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
-    acCode = await Promise.race([fetchMnaAcCode(contestId, problemNumber), timeout])
-  } catch (error) {
-    console.warn('[mna] AC code skipped:', error.message)
+  if (type === 'contest') {
+    try {
+      const timeout = new Promise(resolve => setTimeout(() => resolve(''), 20000))
+      acCode = await Promise.race([fetchMnaAcCode(groupId, problemNumber), timeout])
+    } catch (error) {
+      console.warn('[mna] AC code skipped:', error.message)
+    }
   }
 
   return {
@@ -447,4 +501,16 @@ export async function fetchMnaProblem(url) {
   }
 }
 
-export { parseMnaContestId, parseMnaProblemIds }
+export async function fetchMnaContest(url) {
+  const collection = parseMnaCollection(url)
+  if (!collection) throw new Error('无法从 URL 中解析梦熊联盟比赛/课程 ID')
+  return fetchMnaCollectionProblems(collection.type, collection.id)
+}
+
+export async function fetchMnaProblem(url) {
+  const locator = parseMnaProblemLocator(url)
+  if (!locator) throw new Error('无法从 URL 中解析梦熊联盟题目地址，格式应为 /contest/{id}/problem/{number} 或 /course/{id}/problem/{number}')
+  return fetchMnaProblemPage(locator.type, locator.groupId, locator.problemNumber)
+}
+
+export { parseMnaContestId, parseMnaCourseId, parseMnaProblemIds, parseMnaCourseProblemIds }
