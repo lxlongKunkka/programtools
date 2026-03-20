@@ -3,8 +3,9 @@ const statusNode = document.getElementById('status')
 const targetOriginNode = document.getElementById('targetOrigin')
 
 function getPageContext(url) {
-  if (/https:\/\/mna\.wang\/contest\/\d+\/problem\/\d+/i.test(url || '')) return { site: 'MNA', mode: 'problem', strategy: 'scrape' }
-  if (/https:\/\/mna\.wang\/contest\/\d+\/?(?:\?.*)?$/i.test(url || '')) return { site: 'MNA', mode: 'contest', strategy: 'scrape' }
+  if (/https:\/\/mna\.wang\/(contest|course)\/\d+\/problem\/\d+/i.test(url || '')) return { site: 'MNA', mode: 'problem', strategy: 'scrape' }
+  if (/https:\/\/mna\.wang\/contest\/\d+\/?(?:\?.*)?$/i.test(url || '')) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '比赛' }
+  if (/https:\/\/mna\.wang\/course\/\d+\/?(?:\?.*)?$/i.test(url || '')) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '课程' }
   if (/https:\/\/atcoder\.jp\/contests\/[^/]+\/tasks\/[^/?#]+/i.test(url || '')) return { site: 'AtCoder', mode: 'problem', strategy: 'url' }
   if (/https:\/\/atcoder\.jp\/contests\/[^/?#]+\/?(?:\?.*)?$/i.test(url || '')) return { site: 'AtCoder', mode: 'contest', strategy: 'url' }
   if (/https:\/\/htoj\.com\.cn\/cpp\/oj\/problem\/detail\?[^#]*\bpid=\d+/i.test(url || '')) return { site: '核桃 OJ', mode: 'problem', strategy: 'url' }
@@ -27,11 +28,13 @@ async function updatePopupByActiveTab() {
     return
   }
   if (context?.mode === 'contest') {
-    button.textContent = '导入整场比赛'
+    const collectionLabel = context.collectionLabel || '比赛'
+    button.textContent = collectionLabel === '课程' ? '导入整门课程' : '导入整场比赛'
     if (context.strategy === 'scrape') {
-      setStatus(`当前是 ${context.site} 比赛页，将按题目顺序整场导入。`)
+      const batchLabel = collectionLabel === '课程' ? '整课导入' : '整场导入'
+      setStatus(`当前是 ${context.site} ${collectionLabel}页，将按题目顺序${batchLabel}。`)
     } else {
-      setStatus(`当前是 ${context.site} 比赛页，将把当前链接交给 SolveData 批量导入。`)
+      setStatus(`当前是 ${context.site} ${collectionLabel}页，将把当前链接交给 SolveData 批量导入。`)
     }
     return
   }
@@ -58,10 +61,11 @@ button.addEventListener('click', async () => {
     }
 
     if (response.mode === 'contest') {
+      const collectionLabel = response.collectionLabel || '比赛'
       if (response.strategy === 'scrape') {
-        setStatus(`导入成功。\n比赛：${response.contestTitle || '未知比赛'}\n成功 ${response.importedCount || 0} 题，失败 ${response.failedCount || 0} 题。`)
+        setStatus(`导入成功。\n${collectionLabel}：${response.contestTitle || '未知' + collectionLabel}\n成功 ${response.importedCount || 0} 题，失败 ${response.failedCount || 0} 题。`)
       } else {
-        setStatus(`导入成功。\n已将 ${response.site || '当前站点'} 比赛链接交给 SolveData 处理。`)
+        setStatus(`导入成功。\n已将 ${response.site || '当前站点'} ${collectionLabel}链接交给 SolveData 处理。`)
       }
     } else {
       const siteLabel = response.site || '当前站点'

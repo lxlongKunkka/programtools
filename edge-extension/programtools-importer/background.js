@@ -31,7 +31,8 @@ function isNflsoiContestUrl(url) {
 
 function getImportContext(url) {
   if (isMnaProblemUrl(url)) return { site: 'MNA', mode: 'problem', strategy: 'scrape' }
-  if (isMnaContestUrl(url)) return { site: 'MNA', mode: 'contest', strategy: 'scrape' }
+  if (isMnaContestUrl(url)) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '比赛' }
+  if (isMnaCourseUrl(url)) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '课程' }
   if (isAtcoderProblemUrl(url)) return { site: 'AtCoder', mode: 'problem', strategy: 'url' }
   if (isAtcoderContestUrl(url)) return { site: 'AtCoder', mode: 'contest', strategy: 'url' }
   if (isHtojProblemUrl(url)) return { site: '核桃 OJ', mode: 'problem', strategy: 'url' }
@@ -42,11 +43,15 @@ function getImportContext(url) {
 }
 
 function isMnaProblemUrl(url) {
-  return /https:\/\/mna\.wang\/contest\/\d+\/problem\/\d+/i.test(url || '')
+  return /https:\/\/mna\.wang\/(contest|course)\/\d+\/problem\/\d+/i.test(url || '')
 }
 
 function isMnaContestUrl(url) {
   return /https:\/\/mna\.wang\/contest\/\d+\/?(?:\?.*)?$/i.test(url || '')
+}
+
+function isMnaCourseUrl(url) {
+  return /https:\/\/mna\.wang\/course\/\d+\/?(?:\?.*)?$/i.test(url || '')
 }
 
 async function waitForTabComplete(tabId) {
@@ -173,6 +178,20 @@ async function collectCurrentMnaProblem() {
     }
   }
 
+  function isIgnorableProblemLink(href = '', text = '') {
+    const normalizedHref = href.trim()
+    const normalizedText = text.replace(/\s+/g, ' ').trim()
+
+    if (!normalizedHref) return true
+    if (/\/download\/additional_file/.test(normalizedHref)) return true
+    if (/#[a-z0-9_-]+$/i.test(normalizedHref)) return true
+    if (/\/(contest|course)\/\d+\/(submissions|ranklist)(\?|$)/i.test(normalizedHref)) return true
+    if (/\/(contest|course)\/submission\/\d+/i.test(normalizedHref)) return true
+    if (/^(返回课程|返回比赛|提交|提交记录|排行榜)$/.test(normalizedText)) return true
+
+    return false
+  }
+
   function getNodeText(node, pageUrl) {
     if (!node) return ''
     if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
@@ -187,7 +206,7 @@ async function collectCurrentMnaProblem() {
     if (tag === 'a') {
       const href = node.getAttribute('href') || ''
       const text = [...node.childNodes].map((child) => getNodeText(child, pageUrl)).join('').trim()
-      if (!href || /\/download\/additional_file/.test(href)) return text
+      if (isIgnorableProblemLink(href, text)) return text && !href ? text : ''
       return text ? `[${text}](${normalizeUrl(href, pageUrl)})` : normalizeUrl(href, pageUrl)
     }
     return [...node.childNodes].map((child) => getNodeText(child, pageUrl)).join('')
@@ -234,6 +253,13 @@ async function collectCurrentMnaProblem() {
       const rows = [...node.querySelectorAll('tr')].map((row) => [...row.querySelectorAll('th,td')].map((cell) => getNodeText(cell, pageUrl).replace(/\s+/g, ' ').trim()))
       const filtered = rows.filter((row) => row.some(Boolean))
       return filtered.length ? filtered.map((row) => `| ${row.join(' | ')} |`).join('\n') + '\n\n' : ''
+    }
+    if (tag === 'a') {
+      const href = node.getAttribute('href') || ''
+      const text = getNodeText(node, pageUrl).replace(/\s+/g, ' ').trim()
+      if (isIgnorableProblemLink(href, text)) return ''
+      if (!text) return ''
+      return `[${text}](${normalizeUrl(href, pageUrl)})`
     }
     return [...node.childNodes].map((child) => nodeToMarkdown(child, pageUrl)).join('')
   }
@@ -358,12 +384,12 @@ async function collectCurrentMnaProblem() {
     return ''
   }
 
-  const match = location.href.match(/\/contest\/(\d+)\/problem\/(\d+)/i)
+  const match = location.href.match(/\/(contest|course)\/(\d+)\/problem\/(\d+)/i)
   if (!match) {
     throw new Error('当前页面不是 MNA 单题页面')
   }
 
-  const [, contestId, problemNumber] = match
+  const [, collectionType, groupId, problemNumber] = match
   const { title, content } = parseProblemContent()
   const { timeLimit, memoryLimit } = extractLimits()
 
@@ -374,14 +400,14 @@ async function collectCurrentMnaProblem() {
     try {
       const binary = await fetchBinary(sourceUrl)
       additionalFile = {
-        filename: parseFilename(binary.headers.contentDisposition, `additional_file_${contestId}_${problemNumber}.zip`),
+        filename: parseFilename(binary.headers.contentDisposition, `additional_file_${groupId}_${problemNumber}.zip`),
         base64: binary.base64,
         size: binary.size,
         sourceUrl,
       }
     } catch {
       additionalFile = {
-        filename: `additional_file_${contestId}_${problemNumber}.zip`,
+        filename: `additional_file_${groupId}_${problemNumber}.zip`,
         size: 0,
         sourceUrl,
       }
@@ -389,13 +415,15 @@ async function collectCurrentMnaProblem() {
   }
 
   let acCode = ''
-  try {
-    acCode = await Promise.race([
-      fetchAcCode(contestId, problemNumber),
-      new Promise((resolve) => setTimeout(() => resolve(''), 15000)),
-    ])
-  } catch {
-    acCode = ''
+  if (collectionType === 'contest') {
+    try {
+      acCode = await Promise.race([
+        fetchAcCode(groupId, problemNumber),
+        new Promise((resolve) => setTimeout(() => resolve(''), 15000)),
+      ])
+    } catch {
+      acCode = ''
+    }
   }
 
   return {
@@ -409,17 +437,23 @@ async function collectCurrentMnaProblem() {
   }
 }
 
-function collectCurrentMnaContest() {
+function collectCurrentMnaCollection() {
+  const pageMatch = location.href.match(/\/(contest|course)\/(\d+)/i)
+  if (!pageMatch) {
+    throw new Error('当前页面不是 MNA 比赛页或课程页')
+  }
+
+  const [, collectionType, collectionId] = pageMatch
   const title = (document.querySelector('h1')?.textContent || document.title || '').replace(/\s+/g, ' ').trim()
-  const links = [...document.querySelectorAll('a[href*="/contest/"][href*="/problem/"]')]
+  const links = [...document.querySelectorAll(`a[href*="/${collectionType}/${collectionId}/problem/"]`)]
   const dedup = new Map()
 
   for (const link of links) {
     const href = link.getAttribute('href') || ''
     const url = new URL(href, location.origin).href
-    const match = url.match(/\/contest\/(\d+)\/problem\/(\d+)/i)
+    const match = url.match(new RegExp(`/${collectionType}/${collectionId}/problem/(\\d+)`, 'i'))
     if (!match) continue
-    const problemNumber = Number(match[2])
+    const problemNumber = Number(match[1])
     if (!dedup.has(url)) {
       dedup.set(url, {
         url,
@@ -432,6 +466,7 @@ function collectCurrentMnaContest() {
   const problems = [...dedup.values()].sort((left, right) => left.problemNumber - right.problemNumber)
   return {
     title,
+    collectionLabel: collectionType === 'course' ? '课程' : '比赛',
     problems,
   }
 }
@@ -455,17 +490,17 @@ async function importSingleProblem(activeTab, targetOrigin) {
 
   const solveDataTabId = await ensureSolveDataTab(targetOrigin)
   await sendTaskToSolveData(solveDataTabId, payload)
-  return { ok: true, mode: 'problem' }
+  return { ok: true, mode: 'problem', site: 'MNA', strategy: 'scrape' }
 }
 
-async function importContest(activeTab, targetOrigin) {
-  if (!activeTab?.id || !isMnaContestUrl(activeTab.url)) {
-    throw new Error('请先在 Edge 中打开 MNA 比赛页面，再点击扩展按钮')
+async function importCollection(activeTab, targetOrigin) {
+  if (!activeTab?.id || (!isMnaContestUrl(activeTab.url) && !isMnaCourseUrl(activeTab.url))) {
+    throw new Error('请先在 Edge 中打开 MNA 比赛页或课程页，再点击扩展按钮')
   }
 
-  const contestInfo = await runScriptInTab(activeTab.id, collectCurrentMnaContest)
+  const contestInfo = await runScriptInTab(activeTab.id, collectCurrentMnaCollection)
   if (!contestInfo?.problems?.length) {
-    throw new Error('未能在当前比赛页找到题目列表')
+    throw new Error(`未能在当前${contestInfo?.collectionLabel || '页面'}找到题目列表`)
   }
 
   const solveDataTabId = await ensureSolveDataTab(targetOrigin)
@@ -491,12 +526,16 @@ async function importContest(activeTab, targetOrigin) {
   }
 
   if (importedCount === 0) {
-    throw new Error(`整场导入失败。${failedProblems[0] || '没有成功抓到任何题目'}`)
+    const batchLabel = (contestInfo.collectionLabel || '比赛') === '课程' ? '整课导入' : '整场导入'
+    throw new Error(`${batchLabel}失败。${failedProblems[0] || '没有成功抓到任何题目'}`)
   }
 
   return {
     ok: true,
     mode: 'contest',
+    site: 'MNA',
+    strategy: 'scrape',
+    collectionLabel: contestInfo.collectionLabel || '比赛',
     contestTitle: contestInfo.title,
     importedCount,
     failedCount,
@@ -531,7 +570,7 @@ async function handleImportCurrentPage(targetOrigin = DEFAULT_TARGET_ORIGIN) {
   }
 
   if (context.strategy === 'scrape' && context.mode === 'contest') {
-    return importContest(activeTab, targetOrigin)
+    return importCollection(activeTab, targetOrigin)
   }
 
   return importSupportedUrl(activeTab, targetOrigin, context)
