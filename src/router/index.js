@@ -15,6 +15,7 @@ const Typing = () => import('../pages/Typing.vue')
 const LearningMap = () => import('../pages/LearningMap.vue')
 const ChapterDetail = () => import('../pages/ChapterDetail.vue')
 const DailyProblem = () => import('../pages/DailyProblem.vue')
+const QuizDaily = () => import('../pages/QuizDaily.vue')
 const SolutionReport = () => import('../pages/SolutionReport.vue')
 const PromptEditor = () => import('../pages/PromptEditor.vue')
 const GespTool = () => import('../pages/GespTool.vue')
@@ -43,6 +44,7 @@ const routes = [
   { path: '/progress', component: ProgressDashboard, meta: { requiresAuth: true } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
+  { path: '/quiz-daily', component: QuizDaily, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
   { path: '/atcoder', redirect: '/solvedata' }

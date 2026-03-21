@@ -20,6 +20,7 @@ import settingsRoutes from './routes/settings.js'
 import atcoderRoutes from './routes/atcoder.js'
 import htojRoutes from './routes/htoj.js'
 import nflsojRoutes from './routes/nflsoj.js'
+import quizRoutes from './routes/quiz.js'
 import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
@@ -82,6 +83,7 @@ app.use('/api/sokoban', sokobanRoutes)
 app.use('/api/atcoder', atcoderRoutes)
 app.use('/api/htoj', htojRoutes)
 app.use('/api/nflsoj', nflsojRoutes)
+app.use('/api/quiz', quizRoutes)
 
 // 简单的日志上报接口，用于前端统计页面访问
 app.post('/api/log/visit', (req, res) => {

@@ -25,6 +25,12 @@
           <div class="card-desc">每天一道精选题目，保持编程手感。</div>
         </router-link>
 
+        <router-link to="/quiz-daily" class="card">
+          <div class="card-icon">📝</div>
+          <div class="card-title">客观题打卡</div>
+          <div class="card-desc">每天一道 GESP 单题，手机上也能快速刷完。</div>
+        </router-link>
+
         <router-link to="/checker" class="card">
           <div class="card-icon">🔍</div>
           <div class="card-title">代码校验</div>

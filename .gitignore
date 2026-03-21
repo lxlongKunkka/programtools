@@ -14,6 +14,7 @@ server/logs/
 server/logs/*.log
 logs/
 *.log
+server/temp_gesp/
 
 # OS
 .DS_Store

@@ -8,10 +8,44 @@ const __dirname = path.dirname(__filename)
 // Load .env from server directory
 dotenv.config({ path: path.join(__dirname, '.env') })
 
+function deriveMongoDbUri(uri, dbName) {
+  const text = String(uri || '').trim()
+  if (!text) return `mongodb://localhost:27017/${dbName}`
+
+  if (!text.startsWith('mongodb://') && !text.startsWith('mongodb+srv://')) {
+    return text
+  }
+
+  const match = text.match(/^(mongodb(?:\+srv)?:\/\/[^/]+\/)([^?]*)(\?.*)?$/)
+  if (match) {
+    const originalDb = match[2] || ''
+    const query = match[3] || ''
+    if (query.includes('authSource=')) {
+      return `${match[1]}${dbName}${query}`
+    }
+
+    if (query) {
+      return `${match[1]}${dbName}${query}&authSource=${encodeURIComponent(originalDb || dbName)}`
+    }
+
+    if (originalDb) {
+      return `${match[1]}${dbName}?authSource=${encodeURIComponent(originalDb)}`
+    }
+
+    return `${match[1]}${dbName}`
+  }
+
+  if (text.endsWith('/')) {
+    return `${text}${dbName}`
+  }
+
+  return `${text}/${dbName}`
+}
+
 export const PORT = process.env.PORT || 3000
 export const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/programtools'
 export const HYDRO_MONGODB_URI = process.env.HYDRO_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/hydro'
-export const APP_MONGODB_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools'
+export const APP_MONGODB_URI = process.env.APP_MONGODB_URI || deriveMongoDbUri(process.env.MONGODB_URI || process.env.HYDRO_MONGODB_URI || 'mongodb://localhost:27017/hydro', 'programtools')
 export const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_this'
 
 // 启动时强制校验 JWT_SECRET，防止使用默认值导致 token 可被伪造
