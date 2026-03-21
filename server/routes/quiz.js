@@ -4,6 +4,7 @@ import QuizQuestion from '../models/QuizQuestion.js'
 import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
 import User from '../models/User.js'
+import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 
 const router = express.Router()
 
@@ -211,31 +212,14 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
     const previousDate = getPreviousDate(today)
     const previousProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: previousDate }).lean()
     const streakBase = previousProgress?.completed ? (previousProgress.streak || 0) : 0
-    const alreadyTrackedToday = !!existingProgress?.questionUids?.includes(questionUid)
-    const progressUpdate = {
-      $set: {
-        subject: assignedQuestion.subject || 'C++',
-        source: assignedQuestion.source || 'gesp',
-        completed: true,
-        lastAnsweredAt: now,
-        streak: Math.max(existingProgress?.streak || 0, streakBase + 1)
-      }
-    }
-
-    if (existingProgress) {
-      progressUpdate.$addToSet = { questionUids: questionUid }
-      progressUpdate.$inc = {
-        answeredCount: alreadyTrackedToday ? 0 : 1,
-        correctCount: (!alreadyTrackedToday && isCorrect) ? 1 : 0
-      }
-    } else {
-      progressUpdate.$setOnInsert = {
-        firstAnsweredAt: now,
-        answeredCount: 1,
-        correctCount: isCorrect ? 1 : 0,
-        questionUids: [questionUid]
-      }
-    }
+    const progressUpdate = buildDailyProgressUpdate({
+      existingProgress,
+      assignedQuestion,
+      now,
+      questionUid,
+      isCorrect,
+      streakBase
+    })
 
     const updatedProgress = await QuizDailyProgress.findOneAndUpdate(
       { userId: req.user.id, date: today },
