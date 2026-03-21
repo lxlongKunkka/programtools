@@ -211,29 +211,35 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
     const previousDate = getPreviousDate(today)
     const previousProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: previousDate }).lean()
     const streakBase = previousProgress?.completed ? (previousProgress.streak || 0) : 0
+    const alreadyTrackedToday = !!existingProgress?.questionUids?.includes(questionUid)
+    const progressUpdate = {
+      $set: {
+        subject: assignedQuestion.subject || 'C++',
+        source: assignedQuestion.source || 'gesp',
+        completed: true,
+        lastAnsweredAt: now,
+        streak: Math.max(existingProgress?.streak || 0, streakBase + 1)
+      }
+    }
+
+    if (existingProgress) {
+      progressUpdate.$addToSet = { questionUids: questionUid }
+      progressUpdate.$inc = {
+        answeredCount: alreadyTrackedToday ? 0 : 1,
+        correctCount: (!alreadyTrackedToday && isCorrect) ? 1 : 0
+      }
+    } else {
+      progressUpdate.$setOnInsert = {
+        firstAnsweredAt: now,
+        answeredCount: 1,
+        correctCount: isCorrect ? 1 : 0,
+        questionUids: [questionUid]
+      }
+    }
 
     const updatedProgress = await QuizDailyProgress.findOneAndUpdate(
       { userId: req.user.id, date: today },
-      {
-        $set: {
-          subject: assignedQuestion.subject || 'C++',
-          source: assignedQuestion.source || 'gesp',
-          completed: true,
-          lastAnsweredAt: now,
-          streak: Math.max(existingProgress?.streak || 0, streakBase + 1)
-        },
-        $setOnInsert: {
-          firstAnsweredAt: now,
-          answeredCount: 1,
-          correctCount: isCorrect ? 1 : 0,
-          questionUids: [questionUid]
-        },
-        $addToSet: { questionUids: questionUid },
-        $inc: {
-          answeredCount: existingProgress?.questionUids?.includes(questionUid) ? 0 : 1,
-          correctCount: (!existingProgress?.questionUids?.includes(questionUid) && isCorrect) ? 1 : 0
-        }
-      },
+      progressUpdate,
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean()
 
