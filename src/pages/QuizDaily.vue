@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <p class="eyebrow">GESP 客观题</p>
         <h1>每日打卡，可连续刷题</h1>
-        <p class="hero-text">当天至少完成 1 题就算打卡成功。完成后还可以继续刷下一题，手机上也能顺手连续做。</p>
+        <p class="hero-text">当天至少完成 1 题就算打卡成功。完成后还可以继续刷下一题，也可以直接切到错题本按级别和知识点重做。</p>
       </div>
       <div class="hero-stats">
         <div class="stat-card">
@@ -30,6 +30,10 @@
             <h2>{{ currentDateText }}</h2>
           </div>
           <div class="toolbar-actions">
+            <div class="mode-switch">
+              <button class="mode-button" :class="{ active: activeMode === 'daily' }" :disabled="loading || submitting" @click="switchToDailyMode">今日刷题</button>
+              <button class="mode-button" :class="{ active: activeMode === 'wrongbook' }" :disabled="loading || submitting || wrongbook.length === 0" @click="switchToWrongbookMode">错题重做</button>
+            </div>
             <label class="filter-field">
               <span>级别</span>
               <select v-model="selectedLevelTag" :disabled="loading || submitting" @change="handleLevelChange">
@@ -86,7 +90,7 @@
 
             <div v-if="!result" class="submit-row">
               <button class="btn-submit" :disabled="!selectedAnswer || submitting" @click="submitAnswer">
-                {{ submitting ? '提交中...' : '提交答案' }}
+                {{ submitting ? '提交中...' : activeMode === 'wrongbook' ? '提交错题本答案' : '提交答案' }}
               </button>
             </div>
 
@@ -96,7 +100,7 @@
                 <span class="answer-pill">正确答案：{{ optionLabel(result.correctAnswer) }}</span>
               </div>
               <p class="result-copy">
-                {{ result.correct ? '今天这道题已经完成，系统已为你记录打卡。' : '今天这道题已经提交，系统已为你记录打卡，下次可以再来复习。' }}
+                {{ resultCopy }}
               </p>
               <div v-if="result.explanation" class="explanation-box">
                 <h4>题目解析</h4>
@@ -104,15 +108,15 @@
               </div>
               <div class="submit-row next-row">
                 <button class="btn-next" :disabled="loading" @click="fetchCurrentQuestion">
-                  再来一题
+                  {{ activeMode === 'wrongbook' ? '下一道错题' : '再来一题' }}
                 </button>
               </div>
             </div>
           </div>
 
           <div v-else class="state-card success">
-            <h3>今天可做的题目已经刷完</h3>
-            <p>今天这组题已经没有新的未做题目了。你可以查看右侧排行榜和最近打卡记录。</p>
+            <h3>{{ activeMode === 'wrongbook' ? '当前筛选下没有错题' : '今天可做的题目已经刷完' }}</h3>
+            <p>{{ activeMode === 'wrongbook' ? '你可以切换筛选条件，或者回到今日刷题继续练习。' : '今天这组题已经没有新的未做题目了。你可以查看右侧排行榜、最近打卡和错题本。' }}</p>
           </div>
         </template>
       </section>
@@ -191,7 +195,11 @@
                 <span v-for="tag in item.tags || []" :key="`${item.questionUid}-${tag}`" class="meta-chip small knowledge-chip">{{ tag }}</span>
               </div>
               <p class="wrongbook-stem">{{ item.stem }}</p>
-              <p class="wrongbook-answer">你的答案：{{ optionLabel(item.selectedAnswer) }} ｜ 正确答案：{{ optionLabel(item.correctAnswer) }}</p>
+              <p class="wrongbook-answer">你的答案：{{ optionLabel(item.selectedAnswer) }} ｜ 正确答案：{{ optionLabel(item.correctAnswer) }} ｜ 错误次数：{{ item.wrongCount || 1 }}</p>
+              <div class="wrongbook-actions">
+                <button class="btn-mini primary" :disabled="submitting" @click="retryWrongbookItem(item)">重做</button>
+                <button class="btn-mini" :disabled="submitting" @click="removeWrongbookItem(item.questionUid)">移除</button>
+              </div>
             </li>
           </ul>
         </div>
@@ -213,6 +221,7 @@ const QUIZ_KNOWLEDGE_STORAGE_KEY = 'quiz_daily_knowledge_tag'
 
 const loading = ref(true)
 const submitting = ref(false)
+const activeMode = ref('daily')
 const leaderboardLoading = ref(false)
 const historyLoading = ref(false)
 const wrongbookLoading = ref(false)
@@ -225,6 +234,7 @@ const levelOptions = ref([])
 const knowledgeTagOptions = ref([])
 const result = ref(null)
 const today = ref('')
+const activeWrongbookQuestionUid = ref('')
 const progress = ref({
   answeredCount: 0,
   correctCount: 0,
@@ -239,6 +249,19 @@ const wrongbook = ref([])
 const currentDateText = computed(() => {
   if (!today.value) return '今日'
   return today.value
+})
+
+const resultCopy = computed(() => {
+  if (!result.value) return ''
+  if (activeMode.value === 'wrongbook') {
+    return result.value.correct
+      ? '这道错题已订正，系统已将它移出错题本。'
+      : '这道错题仍然保留在错题本中，后面可以继续重做。'
+  }
+
+  return result.value.correct
+    ? '今天这道题已经完成，系统已为你记录打卡。'
+    : '今天这道题已经提交，系统已为你记录打卡，下次可以再来复习。'
 })
 
 onMounted(async () => {
@@ -288,16 +311,46 @@ async function fetchLevelOptions() {
     const data = await request('/api/quiz/daily/options')
     levelOptions.value = Array.isArray(data?.levels) ? data.levels : []
     knowledgeTagOptions.value = Array.isArray(data?.knowledgeTags) ? data.knowledgeTags : []
+    const validLevelTags = new Set(levelOptions.value.map((item) => item.value))
+    if (selectedLevelTag.value && !validLevelTags.has(selectedLevelTag.value)) {
+      selectedLevelTag.value = ''
+      localStorage.removeItem(QUIZ_LEVEL_STORAGE_KEY)
+    }
+    const validKnowledgeTags = new Set(knowledgeTagOptions.value.map((item) => item.value))
+    if (selectedKnowledgeTag.value && !validKnowledgeTags.has(selectedKnowledgeTag.value)) {
+      selectedKnowledgeTag.value = ''
+      localStorage.removeItem(QUIZ_KNOWLEDGE_STORAGE_KEY)
+    }
   } catch {
     levelOptions.value = []
     knowledgeTagOptions.value = []
+    selectedKnowledgeTag.value = ''
+    localStorage.removeItem(QUIZ_KNOWLEDGE_STORAGE_KEY)
   }
 }
 
 function handleLevelChange() {
   localStorage.setItem(QUIZ_LEVEL_STORAGE_KEY, selectedLevelTag.value)
   localStorage.setItem(QUIZ_KNOWLEDGE_STORAGE_KEY, selectedKnowledgeTag.value)
+  activeWrongbookQuestionUid.value = ''
   refreshAll()
+}
+
+function switchToDailyMode() {
+  activeMode.value = 'daily'
+  activeWrongbookQuestionUid.value = ''
+  fetchCurrentQuestion()
+}
+
+function switchToWrongbookMode() {
+  activeMode.value = 'wrongbook'
+  if (wrongbook.value.length > 0) {
+    retryWrongbookItem(wrongbook.value[0])
+  } else {
+    question.value = null
+    selectedAnswer.value = ''
+    result.value = null
+  }
 }
 
 async function submitAnswer() {
@@ -305,14 +358,16 @@ async function submitAnswer() {
 
   submitting.value = true
   try {
-    const data = await request('/api/quiz/daily/submit', {
+    const endpoint = activeMode.value === 'wrongbook' ? '/api/quiz/wrongbook/submit' : '/api/quiz/daily/submit'
+    const payload = {
+      questionUid: question.value.questionUid,
+      selectedAnswer: selectedAnswer.value,
+      levelTag: selectedLevelTag.value,
+      tag: selectedKnowledgeTag.value
+    }
+    const data = await request(endpoint, {
       method: 'POST',
-      body: JSON.stringify({
-        questionUid: question.value.questionUid,
-        selectedAnswer: selectedAnswer.value,
-        levelTag: selectedLevelTag.value,
-        tag: selectedKnowledgeTag.value
-      })
+      body: JSON.stringify(payload)
     })
 
     result.value = {
@@ -320,15 +375,22 @@ async function submitAnswer() {
       correctAnswer: data?.correctAnswer || '',
       explanation: data?.explanation || ''
     }
-    progress.value = {
-      answeredCount: data?.progress?.answeredCount || progress.value.answeredCount,
-      correctCount: data?.progress?.correctCount || progress.value.correctCount,
-      streak: data?.progress?.streak || progress.value.streak,
-      completed: !!data?.completed,
-      questionUids: data?.progress?.questionUids || progress.value.questionUids
+    if (activeMode.value === 'daily') {
+      progress.value = {
+        answeredCount: data?.progress?.answeredCount || progress.value.answeredCount,
+        correctCount: data?.progress?.correctCount || progress.value.correctCount,
+        streak: data?.progress?.streak || progress.value.streak,
+        completed: !!data?.completed,
+        questionUids: data?.progress?.questionUids || progress.value.questionUids
+      }
     }
-    showToastMessage(data?.correct ? '回答正确，已完成今日打卡' : '已提交，今日打卡已记录')
+    showToastMessage(activeMode.value === 'wrongbook'
+      ? (data?.correct ? '已订正，题目已从错题本移除' : '仍未答对，题目保留在错题本')
+      : (data?.correct ? '回答正确，已完成今日打卡' : '已提交，今日打卡已记录'))
     await Promise.all([fetchLeaderboard(), fetchHistory(), fetchWrongbook()])
+    if (activeMode.value === 'wrongbook' && data?.correct) {
+      activeWrongbookQuestionUid.value = ''
+    }
   } catch (e) {
     showToastMessage(e.message || '提交失败')
   } finally {
@@ -363,12 +425,61 @@ async function fetchHistory() {
 async function fetchWrongbook() {
   wrongbookLoading.value = true
   try {
-    const data = await request('/api/quiz/daily/wrongbook?limit=10')
+    const params = new URLSearchParams({ limit: '10' })
+    if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
+    if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
+    const data = await request(`/api/quiz/daily/wrongbook?${params.toString()}`)
     wrongbook.value = Array.isArray(data?.items) ? data.items : []
+    if (activeMode.value === 'wrongbook') {
+      const current = wrongbook.value.find((item) => item.questionUid === activeWrongbookQuestionUid.value)
+      if (current) {
+        retryWrongbookItem(current)
+      } else if (wrongbook.value.length > 0) {
+        retryWrongbookItem(wrongbook.value[0])
+      } else {
+        question.value = null
+        result.value = null
+        selectedAnswer.value = ''
+      }
+    }
   } catch {
     wrongbook.value = []
   } finally {
     wrongbookLoading.value = false
+  }
+}
+
+function retryWrongbookItem(item) {
+  activeMode.value = 'wrongbook'
+  activeWrongbookQuestionUid.value = item.questionUid
+  question.value = {
+    questionUid: item.questionUid,
+    paperQuestionNo: item.paperQuestionNo,
+    type: item.type,
+    stem: item.stem,
+    options: item.options || [],
+    tags: item.tags || [],
+    levelTag: item.levelTag || '',
+    sourceTitle: item.sourceTitle || ''
+  }
+  selectedAnswer.value = ''
+  result.value = null
+  error.value = ''
+}
+
+async function removeWrongbookItem(questionUid) {
+  try {
+    await request('/api/quiz/wrongbook/remove', {
+      method: 'POST',
+      body: JSON.stringify({ questionUid })
+    })
+    showToastMessage('已从错题本移除')
+    if (activeWrongbookQuestionUid.value === questionUid) {
+      activeWrongbookQuestionUid.value = ''
+    }
+    await fetchWrongbook()
+  } catch (e) {
+    showToastMessage(e.message || '移除失败')
   }
 }
 
@@ -505,6 +616,30 @@ function renderInlineMarkdown(content) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-button {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #fff;
+  color: #123458;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  background: #123458;
+  color: #fff;
+  border-color: #123458;
 }
 
 .filter-field {
@@ -645,17 +780,17 @@ function renderInlineMarkdown(content) {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-
-.knowledge-chip {
-  background: #fff3e6;
-  color: #9a3412;
-}
 }
 
 .meta-chip {
   padding: 6px 10px;
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+.knowledge-chip {
+  background: #fff3e6;
+  color: #9a3412;
 }
 
 .meta-source {
@@ -891,6 +1026,30 @@ function renderInlineMarkdown(content) {
   font-weight: 700;
 }
 
+.wrongbook-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-mini {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #dbe4ef;
+  background: #fff;
+  color: #123458;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-mini.primary {
+  border-color: #123458;
+  background: #123458;
+  color: #fff;
+}
+
 .rank {
   width: 30px;
   height: 30px;
@@ -966,11 +1125,13 @@ function renderInlineMarkdown(content) {
     align-items: flex-start;
   }
 
+  .mode-switch,
   .toolbar-actions,
   .filter-field {
     width: 100%;
   }
 
+  .mode-button,
   .btn-refresh,
   .btn-submit,
   .btn-next,

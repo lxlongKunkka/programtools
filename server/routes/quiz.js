@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import QuizQuestion from '../models/QuizQuestion.js'
 import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
+import QuizWrongbookItem from '../models/QuizWrongbookItem.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { KNOWLEDGE_TAGS, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
@@ -110,6 +111,141 @@ async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) 
 
 async function getTodayProgress(userId, today) {
   return QuizDailyProgress.findOne({ userId, date: today }).lean()
+}
+
+function buildWrongbookFilter(userId, input = {}) {
+  const filter = {
+    userId,
+    active: true
+  }
+  if (typeof input.levelTag === 'string' && input.levelTag.trim()) {
+    filter.levelTag = input.levelTag.trim()
+  }
+  const selectedTag = normalizeQuizKnowledgeTags([
+    input.tag,
+    input.knowledgeTag
+  ])[0]
+  if (selectedTag) {
+    filter.tags = selectedTag
+  }
+  return filter
+}
+
+async function markWrongbookState(question, {
+  userId,
+  selectedAnswer,
+  isCorrect,
+  answeredAt,
+  incrementWrongCount = true
+} = {}) {
+  if (!question?.questionUid) return
+
+  if (isCorrect) {
+    await QuizWrongbookItem.updateOne(
+      { userId, questionUid: question.questionUid },
+      {
+        $set: {
+          active: false,
+          resolvedAt: answeredAt,
+          removedAt: null,
+          paperUid: question.paperUid || '',
+          source: question.source || 'gesp',
+          sourceTitle: question.sourceTitle || '',
+          subject: question.subject || 'C++',
+          levelTag: question.levelTag || '',
+          tags: question.tags || [],
+          type: question.type || 'single'
+        }
+      },
+      { upsert: false }
+    )
+    return
+  }
+
+  const update = {
+    $set: {
+      active: true,
+      paperUid: question.paperUid || '',
+      source: question.source || 'gesp',
+      sourceTitle: question.sourceTitle || '',
+      subject: question.subject || 'C++',
+      levelTag: question.levelTag || '',
+      tags: question.tags || [],
+      type: question.type || 'single',
+      lastWrongAnswer: selectedAnswer,
+      lastWrongAt: answeredAt,
+      resolvedAt: null,
+      removedAt: null
+    },
+    $setOnInsert: {
+      wrongCount: 0
+    }
+  }
+
+  if (incrementWrongCount) {
+    update.$inc = { wrongCount: 1 }
+  }
+
+  await QuizWrongbookItem.updateOne(
+    { userId, questionUid: question.questionUid },
+    update,
+    { upsert: true }
+  )
+}
+
+async function seedWrongbookItems(userId) {
+  const activeCount = await QuizWrongbookItem.countDocuments({ userId, active: true })
+  if (activeCount > 0) return
+
+  const latestWrongAttempts = await QuizAttempt.aggregate([
+    { $match: { userId } },
+    { $sort: { answeredAt: -1 } },
+    { $group: { _id: '$questionUid', latestAttempt: { $first: '$$ROOT' } } },
+    { $match: { 'latestAttempt.isCorrect': false } },
+    { $limit: 100 }
+  ])
+
+  if (!latestWrongAttempts.length) return
+
+  const questionUids = latestWrongAttempts.map((item) => item._id)
+  const questions = await QuizQuestion.find({ questionUid: { $in: questionUids } }).lean()
+  const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
+
+  const ops = latestWrongAttempts
+    .map((item) => {
+      const question = questionMap.get(item._id)
+      if (!question) return null
+      return {
+        updateOne: {
+          filter: { userId, questionUid: item._id },
+          update: {
+            $setOnInsert: {
+              userId,
+              questionUid: item._id,
+              paperUid: question.paperUid || '',
+              source: question.source || 'gesp',
+              sourceTitle: question.sourceTitle || '',
+              subject: question.subject || 'C++',
+              levelTag: question.levelTag || '',
+              tags: question.tags || [],
+              type: question.type || 'single',
+              active: true,
+              wrongCount: 1,
+              lastWrongAnswer: item.latestAttempt.selectedAnswer || '',
+              lastWrongAt: item.latestAttempt.answeredAt,
+              resolvedAt: null,
+              removedAt: null
+            }
+          },
+          upsert: true
+        }
+      }
+    })
+    .filter(Boolean)
+
+  if (ops.length > 0) {
+    await QuizWrongbookItem.bulkWrite(ops, { ordered: false })
+  }
 }
 
 async function enrichLeaderboard(entries) {
@@ -273,6 +409,13 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     )
 
+    await markWrongbookState(assignedQuestion, {
+      userId: req.user.id,
+      selectedAnswer: normalizedSelectedAnswer,
+      isCorrect,
+      answeredAt: now
+    })
+
     const previousDate = getPreviousDate(today)
     const previousProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: previousDate }).lean()
     const streakBase = previousProgress?.completed ? (previousProgress.streak || 0) : 0
@@ -368,23 +511,21 @@ router.get('/daily/history', authenticateToken, async (req, res) => {
 
 router.get('/daily/wrongbook', authenticateToken, async (req, res) => {
   try {
+    await seedWrongbookItems(req.user.id)
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100)
-    const latestWrongAttempts = await QuizAttempt.aggregate([
-      { $match: { userId: req.user.id } },
-      { $sort: { answeredAt: -1 } },
-      { $group: { _id: '$questionUid', latestAttempt: { $first: '$$ROOT' } } },
-      { $match: { 'latestAttempt.isCorrect': false } },
-      { $sort: { 'latestAttempt.answeredAt': -1 } },
-      { $limit: limit }
-    ])
+    const wrongbookFilter = buildWrongbookFilter(req.user.id, req.query)
+    const items = await QuizWrongbookItem.find(wrongbookFilter)
+      .sort({ lastWrongAt: -1 })
+      .limit(limit)
+      .lean()
 
-    const questionUids = latestWrongAttempts.map((item) => item._id)
+    const questionUids = items.map((item) => item.questionUid)
     const questions = await QuizQuestion.find({ questionUid: { $in: questionUids } }).lean()
     const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
 
     res.json({
-      items: latestWrongAttempts.map((item) => {
-        const question = questionMap.get(item._id)
+      items: items.map((item) => {
+        const question = questionMap.get(item.questionUid)
         if (!question) return null
 
         return {
@@ -396,12 +537,94 @@ router.get('/daily/wrongbook', authenticateToken, async (req, res) => {
           stem: question.stem,
           options: question.options || [],
           correctAnswer: normalizeSubmittedAnswer(question.answer, question.type),
-          selectedAnswer: item.latestAttempt.selectedAnswer,
-          answeredAt: item.latestAttempt.answeredAt,
+          selectedAnswer: item.lastWrongAnswer,
+          answeredAt: item.lastWrongAt,
+          wrongCount: item.wrongCount || 0,
           paperQuestionNo: question.paperQuestionNo
         }
       }).filter(Boolean)
     })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/wrongbook/submit', authenticateToken, async (req, res) => {
+  try {
+    const { questionUid, selectedAnswer, costMs = null } = req.body || {}
+    if (!questionUid || typeof selectedAnswer !== 'string' || !selectedAnswer.trim()) {
+      return res.status(400).json({ error: 'questionUid 和 selectedAnswer 为必填项' })
+    }
+
+    const question = await QuizQuestion.findOne({ questionUid, enabled: true }).lean()
+    if (!question) {
+      return res.status(404).json({ error: '题目不存在' })
+    }
+
+    const normalizedSelectedAnswer = normalizeSubmittedAnswer(selectedAnswer, question.type)
+    const normalizedCorrectAnswer = normalizeSubmittedAnswer(question.answer, question.type)
+    const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer
+    const now = new Date()
+
+    await QuizAttempt.create({
+      attemptUid: `wrongbook-${req.user.id}-${questionUid}-${now.getTime()}`,
+      userId: req.user.id,
+      questionUid,
+      paperUid: question.paperUid,
+      selectedAnswer: normalizedSelectedAnswer,
+      isCorrect,
+      answeredAt: now,
+      costMs,
+      mode: 'wrongbook',
+      sessionDate: getTodayDate(),
+      subject: question.subject || 'C++',
+      levelTag: question.levelTag || '',
+      tags: question.tags || [],
+      source: question.source || 'gesp'
+    })
+
+    await markWrongbookState(question, {
+      userId: req.user.id,
+      selectedAnswer: normalizedSelectedAnswer,
+      isCorrect,
+      answeredAt: now
+    })
+
+    res.json({
+      correct: isCorrect,
+      correctAnswer: normalizedCorrectAnswer,
+      explanation: question.explanation || '',
+      removed: !!isCorrect
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/wrongbook/remove', authenticateToken, async (req, res) => {
+  try {
+    const { questionUid } = req.body || {}
+    if (!questionUid) {
+      return res.status(400).json({ error: 'questionUid 为必填项' })
+    }
+
+    await QuizWrongbookItem.findOneAndUpdate(
+      { userId: req.user.id, questionUid },
+      {
+        $set: {
+          active: false,
+          removedAt: new Date()
+        },
+        $setOnInsert: {
+          userId: req.user.id,
+          questionUid,
+          source: 'gesp'
+        }
+      },
+      { upsert: true }
+    )
+
+    res.json({ success: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
