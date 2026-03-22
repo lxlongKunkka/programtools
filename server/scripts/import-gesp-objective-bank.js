@@ -15,15 +15,18 @@ const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
 const limitArg = args.find((arg) => arg.startsWith('--limit='))
 const docIdArg = args.find((arg) => arg.startsWith('--doc-id='))
+const minDocIdArg = args.find((arg) => arg.startsWith('--min-doc-id='))
 const hydroUriArg = args.find((arg) => arg.startsWith('--hydro-uri='))
 const appUriArg = args.find((arg) => arg.startsWith('--app-uri='))
 const outDirArg = args.find((arg) => arg.startsWith('--out-dir='))
 const exportOnly = args.includes('--export-only')
+const pruneMissing = args.includes('--prune-missing')
 
 const limit = limitArg ? Number(limitArg.split('=')[1]) : null
 const targetDocIds = docIdArg
   ? docIdArg.split('=')[1].split(',').map((item) => Number(item.trim())).filter(Boolean)
   : []
+const minDocId = minDocIdArg ? Number(minDocIdArg.split('=')[1]) : null
 const hydroUri = hydroUriArg ? hydroUriArg.split('=')[1] : HYDRO_MONGODB_URI
 const appUri = appUriArg ? appUriArg.split('=')[1] : APP_MONGODB_URI
 const outDir = outDirArg ? path.resolve(outDirArg.split('=')[1]) : ''
@@ -42,6 +45,8 @@ async function main() {
     }
     if (targetDocIds.length > 0) {
       query.docId = { $in: targetDocIds }
+    } else if (Number.isFinite(minDocId)) {
+      query.docId = { $gte: minDocId }
     }
 
     let cursor = hydroConn.collection('document')
@@ -190,11 +195,34 @@ async function main() {
       await appConn.collection('quiz_questions').bulkWrite(questionOps, { ordered: false })
     }
 
+    let prunedPapers = 0
+    let prunedQuestions = 0
+    if (pruneMissing) {
+      const importedPaperUids = papers.map((paper) => paper.paperUid)
+      const importedQuestionUids = questions.map((question) => question.questionUid)
+
+      const paperDeleteResult = await appConn.collection('quiz_papers').deleteMany({
+        source: 'gesp',
+        ...(importedPaperUids.length > 0 ? { paperUid: { $nin: importedPaperUids } } : {})
+      })
+      const questionDeleteResult = await appConn.collection('quiz_questions').deleteMany({
+        source: 'gesp',
+        ...(importedQuestionUids.length > 0 ? { questionUid: { $nin: importedQuestionUids } } : {})
+      })
+
+      prunedPapers = Number(paperDeleteResult.deletedCount || 0)
+      prunedQuestions = Number(questionDeleteResult.deletedCount || 0)
+      console.log(`[import-gesp-objective-bank] pruned papers: ${prunedPapers}`)
+      console.log(`[import-gesp-objective-bank] pruned questions: ${prunedQuestions}`)
+    }
+
     console.log('[import-gesp-objective-bank] import complete')
     console.log(JSON.stringify({
       papersUpserted: paperOps.length,
       questionsUpserted: questionOps.length,
-      failures: failures.length
+      failures: failures.length,
+      prunedPapers,
+      prunedQuestions
     }, null, 2))
   } finally {
     await hydroConn.close().catch(() => {})
