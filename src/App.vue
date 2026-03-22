@@ -51,6 +51,17 @@
       </router-view>
     </main>
 
+    <nav v-if="mobileQuickLinks.length" class="mobile-bottom-nav" aria-label="常用导航">
+      <router-link
+        v-for="item in mobileQuickLinks"
+        :key="item.to"
+        :to="item.to"
+        class="mobile-bottom-link"
+      >
+        <span class="mobile-bottom-label">{{ item.label }}</span>
+      </router-link>
+    </nav>
+
     <!-- 全局 Toast -->
     <div v-if="toast.show" class="global-toast">
       <span>{{ toast.message }}</span>
@@ -103,6 +114,23 @@ export default {
     },
     isTeacher() {
       return this.user && (this.user.role === 'teacher')
+    },
+    mobileQuickLinks() {
+      if (this.user) {
+        return [
+          { to: '/', label: '首页' },
+          { to: '/course', label: '课程' },
+          { to: '/quiz-daily', label: '客观题' },
+          { to: '/profile', label: '我的' }
+        ]
+      }
+
+      return [
+        { to: '/', label: '首页' },
+        { to: '/translate', label: '翻译' },
+        { to: '/typing', label: 'Typing' },
+        { to: '/login', label: '登录' }
+      ]
     }
   },
   methods: {
@@ -228,6 +256,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 .btn-logout:hover { background: rgba(239,68,68,0.28); color: #fff; }
 main { padding: 0; }
 
+.mobile-bottom-nav {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .header {
     padding: 10px 14px;
@@ -290,6 +322,57 @@ main { padding: 0; }
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
+  }
+
+  main {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 950;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(12px);
+    box-sizing: border-box;
+  }
+
+  .mobile-bottom-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 6px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+
+  .mobile-bottom-link.router-link-active {
+    background: #2b9af3;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(43, 154, 243, 0.28);
+  }
+
+  .mobile-bottom-link:active {
+    transform: translateY(1px);
+  }
+
+  .mobile-bottom-label {
+    display: block;
+    line-height: 1.2;
   }
 }
 
