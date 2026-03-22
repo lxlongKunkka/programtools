@@ -168,9 +168,6 @@ async function markWrongbookState(question, {
       lastWrongAt: answeredAt,
       resolvedAt: null,
       removedAt: null
-    },
-    $setOnInsert: {
-      wrongCount: 0
     }
   }
 
