@@ -497,8 +497,13 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
       })
     }
 
-    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, tag, type }, today, existingProgress?.questionUids || [])
-    if (!assignedQuestion && (!existingProgress?.questionUids || existingProgress.questionUids.length === 0)) {
+    const excludedQuestionUids = [
+      ...(existingProgress?.questionUids || []),
+      ...(existingProgress?.skippedQuestionUids || [])
+    ]
+
+    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, tag, type }, today, excludedQuestionUids)
+    if (!assignedQuestion && excludedQuestionUids.length === 0) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
     }
 
