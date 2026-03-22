@@ -5,6 +5,7 @@ import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
+import { pickQuestionByDailySequence } from '../utils/quizDailySequence.js'
 
 const router = express.Router()
 
@@ -36,16 +37,6 @@ function buildQuestionFilter(input = {}) {
   return filter
 }
 
-function hashString(value) {
-  let hash = 0
-  const text = String(value || '')
-  for (let i = 0; i < text.length; i++) {
-    hash = ((hash << 5) - hash) + text.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash)
-}
-
 function sanitizeQuestion(question) {
   if (!question) return null
   return {
@@ -71,7 +62,7 @@ function normalizeSubmittedAnswer(answer, type) {
   return text.toUpperCase()
 }
 
-async function pickDailyQuestion(filterInput, today) {
+async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
   const questions = await QuizQuestion.find(filter)
     .sort({ sourceDocId: 1, paperQuestionNo: 1 })
@@ -79,9 +70,13 @@ async function pickDailyQuestion(filterInput, today) {
 
   if (questions.length === 0) return null
 
-  const seed = `${today}|${filter.subject || ''}|${filter.levelTag || ''}|${filter.type || ''}`
-  const index = hashString(seed) % questions.length
-  return questions[index]
+  return pickQuestionByDailySequence(questions, {
+    today,
+    subject: filter.subject || '',
+    levelTag: filter.levelTag || '',
+    type: filter.type || '',
+    answeredQuestionUids
+  })
 }
 
 async function getTodayProgress(userId, today) {
@@ -113,25 +108,23 @@ router.get('/daily/current', authenticateToken, async (req, res) => {
   try {
     const today = getTodayDate()
     const progress = await getTodayProgress(req.user.id, today)
-    const question = await pickDailyQuestion(req.query, today)
+    const question = await pickDailyQuestion(req.query, today, progress?.questionUids || [])
 
-    if (!question) {
+    if (!question && (!progress?.questionUids || progress.questionUids.length === 0)) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
     }
-
-    const alreadyAnswered = !!progress?.questionUids?.includes(question.questionUid)
 
     res.json({
       date: today,
       completed: !!progress?.completed,
-      alreadyAnswered,
+      alreadyAnswered: false,
       progress: {
         answeredCount: progress?.answeredCount || 0,
         correctCount: progress?.correctCount || 0,
         streak: progress?.streak || 0,
         questionUids: progress?.questionUids || []
       },
-      question: alreadyAnswered ? null : sanitizeQuestion(question)
+      question: sanitizeQuestion(question)
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -147,17 +140,6 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
     }
 
     const today = getTodayDate()
-    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, type }, today)
-    if (!assignedQuestion) {
-      return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
-    }
-
-    if (assignedQuestion.questionUid !== questionUid) {
-      return res.status(400).json({ error: '提交的题目不是今日分配题目，请刷新后重试' })
-    }
-
-    const normalizedSelectedAnswer = normalizeSubmittedAnswer(selectedAnswer, assignedQuestion.type)
-    const normalizedCorrectAnswer = normalizeSubmittedAnswer(assignedQuestion.answer, assignedQuestion.type)
     const existingProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: today })
     const existingAttempt = await QuizAttempt.findOne({
       userId: req.user.id,
@@ -181,6 +163,22 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
         }
       })
     }
+
+    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, type }, today, existingProgress?.questionUids || [])
+    if (!assignedQuestion && (!existingProgress?.questionUids || existingProgress.questionUids.length === 0)) {
+      return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
+    }
+
+    if (!assignedQuestion) {
+      return res.status(400).json({ error: '今天可做的题目已经全部完成，请明天再来' })
+    }
+
+    if (assignedQuestion.questionUid !== questionUid) {
+      return res.status(400).json({ error: '提交的题目不是当前分配题目，请刷新后重试' })
+    }
+
+    const normalizedSelectedAnswer = normalizeSubmittedAnswer(selectedAnswer, assignedQuestion.type)
+    const normalizedCorrectAnswer = normalizeSubmittedAnswer(assignedQuestion.answer, assignedQuestion.type)
 
     const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer
     const now = new Date()

@@ -3,8 +3,8 @@
     <section class="hero-panel">
       <div class="hero-copy">
         <p class="eyebrow">GESP 客观题</p>
-        <h1>每日单题打卡</h1>
-        <p class="hero-text">每天只刷一题，手机上也能快速完成。提交后立即看到结果，并自动计入今日打卡。</p>
+        <h1>每日打卡，可连续刷题</h1>
+        <p class="hero-text">当天至少完成 1 题就算打卡成功。完成后还可以继续刷下一题，手机上也能顺手连续做。</p>
       </div>
       <div class="hero-stats">
         <div class="stat-card">
@@ -81,12 +81,17 @@
                 <h4>题目解析</h4>
                 <MarkdownViewer :content="result.explanation" />
               </div>
+              <div class="submit-row next-row">
+                <button class="btn-next" :disabled="loading" @click="fetchCurrentQuestion">
+                  再来一题
+                </button>
+              </div>
             </div>
           </div>
 
           <div v-else class="state-card success">
-            <h3>今日已完成</h3>
-            <p>今天的单题已经提交。你可以查看右侧排行榜和最近打卡记录。</p>
+            <h3>今天可做的题目已经刷完</h3>
+            <p>今天这组题已经没有新的未做题目了。你可以查看右侧排行榜和最近打卡记录。</p>
           </div>
         </template>
       </section>
@@ -425,7 +430,8 @@ function renderInlineMarkdown(content) {
 }
 
 .btn-refresh,
-.btn-submit {
+.btn-submit,
+.btn-next {
   border: none;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -450,17 +456,35 @@ function renderInlineMarkdown(content) {
   box-shadow: 0 12px 24px rgba(217, 119, 6, 0.22);
 }
 
+.btn-next {
+  min-width: 180px;
+  padding: 14px 22px;
+  border-radius: 14px;
+  background: #fff;
+  color: #123458;
+  font-size: 15px;
+  font-weight: 800;
+  border: 1px solid rgba(18, 52, 88, 0.12);
+  box-shadow: 0 8px 20px rgba(18, 52, 88, 0.08);
+}
+
 .btn-refresh:hover,
-.btn-submit:hover {
+.btn-submit:hover,
+.btn-next:hover {
   transform: translateY(-1px);
 }
 
 .btn-refresh:disabled,
 .btn-submit:disabled,
+.btn-next:disabled,
 .option-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.next-row {
+  margin-top: 16px;
 }
 
 .state-card,
