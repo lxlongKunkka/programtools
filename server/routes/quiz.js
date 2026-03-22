@@ -79,8 +79,9 @@ function formatLevelLabel(levelTag) {
 }
 
 function questionLooksMalformed(question) {
-  const stem = String(question?.stem || '')
-  if (!stem) return true
+  const rawStem = String(question?.stem || '')
+  if (!rawStem) return true
+  const stem = rawStem.normalize('NFKC')
 
   const mentionsCode = /(?:下列|下方|下面).{0,8}(?:C\+\+)?代码|代码执行后|代码运行后|有关下列C\+\+代码/.test(stem)
   const hasCodeSignals = /```|`[^`]+`|cout\s*<<?|cin\s*>>?|if\s*\(|for\s*\(|while\s*\(|main\s*\(|int\s+[a-zA-Z_]|\{|\}|;/.test(stem)
