@@ -29,9 +29,20 @@
             <p class="toolbar-label">今日日期</p>
             <h2>{{ currentDateText }}</h2>
           </div>
-          <button class="btn-refresh" :disabled="loading || submitting" @click="refreshAll">
-            {{ loading ? '加载中...' : '刷新题目' }}
-          </button>
+          <div class="toolbar-actions">
+            <label class="filter-field">
+              <span>级别</span>
+              <select v-model="selectedLevelTag" :disabled="loading || submitting" @change="handleLevelChange">
+                <option value="">全部级别</option>
+                <option v-for="item in levelOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}（{{ item.count }}）
+                </option>
+              </select>
+            </label>
+            <button class="btn-refresh" :disabled="loading || submitting" @click="refreshAll">
+              {{ loading ? '加载中...' : '刷新题目' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="loading" class="state-card">正在加载今日题目...</div>
@@ -168,6 +179,7 @@ import MarkdownViewer from '../components/MarkdownViewer.vue'
 import request from '../utils/request'
 
 const showToastMessage = inject('showToastMessage', () => {})
+const QUIZ_LEVEL_STORAGE_KEY = 'quiz_daily_level_tag'
 
 const loading = ref(true)
 const submitting = ref(false)
@@ -176,6 +188,8 @@ const historyLoading = ref(false)
 const error = ref('')
 const question = ref(null)
 const selectedAnswer = ref('')
+const selectedLevelTag = ref(localStorage.getItem(QUIZ_LEVEL_STORAGE_KEY) || '')
+const levelOptions = ref([])
 const result = ref(null)
 const today = ref('')
 const progress = ref({
@@ -194,6 +208,7 @@ const currentDateText = computed(() => {
 })
 
 onMounted(async () => {
+  await fetchLevelOptions()
   await refreshAll()
 })
 
@@ -212,7 +227,10 @@ async function fetchCurrentQuestion() {
   result.value = null
 
   try {
-    const data = await request('/api/quiz/daily/current')
+    const params = new URLSearchParams()
+    if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
+    const suffix = params.toString() ? `?${params.toString()}` : ''
+    const data = await request(`/api/quiz/daily/current${suffix}`)
     today.value = data?.date || ''
     question.value = data?.question || null
     progress.value = {
@@ -229,6 +247,20 @@ async function fetchCurrentQuestion() {
   }
 }
 
+async function fetchLevelOptions() {
+  try {
+    const data = await request('/api/quiz/daily/options')
+    levelOptions.value = Array.isArray(data?.levels) ? data.levels : []
+  } catch {
+    levelOptions.value = []
+  }
+}
+
+function handleLevelChange() {
+  localStorage.setItem(QUIZ_LEVEL_STORAGE_KEY, selectedLevelTag.value)
+  refreshAll()
+}
+
 async function submitAnswer() {
   if (!question.value || !selectedAnswer.value) return
 
@@ -238,7 +270,8 @@ async function submitAnswer() {
       method: 'POST',
       body: JSON.stringify({
         questionUid: question.value.questionUid,
-        selectedAnswer: selectedAnswer.value
+        selectedAnswer: selectedAnswer.value,
+        levelTag: selectedLevelTag.value
       })
     })
 
@@ -414,6 +447,36 @@ function renderInlineMarkdown(content) {
 .toolbar {
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.filter-field span {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.filter-field select {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #dbe4ef;
+  background: #fff;
+  color: #123458;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .toolbar-label,
@@ -817,8 +880,15 @@ function renderInlineMarkdown(content) {
     align-items: flex-start;
   }
 
+  .toolbar-actions,
+  .filter-field {
+    width: 100%;
+  }
+
   .btn-refresh,
-  .btn-submit {
+  .btn-submit,
+  .btn-next,
+  .filter-field select {
     width: 100%;
   }
 

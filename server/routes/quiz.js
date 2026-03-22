@@ -62,6 +62,14 @@ function normalizeSubmittedAnswer(answer, type) {
   return text.toUpperCase()
 }
 
+function formatLevelLabel(levelTag) {
+  const text = String(levelTag || '').trim()
+  if (!text) return '全部级别'
+  const match = text.match(/^gesp(\d+)$/i)
+  if (!match) return text
+  return `GESP ${Number(match[1])} 级`
+}
+
 async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
   const questions = await QuizQuestion.find(filter)
@@ -104,6 +112,26 @@ async function enrichLeaderboard(entries) {
   })
 }
 
+router.get('/daily/options', authenticateToken, async (req, res) => {
+  try {
+    const levels = await QuizQuestion.aggregate([
+      { $match: { enabled: true, levelTag: { $exists: true, $ne: '' } } },
+      { $group: { _id: '$levelTag', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ])
+
+    res.json({
+      levels: levels.map((item) => ({
+        value: item._id,
+        label: formatLevelLabel(item._id),
+        count: item.count
+      }))
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 router.get('/daily/current', authenticateToken, async (req, res) => {
   try {
     const today = getTodayDate()
@@ -141,6 +169,7 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
 
     const today = getTodayDate()
     const existingProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: today })
+    const answeredQuestion = await QuizQuestion.findOne({ questionUid }).lean()
     const existingAttempt = await QuizAttempt.findOne({
       userId: req.user.id,
       questionUid,
@@ -149,11 +178,12 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
     }).sort({ answeredAt: -1 })
 
     if (existingProgress?.questionUids?.includes(questionUid) && existingAttempt) {
+      const answeredType = answeredQuestion?.type || 'single'
       return res.json({
         alreadyAnswered: true,
         correct: existingAttempt.isCorrect,
-        correctAnswer: normalizedCorrectAnswer,
-        explanation: assignedQuestion.explanation || '',
+        correctAnswer: normalizeSubmittedAnswer(answeredQuestion?.answer, answeredType),
+        explanation: answeredQuestion?.explanation || '',
         completed: !!existingProgress.completed,
         progress: {
           answeredCount: existingProgress.answeredCount || 0,
