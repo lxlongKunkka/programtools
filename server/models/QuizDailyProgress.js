@@ -12,7 +12,8 @@ const quizDailyProgressSchema = new mongoose.Schema({
   completed: { type: Boolean, default: false },
   firstAnsweredAt: { type: Date, default: null },
   lastAnsweredAt: { type: Date, default: null },
-  questionUids: { type: [String], default: [] }
+  questionUids: { type: [String], default: [] },
+  skippedQuestionUids: { type: [String], default: [] }
 }, {
   timestamps: true,
   collection: 'quiz_daily_progress'

@@ -33,6 +33,7 @@
             <div class="mode-switch">
               <button class="mode-button" :class="{ active: activeMode === 'daily' }" :disabled="loading || submitting" @click="switchToDailyMode">今日刷题</button>
               <button class="mode-button" :class="{ active: activeMode === 'wrongbook' }" :disabled="loading || submitting || wrongbook.length === 0" @click="switchToWrongbookMode">错题重做</button>
+              <button class="mode-button" :class="{ active: activeMode === 'favorite' }" :disabled="loading || submitting || favorites.length === 0" @click="switchToFavoriteMode">收藏夹</button>
             </div>
             <label class="filter-field">
               <span>级别</span>
@@ -74,6 +75,13 @@
               <MarkdownViewer :content="question.stem" />
             </div>
 
+            <div class="question-actions-bar">
+              <button v-if="activeMode === 'daily' && !result" class="btn-secondary" :disabled="submitting || loading" @click="skipCurrentQuestion">跳过这题</button>
+              <button class="btn-secondary" :class="{ active: question.isFavorite }" :disabled="submitting || favoriteSubmitting" @click="toggleFavoriteCurrentQuestion">
+                {{ question.isFavorite ? '取消收藏' : '加入收藏夹' }}
+              </button>
+            </div>
+
             <div class="options-list">
               <button
                 v-for="option in question.options"
@@ -90,7 +98,7 @@
 
             <div v-if="!result" class="submit-row">
               <button class="btn-submit" :disabled="!selectedAnswer || submitting" @click="submitAnswer">
-                {{ submitting ? '提交中...' : activeMode === 'wrongbook' ? '提交错题本答案' : '提交答案' }}
+                {{ submitting ? '提交中...' : activeMode === 'wrongbook' ? '提交错题本答案' : activeMode === 'favorite' ? '提交收藏题答案' : '提交答案' }}
               </button>
             </div>
 
@@ -107,16 +115,16 @@
                 <MarkdownViewer :content="result.explanation" />
               </div>
               <div class="submit-row next-row">
-                <button class="btn-next" :disabled="loading" @click="fetchCurrentQuestion">
-                  {{ activeMode === 'wrongbook' ? '下一道错题' : '再来一题' }}
+                <button class="btn-next" :disabled="loading" @click="goToNextQuestion">
+                  {{ activeMode === 'wrongbook' ? '下一道错题' : activeMode === 'favorite' ? '下一道收藏题' : '再来一题' }}
                 </button>
               </div>
             </div>
           </div>
 
           <div v-else class="state-card success">
-            <h3>{{ activeMode === 'wrongbook' ? '当前筛选下没有错题' : '今天可做的题目已经刷完' }}</h3>
-            <p>{{ activeMode === 'wrongbook' ? '你可以切换筛选条件，或者回到今日刷题继续练习。' : '今天这组题已经没有新的未做题目了。你可以查看右侧排行榜、最近打卡和错题本。' }}</p>
+            <h3>{{ emptyStateTitle }}</h3>
+            <p>{{ emptyStateCopy }}</p>
           </div>
         </template>
       </section>
@@ -203,6 +211,29 @@
             </li>
           </ul>
         </div>
+
+        <div class="side-card favorite-card">
+          <div class="side-card-header">
+            <h3>收藏夹</h3>
+            <span class="muted-text">最近 {{ favorites.length }} 题</span>
+          </div>
+          <div v-if="favoritesLoading" class="small-state">加载中...</div>
+          <div v-else-if="favorites.length === 0" class="small-state">暂时还没有收藏题</div>
+          <ul v-else class="wrongbook-list">
+            <li v-for="item in favorites" :key="item.questionUid" class="wrongbook-item favorite-item">
+              <div class="wrongbook-head">
+                <span class="meta-chip small">{{ item.levelTag || '未分级' }}</span>
+                <span v-for="tag in item.tags || []" :key="`${item.questionUid}-${tag}`" class="meta-chip small knowledge-chip">{{ tag }}</span>
+              </div>
+              <p class="wrongbook-stem">{{ item.stem }}</p>
+              <p class="favorite-time">收藏时间：{{ formatDateTime(item.collectedAt) }}</p>
+              <div class="wrongbook-actions">
+                <button class="btn-mini primary" :disabled="submitting" @click="reviewFavoriteItem(item)">做这题</button>
+                <button class="btn-mini" :disabled="submitting" @click="toggleFavoriteByQuestionUid(item.questionUid, false)">移出收藏</button>
+              </div>
+            </li>
+          </ul>
+        </div>
       </aside>
     </div>
   </div>
@@ -225,6 +256,8 @@ const activeMode = ref('daily')
 const leaderboardLoading = ref(false)
 const historyLoading = ref(false)
 const wrongbookLoading = ref(false)
+const favoritesLoading = ref(false)
+const favoriteSubmitting = ref(false)
 const error = ref('')
 const question = ref(null)
 const selectedAnswer = ref('')
@@ -235,16 +268,19 @@ const knowledgeTagOptions = ref([])
 const result = ref(null)
 const today = ref('')
 const activeWrongbookQuestionUid = ref('')
+const activeFavoriteQuestionUid = ref('')
 const progress = ref({
   answeredCount: 0,
   correctCount: 0,
   streak: 0,
   completed: false,
-  questionUids: []
+  questionUids: [],
+  skippedQuestionUids: []
 })
 const leaderboard = ref([])
 const history = ref([])
 const wrongbook = ref([])
+const favorites = ref([])
 
 const currentDateText = computed(() => {
   if (!today.value) return '今日'
@@ -259,9 +295,31 @@ const resultCopy = computed(() => {
       : '这道错题仍然保留在错题本中，后面可以继续重做。'
   }
 
+  if (activeMode.value === 'favorite') {
+    return result.value.correct
+      ? '收藏题已答对，你可以继续保留在收藏夹中反复练习。'
+      : '这道收藏题答错了，系统也会同步加入错题本。'
+  }
+
   return result.value.correct
     ? '今天这道题已经完成，系统已为你记录打卡。'
     : '今天这道题已经提交，系统已为你记录打卡，下次可以再来复习。'
+})
+
+const emptyStateTitle = computed(() => {
+  if (activeMode.value === 'wrongbook') return '当前筛选下没有错题'
+  if (activeMode.value === 'favorite') return '当前筛选下没有收藏题'
+  return '今天可做的题目已经刷完'
+})
+
+const emptyStateCopy = computed(() => {
+  if (activeMode.value === 'wrongbook') {
+    return '你可以切换筛选条件，或者回到今日刷题继续练习。'
+  }
+  if (activeMode.value === 'favorite') {
+    return '你可以先在日刷题里把题加入收藏夹，稍后再集中回看。'
+  }
+  return '今天这组题已经没有新的未做题目了。你可以查看右侧排行榜、最近打卡、错题本和收藏夹。'
 })
 
 onMounted(async () => {
@@ -271,11 +329,35 @@ onMounted(async () => {
 
 async function refreshAll() {
   await Promise.all([
-    fetchCurrentQuestion(),
     fetchLeaderboard(),
     fetchHistory(),
-    fetchWrongbook()
+    fetchWrongbook(),
+    fetchFavorites()
   ])
+
+  if (activeMode.value === 'wrongbook') {
+    if (wrongbook.value.length > 0) {
+      retryWrongbookItem(wrongbook.value[0])
+    } else {
+      question.value = null
+      selectedAnswer.value = ''
+      result.value = null
+    }
+    return
+  }
+
+  if (activeMode.value === 'favorite') {
+    if (favorites.value.length > 0) {
+      reviewFavoriteItem(favorites.value[0])
+    } else {
+      question.value = null
+      selectedAnswer.value = ''
+      result.value = null
+    }
+    return
+  }
+
+  await fetchCurrentQuestion()
 }
 
 async function fetchCurrentQuestion() {
@@ -297,7 +379,8 @@ async function fetchCurrentQuestion() {
       correctCount: data?.progress?.correctCount || 0,
       streak: data?.progress?.streak || 0,
       completed: !!data?.completed,
-      questionUids: data?.progress?.questionUids || []
+      questionUids: data?.progress?.questionUids || [],
+      skippedQuestionUids: data?.progress?.skippedQuestionUids || []
     }
   } catch (e) {
     error.value = e.message || '获取今日题目失败'
@@ -333,12 +416,14 @@ function handleLevelChange() {
   localStorage.setItem(QUIZ_LEVEL_STORAGE_KEY, selectedLevelTag.value)
   localStorage.setItem(QUIZ_KNOWLEDGE_STORAGE_KEY, selectedKnowledgeTag.value)
   activeWrongbookQuestionUid.value = ''
+  activeFavoriteQuestionUid.value = ''
   refreshAll()
 }
 
 function switchToDailyMode() {
   activeMode.value = 'daily'
   activeWrongbookQuestionUid.value = ''
+  activeFavoriteQuestionUid.value = ''
   fetchCurrentQuestion()
 }
 
@@ -353,12 +438,55 @@ function switchToWrongbookMode() {
   }
 }
 
+function switchToFavoriteMode() {
+  activeMode.value = 'favorite'
+  if (favorites.value.length > 0) {
+    reviewFavoriteItem(favorites.value[0])
+  } else {
+    question.value = null
+    selectedAnswer.value = ''
+    result.value = null
+  }
+}
+
+function goToNextQuestion() {
+  if (activeMode.value === 'wrongbook') {
+    const currentIndex = wrongbook.value.findIndex((item) => item.questionUid === activeWrongbookQuestionUid.value)
+    if (currentIndex >= 0 && currentIndex < wrongbook.value.length - 1) {
+      retryWrongbookItem(wrongbook.value[currentIndex + 1])
+      return
+    }
+    if (wrongbook.value.length > 0) {
+      retryWrongbookItem(wrongbook.value[0])
+      return
+    }
+  }
+
+  if (activeMode.value === 'favorite') {
+    const currentIndex = favorites.value.findIndex((item) => item.questionUid === activeFavoriteQuestionUid.value)
+    if (currentIndex >= 0 && currentIndex < favorites.value.length - 1) {
+      reviewFavoriteItem(favorites.value[currentIndex + 1])
+      return
+    }
+    if (favorites.value.length > 0) {
+      reviewFavoriteItem(favorites.value[0])
+      return
+    }
+  }
+
+  fetchCurrentQuestion()
+}
+
 async function submitAnswer() {
   if (!question.value || !selectedAnswer.value) return
 
   submitting.value = true
   try {
-    const endpoint = activeMode.value === 'wrongbook' ? '/api/quiz/wrongbook/submit' : '/api/quiz/daily/submit'
+    const endpoint = activeMode.value === 'wrongbook'
+      ? '/api/quiz/wrongbook/submit'
+      : activeMode.value === 'favorite'
+        ? '/api/quiz/favorite/submit'
+        : '/api/quiz/daily/submit'
     const payload = {
       questionUid: question.value.questionUid,
       selectedAnswer: selectedAnswer.value,
@@ -381,13 +509,16 @@ async function submitAnswer() {
         correctCount: data?.progress?.correctCount || progress.value.correctCount,
         streak: data?.progress?.streak || progress.value.streak,
         completed: !!data?.completed,
-        questionUids: data?.progress?.questionUids || progress.value.questionUids
+        questionUids: data?.progress?.questionUids || progress.value.questionUids,
+        skippedQuestionUids: data?.progress?.skippedQuestionUids || progress.value.skippedQuestionUids
       }
     }
     showToastMessage(activeMode.value === 'wrongbook'
       ? (data?.correct ? '已订正，题目已从错题本移除' : '仍未答对，题目保留在错题本')
-      : (data?.correct ? '回答正确，已完成今日打卡' : '已提交，今日打卡已记录'))
-    await Promise.all([fetchLeaderboard(), fetchHistory(), fetchWrongbook()])
+      : activeMode.value === 'favorite'
+        ? (data?.correct ? '收藏题回答正确' : '已记录，本题也加入错题本')
+        : (data?.correct ? '回答正确，已完成今日打卡' : '已提交，今日打卡已记录'))
+    await Promise.all([fetchLeaderboard(), fetchHistory(), fetchWrongbook(), fetchFavorites()])
     if (activeMode.value === 'wrongbook' && data?.correct) {
       activeWrongbookQuestionUid.value = ''
     }
@@ -449,9 +580,37 @@ async function fetchWrongbook() {
   }
 }
 
+async function fetchFavorites() {
+  favoritesLoading.value = true
+  try {
+    const params = new URLSearchParams({ limit: '10' })
+    if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
+    if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
+    const data = await request(`/api/quiz/daily/favorites?${params.toString()}`)
+    favorites.value = Array.isArray(data?.items) ? data.items : []
+    if (activeMode.value === 'favorite') {
+      const current = favorites.value.find((item) => item.questionUid === activeFavoriteQuestionUid.value)
+      if (current) {
+        reviewFavoriteItem(current)
+      } else if (favorites.value.length > 0) {
+        reviewFavoriteItem(favorites.value[0])
+      } else {
+        question.value = null
+        result.value = null
+        selectedAnswer.value = ''
+      }
+    }
+  } catch {
+    favorites.value = []
+  } finally {
+    favoritesLoading.value = false
+  }
+}
+
 function retryWrongbookItem(item) {
   activeMode.value = 'wrongbook'
   activeWrongbookQuestionUid.value = item.questionUid
+  activeFavoriteQuestionUid.value = ''
   question.value = {
     questionUid: item.questionUid,
     paperQuestionNo: item.paperQuestionNo,
@@ -460,7 +619,28 @@ function retryWrongbookItem(item) {
     options: item.options || [],
     tags: item.tags || [],
     levelTag: item.levelTag || '',
-    sourceTitle: item.sourceTitle || ''
+    sourceTitle: item.sourceTitle || '',
+    isFavorite: favorites.value.some((favoriteItem) => favoriteItem.questionUid === item.questionUid)
+  }
+  selectedAnswer.value = ''
+  result.value = null
+  error.value = ''
+}
+
+function reviewFavoriteItem(item) {
+  activeMode.value = 'favorite'
+  activeFavoriteQuestionUid.value = item.questionUid
+  activeWrongbookQuestionUid.value = ''
+  question.value = {
+    questionUid: item.questionUid,
+    paperQuestionNo: item.paperQuestionNo,
+    type: item.type,
+    stem: item.stem,
+    options: item.options || [],
+    tags: item.tags || [],
+    levelTag: item.levelTag || '',
+    sourceTitle: item.sourceTitle || '',
+    isFavorite: true
   }
   selectedAnswer.value = ''
   result.value = null
@@ -481,6 +661,77 @@ async function removeWrongbookItem(questionUid) {
   } catch (e) {
     showToastMessage(e.message || '移除失败')
   }
+}
+
+async function skipCurrentQuestion() {
+  if (!question.value || activeMode.value !== 'daily') return
+
+  submitting.value = true
+  try {
+    const data = await request('/api/quiz/daily/skip', {
+      method: 'POST',
+      body: JSON.stringify({
+        questionUid: question.value.questionUid,
+        levelTag: selectedLevelTag.value,
+        tag: selectedKnowledgeTag.value
+      })
+    })
+
+    question.value = data?.question || null
+    selectedAnswer.value = ''
+    result.value = null
+    progress.value = {
+      ...progress.value,
+      skippedQuestionUids: Array.isArray(data?.skippedQuestionUids) ? data.skippedQuestionUids : progress.value.skippedQuestionUids
+    }
+    showToastMessage(data?.question ? '已跳过，换一题继续' : '已跳过，当前筛选下没有更多题目了')
+  } catch (e) {
+    showToastMessage(e.message || '跳过失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function toggleFavoriteCurrentQuestion() {
+  if (!question.value?.questionUid) return
+  await toggleFavoriteByQuestionUid(question.value.questionUid, !question.value.isFavorite)
+}
+
+async function toggleFavoriteByQuestionUid(questionUid, active) {
+  favoriteSubmitting.value = true
+  try {
+    await request('/api/quiz/favorites/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ questionUid, active })
+    })
+    if (question.value?.questionUid === questionUid) {
+      question.value = {
+        ...question.value,
+        isFavorite: active
+      }
+    }
+    if (!active && activeFavoriteQuestionUid.value === questionUid) {
+      activeFavoriteQuestionUid.value = ''
+    }
+    showToastMessage(active ? '已加入收藏夹' : '已移出收藏夹')
+    await fetchFavorites()
+  } catch (e) {
+    showToastMessage(e.message || (active ? '收藏失败' : '取消收藏失败'))
+  } finally {
+    favoriteSubmitting.value = false
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return '刚刚'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '刚刚'
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function optionLabel(key) {
@@ -681,7 +932,8 @@ function renderInlineMarkdown(content) {
 
 .btn-refresh,
 .btn-submit,
-.btn-next {
+.btn-next,
+.btn-secondary {
   border: none;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -718,9 +970,26 @@ function renderInlineMarkdown(content) {
   box-shadow: 0 8px 20px rgba(18, 52, 88, 0.08);
 }
 
+.btn-secondary {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff;
+  color: #123458;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid rgba(18, 52, 88, 0.14);
+}
+
+.btn-secondary.active {
+  background: #fff3e6;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
 .btn-refresh:hover,
 .btn-submit:hover,
-.btn-next:hover {
+.btn-next:hover,
+.btn-secondary:hover {
   transform: translateY(-1px);
 }
 
@@ -801,6 +1070,13 @@ function renderInlineMarkdown(content) {
 
 .question-body {
   padding: 6px 0 14px;
+}
+
+.question-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
 }
 
 .question-body :deep(.markdown-viewer) {
@@ -1026,6 +1302,13 @@ function renderInlineMarkdown(content) {
   font-weight: 700;
 }
 
+.favorite-time {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .wrongbook-actions {
   display: flex;
   gap: 8px;
@@ -1135,8 +1418,14 @@ function renderInlineMarkdown(content) {
   .btn-refresh,
   .btn-submit,
   .btn-next,
+  .btn-secondary,
   .filter-field select {
     width: 100%;
+  }
+
+  .question-actions-bar,
+  .wrongbook-actions {
+    flex-direction: column;
   }
 
   .option-button {
