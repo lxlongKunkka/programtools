@@ -31,6 +31,43 @@ function getDiffDays(from, to) {
   return Math.max(0, Math.floor(diffMs / 86400000))
 }
 
+export function computeKnowledgeWeaknessScore(tags = [], tagSummaryMap = new Map(), { today } = {}) {
+  const normalizedTags = Array.isArray(tags) ? tags.filter(Boolean) : []
+  if (!normalizedTags.length || !(tagSummaryMap instanceof Map) || tagSummaryMap.size === 0) {
+    return 0
+  }
+
+  const todayAnchor = getTodayAnchor(today)
+  const tagScores = normalizedTags
+    .map((tag) => {
+      const summary = tagSummaryMap.get(tag)
+      if (!summary) return 0
+
+      const totalAttempts = Number(summary.totalAttempts || 0)
+      const totalCorrect = Number(summary.totalCorrect || 0)
+      const totalWrong = Number(summary.totalWrong || 0)
+      const lastWrongAt = toDate(summary.lastWrongAt)
+      const lastCorrectAt = toDate(summary.lastCorrectAt)
+      const lastIsCorrect = summary.lastIsCorrect === true
+
+      if (totalAttempts === 0) return 0
+
+      const wrongRate = totalWrong / totalAttempts
+      const recentWrongBoost = Math.max(0, 10 - Math.min(getDiffDays(lastWrongAt, todayAnchor), 10)) * 3
+      const recentCorrectPenalty = Math.max(0, 10 - Math.min(getDiffDays(lastCorrectAt, todayAnchor), 10)) * 2
+      const base = (wrongRate * 36) + (Math.min(totalWrong, 6) * 5) - (Math.min(totalCorrect, 6) * 2)
+
+      if (!lastIsCorrect) {
+        return base + recentWrongBoost
+      }
+
+      return base - recentCorrectPenalty
+    })
+
+  if (!tagScores.length) return 0
+  return tagScores.reduce((sum, score) => sum + score, 0) / tagScores.length
+}
+
 export function computeMemoryCurveScore(summary, { today } = {}) {
   const todayAnchor = getTodayAnchor(today)
   if (!summary) return 90
@@ -77,7 +114,8 @@ export function pickQuestionByMemoryCurve(questions, {
   tag = '',
   type = '',
   answeredQuestionUids = [],
-  attemptSummaryMap = new Map()
+  attemptSummaryMap = new Map(),
+  tagSummaryMap = new Map()
 } = {}) {
   if (!Array.isArray(questions) || questions.length === 0) return null
 
@@ -88,7 +126,8 @@ export function pickQuestionByMemoryCurve(questions, {
     .filter((question) => !answeredSet.has(question.questionUid))
     .map((question, index) => ({
       question,
-      score: computeMemoryCurveScore(attemptSummaryMap.get(question.questionUid), { today }),
+      score: computeMemoryCurveScore(attemptSummaryMap.get(question.questionUid), { today })
+        + computeKnowledgeWeaknessScore(question.tags || [], tagSummaryMap, { today }),
       tieBreaker: hashString(`${seed}|${question.questionUid}`),
       sourceOrder: index
     }))

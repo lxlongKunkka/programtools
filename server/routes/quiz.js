@@ -8,7 +8,7 @@ import QuizWrongbookItem from '../models/QuizWrongbookItem.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
-import { KNOWLEDGE_TAGS, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
+import { KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
 import { pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
 
 const router = express.Router()
@@ -136,6 +136,57 @@ async function buildAttemptSummaryMap(userId, questionUids = []) {
   return new Map(summaries.map((item) => [item._id, item]))
 }
 
+async function buildTagSummaryMap(userId, tags = []) {
+  const normalizedTags = [...new Set((Array.isArray(tags) ? tags : []).filter((tag) => KNOWLEDGE_TAG_SET.has(tag)))]
+  if (!userId || normalizedTags.length === 0) return new Map()
+
+  const summaries = await QuizAttempt.aggregate([
+    {
+      $match: {
+        userId,
+        tags: { $in: normalizedTags }
+      }
+    },
+    { $sort: { answeredAt: -1 } },
+    { $unwind: '$tags' },
+    {
+      $match: {
+        tags: { $in: normalizedTags }
+      }
+    },
+    {
+      $group: {
+        _id: '$tags',
+        lastAttemptAt: { $first: '$answeredAt' },
+        lastIsCorrect: { $first: '$isCorrect' },
+        totalAttempts: { $sum: 1 },
+        totalCorrect: {
+          $sum: {
+            $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+          }
+        },
+        totalWrong: {
+          $sum: {
+            $cond: [{ $eq: ['$isCorrect', false] }, 1, 0]
+          }
+        },
+        lastCorrectAt: {
+          $max: {
+            $cond: [{ $eq: ['$isCorrect', true] }, '$answeredAt', null]
+          }
+        },
+        lastWrongAt: {
+          $max: {
+            $cond: [{ $eq: ['$isCorrect', false] }, '$answeredAt', null]
+          }
+        }
+      }
+    }
+  ])
+
+  return new Map(summaries.map((item) => [item._id, item]))
+}
+
 async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
   const questions = (await QuizQuestion.find(filter)
@@ -146,6 +197,8 @@ async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUid
   if (questions.length === 0) return null
 
   const attemptSummaryMap = await buildAttemptSummaryMap(userId, questions.map((question) => question.questionUid))
+  const candidateTags = [...new Set(questions.flatMap((question) => Array.isArray(question.tags) ? question.tags : []))]
+  const tagSummaryMap = await buildTagSummaryMap(userId, candidateTags)
 
   return pickQuestionByMemoryCurve(questions, {
     today,
@@ -154,7 +207,8 @@ async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUid
     tag: filter.tags || '',
     type: filter.type || '',
     answeredQuestionUids,
-    attemptSummaryMap
+    attemptSummaryMap,
+    tagSummaryMap
   })
 }
 
