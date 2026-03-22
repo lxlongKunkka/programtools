@@ -9,7 +9,7 @@ import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
 import { KNOWLEDGE_TAGS, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
-import { pickQuestionByDailySequence } from '../utils/quizDailySequence.js'
+import { pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
 
 const router = express.Router()
 
@@ -92,7 +92,51 @@ function questionLooksMalformed(question) {
   return mentionsCode && !hasCodeSignals
 }
 
-async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) {
+async function buildAttemptSummaryMap(userId, questionUids = []) {
+  if (!userId || !questionUids.length) return new Map()
+
+  const summaries = await QuizAttempt.aggregate([
+    {
+      $match: {
+        userId,
+        questionUid: { $in: questionUids }
+      }
+    },
+    { $sort: { answeredAt: -1 } },
+    {
+      $group: {
+        _id: '$questionUid',
+        lastAttemptAt: { $first: '$answeredAt' },
+        lastIsCorrect: { $first: '$isCorrect' },
+        totalAttempts: { $sum: 1 },
+        totalCorrect: {
+          $sum: {
+            $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+          }
+        },
+        totalWrong: {
+          $sum: {
+            $cond: [{ $eq: ['$isCorrect', false] }, 1, 0]
+          }
+        },
+        lastCorrectAt: {
+          $max: {
+            $cond: [{ $eq: ['$isCorrect', true] }, '$answeredAt', null]
+          }
+        },
+        lastWrongAt: {
+          $max: {
+            $cond: [{ $eq: ['$isCorrect', false] }, '$answeredAt', null]
+          }
+        }
+      }
+    }
+  ])
+
+  return new Map(summaries.map((item) => [item._id, item]))
+}
+
+async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
   const questions = (await QuizQuestion.find(filter)
     .sort({ sourceDocId: 1, paperQuestionNo: 1 })
@@ -101,13 +145,16 @@ async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) 
 
   if (questions.length === 0) return null
 
-  return pickQuestionByDailySequence(questions, {
+  const attemptSummaryMap = await buildAttemptSummaryMap(userId, questions.map((question) => question.questionUid))
+
+  return pickQuestionByMemoryCurve(questions, {
     today,
     subject: filter.subject || '',
     levelTag: filter.levelTag || '',
     tag: filter.tags || '',
     type: filter.type || '',
-    answeredQuestionUids
+    answeredQuestionUids,
+    attemptSummaryMap
   })
 }
 
@@ -376,7 +423,7 @@ router.get('/daily/current', authenticateToken, async (req, res) => {
       ...(progress?.questionUids || []),
       ...skippedQuestionUids
     ]
-    const question = await pickDailyQuestion(req.query, today, excludedQuestionUids)
+    const question = await pickDailyQuestion(req.user.id, req.query, today, excludedQuestionUids)
 
     if (!question && excludedQuestionUids.length === 0) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
@@ -413,7 +460,7 @@ router.post('/daily/skip', authenticateToken, async (req, res) => {
       ...(existingProgress?.questionUids || []),
       ...(existingProgress?.skippedQuestionUids || [])
     ]
-    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, tag, type }, today, excludedQuestionUids)
+    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, type }, today, excludedQuestionUids)
 
     if (!assignedQuestion) {
       return res.status(400).json({ error: '当前筛选下已经没有可跳过的题目了' })
@@ -440,6 +487,7 @@ router.post('/daily/skip', authenticateToken, async (req, res) => {
     ).lean()
 
     const nextQuestion = await pickDailyQuestion(
+      req.user.id,
       { subject, levelTag, tag, type },
       today,
       [
@@ -499,7 +547,7 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
       ...(existingProgress?.skippedQuestionUids || [])
     ]
 
-    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, tag, type }, today, excludedQuestionUids)
+    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, type }, today, excludedQuestionUids)
     if (!assignedQuestion && excludedQuestionUids.length === 0) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
     }

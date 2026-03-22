@@ -3,8 +3,8 @@
     <section class="hero-panel">
       <div class="hero-copy">
         <p class="eyebrow">GESP 客观题</p>
-        <h1>每日打卡，可连续刷题</h1>
-        <p class="hero-text">当天至少完成 1 题就算打卡成功。完成后还可以继续刷下一题，也可以直接切到错题本按级别和知识点重做。</p>
+        <h1>每日打卡，按记忆曲线刷题</h1>
+        <p class="hero-text">系统会结合你的答题记录智能推荐：做错过的题更常出现，做对的题会适当降频，隔一段时间再安排复习。</p>
       </div>
       <div class="hero-stats">
         <div class="stat-card">
