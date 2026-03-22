@@ -9,6 +9,26 @@ import renderMathInElement from 'katex/contrib/auto-render'
 import 'katex/dist/katex.min.css'
 import { nextTick } from 'vue'
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function normalizeLanguageLabel(language) {
+  const text = String(language || '').trim().toLowerCase()
+  if (!text) return 'TEXT'
+  if (text === 'cpp' || text === 'c++') return 'C++'
+  if (text === 'py' || text === 'python') return 'Python'
+  if (text === 'js' || text === 'javascript') return 'JavaScript'
+  if (text === 'ts' || text === 'typescript') return 'TypeScript'
+  if (text === 'text' || text === 'plaintext') return 'TEXT'
+  return text.toUpperCase()
+}
+
 export default {
   name: 'MarkdownViewer',
   props: {
@@ -22,10 +42,31 @@ export default {
       try {
         const raw = this.content || ''
         const pre = this.preprocessMarkdown(raw)
+        const renderer = new marked.Renderer()
+
+        renderer.code = (code, infoString) => {
+          const language = String(infoString || '').trim().split(/\s+/)[0]
+          const languageLabel = normalizeLanguageLabel(language)
+          const languageClass = language ? ` language-${language}` : ''
+
+          return `
+            <div class="code-block-card">
+              <div class="code-block-toolbar">
+                <span class="code-block-dot"></span>
+                <span class="code-block-dot"></span>
+                <span class="code-block-dot"></span>
+                <span class="code-block-language">${escapeHtml(languageLabel)}</span>
+              </div>
+              <pre><code class="${languageClass.trim()}">${escapeHtml(code)}</code></pre>
+            </div>
+          `
+        }
+
         const html = marked.parse(pre, {
           mangle: false,
           headerIds: false,
-          breaks: true
+          breaks: true,
+          renderer
         })
         let sanitized = DOMPurify.sanitize(html, {
           ADD_TAGS: ['iframe'],
@@ -52,7 +93,7 @@ export default {
         return sanitized
       } catch (e) {
         console.error('Markdown render error:', e)
-        return `<pre>${this.escapeHtml(this.content)}</pre>`
+        return `<pre>${escapeHtml(this.content)}</pre>`
       }
     }
   },
@@ -140,15 +181,6 @@ export default {
         }
       })
     },
-    escapeHtml(text) {
-      if (!text) return ''
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    },
     preprocessMarkdown(raw) {
       let s = raw || ''
       // Handle input/output blocks
@@ -191,73 +223,168 @@ export default {
 <style>
 /* Shared styles for markdown content */
 .markdown-viewer {
-  padding-bottom: 80px; /* Ensure last element is visible */
+  padding-bottom: 80px;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.9;
+}
+.markdown-viewer > :first-child {
+  margin-top: 0;
+}
+.markdown-viewer > :last-child {
+  margin-bottom: 0;
+}
+.markdown-viewer p,
+.markdown-viewer ul,
+.markdown-viewer ol,
+.markdown-viewer blockquote,
+.markdown-viewer table,
+.markdown-viewer .code-block-card,
+.markdown-viewer .sample-block,
+.markdown-viewer .math-block {
+  margin: 14px 0;
+}
+.markdown-viewer ul,
+.markdown-viewer ol {
+  padding-left: 1.4em;
+}
+.markdown-viewer li + li {
+  margin-top: 6px;
+}
+.markdown-viewer strong {
+  color: #102a43;
+}
+.markdown-viewer h1,
+.markdown-viewer h2,
+.markdown-viewer h3,
+.markdown-viewer h4,
+.markdown-viewer h5,
+.markdown-viewer h6 {
+  margin: 20px 0 10px;
+  color: #102a43;
+  line-height: 1.35;
 }
 .markdown-viewer pre {
-  background: #f6f8fa;
-  padding: 16px;
-  border-radius: 6px;
+  margin: 0;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: #e5eefb;
+  border-radius: 0 0 18px 18px;
   overflow-x: auto;
 }
 .markdown-viewer code {
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  background: rgba(175, 184, 193, 0.2);
-  padding: 0.2em 0.4em;
+  font-family: 'Cascadia Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 0.92em;
+  background: rgba(15, 23, 42, 0.06);
+  color: #9a3412;
+  padding: 0.18em 0.42em;
   border-radius: 6px;
 }
 .markdown-viewer pre code {
   background: transparent;
   padding: 0;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.markdown-viewer .code-block-card {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+.markdown-viewer .code-block-toolbar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+}
+.markdown-viewer .code-block-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+.markdown-viewer .code-block-dot:nth-child(1) {
+  background: #f87171;
+}
+.markdown-viewer .code-block-dot:nth-child(2) {
+  background: #fbbf24;
+}
+.markdown-viewer .code-block-dot:nth-child(3) {
+  background: #34d399;
+}
+.markdown-viewer .code-block-language {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.8);
 }
 .markdown-viewer blockquote {
-  border-left: 4px solid #dfe2e5;
-  color: #6a737d;
-  padding-left: 16px;
+  border-left: 4px solid #f59e0b;
+  color: #475569;
+  padding: 8px 0 8px 16px;
   margin: 0;
+  background: rgba(245, 158, 11, 0.06);
+  border-radius: 0 12px 12px 0;
 }
 .markdown-viewer table {
   border-collapse: collapse;
   width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px #dbe4ef;
 }
 .markdown-viewer th, .markdown-viewer td {
-  border: 1px solid #dfe2e5;
-  padding: 6px 13px;
+  border: 1px solid #dbe4ef;
+  padding: 10px 13px;
+}
+.markdown-viewer th {
+  background: #eff6ff;
+  color: #123458;
 }
 .markdown-viewer tr:nth-child(2n) {
-  background-color: #f6f8fa;
+  background-color: #f8fafc;
 }
 .markdown-viewer img {
   max-width: 100%;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
 /* Custom blocks from preprocess */
 .sample-block {
-  margin: 10px 0;
-  border: 1px solid #e1e4e8;
-  border-radius: 6px;
+  border: 1px solid #dbe4ef;
+  border-radius: 16px;
   overflow: hidden;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 .sample-label {
-  background: #f1f8ff;
-  padding: 4px 10px;
+  background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+  padding: 8px 12px;
   font-size: 12px;
-  font-weight: bold;
-  color: #0366d6;
-  border-bottom: 1px solid #e1e4e8;
+  font-weight: 800;
+  color: #1d4ed8;
+  border-bottom: 1px solid #dbe4ef;
 }
 .sample-code {
   margin: 0;
-  padding: 8px 10px;
+  padding: 12px 14px;
   background: #fff;
-  font-family: Consolas, monospace;
+  font-family: 'Cascadia Code', Consolas, monospace;
   font-size: 14px;
   white-space: pre-wrap;
   word-break: break-all;
 }
 .math-block {
   overflow-x: auto;
-  padding: 10px 0;
+  padding: 14px 18px;
   text-align: center;
+  background: linear-gradient(180deg, #fffdf4 0%, #fff 100%);
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 16px;
 }
 </style>
