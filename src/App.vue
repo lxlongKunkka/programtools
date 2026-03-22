@@ -7,7 +7,21 @@
           <h1>Acjudge Tools</h1>
         </router-link>
       </div>
-      <nav>
+      <button
+        class="nav-toggle"
+        type="button"
+        :aria-expanded="mobileNavOpen ? 'true' : 'false'"
+        aria-controls="app-navigation"
+        @click="toggleMobileNav"
+      >
+        {{ mobileNavOpen ? '收起' : '菜单' }}
+      </button>
+      <nav
+        id="app-navigation"
+        class="main-nav"
+        :class="{ 'is-open': mobileNavOpen }"
+        @click="handleNavClick"
+      >
         <router-link to="/translate">Translate</router-link>
         <router-link to="/typing">Typing</router-link>
         <router-link v-if="user" to="/course">Course</router-link>
@@ -51,6 +65,7 @@ export default {
   data() {
     return {
       user: null,
+      mobileNavOpen: false,
       toast: {
         show: false,
         message: ''
@@ -60,12 +75,19 @@ export default {
   mounted() {
     this.checkLogin()
     window.addEventListener('storage', this.checkLogin)
+    window.addEventListener('resize', this.handleResize)
     // Custom event for login update within the same tab
     window.addEventListener('login-success', this.checkLogin)
   },
   unmounted() {
     window.removeEventListener('storage', this.checkLogin)
+    window.removeEventListener('resize', this.handleResize)
     window.removeEventListener('login-success', this.checkLogin)
+  },
+  watch: {
+    $route() {
+      this.mobileNavOpen = false
+    }
   },
   provide() {
     return {
@@ -106,9 +128,24 @@ export default {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user_info')
       this.user = null
+      this.mobileNavOpen = false
       clearModelCache()
       this.showToastMessage('已退出登录')
       this.$router.push('/login')
+    },
+    toggleMobileNav() {
+      this.mobileNavOpen = !this.mobileNavOpen
+    },
+    handleNavClick(event) {
+      if (window.innerWidth > 900) return
+      if (event.target.closest('a') || event.target.closest('button')) {
+        this.mobileNavOpen = false
+      }
+    },
+    handleResize() {
+      if (window.innerWidth > 900 && this.mobileNavOpen) {
+        this.mobileNavOpen = false
+      }
     },
     showToastMessage(message) {
       this.toast.message = message
@@ -127,19 +164,30 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
   background: #2b9af3;
   color: white;
   padding: 0 20px;
-  height: 52px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255,255,255,0.12);
   flex-shrink: 0;
+  position: relative;
 }
 .branding { display: flex; align-items: center; }
 .branding-link { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .app-logo { height: 28px; width: auto; border-radius: 6px; background: white; padding: 2px; }
 .header h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.2px; color: #fff; }
-.header nav { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; }
-.header nav a {
+.nav-toggle {
+  display: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.main-nav { display: flex; align-items: center; gap: 2px; flex-wrap: nowrap; }
+.main-nav a {
   color: rgba(255,255,255,0.6);
   padding: 5px 9px;
   text-decoration: none;
@@ -149,8 +197,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
   transition: color 0.15s, background 0.15s;
   white-space: nowrap;
 }
-.header nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
-.header nav a.router-link-active {
+.main-nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.main-nav a.router-link-active {
   color: #fff;
   font-weight: 600;
   background: rgba(255,255,255,0.2);
@@ -179,6 +227,71 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 }
 .btn-logout:hover { background: rgba(239,68,68,0.28); color: #fff; }
 main { padding: 0; }
+
+@media (max-width: 900px) {
+  .header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .branding {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .branding-link {
+    min-width: 0;
+  }
+
+  .header h1 {
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .main-nav {
+    display: none;
+    width: 100%;
+    order: 3;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px;
+    margin-bottom: 4px;
+    border-radius: 12px;
+    background: rgba(16, 58, 96, 0.22);
+    box-sizing: border-box;
+  }
+
+  .main-nav.is-open {
+    display: flex;
+  }
+
+  .main-nav a,
+  .username-link,
+  .btn-logout {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .user-menu {
+    width: 100%;
+    margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+}
 
 /* 全局 Toast 样式 */
 .global-toast {
