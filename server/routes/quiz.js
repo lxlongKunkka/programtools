@@ -78,11 +78,22 @@ function formatLevelLabel(levelTag) {
   return `GESP ${Number(match[1])} 级`
 }
 
+function questionLooksMalformed(question) {
+  const stem = String(question?.stem || '')
+  if (!stem) return true
+
+  const mentionsCode = /(?:下列|下方|下面).{0,8}(?:C\+\+)?代码|代码执行后|代码运行后|有关下列C\+\+代码/.test(stem)
+  const hasCodeSignals = /```|`[^`]+`|cout\s*<<?|cin\s*>>?|if\s*\(|for\s*\(|while\s*\(|main\s*\(|int\s+[a-zA-Z_]|\{|\}|;/.test(stem)
+
+  return mentionsCode && !hasCodeSignals
+}
+
 async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
-  const questions = await QuizQuestion.find(filter)
+  const questions = (await QuizQuestion.find(filter)
     .sort({ sourceDocId: 1, paperQuestionNo: 1 })
-    .lean()
+    .lean())
+    .filter((question) => !questionLooksMalformed(question))
 
   if (questions.length === 0) return null
 
@@ -349,6 +360,47 @@ router.get('/daily/history', authenticateToken, async (req, res) => {
       completed: !!item.completed,
       questionUids: item.questionUids || []
     })))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/daily/wrongbook', authenticateToken, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100)
+    const latestWrongAttempts = await QuizAttempt.aggregate([
+      { $match: { userId: req.user.id } },
+      { $sort: { answeredAt: -1 } },
+      { $group: { _id: '$questionUid', latestAttempt: { $first: '$$ROOT' } } },
+      { $match: { 'latestAttempt.isCorrect': false } },
+      { $sort: { 'latestAttempt.answeredAt': -1 } },
+      { $limit: limit }
+    ])
+
+    const questionUids = latestWrongAttempts.map((item) => item._id)
+    const questions = await QuizQuestion.find({ questionUid: { $in: questionUids } }).lean()
+    const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
+
+    res.json({
+      items: latestWrongAttempts.map((item) => {
+        const question = questionMap.get(item._id)
+        if (!question) return null
+
+        return {
+          questionUid: question.questionUid,
+          sourceTitle: question.sourceTitle || '',
+          levelTag: question.levelTag || '',
+          tags: question.tags || [],
+          type: question.type,
+          stem: question.stem,
+          options: question.options || [],
+          correctAnswer: normalizeSubmittedAnswer(question.answer, question.type),
+          selectedAnswer: item.latestAttempt.selectedAnswer,
+          answeredAt: item.latestAttempt.answeredAt,
+          paperQuestionNo: question.paperQuestionNo
+        }
+      }).filter(Boolean)
+    })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

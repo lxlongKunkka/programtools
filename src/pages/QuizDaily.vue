@@ -176,6 +176,25 @@
             </li>
           </ul>
         </div>
+
+        <div class="side-card wrongbook-card">
+          <div class="side-card-header">
+            <h3>错题本</h3>
+            <span class="muted-text">最近 {{ wrongbook.length }} 题</span>
+          </div>
+          <div v-if="wrongbookLoading" class="small-state">加载中...</div>
+          <div v-else-if="wrongbook.length === 0" class="small-state">暂时还没有错题</div>
+          <ul v-else class="wrongbook-list">
+            <li v-for="item in wrongbook" :key="item.questionUid" class="wrongbook-item">
+              <div class="wrongbook-head">
+                <span class="meta-chip small">{{ item.levelTag || '未分级' }}</span>
+                <span v-for="tag in item.tags || []" :key="`${item.questionUid}-${tag}`" class="meta-chip small knowledge-chip">{{ tag }}</span>
+              </div>
+              <p class="wrongbook-stem">{{ item.stem }}</p>
+              <p class="wrongbook-answer">你的答案：{{ optionLabel(item.selectedAnswer) }} ｜ 正确答案：{{ optionLabel(item.correctAnswer) }}</p>
+            </li>
+          </ul>
+        </div>
       </aside>
     </div>
   </div>
@@ -196,6 +215,7 @@ const loading = ref(true)
 const submitting = ref(false)
 const leaderboardLoading = ref(false)
 const historyLoading = ref(false)
+const wrongbookLoading = ref(false)
 const error = ref('')
 const question = ref(null)
 const selectedAnswer = ref('')
@@ -214,6 +234,7 @@ const progress = ref({
 })
 const leaderboard = ref([])
 const history = ref([])
+const wrongbook = ref([])
 
 const currentDateText = computed(() => {
   if (!today.value) return '今日'
@@ -229,7 +250,8 @@ async function refreshAll() {
   await Promise.all([
     fetchCurrentQuestion(),
     fetchLeaderboard(),
-    fetchHistory()
+    fetchHistory(),
+    fetchWrongbook()
   ])
 }
 
@@ -306,7 +328,7 @@ async function submitAnswer() {
       questionUids: data?.progress?.questionUids || progress.value.questionUids
     }
     showToastMessage(data?.correct ? '回答正确，已完成今日打卡' : '已提交，今日打卡已记录')
-    await Promise.all([fetchLeaderboard(), fetchHistory()])
+    await Promise.all([fetchLeaderboard(), fetchHistory(), fetchWrongbook()])
   } catch (e) {
     showToastMessage(e.message || '提交失败')
   } finally {
@@ -335,6 +357,18 @@ async function fetchHistory() {
     history.value = []
   } finally {
     historyLoading.value = false
+  }
+}
+
+async function fetchWrongbook() {
+  wrongbookLoading.value = true
+  try {
+    const data = await request('/api/quiz/daily/wrongbook?limit=10')
+    wrongbook.value = Array.isArray(data?.items) ? data.items : []
+  } catch {
+    wrongbook.value = []
+  } finally {
+    wrongbookLoading.value = false
   }
 }
 
@@ -810,22 +844,51 @@ function renderInlineMarkdown(content) {
 }
 
 .leaderboard-list,
-.history-list {
+.history-list,
+.wrongbook-list {
   list-style: none;
   margin: 14px 0 0;
   padding: 0;
 }
 
 .leaderboard-item,
-.history-item {
+.history-item,
+.wrongbook-item {
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid #eef2f7;
 }
 
 .leaderboard-item:last-child,
-.history-item:last-child {
+.history-item:last-child,
+.wrongbook-item:last-child {
   border-bottom: none;
+}
+
+.wrongbook-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.meta-chip.small {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.wrongbook-stem {
+  margin: 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.wrongbook-answer {
+  margin: 8px 0 0;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .rank {
