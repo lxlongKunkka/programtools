@@ -64,11 +64,14 @@ async function main() {
     const docs = await cursor.toArray()
     console.log(`[import-gesp-objective-bank] matched papers: ${docs.length}`)
 
+    const resolvedDocs = selectPreferredPaperDocs(docs)
+    console.log(`[import-gesp-objective-bank] selected papers after dedupe: ${resolvedDocs.length}`)
+
     const papers = []
     const questions = []
     const failures = []
 
-    for (const doc of docs) {
+    for (const doc of resolvedDocs) {
       try {
         const markdown = parseLocalizedContent(doc.content)
         const answers = parseObjectiveConfig(doc.config)
@@ -199,6 +202,39 @@ async function main() {
       await appConn.close().catch(() => {})
     }
   }
+}
+
+function selectPreferredPaperDocs(docs) {
+  const groups = new Map()
+
+  for (const doc of docs) {
+    const meta = parsePaperMeta(doc.title, doc.docId)
+    const groupKey = meta.paperUid
+    const current = groups.get(groupKey)
+
+    if (!current) {
+      groups.set(groupKey, { meta, docs: [doc] })
+      continue
+    }
+
+    current.docs.push(doc)
+  }
+
+  const selected = []
+
+  for (const { meta, docs: groupDocs } of groups.values()) {
+    if (groupDocs.length === 1) {
+      selected.push(groupDocs[0])
+      continue
+    }
+
+    const sortedDocs = [...groupDocs].sort((left, right) => Number(right.docId) - Number(left.docId))
+    const chosenDoc = sortedDocs[0]
+    console.log(`[import-gesp-objective-bank] duplicate paper sources for ${meta.paperUid}: ${sortedDocs.map((item) => item.docId).join(', ')} -> choose ${chosenDoc.docId}`)
+    selected.push(chosenDoc)
+  }
+
+  return selected.sort((left, right) => Number(left.docId) - Number(right.docId))
 }
 
 main().catch((error) => {

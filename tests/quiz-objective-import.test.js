@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  parsePaperMeta,
   parseObjectiveConfig,
   parseObjectiveQuestions
 } from '../server/utils/gesp/objectiveImport.js'
@@ -56,4 +57,17 @@ test('parseObjectiveQuestions maps judge answers and stops at next heading', () 
   assert.equal(questions[1].type, 'judge')
   assert.equal(questions[1].answer, 'false')
   assert.deepEqual(questions[1].options.map((item) => item.key), ['true', 'false'])
+})
+
+test('parsePaperMeta supports variant GESP paper titles', () => {
+  const meta = parsePaperMeta('GESP-C++-2024年12月一级真题卷GESP-C++-2024年12月一级真题卷', 247)
+
+  assert.deepEqual(meta, {
+    year: 2024,
+    month: 12,
+    subject: 'C++',
+    level: 1,
+    paperUid: 'gesp-2024-12-cpp-1',
+    levelTag: 'gesp1'
+  })
 })

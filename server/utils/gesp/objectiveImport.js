@@ -74,8 +74,11 @@ export function parsePaperMeta(title, sourceDocId) {
     level: null
   }
 
-  const match = String(title || '').match(/GESP\s*(\d{4})年(\d{1,2})月认证(.+?)([一二三四五六七八九十]+)级/)
-  if (!match) {
+  const text = String(title || '').trim()
+  const directMatch = text.match(/GESP\s*(\d{4})年(\d{1,2})月认证(.+?)([一二三四五六七八九十]+)级/)
+  const variantMatch = text.match(/GESP\s*[- ]?\s*(C\+\+|Python)\s*[- ]\s*(\d{4})年(\d{1,2})月([一二三四五六七八九十]+)级/i)
+
+  if (!directMatch && !variantMatch) {
     const subjectSlug = slugifySubject(fallback.subject)
     return {
       ...fallback,
@@ -84,10 +87,10 @@ export function parsePaperMeta(title, sourceDocId) {
     }
   }
 
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const subject = match[3].trim()
-  const level = CHINESE_LEVEL_MAP[match[4]] || null
+  const year = Number(directMatch ? directMatch[1] : variantMatch[2])
+  const month = Number(directMatch ? directMatch[2] : variantMatch[3])
+  const subject = normalizePaperSubject(directMatch ? directMatch[3] : variantMatch[1])
+  const level = CHINESE_LEVEL_MAP[directMatch ? directMatch[4] : variantMatch[4]] || null
   const subjectSlug = slugifySubject(subject)
 
   return {
@@ -283,4 +286,11 @@ function slugifySubject(subject) {
   if (normalized.includes('c++')) return 'cpp'
   if (normalized.includes('python')) return 'python'
   return normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown'
+}
+
+function normalizePaperSubject(subject) {
+  const text = String(subject || '').trim()
+  if (/^c\+\+$/i.test(text)) return 'C++'
+  if (/^python$/i.test(text)) return 'Python'
+  return text
 }
