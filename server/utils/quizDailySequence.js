@@ -12,13 +12,14 @@ export function pickQuestionByDailySequence(questions, {
   today,
   subject = '',
   levelTag = '',
+  tag = '',
   type = '',
   answeredQuestionUids = []
 } = {}) {
   if (!Array.isArray(questions) || questions.length === 0) return null
 
   const answeredSet = new Set(answeredQuestionUids)
-  const seed = `${today}|${subject}|${levelTag}|${type}`
+  const seed = `${today}|${subject}|${levelTag}|${tag}|${type}`
   const startIndex = hashString(seed) % questions.length
 
   for (let offset = 0; offset < questions.length; offset++) {

@@ -5,6 +5,7 @@ import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
+import { KNOWLEDGE_TAGS, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
 import { pickQuestionByDailySequence } from '../utils/quizDailySequence.js'
 
 const router = express.Router()
@@ -33,6 +34,13 @@ function buildQuestionFilter(input = {}) {
   }
   if (typeof input.type === 'string' && ['single', 'judge'].includes(input.type.trim())) {
     filter.type = input.type.trim()
+  }
+  const selectedTag = normalizeQuizKnowledgeTags([
+    input.tag,
+    input.knowledgeTag
+  ])[0]
+  if (selectedTag) {
+    filter.tags = selectedTag
   }
   return filter
 }
@@ -82,6 +90,7 @@ async function pickDailyQuestion(filterInput, today, answeredQuestionUids = []) 
     today,
     subject: filter.subject || '',
     levelTag: filter.levelTag || '',
+    tag: filter.tags || '',
     type: filter.type || '',
     answeredQuestionUids
   })
@@ -114,18 +123,33 @@ async function enrichLeaderboard(entries) {
 
 router.get('/daily/options', authenticateToken, async (req, res) => {
   try {
+    const baseMatch = { enabled: true }
     const levels = await QuizQuestion.aggregate([
-      { $match: { enabled: true, levelTag: { $exists: true, $ne: '' } } },
+      { $match: { ...baseMatch, levelTag: { $exists: true, $ne: '' } } },
       { $group: { _id: '$levelTag', count: { $sum: 1 } } },
       { $sort: { _id: 1 } }
     ])
+    const knowledgeCounts = await QuizQuestion.aggregate([
+      { $match: { ...baseMatch, tags: { $exists: true, $ne: [] } } },
+      { $unwind: '$tags' },
+      { $match: { tags: { $in: KNOWLEDGE_TAGS } } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } }
+    ])
+    const knowledgeCountMap = new Map(knowledgeCounts.map((item) => [item._id, item.count]))
 
     res.json({
       levels: levels.map((item) => ({
         value: item._id,
         label: formatLevelLabel(item._id),
         count: item.count
-      }))
+      })),
+      knowledgeTags: KNOWLEDGE_TAGS
+        .filter((tag) => knowledgeCountMap.has(tag))
+        .map((tag) => ({
+          value: tag,
+          label: tag,
+          count: knowledgeCountMap.get(tag)
+        }))
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -161,7 +185,7 @@ router.get('/daily/current', authenticateToken, async (req, res) => {
 
 router.post('/daily/submit', authenticateToken, async (req, res) => {
   try {
-    const { questionUid, selectedAnswer, costMs = null, subject, levelTag, type } = req.body || {}
+    const { questionUid, selectedAnswer, costMs = null, subject, levelTag, tag, type } = req.body || {}
 
     if (!questionUid || typeof selectedAnswer !== 'string' || !selectedAnswer.trim()) {
       return res.status(400).json({ error: 'questionUid 和 selectedAnswer 为必填项' })
@@ -194,7 +218,7 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
       })
     }
 
-    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, type }, today, existingProgress?.questionUids || [])
+    const assignedQuestion = await pickDailyQuestion({ subject, levelTag, tag, type }, today, existingProgress?.questionUids || [])
     if (!assignedQuestion && (!existingProgress?.questionUids || existingProgress.questionUids.length === 0)) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
     }

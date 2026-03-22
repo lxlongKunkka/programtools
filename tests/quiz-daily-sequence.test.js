@@ -44,3 +44,18 @@ test('pickQuestionByDailySequence returns null after all questions are answered'
 
   assert.equal(none, null)
 })
+
+test('pickQuestionByDailySequence changes seed when knowledge tag changes', () => {
+  const withSorting = pickQuestionByDailySequence(sampleQuestions, {
+    today: '2026-03-22',
+    tag: '排序'
+  })
+  const withDp = pickQuestionByDailySequence(sampleQuestions, {
+    today: '2026-03-22',
+    tag: 'DP'
+  })
+
+  assert.ok(withSorting)
+  assert.ok(withDp)
+  assert.notEqual(withSorting.questionUid, withDp.questionUid)
+})

@@ -39,6 +39,15 @@
                 </option>
               </select>
             </label>
+            <label class="filter-field">
+              <span>知识点</span>
+              <select v-model="selectedKnowledgeTag" :disabled="loading || submitting" @change="handleLevelChange">
+                <option value="">全部知识点</option>
+                <option v-for="item in knowledgeTagOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}（{{ item.count }}）
+                </option>
+              </select>
+            </label>
             <button class="btn-refresh" :disabled="loading || submitting" @click="refreshAll">
               {{ loading ? '加载中...' : '刷新题目' }}
             </button>
@@ -53,6 +62,7 @@
             <div class="question-meta">
               <span class="meta-chip">{{ question.levelTag || '未分级' }}</span>
               <span class="meta-chip">{{ question.type === 'judge' ? '判断题' : '单选题' }}</span>
+              <span v-for="tag in question.tags || []" :key="tag" class="meta-chip knowledge-chip">{{ tag }}</span>
               <span v-if="question.sourceTitle" class="meta-source">{{ question.sourceTitle }}</span>
             </div>
 
@@ -180,6 +190,7 @@ import request from '../utils/request'
 
 const showToastMessage = inject('showToastMessage', () => {})
 const QUIZ_LEVEL_STORAGE_KEY = 'quiz_daily_level_tag'
+const QUIZ_KNOWLEDGE_STORAGE_KEY = 'quiz_daily_knowledge_tag'
 
 const loading = ref(true)
 const submitting = ref(false)
@@ -189,7 +200,9 @@ const error = ref('')
 const question = ref(null)
 const selectedAnswer = ref('')
 const selectedLevelTag = ref(localStorage.getItem(QUIZ_LEVEL_STORAGE_KEY) || '')
+const selectedKnowledgeTag = ref(localStorage.getItem(QUIZ_KNOWLEDGE_STORAGE_KEY) || '')
 const levelOptions = ref([])
+const knowledgeTagOptions = ref([])
 const result = ref(null)
 const today = ref('')
 const progress = ref({
@@ -229,6 +242,7 @@ async function fetchCurrentQuestion() {
   try {
     const params = new URLSearchParams()
     if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
+    if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
     const suffix = params.toString() ? `?${params.toString()}` : ''
     const data = await request(`/api/quiz/daily/current${suffix}`)
     today.value = data?.date || ''
@@ -251,13 +265,16 @@ async function fetchLevelOptions() {
   try {
     const data = await request('/api/quiz/daily/options')
     levelOptions.value = Array.isArray(data?.levels) ? data.levels : []
+    knowledgeTagOptions.value = Array.isArray(data?.knowledgeTags) ? data.knowledgeTags : []
   } catch {
     levelOptions.value = []
+    knowledgeTagOptions.value = []
   }
 }
 
 function handleLevelChange() {
   localStorage.setItem(QUIZ_LEVEL_STORAGE_KEY, selectedLevelTag.value)
+  localStorage.setItem(QUIZ_KNOWLEDGE_STORAGE_KEY, selectedKnowledgeTag.value)
   refreshAll()
 }
 
@@ -271,7 +288,8 @@ async function submitAnswer() {
       body: JSON.stringify({
         questionUid: question.value.questionUid,
         selectedAnswer: selectedAnswer.value,
-        levelTag: selectedLevelTag.value
+        levelTag: selectedLevelTag.value,
+        tag: selectedKnowledgeTag.value
       })
     })
 
@@ -593,6 +611,11 @@ function renderInlineMarkdown(content) {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+
+.knowledge-chip {
+  background: #fff3e6;
+  color: #9a3412;
+}
 }
 
 .meta-chip {
