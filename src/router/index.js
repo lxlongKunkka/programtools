@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import request from '../utils/request'
 
-const Home = () => import('../pages/Home.vue')
 const Translate = () => import('../pages/Translate.vue')
 const Checker = () => import('../pages/Checker.vue')
 const Solution = () => import('../pages/Solution.vue')
@@ -10,6 +9,7 @@ const Chat = () => import('../pages/Chat.vue')
 const Login = () => import('../pages/Login.vue')
 const Profile = () => import('../pages/Profile.vue')
 const Admin = () => import('../pages/Admin.vue')
+const QuizIssueAdmin = () => import('../pages/QuizIssueAdmin.vue')
 const ProblemManager = () => import('../pages/ProblemManager.vue')
 const Typing = () => import('../pages/Typing.vue')
 const LearningMap = () => import('../pages/LearningMap.vue')
@@ -25,12 +25,14 @@ const SokobanGame = () => import('../pages/SokobanGame.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [
-  { path: '/', component: Home },
+  { path: '/', component: QuizDaily },
+  { path: '/quiz-daily', redirect: '/' },
   { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/gesp-map', component: GespMap, meta: { requiresAuth: true } },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
+  { path: '/admin/quiz-issues', component: QuizIssueAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/prompts', component: PromptEditor, meta: { requiresAuth: true, allowedRoles: ['admin'] } },
   { path: '/problems', component: ProblemManager, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },
@@ -44,7 +46,6 @@ const routes = [
   { path: '/progress', component: ProgressDashboard, meta: { requiresAuth: true } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
-  { path: '/quiz-daily', component: QuizDaily, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
   { path: '/atcoder', redirect: '/solvedata' }

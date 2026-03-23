@@ -8,7 +8,8 @@ import {
   parseLocalizedContent,
   parseObjectiveConfig,
   parsePaperMeta,
-  parseObjectiveQuestions
+  parseObjectiveQuestions,
+  parseObjectiveSolutions
 } from '../utils/gesp/objectiveImport.js'
 
 const args = process.argv.slice(2)
@@ -57,7 +58,8 @@ async function main() {
           content: 1,
           tag: 1,
           config: 1,
-          domainId: 1
+          domainId: 1,
+          additional_file: 1
         }
       })
       .sort({ docId: 1 })
@@ -80,6 +82,7 @@ async function main() {
       try {
         const markdown = parseLocalizedContent(doc.content)
         const answers = parseObjectiveConfig(doc.config)
+        const solutions = readObjectiveSolutions(doc)
         const meta = parsePaperMeta(doc.title, doc.docId)
         const parsedQuestions = parseObjectiveQuestions(markdown, {
           answers,
@@ -90,6 +93,13 @@ async function main() {
           levelTag: meta.levelTag,
           tags: doc.tag || []
         })
+
+        for (const question of parsedQuestions) {
+          const parsedSolution = solutions[question.paperQuestionNo]
+          if (!parsedSolution?.explanation) continue
+          question.explanation = parsedSolution.explanation
+          question.explanationText = parsedSolution.explanationText || ''
+        }
 
         papers.push({
           paperUid: meta.paperUid,
@@ -229,6 +239,38 @@ async function main() {
     if (appConn) {
       await appConn.close().catch(() => {})
     }
+  }
+}
+
+function readObjectiveSolutions(doc) {
+  const file = Array.isArray(doc?.additional_file)
+    ? doc.additional_file.find((item) => /solution\.md$/i.test(String(item?.name || item?._id || '')))
+    : null
+
+  if (!file?.etag) {
+    return {}
+  }
+
+  const filePath = decodeHydroFilePath(file.etag)
+  if (!filePath || !fs.existsSync(filePath)) {
+    return {}
+  }
+
+  try {
+    const markdown = fs.readFileSync(filePath, 'utf-8')
+    return parseObjectiveSolutions(markdown)
+  } catch (error) {
+    console.warn(`[import-gesp-objective-bank] failed to read solution for doc ${doc.docId}: ${error.message}`)
+    return {}
+  }
+}
+
+function decodeHydroFilePath(etag) {
+  try {
+    const decoded = Buffer.from(String(etag || ''), 'base64').toString('utf8')
+    return decoded.startsWith('/') ? decoded : ''
+  } catch {
+    return ''
   }
 }
 

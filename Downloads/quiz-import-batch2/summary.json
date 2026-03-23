@@ -1,0 +1,91 @@
+{
+  "papers": 14,
+  "resolvedPapers": 14,
+  "questions": 273,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 257,
+  "unresolvedQuestions": 16,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1002 - NOIP 2007 提高组初赛试题",
+      "questionUid": "downloads-1002-q16",
+      "error": "后端未返回可用答案: downloads-1002-q16"
+    },
+    {
+      "fileName": "1002 - NOIP 2007 提高组初赛试题",
+      "questionUid": "downloads-1002-q11",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1002 - NOIP 2007 提高组初赛试题",
+      "questionUid": "downloads-1002-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1006 - NOIP 2009 提高组初赛试题",
+      "questionUid": "downloads-1006-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1010 - NOIP 2011 提高组初赛试题",
+      "questionUid": "downloads-1010-q12",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1010 - NOIP 2011 提高组初赛试题",
+      "questionUid": "downloads-1010-q14",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1018 - NOIP 2015 提高组初赛试题",
+      "questionUid": "downloads-1018-q16",
+      "error": "后端未返回可用答案: downloads-1018-q16"
+    },
+    {
+      "fileName": "1014 - NOIP 2013 提高组初赛试题",
+      "questionUid": "downloads-1014-q17",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1031 - CSP 2019 提高级第一轮",
+      "questionUid": "downloads-1031-q16",
+      "error": "后端未返回可用答案: downloads-1031-q16"
+    },
+    {
+      "fileName": "1022 - NOIP 2017 提高组初赛试题",
+      "questionUid": "downloads-1022-q16",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1022 - NOIP 2017 提高组初赛试题",
+      "questionUid": "downloads-1022-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1031 - CSP 2019 提高级第一轮",
+      "questionUid": "downloads-1031-q19",
+      "error": "后端未返回可用答案: downloads-1031-q19"
+    },
+    {
+      "fileName": "1031 - CSP 2019 提高级第一轮",
+      "questionUid": "downloads-1031-q9",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1036 - CSP 2021 入门级第一轮",
+      "questionUid": "downloads-1036-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1041 - CSP 2023 入门级第一轮",
+      "questionUid": "downloads-1041-q19",
+      "error": "后端未返回可用答案: downloads-1041-q19"
+    },
+    {
+      "fileName": "1041 - CSP 2023 入门级第一轮",
+      "questionUid": "downloads-1041-q18",
+      "error": "timeout of 120000ms exceeded"
+    }
+  ]
+}

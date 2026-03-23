@@ -54,7 +54,10 @@ export default {
           localStorage.setItem('user_info', JSON.stringify(data.user))
           window.dispatchEvent(new Event('login-success'))
           this.showToastMessage('登录成功')
-          this.$router.push('/')
+          const redirect = typeof this.$route.query.redirect === 'string' && this.$route.query.redirect.trim()
+            ? this.$route.query.redirect.trim()
+            : '/'
+          this.$router.push(redirect)
         } else {
           this.error = data.error || '登录失败'
         }

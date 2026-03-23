@@ -14,7 +14,7 @@
           { id: 'o2-mini', name: 'o2-mini' },
           { id: 'o1-mini', name: 'o1-mini' },
           { id: 'grok-4-fast', name: 'grok-4-fast' },
-          { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' }
+          { id: 'gemini-3-flash-preview', name: 'gemini-3-flash-preview' }
         ])" :key="m.id" :value="m.id">{{ m.name }}</option>
       </select>
       <label style="margin-left:12px;">语言:</label>

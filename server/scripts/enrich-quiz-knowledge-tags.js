@@ -23,6 +23,12 @@ function shouldRetag(question, force) {
   return tags.length === 0
 }
 
+function mergeKnowledgeTags(existingTags, newKnowledgeTags) {
+  const current = Array.isArray(existingTags) ? existingTags : []
+  const preserved = current.filter((tag) => !normalizeQuizKnowledgeTags([tag]).length)
+  return [...new Set([...preserved, ...newKnowledgeTags])]
+}
+
 function buildQuestionText(question) {
   const optionLines = Array.isArray(question?.options)
     ? question.options.map((option) => `${option.key}. ${option.textPlain || option.text || ''}`)
@@ -58,6 +64,18 @@ async function generateKnowledgeTags(question, model) {
   return parseQuizKnowledgeTaggingResult(content)
 }
 
+async function runWithConcurrency(items, concurrency, worker) {
+  const queue = [...items]
+  const runners = Array.from({ length: Math.max(concurrency, 1) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift()
+      if (!item) break
+      await worker(item)
+    }
+  })
+  await Promise.all(runners)
+}
+
 async function main() {
   if (!YUN_API_KEY) {
     throw new Error('缺少 YUN_API_KEY，无法执行知识点打标')
@@ -65,14 +83,16 @@ async function main() {
 
   const limit = Math.max(Number(getArg('limit', '0')) || 0, 0)
   const batchSize = Math.max(Number(getArg('batch-size', '100')) || 100, 1)
-  const model = getArg('model', 'gemini-2.0-flash')
+  const concurrency = Math.max(Number(getArg('concurrency', '6')) || 6, 1)
+  const model = getArg('model', 'gemini-3-flash-preview')
+  const source = getArg('source', 'gesp')
   const force = hasFlag('force')
   const dryRun = hasFlag('dry-run')
 
   const conn = await mongoose.createConnection(APP_MONGODB_URI).asPromise()
   const coll = conn.collection('quiz_questions')
   const cursor = coll.find(
-    { enabled: true, source: 'gesp' },
+    { enabled: true, source },
     {
       projection: {
         _id: 1,
@@ -90,27 +110,28 @@ async function main() {
     }
   )
 
+  const questions = await cursor.toArray()
+  const selectedQuestions = limit > 0 ? questions.slice(0, limit) : questions
+
   let scanned = 0
   let updated = 0
   let skipped = 0
   let failed = 0
 
-  for await (const question of cursor) {
+  await runWithConcurrency(selectedQuestions, concurrency, async (question) => {
     scanned += 1
 
     if (!shouldRetag(question, force)) {
       skipped += 1
-      continue
+      return
     }
-
-    if (limit > 0 && updated + failed >= limit) break
 
     try {
       const tags = await generateKnowledgeTags(question, model)
       if (tags.length === 0) {
         failed += 1
         console.warn(`[WARN] ${question.questionUid} 未解析出知识点标签`)
-        continue
+        return
       }
 
       if (!dryRun) {
@@ -118,7 +139,7 @@ async function main() {
           { _id: question._id },
           {
             $set: {
-              tags,
+              tags: mergeKnowledgeTags(question.tags, tags),
               updatedAt: new Date()
             }
           }
@@ -126,14 +147,14 @@ async function main() {
       }
 
       updated += 1
-      console.log(`[OK] ${question.questionUid} -> ${tags.join(', ')}`)
+      console.log(`[OK] ${question.questionUid} -> ${mergeKnowledgeTags(question.tags, tags).join(', ')}`)
     } catch (error) {
       failed += 1
       console.warn(`[FAIL] ${question.questionUid} -> ${error?.message || error}`)
     }
-  }
+  })
 
-  console.log(JSON.stringify({ scanned, updated, skipped, failed, dryRun, force, model }, null, 2))
+  console.log(JSON.stringify({ scanned, updated, skipped, failed, dryRun, force, model, source, concurrency, selected: selectedQuestions.length }, null, 2))
   await conn.close()
 }
 

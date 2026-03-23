@@ -1,0 +1,51 @@
+{
+  "papers": 14,
+  "resolvedPapers": 14,
+  "questions": 277,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 269,
+  "unresolvedQuestions": 8,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1033 - CSP 2020 第一轮（初赛）模拟",
+      "questionUid": "downloads-1033-q16",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1038 - SCP 2021 第一轮（初赛）模拟",
+      "questionUid": "downloads-1038-q18",
+      "error": "后端未返回可用答案: downloads-1038-q18"
+    },
+    {
+      "fileName": "1038 - SCP 2021 第一轮（初赛）模拟",
+      "questionUid": "downloads-1038-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1042 - CSP 2023 提高级第一轮",
+      "questionUid": "downloads-1042-q19",
+      "error": "read ECONNRESET"
+    },
+    {
+      "fileName": "1042 - CSP 2023 提高级第一轮",
+      "questionUid": "downloads-1042-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1042 - CSP 2023 提高级第一轮",
+      "questionUid": "downloads-1042-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1114 - 2024 BCSP-X 上半年活动基础知识测评（初中组）",
+      "questionUid": "downloads-1114-q11",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1114 - 2024 BCSP-X 上半年活动基础知识测评（初中组）",
+      "questionUid": "downloads-1114-q23",
+      "error": "timeout of 120000ms exceeded"
+    }
+  ]
+}

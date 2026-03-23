@@ -91,7 +91,7 @@ export default {
       resultHtml: '',
       loading: false,
       loadingPlan: false,
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
       language: 'C++',
       rawModelOptions: []
     }
@@ -108,7 +108,7 @@ export default {
     modelOptions() {
       const all = this.rawModelOptions || []
       if (this.isPremium) return all
-      return all.filter(m => m.id === 'gemini-2.0-flash')
+      return all.filter(m => m.id === 'gemini-3-flash-preview')
     }
   },
   async mounted() {

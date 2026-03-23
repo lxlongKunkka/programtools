@@ -1,0 +1,11 @@
+{
+  "sourceDir": "D:\\webapp\\programtools\\Downloads\\quiz-import-final",
+  "papers": 56,
+  "resolvedPapers": 56,
+  "questions": 1103,
+  "importableQuestions": 1069,
+  "manuallyResolvedQuestions": 2,
+  "unresolvedQuestions": 0,
+  "excludedMultipleChoice": 20,
+  "excludedMalformed": 14
+}

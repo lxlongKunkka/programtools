@@ -1,0 +1,2476 @@
+[
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q1",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 1,
+    "type": "single",
+    "stem": "以下不属于计算机输入设备的有（ ）。",
+    "stemText": "以下不属于计算机输入设备的有（ ）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "键盘",
+        "textPlain": "键盘",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "音箱",
+        "textPlain": "音箱",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "鼠标",
+        "textPlain": "鼠标",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "传感器",
+        "textPlain": "传感器",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q2",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 2,
+    "type": "single",
+    "stem": "计算机系统中存储的基本单位用 B 来表示，它代表的是（ ）。",
+    "stemText": "计算机系统中存储的基本单位用 B 来表示，它代表的是（ ）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "Byte",
+        "textPlain": "Byte",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "Block",
+        "textPlain": "Block",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Bulk",
+        "textPlain": "Bulk",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "Bit",
+        "textPlain": "Bit",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q3",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 3,
+    "type": "single",
+    "stem": "常量 7.0 的数据类型是（）。",
+    "stemText": "常量 7.0 的数据类型是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "double",
+        "textPlain": "double",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "float",
+        "textPlain": "float",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "void",
+        "textPlain": "void",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "int",
+        "textPlain": "int",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q4",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 4,
+    "type": "single",
+    "stem": "下列关于 C++语言的叙述，不正确的是（）。",
+    "stemText": "下列关于 C++语言的叙述，不正确的是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "变量定义时可以不初始化",
+        "textPlain": "变量定义时可以不初始化",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "变量被赋值之后的类型不变",
+        "textPlain": "变量被赋值之后的类型不变",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "变量没有定义也能够使用",
+        "textPlain": "变量没有定义也能够使用",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "变量名必须是合法的标识符",
+        "textPlain": "变量名必须是合法的标识符",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q5",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 5,
+    "type": "single",
+    "stem": "以下不可以作为 C++标识符的是（）。",
+    "stemText": "以下不可以作为 C++标识符的是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "x321",
+        "textPlain": "x321",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "0x321",
+        "textPlain": "0x321",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "x321_",
+        "textPlain": "x321_",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "_x321",
+        "textPlain": "_x321",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q6",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 6,
+    "type": "single",
+    "stem": "以下哪个不是 C++语言的关键字？",
+    "stemText": "以下哪个不是 C++语言的关键字？",
+    "options": [
+      {
+        "key": "A",
+        "text": "int",
+        "textPlain": "int",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "for",
+        "textPlain": "for",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "do",
+        "textPlain": "do",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "cout",
+        "textPlain": "cout",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q7",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 7,
+    "type": "single",
+    "stem": "如果 a、b 和 c 都是 int 类型的变量，下列哪个语句不符合 C++语法？",
+    "stemText": "如果 a、b 和 c 都是 int 类型的变量，下列哪个语句不符合 C++语法？",
+    "options": [
+      {
+        "key": "A",
+        "text": "c = a + b;",
+        "textPlain": "c = a + b;",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "c += a + b;",
+        "textPlain": "c += a + b;",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "c = a = b;",
+        "textPlain": "c = a = b;",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "c = a ++ b;",
+        "textPlain": "c = a ++ b;",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q8",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 8,
+    "type": "single",
+    "stem": "如果用两个 int 类型的变量 a 和 b 分别表达长方形的长和宽，则下列哪个表达式不能用来计算长方形的周长？",
+    "stemText": "如果用两个 int 类型的变量 a 和 b 分别表达长方形的长和宽，则下列哪个表达式不能用来计算长方形的周长？",
+    "options": [
+      {
+        "key": "A",
+        "text": "a + b * 2",
+        "textPlain": "a + b * 2",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "2 * a + 2 * b",
+        "textPlain": "2 * a + 2 * b",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "a + b + a + b",
+        "textPlain": "a + b + a + b",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "b + a * 2 + b",
+        "textPlain": "b + a * 2 + b",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q9",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 9,
+    "type": "single",
+    "stem": "表达式((3 == 0) + 'A' + 1 + 3.0)的结果类型为（）。",
+    "stemText": "表达式((3 == 0) + 'A' + 1 + 3.0)的结果类型为（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "double",
+        "textPlain": "double",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "int",
+        "textPlain": "int",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "char",
+        "textPlain": "char",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "bool",
+        "textPlain": "bool",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q10",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 10,
+    "type": "single",
+    "stem": "如果 a 为 int 类型的变量，且 a 的值为 6，则执行 a *= 3;之后，a 的值会是（）。",
+    "stemText": "如果 a 为 int 类型的变量，且 a 的值为 6，则执行 a *= 3;之后，a 的值会是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "3",
+        "textPlain": "3",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "6",
+        "textPlain": "6",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "9",
+        "textPlain": "9",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "18",
+        "textPlain": "18",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q11",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "如果 a 和 b 均为 int 类型的变量，下列表达式不能正确判断“a 等于 0 且 b等于0的是 （）",
+    "stemText": "如果 a 和 b 均为 int 类型的变量，下列表达式不能正确判断“a 等于 0 且 b等于0的是 （）",
+    "options": [
+      {
+        "key": "A",
+        "text": "(a == 0) && (b == 0)",
+        "textPlain": "(a == 0) && (b == 0)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(a == b == 0)",
+        "textPlain": "(a == b == 0)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(!a) && (!b)",
+        "textPlain": "(!a) && (!b)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(a == 0) + (b == 0) == 2",
+        "textPlain": "(a == 0) + (b == 0) == 2",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q12",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 12,
+    "type": "single",
+    "stem": "如果 a 为 int 类型的变量，下列哪个表达式可以正确求出满足“大于等于 a 且是 4 的倍数”的整数中最小的？",
+    "stemText": "如果 a 为 int 类型的变量，下列哪个表达式可以正确求出满足“大于等于 a 且是 4 的倍数”的整数中最小的？",
+    "options": [
+      {
+        "key": "A",
+        "text": ".a * 4",
+        "textPlain": ".a * 4",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a / 4 * 4",
+        "textPlain": "a / 4 * 4",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(a + 3) / 4 * 4",
+        "textPlain": "(a + 3) / 4 * 4",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a - a % 4 + 4",
+        "textPlain": "a - a % 4 + 4",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q13",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 13,
+    "type": "single",
+    "stem": "在下列代码的横线处填写（），可以使得输出是“20 10”。\n\n![image-20241205101221378](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012486.png)",
+    "stemText": "在下列代码的横线处填写（），可以使得输出是“20 10”。",
+    "options": [
+      {
+        "key": "A",
+        "text": "a + b",
+        "textPlain": "a + b",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(a + b)\t*100",
+        "textPlain": "(a + b) *100",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "b * 100\t+a",
+        "textPlain": "b * 100 +a",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a * 100\t+b",
+        "textPlain": "a * 100 +b",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012486.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q14",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 14,
+    "type": "single",
+    "stem": "在下列代码的横线处填写（），可以使得输出是“1248”。![image-20241205101244052](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012095.png)",
+    "stemText": "在下列代码的横线处填写（），可以使得输出是“1248”。",
+    "options": [
+      {
+        "key": "A",
+        "text": "i++",
+        "textPlain": "i++",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "i *= 2",
+        "textPlain": "i *= 2",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i += 2",
+        "textPlain": "i += 2",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "i * 2",
+        "textPlain": "i * 2",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012095.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q15",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 15,
+    "type": "single",
+    "stem": "执行以下 C++语言程序后，输出结果是（）。![image-20241205101255141](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012179.png)",
+    "stemText": "执行以下 C++语言程序后，输出结果是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "210",
+        "textPlain": "210",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "113",
+        "textPlain": "113",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "98",
+        "textPlain": "98",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "15",
+        "textPlain": "15",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051012179.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q16",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 16,
+    "type": "judge",
+    "stem": "在 Windows 系统中通过键盘完成对选定文本移动的按键组合是先 Ctrl+X，移动到目标位置后按 Ctrl+V。",
+    "stemText": "在 Windows 系统中通过键盘完成对选定文本移动的按键组合是先 Ctrl+X，移动到目标位置后按 Ctrl+V。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q17",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 17,
+    "type": "judge",
+    "stem": "程序员用 C、C++、Python、Scratch 等编写的程序能在 CPU 上直接执行。",
+    "stemText": "程序员用 C、C++、Python、Scratch 等编写的程序能在 CPU 上直接执行。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q18",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 18,
+    "type": "judge",
+    "stem": "在 C++语言中，注释不宜写得过多，否则会使得程序运行速度变慢。",
+    "stemText": "在 C++语言中，注释不宜写得过多，否则会使得程序运行速度变慢。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q19",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 19,
+    "type": "judge",
+    "stem": "在 C++语言中，标识符中可以有数字，但不能以数字开头。",
+    "stemText": "在 C++语言中，标识符中可以有数字，但不能以数字开头。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q20",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 20,
+    "type": "judge",
+    "stem": "'3'是一个 int 类型常量。",
+    "stemText": "'3'是一个 int 类型常量。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q21",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 21,
+    "type": "judge",
+    "stem": "if 语句中的条件表达式的结果必须为 bool 类型。",
+    "stemText": "if 语句中的条件表达式的结果必须为 bool 类型。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q22",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 22,
+    "type": "judge",
+    "stem": "for 语句的循环体至少会执行一次。",
+    "stemText": "for 语句的循环体至少会执行一次。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q23",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 23,
+    "type": "judge",
+    "stem": "如果 a 为 int 类型的变量，则赋值语句 a = a + 3;是错误的，因为这条语句会导致 a 无意义。",
+    "stemText": "如果 a 为 int 类型的变量，则赋值语句 a = a + 3;是错误的，因为这条语句会导致 a 无意义。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q24",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 24,
+    "type": "judge",
+    "stem": "如果 a 为 int 类型的变量，则表达式(a / 4 == 2)和表达式(a >= 8 && a<= 11)的结果总是相同的。",
+    "stemText": "如果 a 为 int 类型的变量，则表达式(a / 4 == 2)和表达式(a >= 8 && a<= 11)的结果总是相同的。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-1-q25",
+    "paperUid": "gesp-2023-03-cpp-1",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 1,
+    "paperQuestionNo": 25,
+    "type": "judge",
+    "stem": "表达式(3.5 * 2)的计算结果为 7.0，且结果类型为 double。",
+    "stemText": "表达式(3.5 * 2)的计算结果为 7.0，且结果类型为 double。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp1",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++一级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q1",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 1,
+    "type": "single",
+    "stem": "以下存储器中的数据不会受到附近强磁场干扰的是（ ）。",
+    "stemText": "以下存储器中的数据不会受到附近强磁场干扰的是（ ）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "硬盘",
+        "textPlain": "硬盘",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "U 盘",
+        "textPlain": "U 盘",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "内存",
+        "textPlain": "内存",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "光盘",
+        "textPlain": "光盘",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q2",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 2,
+    "type": "single",
+    "stem": "下列流程图，属于计算机的哪种程序结构？（ ）。\n\n![image-20241205111734330](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051117571.png)",
+    "stemText": "下列流程图，属于计算机的哪种程序结构？（ ）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "顺序结构",
+        "textPlain": "顺序结构",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "循环结构",
+        "textPlain": "循环结构",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "分支结构",
+        "textPlain": "分支结构",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "数据结构",
+        "textPlain": "数据结构",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051117571.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q3",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 3,
+    "type": "single",
+    "stem": "下列关于 C++语言的叙述，不正确的是（）。",
+    "stemText": "下列关于 C++语言的叙述，不正确的是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "double 类型的变量占用内存的大小是浮动的",
+        "textPlain": "double 类型的变量占用内存的大小是浮动的",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "bool 类型的变量占用 1 字节内存",
+        "textPlain": "bool 类型的变量占用 1 字节内存",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "int 类型变量的取值范围不是无限的",
+        "textPlain": "int 类型变量的取值范围不是无限的",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "char 类型的变量有 256 种取值",
+        "textPlain": "char 类型的变量有 256 种取值",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q4",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 4,
+    "type": "single",
+    "stem": "下列关于 C++语言的叙述，不正确的是（）。",
+    "stemText": "下列关于 C++语言的叙述，不正确的是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "变量定义后，可以使用赋值语句改变它的值",
+        "textPlain": "变量定义后，可以使用赋值语句改变它的值",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "变量定义时，必须指定类型",
+        "textPlain": "变量定义时，必须指定类型",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "变量名必须为合法标识符",
+        "textPlain": "变量名必须为合法标识符",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "合法标识符可以以数字开始",
+        "textPlain": "合法标识符可以以数字开始",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q5",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 5,
+    "type": "single",
+    "stem": "以下哪个不是 C++语言的关键字？",
+    "stemText": "以下哪个不是 C++语言的关键字？",
+    "options": [
+      {
+        "key": "A",
+        "text": "return",
+        "textPlain": "return",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "max",
+        "textPlain": "max",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "else",
+        "textPlain": "else",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "case",
+        "textPlain": "case",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q6",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 6,
+    "type": "single",
+    "stem": "以下哪个不是 C++语言的运算符？",
+    "stemText": "以下哪个不是 C++语言的运算符？",
+    "options": [
+      {
+        "key": "A",
+        "text": "\\=",
+        "textPlain": "\\=",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "/=",
+        "textPlain": "/=",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "-=",
+        "textPlain": "-=",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "!=",
+        "textPlain": "!=",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q7",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 7,
+    "type": "single",
+    "stem": "如果 a 和 b 都是 char 类型的变量，下列哪个语句不符合 C++语法？",
+    "stemText": "如果 a 和 b 都是 char 类型的变量，下列哪个语句不符合 C++语法？",
+    "options": [
+      {
+        "key": "A",
+        "text": "b=a + 1;",
+        "textPlain": "b=a + 1;",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "b=a + '1';",
+        "textPlain": "b=a + '1';",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "b='a'++;",
+        "textPlain": "b='a'++;",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "b=a++;",
+        "textPlain": "b=a++;",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q8",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 8,
+    "type": "single",
+    "stem": "如果 a、b、c 和 d 都是 int 类型的变量，则下列哪个表达式能够正确计算它们的平均值？",
+    "stemText": "如果 a、b、c 和 d 都是 int 类型的变量，则下列哪个表达式能够正确计算它们的平均值？",
+    "options": [
+      {
+        "key": "A",
+        "text": "(a + b + c + d) / 4",
+        "textPlain": "(a + b + c + d) / 4",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(a + b + c + d) % 4",
+        "textPlain": "(a + b + c + d) % 4",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(a + b + c + d) / 4.0",
+        "textPlain": "(a + b + c + d) / 4.0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(a + b + c + d) % 4.0",
+        "textPlain": "(a + b + c + d) % 4.0",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q9",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 9,
+    "type": "single",
+    "stem": "如果 a 为 char 类型的变量，且 a 的值为'2'，则下列哪条语句执行后，a 的值不会变为'3'？",
+    "stemText": "如果 a 为 char 类型的变量，且 a 的值为'2'，则下列哪条语句执行后，a 的值不会变为'3'？",
+    "options": [
+      {
+        "key": "A",
+        "text": "a = a + 1;",
+        "textPlain": "a = a + 1;",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a + 1;",
+        "textPlain": "a + 1;",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "a = 1 + a;",
+        "textPlain": "a = 1 + a;",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "++a;",
+        "textPlain": "++a;",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q10",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 10,
+    "type": "single",
+    "stem": "如果 a 为 int 类型的变量，且 a 的值为 9，则执行 a -= 3;之后，a 的值会是（）。",
+    "stemText": "如果 a 为 int 类型的变量，且 a 的值为 9，则执行 a -= 3;之后，a 的值会是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "3",
+        "textPlain": "3",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "6",
+        "textPlain": "6",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "9",
+        "textPlain": "9",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "12",
+        "textPlain": "12",
+        "images": []
+      }
+    ],
+    "answer": "B",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q11",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "如果 a 和 b 均为 int 类型的变量，下列表达式能正确判断“a 等于 0 或 b 等于 0”的是（）",
+    "stemText": "如果 a 和 b 均为 int 类型的变量，下列表达式能正确判断“a 等于 0 或 b 等于 0”的是（）",
+    "options": [
+      {
+        "key": "A",
+        "text": "(!a) || (!b)",
+        "textPlain": "(!a) || (!b)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(a == b == 0)",
+        "textPlain": "(a == b == 0)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(a == 0) && (b == 0)",
+        "textPlain": "(a == 0) && (b == 0)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(a == 0) - (b == 0) == 0",
+        "textPlain": "(a == 0) - (b == 0) == 0",
+        "images": []
+      }
+    ],
+    "answer": "A",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q12",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 12,
+    "type": "single",
+    "stem": "如果 a 为 char 类型的变量，下列哪个表达式可以正确判断“a 是小写字母”？",
+    "stemText": "如果 a 为 char 类型的变量，下列哪个表达式可以正确判断“a 是小写字母”？",
+    "options": [
+      {
+        "key": "A",
+        "text": "a <= a <= z",
+        "textPlain": "a <= a <= z",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a - 'a' <= 'z' - 'a'",
+        "textPlain": "a - 'a' <= 'z' - 'a'",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "'a' <= a <= 'z'",
+        "textPlain": "'a' <= a <= 'z'",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a >= 'a' && a <= 'z'",
+        "textPlain": "a >= 'a' && a <= 'z'",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q13",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 13,
+    "type": "single",
+    "stem": "在下列代码的横线处填写（），使得输出是`50 10`。\n\n![image-20241205112249386](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051122427.png)",
+    "stemText": "在下列代码的横线处填写（），使得输出是50 10。",
+    "options": [
+      {
+        "key": "A",
+        "text": "a -= b",
+        "textPlain": "a -= b",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a += b",
+        "textPlain": "a += b",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "a = b - a",
+        "textPlain": "a = b - a",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a = b",
+        "textPlain": "a = b",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051122427.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q14",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 14,
+    "type": "single",
+    "stem": "在下列代码的横线处填写（），可以使得输出是`5`。\n\n![image-20241205112257115](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051122150.png)",
+    "stemText": "在下列代码的横线处填写（），可以使得输出是5。",
+    "options": [
+      {
+        "key": "A",
+        "text": "ch < '5'",
+        "textPlain": "ch < '5'",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "ch >= 5",
+        "textPlain": "ch >= 5",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "ch >= '4'",
+        "textPlain": "ch >= '4'",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "ch % 2 == 1",
+        "textPlain": "ch % 2 == 1",
+        "images": []
+      }
+    ],
+    "answer": "D",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051122150.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q15",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 15,
+    "type": "single",
+    "stem": "执行以下 C++语言程序后，输出结果是（）。\n\n![image-20241205112303891](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051123927.png)",
+    "stemText": "执行以下 C++语言程序后，输出结果是（）。",
+    "options": [
+      {
+        "key": "A",
+        "text": "false",
+        "textPlain": "false",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "true",
+        "textPlain": "true",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      }
+    ],
+    "answer": "C",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202412051123927.png"
+    ],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q16",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 16,
+    "type": "judge",
+    "stem": "明明和笑笑在“小庙会”上分别抽到一个 4GB 和 4096MB 的 U 盘，容量大的盘是笑笑的（ ）。",
+    "stemText": "明明和笑笑在“小庙会”上分别抽到一个 4GB 和 4096MB 的 U 盘，容量大的盘是笑笑的（ ）。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q17",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 17,
+    "type": "judge",
+    "stem": "IPv4 的地址通常用“点分十进制”的表示形式，形如（a.b.c.d），其中",
+    "stemText": "IPv4 的地址通常用“点分十进制”的表示形式，形如（a.b.c.d），其中",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q18",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 18,
+    "type": "judge",
+    "stem": "在 C++语言中，一个程序不能有多个 main 函数。",
+    "stemText": "在 C++语言中，一个程序不能有多个 main 函数。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q19",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 19,
+    "type": "judge",
+    "stem": "在 C++语言中，标识符中可以有下划线_，但不能以下划线_开头。",
+    "stemText": "在 C++语言中，标识符中可以有下划线，但不能以下划线开头。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q20",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 20,
+    "type": "judge",
+    "stem": "如果 a 是 int 类型的变量，而且值为 1，则表达式'a'的值为'1'。",
+    "stemText": "如果 a 是 int 类型的变量，而且值为 1，则表达式'a'的值为'1'。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q21",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 21,
+    "type": "judge",
+    "stem": "在 if ... else 语句中，else 子句可以嵌套 if ... else 语句，但 if 子句不可以，因为会造成二义性。",
+    "stemText": "在 if ... else 语句中，else 子句可以嵌套 if ... else 语句，但 if 子句不可以，因为会造成二义性。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q22",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 22,
+    "type": "judge",
+    "stem": "while 语句的循环体至少会执行一次。",
+    "stemText": "while 语句的循环体至少会执行一次。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "false",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q23",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 23,
+    "type": "judge",
+    "stem": "C++语言中>=是运算符，但=>不是。",
+    "stemText": "C++语言中>=是运算符，但=>不是。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q24",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 24,
+    "type": "judge",
+    "stem": "如果 a 为 char 类型的变量，且取值为小写字母，则执行语句 a = a - 'a'",
+    "stemText": "如果 a 为 char 类型的变量，且取值为小写字母，则执行语句 a = a - 'a'",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  },
+  {
+    "questionUid": "gesp-2023-03-cpp-2-q25",
+    "paperUid": "gesp-2023-03-cpp-2",
+    "source": "gesp",
+    "sourceDomainId": "gesp",
+    "sourceDocId": 2,
+    "paperQuestionNo": 25,
+    "type": "judge",
+    "stem": "表达式(10.0 / 2)的计算结果为 5.0，且结果类型为 double。",
+    "stemText": "表达式(10.0 / 2)的计算结果为 5.0，且结果类型为 double。",
+    "options": [
+      {
+        "key": "true",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      },
+      {
+        "key": "false",
+        "text": "",
+        "textPlain": "",
+        "images": []
+      }
+    ],
+    "answer": "true",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [],
+    "levelTag": "gesp2",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "GESP 2023年3月认证C++二级真题",
+    "enabled": true,
+    "reviewStatus": "pending",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    }
+  }
+]

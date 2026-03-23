@@ -1,0 +1,2342 @@
+[
+  {
+    "questionUid": "downloads-1001-q1",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 1,
+    "type": "single",
+    "stem": "在以下各项中，（ ）不是 CPU 的组成部分",
+    "stemText": "在以下各项中，（ ）不是 CPU 的组成部分",
+    "options": [
+      {
+        "key": "A",
+        "text": "控制器",
+        "textPlain": "控制器",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "运算器",
+        "textPlain": "运算器",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "寄存器",
+        "textPlain": "寄存器",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "主板",
+        "textPlain": "主板",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q2",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 2,
+    "type": "single",
+    "stem": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "stemText": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "options": [
+      {
+        "key": "A",
+        "text": "二叉树",
+        "textPlain": "二叉树",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "多叉树",
+        "textPlain": "多叉树",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "哈希表",
+        "textPlain": "哈希表",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "二维表",
+        "textPlain": "二维表",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q3",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 3,
+    "type": "single",
+    "stem": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "stemText": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "options": [
+      {
+        "key": "A",
+        "text": "Byte",
+        "textPlain": "Byte",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "KB",
+        "textPlain": "KB",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "UB",
+        "textPlain": "UB",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "TB",
+        "textPlain": "TB",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q4",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 4,
+    "type": "single",
+    "stem": "ASCII 码的含义是（ ）",
+    "stemText": "ASCII 码的含义是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "二→十进制转换码",
+        "textPlain": "二→十进制转换码",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "美国信息交换标准代码",
+        "textPlain": "美国信息交换标准代码",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "数字的二进制编码",
+        "textPlain": "数字的二进制编码",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "计算机可处理字符的唯一编码",
+        "textPlain": "计算机可处理字符的唯一编码",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q5",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 5,
+    "type": "single",
+    "stem": "一个完整的计算机系统应包括（ ）",
+    "stemText": "一个完整的计算机系统应包括（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "系统硬件和系统软件",
+        "textPlain": "系统硬件和系统软件",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "硬件系统和软件系统",
+        "textPlain": "硬件系统和软件系统",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "主机和外部设备",
+        "textPlain": "主机和外部设备",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "主机、键盘、显示器和辅助存储器",
+        "textPlain": "主机、键盘、显示器和辅助存储器",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q6",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 6,
+    "type": "single",
+    "stem": "IT 的含义是（ ）",
+    "stemText": "IT 的含义是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "通信技术",
+        "textPlain": "通信技术",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "信息技术",
+        "textPlain": "信息技术",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "网络技术",
+        "textPlain": "网络技术",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "信息学",
+        "textPlain": "信息学",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q7",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 7,
+    "type": "single",
+    "stem": "LAN 的含义是（ ）",
+    "stemText": "LAN 的含义是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "因特网",
+        "textPlain": "因特网",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "局域网",
+        "textPlain": "局域网",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "广域网",
+        "textPlain": "广域网",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "城域网",
+        "textPlain": "城域网",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q8",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 8,
+    "type": "single",
+    "stem": "冗余数据是指可以由其它数据导出的数据。例如，数据库中已存放了学生的数学、语文和英语的三科成绩，如果还存放三科成绩的总分，则总分就可以看作冗余数据。冗余数据往往会造成数据的不一致。例如，上面 4 个数据如果都是输入的，由于操作错误使总分不等于三科成绩之和，就会产生矛盾。下面关于冗余数据的说法中，正确的是（ ）",
+    "stemText": "冗余数据是指可以由其它数据导出的数据。例如，数据库中已存放了学生的数学、语文和英语的三科成绩，如果还存放三科成绩的总分，则总分就可以看作冗余数据。冗余数据往往会造成数据的不一致。例如，上面 4 个数据如果都是输入的，由于操作错误使总分不等于三科成绩之和，就会产生矛盾。下面关于冗余数据的说法中，正确的是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "应该在数据库中消除一切冗余数据",
+        "textPlain": "应该在数据库中消除一切冗余数据",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "用高级语言编写的数据处理系统，通常比用关系数据库编写的系统更容易消除冗余数据",
+        "textPlain": "用高级语言编写的数据处理系统，通常比用关系数据库编写的系统更容易消除冗余数据",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "为了提高查询效率，在数据库中可以保留一些冗余数据，但更新时要做相容性检验",
+        "textPlain": "为了提高查询效率，在数据库中可以保留一些冗余数据，但更新时要做相容性检验",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "做相容性检验会降低效率，可以不理睬数据库中的冗余数据",
+        "textPlain": "做相容性检验会降低效率，可以不理睬数据库中的冗余数据",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q9",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 9,
+    "type": "single",
+    "stem": "在下列各软件，不属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "stemText": "在下列各软件，不属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "options": [
+      {
+        "key": "A",
+        "text": "gcc",
+        "textPlain": "gcc",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "g++",
+        "textPlain": "g++",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Turbo C",
+        "textPlain": "Turbo C",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "Free Pascal",
+        "textPlain": "Free Pascal",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q11",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "在下列关于计算机语言的说法中，正确的有（ ）",
+    "stemText": "在下列关于计算机语言的说法中，正确的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "高级语言比汇编语言更高级，是因为它的程序的运行效率更高",
+        "textPlain": "高级语言比汇编语言更高级，是因为它的程序的运行效率更高",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "随着 Pascal、C 等高级语言的出现，机器语言和汇编语言已经退出了历史舞台",
+        "textPlain": "随着 Pascal、C 等高级语言的出现，机器语言和汇编语言已经退出了历史舞台",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "高级语言比汇编语言程序更容易从一种计算机上移植到另一种计算机上",
+        "textPlain": "高级语言比汇编语言程序更容易从一种计算机上移植到另一种计算机上",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "C 是一种面向对象的高级计算机语言",
+        "textPlain": "C 是一种面向对象的高级计算机语言",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q12",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 12,
+    "type": "single",
+    "stem": "近 20 年来，许多计算机专家都大力推崇递归算法，认为它是解决较复杂问题的强有力的工具。在下列关于递归算法的说法中，正确的是（ ）",
+    "stemText": "近 20 年来，许多计算机专家都大力推崇递归算法，认为它是解决较复杂问题的强有力的工具。在下列关于递归算法的说法中，正确的是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "在 1977 年前后形成标准的计算机高级语言 FORTRAN77 禁止在程序使用递归，原因之一是该方法可能会占用更多的内存空间",
+        "textPlain": "在 1977 年前后形成标准的计算机高级语言 FORTRAN77 禁止在程序使用递归，原因之一是该方法可能会占用更多的内存空间",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "和非递归算法相比，解决同一个问题，递归算法一般运行得更快一些",
+        "textPlain": "和非递归算法相比，解决同一个问题，递归算法一般运行得更快一些",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "对于较复杂的问题，用递归方式编程一般比非递归方式更难一些",
+        "textPlain": "对于较复杂的问题，用递归方式编程一般比非递归方式更难一些",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "对于已经定义好的标准数学函数 sin(x)，应用程序中的语句“y=sin(sin(x));”就是一种递归调用",
+        "textPlain": "对于已经定义好的标准数学函数 sin(x)，应用程序中的语句“y=sin(sin(x));”就是一种递归调用",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q13",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 13,
+    "type": "single",
+    "stem": "一个无法靠自身的控制终止的循环成为“死循环”，例如，在 C++ 语言程序中，语句while(1) printf(\"*\");就是一个死循环，运行时它将无休止地打印*号。下面关于死循环的说法中，只有（ ）是正确的。",
+    "stemText": "一个无法靠自身的控制终止的循环成为“死循环”，例如，在 C++ 语言程序中，语句while(1) printf(\"\");就是一个死循环，运行时它将无休止地打印号。下面关于死循环的说法中，只有（ ）是正确的。",
+    "options": [
+      {
+        "key": "A",
+        "text": "不存在一种算法，对任何一个程序及相应的输入数据，都可以判断是否会出现死循环，因而，任何编译系统都不做死循环检查",
+        "textPlain": "不存在一种算法，对任何一个程序及相应的输入数据，都可以判断是否会出现死循环，因而，任何编译系统都不做死循环检查",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "有些编译系统可以检测出死循环",
+        "textPlain": "有些编译系统可以检测出死循环",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "死循环属于语法错误，既然编译系统能检查各种语法错误，当然也应该能检查出死循环",
+        "textPlain": "死循环属于语法错误，既然编译系统能检查各种语法错误，当然也应该能检查出死循环",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "死循环与多进程中出现的“死锁”差不多，而死锁是可以检测的，因而，死循环也可以检测的",
+        "textPlain": "死循环与多进程中出现的“死锁”差不多，而死锁是可以检测的，因而，死循环也可以检测的",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q14",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 14,
+    "type": "single",
+    "stem": "在 C++ 语言中,表达式23|2^5的值是（ ）",
+    "stemText": "在 C++ 语言中,表达式23|2^5的值是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "18",
+        "textPlain": "18",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "23",
+        "textPlain": "23",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "32",
+        "textPlain": "32",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q15",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 15,
+    "type": "single",
+    "stem": "在 C++ 语言中,判断 a 等于 0 或 b 等于 0 或 c 等于 0 的正确的条件表达式是（ ）",
+    "stemText": "在 C++ 语言中,判断 a 等于 0 或 b 等于 0 或 c 等于 0 的正确的条件表达式是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "!((a!=0)||(b!=0)||(c!=0))",
+        "textPlain": "!((a!=0)||(b!=0)||(c!=0))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "!((a!=0)&&(b!=0)&&(c!=0))",
+        "textPlain": "!((a!=0)&&(b!=0)&&(c!=0))",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "!(a==0&&b==0)||(c!=0)",
+        "textPlain": "!(a==0&&b==0)||(c!=0)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(a=0)&&(b=0)&&(c=0)",
+        "textPlain": "(a=0)&&(b=0)&&(c=0)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q16",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "地面上有标号为 A、B、C 的三根柱，在 A 柱上放有 10 个直径相同中间有孔的圆盘，从上到下依次编号为1,2,3…，将 A 柱上的部分盘子经过 B 柱移入 C 柱，也可以在 B 柱上暂存。如果 B 柱上的操作记录为“进、进、出、进、进、出、出、进、进、出、进、出、出”。那么，在 C 柱上，从下到上的编号为（ ）",
+    "stemText": "地面上有标号为 A、B、C 的三根柱，在 A 柱上放有 10 个直径相同中间有孔的圆盘，从上到下依次编号为1,2,3…，将 A 柱上的部分盘子经过 B 柱移入 C 柱，也可以在 B 柱上暂存。如果 B 柱上的操作记录为“进、进、出、进、进、出、出、进、进、出、进、出、出”。那么，在 C 柱上，从下到上的编号为（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "2 4 3 6 5 7",
+        "textPlain": "2 4 3 6 5 7",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "2 4 1 2 5 7",
+        "textPlain": "2 4 1 2 5 7",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "2 4 3 1 7 6",
+        "textPlain": "2 4 3 1 7 6",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "2 4 3 6 7 5",
+        "textPlain": "2 4 3 6 7 5",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q17",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 17,
+    "type": "single",
+    "stem": "与十进制数 1770 对应的八进制数是（ ）",
+    "stemText": "与十进制数 1770 对应的八进制数是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "3350",
+        "textPlain": "3350",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "3351",
+        "textPlain": "3351",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "3352",
+        "textPlain": "3352",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "3540",
+        "textPlain": "3540",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q18",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 18,
+    "type": "single",
+    "stem": "设A=B=True，C=D=False，以下逻辑运算表达式值为假的有（ ）",
+    "stemText": "设A=B=True，C=D=False，以下逻辑运算表达式值为假的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "(﹁A∧B)∨(C∧D∨A)",
+        "textPlain": "(﹁A∧B)∨(C∧D∨A)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "﹁(((A∧B)∨C)∧D)",
+        "textPlain": "﹁(((A∧B)∨C)∧D)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "A∧(B∨C∨D)∨D",
+        "textPlain": "A∧(B∨C∨D)∨D",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(A∧(D∨C))∧B",
+        "textPlain": "(A∧(D∨C))∧B",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q19",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "(2070)16​+(34)8​的结果是（ ）",
+    "stemText": "(2070)16​+(34)8​的结果是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "( 8 3 3 2 ) 1 0 (8332) 10 ​",
+        "textPlain": "( 8 3 3 2 ) 1 0 (8332) 10 ​",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "( 2 0 8 𝐴 ) 1 6 (208A) 16 ​",
+        "textPlain": "( 2 0 8 𝐴 ) 1 6 (208A) 16 ​",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "( 1 0 0 0 0 0 0 0 0 1 1 0 ) 2 (100000000110) 2 ​",
+        "textPlain": "( 1 0 0 0 0 0 0 0 0 1 1 0 ) 2 (100000000110) 2 ​",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "( 2 0 2 1 2 ) 8 (20212) 8 ​",
+        "textPlain": "( 2 0 2 1 2 ) 8 (20212) 8 ​",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q20",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 20,
+    "type": "single",
+    "stem": "已知 7 个节点的二叉树的先根遍历是 1245637 （数字为节点的编号，以下同），中根遍历是 4265173，则该二叉树的后根遍历是（ ）",
+    "stemText": "已知 7 个节点的二叉树的先根遍历是 1245637 （数字为节点的编号，以下同），中根遍历是 4265173，则该二叉树的后根遍历是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "4 6 5 2 7 3 1 4 6 5 2 7 3 1",
+        "textPlain": "4 6 5 2 7 3 1 4 6 5 2 7 3 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "4 6 5 2 1 3 7 4 6 5 2 1 3 7",
+        "textPlain": "4 6 5 2 1 3 7 4 6 5 2 1 3 7",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "4 2 3 1 5 4 7 4 2 3 1 5 4 7",
+        "textPlain": "4 2 3 1 5 4 7 4 2 3 1 5 4 7",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "4 6 5 3 1 7 2 4 6 5 3 1 7 2",
+        "textPlain": "4 6 5 3 1 7 2 4 6 5 3 1 7 2",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1002-q1",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 1,
+    "type": "single",
+    "stem": "在以下各项中，（ ）不是 CPU 的组成部分。",
+    "stemText": "在以下各项中，（ ）不是 CPU 的组成部分。",
+    "options": [
+      {
+        "key": "A",
+        "text": "控制器",
+        "textPlain": "控制器",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "运算器",
+        "textPlain": "运算器",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "寄存器",
+        "textPlain": "寄存器",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "主板",
+        "textPlain": "主板",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "算术逻辑单元(ALU)",
+        "textPlain": "算术逻辑单元(ALU)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q2",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 2,
+    "type": "single",
+    "stem": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "stemText": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "options": [
+      {
+        "key": "A",
+        "text": "二叉树",
+        "textPlain": "二叉树",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "多叉树",
+        "textPlain": "多叉树",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "哈希表",
+        "textPlain": "哈希表",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "B+ 树",
+        "textPlain": "B+ 树",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "二维表",
+        "textPlain": "二维表",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q3",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 3,
+    "type": "single",
+    "stem": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "stemText": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "options": [
+      {
+        "key": "A",
+        "text": "Byte",
+        "textPlain": "Byte",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "KB",
+        "textPlain": "KB",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "MB",
+        "textPlain": "MB",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "UB",
+        "textPlain": "UB",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "TB",
+        "textPlain": "TB",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q4",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 4,
+    "type": "single",
+    "stem": "ASCII 码的含义是（ ）",
+    "stemText": "ASCII 码的含义是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "二—十进制转换码",
+        "textPlain": "二—十进制转换码",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "美国信息交换标准代码",
+        "textPlain": "美国信息交换标准代码",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "数字的二进制编码",
+        "textPlain": "数字的二进制编码",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "计算机可处理字符的唯一编码",
+        "textPlain": "计算机可处理字符的唯一编码",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "常用字符的二进制编码",
+        "textPlain": "常用字符的二进制编码",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q5",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 5,
+    "type": "single",
+    "stem": "在 C++ 语言中，表达式23|2^5的值是（ ）",
+    "stemText": "在 C++ 语言中，表达式23|2^5的值是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "23",
+        "textPlain": "23",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "18",
+        "textPlain": "18",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "32",
+        "textPlain": "32",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "24",
+        "textPlain": "24",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q6",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 6,
+    "type": "single",
+    "stem": "在 C 语言中，判断 a 等于 0 或 b 等于 0 或 c 等于 0 的正确的条件表达式是（ ）",
+    "stemText": "在 C 语言中，判断 a 等于 0 或 b 等于 0 或 c 等于 0 的正确的条件表达式是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "!((a!=0)||(b!=0)||(c!=0))",
+        "textPlain": "!((a!=0)||(b!=0)||(c!=0))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "!((a!=0)&&(b!=0)&&(c!=0))",
+        "textPlain": "!((a!=0)&&(b!=0)&&(c!=0))",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "!(a==0&&b==0)||(c!=0)",
+        "textPlain": "!(a==0&&b==0)||(c!=0)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(a=0)&&(b=0)&&(c=0)",
+        "textPlain": "(a=0)&&(b=0)&&(c=0)",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "!((a=0)||(b=0)||(c=0))",
+        "textPlain": "!((a=0)||(b=0)||(c=0))",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q7",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 7,
+    "type": "single",
+    "stem": "地面上有标号为A,B,C的 3 根细柱，在 A 柱上放有 10 个直径相同中间有孔的圆盘，从上到下依次编号为1,2,3,…，将 A 柱上的部分盘子经过 B 柱移入 C 柱，也可以在 B 柱上暂存。如果 B 柱上的操作记录为：“进，进，出，进，进，出，出，进，进，出，进，出，出”。那么，在 C 柱上，从下 到上的盘子的编号为（ ）",
+    "stemText": "地面上有标号为A,B,C的 3 根细柱，在 A 柱上放有 10 个直径相同中间有孔的圆盘，从上到下依次编号为1,2,3,…，将 A 柱上的部分盘子经过 B 柱移入 C 柱，也可以在 B 柱上暂存。如果 B 柱上的操作记录为：“进，进，出，进，进，出，出，进，进，出，进，出，出”。那么，在 C 柱上，从下 到上的盘子的编号为（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "2 4 3 6 5 7",
+        "textPlain": "2 4 3 6 5 7",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "2 4 1 2 5 7",
+        "textPlain": "2 4 1 2 5 7",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "2 4 3 1 7 6",
+        "textPlain": "2 4 3 1 7 6",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "2 4 3 6 7 5",
+        "textPlain": "2 4 3 6 7 5",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "2 1 4 3 7 5",
+        "textPlain": "2 1 4 3 7 5",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q8",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 8,
+    "type": "single",
+    "stem": "与十进制数 17.5625 对应的 8 进制数是（ ）",
+    "stemText": "与十进制数 17.5625 对应的 8 进制数是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "2 1 . 5 6 2 5 21.5625",
+        "textPlain": "2 1 . 5 6 2 5 21.5625",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "2 1 . 4 4 21.44",
+        "textPlain": "2 1 . 4 4 21.44",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "2 1 . 7 3 21.73",
+        "textPlain": "2 1 . 7 3 21.73",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "2 1 . 7 3 1 21.731",
+        "textPlain": "2 1 . 7 3 1 21.731",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "前 4 4 个答案都不对",
+        "textPlain": "前 4 4 个答案都不对",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q9",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 9,
+    "type": "single",
+    "stem": "欧拉图 G 是指可以构成一个闭回路的图，且图 G 的每一条边恰好在这个闭回路上出现一次（即一笔画成）。在以下各个描述中，不一定是欧拉图的是（ ）",
+    "stemText": "欧拉图 G 是指可以构成一个闭回路的图，且图 G 的每一条边恰好在这个闭回路上出现一次（即一笔画成）。在以下各个描述中，不一定是欧拉图的是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "图 𝐺 G 中没有度为奇数的顶点",
+        "textPlain": "图 𝐺 G 中没有度为奇数的顶点",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "包含欧拉环游的图（欧拉环游是指通过图中每边恰好一次的闭路径）",
+        "textPlain": "包含欧拉环游的图（欧拉环游是指通过图中每边恰好一次的闭路径）",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "包含欧拉闭迹的图（欧拉迹是指通过图中每边恰好一次的路径）",
+        "textPlain": "包含欧拉闭迹的图（欧拉迹是指通过图中每边恰好一次的路径）",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "存在一条回路，通过每个顶点恰好一次",
+        "textPlain": "存在一条回路，通过每个顶点恰好一次",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "本身为闭迹的图",
+        "textPlain": "本身为闭迹的图",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q10",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 10,
+    "type": "single",
+    "stem": "一个无法靠自身的控制终止的循环称为“死循环”，例如，在 C++ 语言程序中，语句while(1) printf(\"*\");就是一个死循环，运行时它将无休止地打印*号。下面关于死循环的说法中，只有（ ） 是正确的。",
+    "stemText": "一个无法靠自身的控制终止的循环称为“死循环”，例如，在 C++ 语言程序中，语句while(1) printf(\"\");就是一个死循环，运行时它将无休止地打印号。下面关于死循环的说法中，只有（ ） 是正确的。",
+    "options": [
+      {
+        "key": "A",
+        "text": "不存在一种算法，对任何一个程序及相应的输入数据，都可以判断是否会出现死循环，因而， 任何编译系统都不做死循环检验",
+        "textPlain": "不存在一种算法，对任何一个程序及相应的输入数据，都可以判断是否会出现死循环，因而， 任何编译系统都不做死循环检验",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "有些编译系统可以检测出死循环",
+        "textPlain": "有些编译系统可以检测出死循环",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "死循环属于语法错误，既然编译系统能检查各种语法错误，当然也应该能检查出死循环",
+        "textPlain": "死循环属于语法错误，既然编译系统能检查各种语法错误，当然也应该能检查出死循环",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "死循环与多进程中出现的“死锁”差不多，而死锁是可以检测的，因而，死循环也是可以检测的",
+        "textPlain": "死循环与多进程中出现的“死锁”差不多，而死锁是可以检测的，因而，死循环也是可以检测的",
+        "images": []
+      },
+      {
+        "key": "E",
+        "text": "对于死循环，只能等到发生时做现场处理，没有什么更积极的手段",
+        "textPlain": "对于死循环，只能等到发生时做现场处理，没有什么更积极的手段",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q11",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "设A=B=true，C=D=false，以下逻辑运算表达式值为真的有（ ）",
+    "stemText": "设A=B=true，C=D=false，以下逻辑运算表达式值为真的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "(¬ A∧B)∨(C∧D∨A)",
+        "textPlain": "(¬ A∧B)∨(C∧D∨A)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "¬ (((A∧B)∨C)∧D)",
+        "textPlain": "¬ (((A∧B)∨C)∧D)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "A∧(B∨C∨D)∨D",
+        "textPlain": "A∧(B∨C∨D)∨D",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(A∧(D∨C)) ∧B",
+        "textPlain": "(A∧(D∨C)) ∧B",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q12",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 12,
+    "type": "single",
+    "stem": "命题P→Q可读做 P 蕴涵 Q，其中P,Q是两个独立的命题。只有当命题 P 成立而命题 Q 不成立时， 命题P→Q的值为 false，其他情况均为 true。与命题P→Q等价的逻辑关系式是（ ）",
+    "stemText": "命题P→Q可读做 P 蕴涵 Q，其中P,Q是两个独立的命题。只有当命题 P 成立而命题 Q 不成立时， 命题P→Q的值为 false，其他情况均为 true。与命题P→Q等价的逻辑关系式是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "¬ P∨Q",
+        "textPlain": "¬ P∨Q",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "P∧Q",
+        "textPlain": "P∧Q",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "¬ (P∨Q)",
+        "textPlain": "¬ (P∨Q)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "¬ (¬ Q∧P)",
+        "textPlain": "¬ (¬ Q∧P)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q13",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 13,
+    "type": "single",
+    "stem": "(2070)16​+(34)8​的结果是（ ）",
+    "stemText": "(2070)16​+(34)8​的结果是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "( 8 3 3 2 ) 1 0 (8332) 10 ​",
+        "textPlain": "( 8 3 3 2 ) 1 0 (8332) 10 ​",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "( 2 0 8 𝐶 ) 1 6 (208C) 16 ​",
+        "textPlain": "( 2 0 8 𝐶 ) 1 6 (208C) 16 ​",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "( 1 0 0 0 0 0 0 0 0 1 1 0 ) 2 (100000000110) 2 ​",
+        "textPlain": "( 1 0 0 0 0 0 0 0 0 1 1 0 ) 2 (100000000110) 2 ​",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "( 2 0 2 1 4 ) 8 (20214) 8 ​",
+        "textPlain": "( 2 0 2 1 4 ) 8 (20214) 8 ​",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q14",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 14,
+    "type": "single",
+    "stem": "已知 7 个结点的二叉树的先根遍历是 1245637 （数字为结点的编号，以下同），后根遍历是 4652731，则该二叉树的可能的中根遍历是（ ）",
+    "stemText": "已知 7 个结点的二叉树的先根遍历是 1245637 （数字为结点的编号，以下同），后根遍历是 4652731，则该二叉树的可能的中根遍历是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "4 2 6 5 1 7 3",
+        "textPlain": "4 2 6 5 1 7 3",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "4 2 5 6 1 3 7",
+        "textPlain": "4 2 5 6 1 3 7",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "4 2 3 1 5 4 7",
+        "textPlain": "4 2 3 1 5 4 7",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "4 2 5 6 1 7 3",
+        "textPlain": "4 2 5 6 1 7 3",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q15",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 15,
+    "type": "single",
+    "stem": "冗余数据是指可以由其他数据导出的数据，例如，数据库中已存放了学生的数学、语文和英语的三科成绩，如果还存放三科成绩的总分，则总分就可以看作冗余数据。冗余数据往往会造成数据的不一致， 例如，上面 4 个数据如果都是输入的，由于操作错误使总分不等于三科成绩之和，就会产生矛盾。下面 关于冗余数据的说法中，正确的是（ ）",
+    "stemText": "冗余数据是指可以由其他数据导出的数据，例如，数据库中已存放了学生的数学、语文和英语的三科成绩，如果还存放三科成绩的总分，则总分就可以看作冗余数据。冗余数据往往会造成数据的不一致， 例如，上面 4 个数据如果都是输入的，由于操作错误使总分不等于三科成绩之和，就会产生矛盾。下面 关于冗余数据的说法中，正确的是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "应该在数据库中消除一切冗余数据",
+        "textPlain": "应该在数据库中消除一切冗余数据",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "与用高级语言编写的数据处理系统相比，用关系数据库编写的系统更容易消除冗余数据",
+        "textPlain": "与用高级语言编写的数据处理系统相比，用关系数据库编写的系统更容易消除冗余数据",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "为了提高查询效率，在数据库中可以适当保留一些冗余数据，但更新时要做相容性检验",
+        "textPlain": "为了提高查询效率，在数据库中可以适当保留一些冗余数据，但更新时要做相容性检验",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "做相容性检验会降低效率，可以不理睬数据库中的冗余数据",
+        "textPlain": "做相容性检验会降低效率，可以不理睬数据库中的冗余数据",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q16",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "在下列各软件中，属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "stemText": "在下列各软件中，属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "options": [
+      {
+        "key": "A",
+        "text": "gcc",
+        "textPlain": "gcc",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "g++",
+        "textPlain": "g++",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Turbo C",
+        "textPlain": "Turbo C",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "free pascal",
+        "textPlain": "free pascal",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q18",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 18,
+    "type": "single",
+    "stem": "在下列关于计算机语言的说法中，正确的有（ ）",
+    "stemText": "在下列关于计算机语言的说法中，正确的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "高级语言比汇编语言更高级，是因为它的程序的运行效率更高",
+        "textPlain": "高级语言比汇编语言更高级，是因为它的程序的运行效率更高",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "随着 Pascal、C 等高级语言的出现，机器语言和汇编语言已经退出了历史舞台",
+        "textPlain": "随着 Pascal、C 等高级语言的出现，机器语言和汇编语言已经退出了历史舞台",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "高级语言程序比汇编语言程序更容易从一种计算机移植到另一种计算机上",
+        "textPlain": "高级语言程序比汇编语言程序更容易从一种计算机移植到另一种计算机上",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "C 是一种面向过程的高级计算机语言",
+        "textPlain": "C 是一种面向过程的高级计算机语言",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q19",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "在下列关于算法复杂性的说法中，正确的有（ ）",
+    "stemText": "在下列关于算法复杂性的说法中，正确的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "算法的时间复杂度，是指它在某台计算机上具体实现时的运行时间",
+        "textPlain": "算法的时间复杂度，是指它在某台计算机上具体实现时的运行时间",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "算法的时间复杂度，是指对于该算法的一种或几种主要的运算，运算的次数与问题的规模之间的函数关系",
+        "textPlain": "算法的时间复杂度，是指对于该算法的一种或几种主要的运算，运算的次数与问题的规模之间的函数关系",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "一个问题如果是 NPC 类的，就意味着在解决该问题时，不存在一个具有多项式时间复杂度的算法.但这一点还没有得到理论上的证实，也没有被否定",
+        "textPlain": "一个问题如果是 NPC 类的，就意味着在解决该问题时，不存在一个具有多项式时间复杂度的算法.但这一点还没有得到理论上的证实，也没有被否定",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "一个问题如果是 NP 类的，与 C 有相同的结论",
+        "textPlain": "一个问题如果是 NP 类的，与 C 有相同的结论",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q20",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 20,
+    "type": "single",
+    "stem": "近 20 年来，许多计算机专家都大力推崇递归算法，认为它是解决较复杂问题的强有力的工具。在下列关于递归算法的说法中，正确的是（ ）",
+    "stemText": "近 20 年来，许多计算机专家都大力推崇递归算法，认为它是解决较复杂问题的强有力的工具。在下列关于递归算法的说法中，正确的是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "在 1977 年前后形成标准的计算机高级语言 FORTRAN77 禁止在程序使用递归，原因之一是该方法可能会占用更多的内存空间",
+        "textPlain": "在 1977 年前后形成标准的计算机高级语言 FORTRAN77 禁止在程序使用递归，原因之一是该方法可能会占用更多的内存空间",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "和非递归算法相比，解决同一个问题，递归算法一般运行得更快一些",
+        "textPlain": "和非递归算法相比，解决同一个问题，递归算法一般运行得更快一些",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "对于较复杂的问题，用递归方式编程往往比非递归方式更容易一些",
+        "textPlain": "对于较复杂的问题，用递归方式编程往往比非递归方式更容易一些",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "对于已经定义好的标准数学函数 sin(x)，应用程序中的语句 y=sin(sin(x)); 就是一种递归调用",
+        "textPlain": "对于已经定义好的标准数学函数 sin(x)，应用程序中的语句 y=sin(sin(x)); 就是一种递归调用",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  }
+]

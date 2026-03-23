@@ -1,0 +1,182 @@
+[
+  {
+    "questionUid": "downloads-1001-q1",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 1,
+    "type": "single",
+    "stem": "在以下各项中，（ ）不是 CPU 的组成部分",
+    "stemText": "在以下各项中，（ ）不是 CPU 的组成部分",
+    "options": [
+      {
+        "key": "A",
+        "text": "控制器",
+        "textPlain": "控制器",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "运算器",
+        "textPlain": "运算器",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "寄存器",
+        "textPlain": "寄存器",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "主板",
+        "textPlain": "主板",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q2",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 2,
+    "type": "single",
+    "stem": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "stemText": "在关系数据库中，存放在数据库中的数据的逻辑结构以（ ）为主。",
+    "options": [
+      {
+        "key": "A",
+        "text": "二叉树",
+        "textPlain": "二叉树",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "多叉树",
+        "textPlain": "多叉树",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "哈希表",
+        "textPlain": "哈希表",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "二维表",
+        "textPlain": "二维表",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  },
+  {
+    "questionUid": "downloads-1001-q3",
+    "paperUid": "downloads-1001",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1001,
+    "paperQuestionNo": 3,
+    "type": "single",
+    "stem": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "stemText": "在下列各项中，只有（ ）不是计算机存储容量的常用单位。",
+    "options": [
+      {
+        "key": "A",
+        "text": "Byte",
+        "textPlain": "Byte",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "KB",
+        "textPlain": "KB",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "UB",
+        "textPlain": "UB",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "TB",
+        "textPlain": "TB",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1001 - NOIP 2007 普及组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1001/training"
+  }
+]

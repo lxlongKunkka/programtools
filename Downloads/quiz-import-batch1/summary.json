@@ -1,0 +1,51 @@
+{
+  "papers": 14,
+  "resolvedPapers": 14,
+  "questions": 280,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 272,
+  "unresolvedQuestions": 8,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1009 - NOIP 2011 普及组初赛试题",
+      "questionUid": "downloads-1009-q17",
+      "error": "read ECONNRESET"
+    },
+    {
+      "fileName": "1030 - CSP 2019 入门级第一轮",
+      "questionUid": "downloads-1030-q17",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1030 - CSP 2019 入门级第一轮",
+      "questionUid": "downloads-1030-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1030 - CSP 2019 入门级第一轮",
+      "questionUid": "downloads-1030-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1035 - CSP 2020 提高级第一轮",
+      "questionUid": "downloads-1035-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1044 - CSP 2024 提高级第一轮",
+      "questionUid": "downloads-1044-q20",
+      "error": "后端未返回可用答案: downloads-1044-q20"
+    },
+    {
+      "fileName": "1040 - CSP 2022 提高级第一轮",
+      "questionUid": "downloads-1040-q20",
+      "error": "后端未返回可用答案: downloads-1040-q20"
+    },
+    {
+      "fileName": "1116 - 2024 北京市海淀区信息学竞赛（初赛）试题",
+      "questionUid": "downloads-1116-q24",
+      "error": "timeout of 120000ms exceeded"
+    }
+  ]
+}

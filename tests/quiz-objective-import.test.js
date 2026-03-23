@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   parsePaperMeta,
   parseObjectiveConfig,
-  parseObjectiveQuestions
+  parseObjectiveQuestions,
+  parseObjectiveSolutions
 } from '../server/utils/gesp/objectiveImport.js'
 
 test('parseObjectiveConfig keeps objective answers by question number', () => {
@@ -70,4 +71,38 @@ test('parsePaperMeta supports variant GESP paper titles', () => {
     paperUid: 'gesp-2024-12-cpp-1',
     levelTag: 'gesp1'
   })
+})
+
+test('parseObjectiveSolutions extracts explanation blocks from solution markdown', () => {
+  const markdown = `# 题目与解析
+
+1), 下列选项中正确的是（）。 {{ select(1) }}
+
+- A. 1
+- B. 2
+- C. 3
+- D. 4
+
+> **答案**: C
+> **解析**: 因为这是示例解析的第一行。
+> 第二行会继续保留。
+
+---
+
+2), 判断题示例。 {{ select(2) }}
+
+- true
+- false
+
+> **答案**: B
+> **解析**: 判断题也要能提取解析。
+`
+
+  const explanations = parseObjectiveSolutions(markdown)
+
+  assert.equal(explanations[1].answer, 'C')
+  assert.equal(explanations[1].explanation, '因为这是示例解析的第一行。\n第二行会继续保留。')
+  assert.equal(explanations[1].explanationText, '因为这是示例解析的第一行。 第二行会继续保留。')
+  assert.equal(explanations[2].answer, 'B')
+  assert.equal(explanations[2].explanation, '判断题也要能提取解析。')
 })

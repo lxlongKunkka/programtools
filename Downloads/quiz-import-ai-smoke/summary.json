@@ -1,0 +1,26 @@
+{
+  "papers": 56,
+  "resolvedPapers": 0,
+  "questions": 3,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 0,
+  "unresolvedQuestions": 3,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1001 - NOIP 2007 普及组初赛试题",
+      "questionUid": "downloads-1001-q3",
+      "error": "Request failed with status code 500"
+    },
+    {
+      "fileName": "1001 - NOIP 2007 普及组初赛试题",
+      "questionUid": "downloads-1001-q2",
+      "error": "Request failed with status code 500"
+    },
+    {
+      "fileName": "1001 - NOIP 2007 普及组初赛试题",
+      "questionUid": "downloads-1001-q1",
+      "error": "Request failed with status code 500"
+    }
+  ]
+}

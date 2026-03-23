@@ -1,0 +1,126 @@
+{
+  "papers": 14,
+  "resolvedPapers": 14,
+  "questions": 273,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 250,
+  "unresolvedQuestions": 23,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1004 - NOIP 2008 提高组初赛试题",
+      "questionUid": "downloads-1004-q20",
+      "error": "后端未返回可用答案: downloads-1004-q20"
+    },
+    {
+      "fileName": "1004 - NOIP 2008 提高组初赛试题",
+      "questionUid": "downloads-1004-q11",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1004 - NOIP 2008 提高组初赛试题",
+      "questionUid": "downloads-1004-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q12",
+      "error": "后端未返回可用答案: downloads-1012-q12"
+    },
+    {
+      "fileName": "1008 - NOIP 2010 提高组初赛试题",
+      "questionUid": "downloads-1008-q11",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1008 - NOIP 2010 提高组初赛试题",
+      "questionUid": "downloads-1008-q13",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1008 - NOIP 2010 提高组初赛试题",
+      "questionUid": "downloads-1008-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q16",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q17",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q20",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q17",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1020 - NOIP 2016 提高组初赛试题",
+      "questionUid": "downloads-1020-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1029 - NOIP 2018 提高组初赛试题",
+      "questionUid": "downloads-1029-q11",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1029 - NOIP 2018 提高组初赛试题",
+      "questionUid": "downloads-1029-q13",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1029 - NOIP 2018 提高组初赛试题",
+      "questionUid": "downloads-1029-q15",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1034 - CSP 2020 入门级第一轮",
+      "questionUid": "downloads-1034-q16",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1034 - CSP 2020 入门级第一轮",
+      "questionUid": "downloads-1034-q18",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1034 - CSP 2020 入门级第一轮",
+      "questionUid": "downloads-1034-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1039 - CSP 2022 入门级第一轮",
+      "questionUid": "downloads-1039-q16",
+      "error": "后端未返回可用答案: downloads-1039-q16"
+    },
+    {
+      "fileName": "1039 - CSP 2022 入门级第一轮",
+      "questionUid": "downloads-1039-q19",
+      "error": "timeout of 120000ms exceeded"
+    },
+    {
+      "fileName": "1120 - CSP 2025 提高级第一轮",
+      "questionUid": "downloads-1120-q3",
+      "error": "timeout of 120000ms exceeded"
+    }
+  ]
+}

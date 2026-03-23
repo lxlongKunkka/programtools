@@ -1,17 +1,19 @@
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js'
 import QuizQuestion from '../models/QuizQuestion.js'
 import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
 import QuizFavoriteItem from '../models/QuizFavoriteItem.js'
 import QuizWrongbookItem from '../models/QuizWrongbookItem.js'
+import QuizQuestionIssue, { ISSUE_TYPES } from '../models/QuizQuestionIssue.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
 import { KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
-import { pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
+import { buildRecommendationReason, pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
 
 const router = express.Router()
+const GUEST_DAILY_LIMIT = 5
 
 function getTodayDate() {
   const now = new Date()
@@ -67,10 +69,81 @@ function sanitizeQuestion(question) {
   }
 }
 
+function buildStemPreview(value, maxLength = 180) {
+  const text = String(value || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/[#>*_\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!text) return ''
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
+}
+
+function normalizeIssueType(value) {
+  const issueType = String(value || '').trim()
+  return ISSUE_TYPES.includes(issueType) ? issueType : 'other'
+}
+
+function sanitizeIssueState(issue) {
+  if (!issue) {
+    return {
+      reported: false,
+      status: '',
+      issueType: '',
+      reportedAt: null,
+      updatedAt: null
+    }
+  }
+
+  return {
+    reported: true,
+    status: issue.status || 'pending',
+    issueType: issue.issueType || 'other',
+    reportedAt: issue.reportedAt || issue.createdAt || null,
+    updatedAt: issue.updatedAt || null
+  }
+}
+
 function normalizeSubmittedAnswer(answer, type) {
   const text = String(answer || '').trim()
   if (type === 'judge') return text.toLowerCase()
   return text.toUpperCase()
+}
+
+function parseQuestionUidList(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => String(item || '').trim()).filter(Boolean))]
+  }
+
+  if (typeof value === 'string') {
+    return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))]
+  }
+
+  return []
+}
+
+function buildGuestProgressState(input = {}) {
+  const questionUids = parseQuestionUidList(input.questionUids)
+  const skippedQuestionUids = parseQuestionUidList(input.skippedQuestionUids)
+  const answeredCountValue = Number(input.answeredCount)
+  const correctCountValue = Number(input.correctCount)
+  const answeredCount = Number.isFinite(answeredCountValue)
+    ? Math.max(questionUids.length, Math.min(Math.max(Math.floor(answeredCountValue), 0), GUEST_DAILY_LIMIT))
+    : questionUids.length
+  const correctCount = Number.isFinite(correctCountValue)
+    ? Math.min(Math.max(Math.floor(correctCountValue), 0), answeredCount)
+    : 0
+
+  return {
+    answeredCount,
+    correctCount,
+    streak: 0,
+    completed: answeredCount >= GUEST_DAILY_LIMIT,
+    questionUids,
+    skippedQuestionUids
+  }
 }
 
 function formatLevelLabel(levelTag) {
@@ -187,20 +260,25 @@ async function buildTagSummaryMap(userId, tags = []) {
   return new Map(summaries.map((item) => [item._id, item]))
 }
 
-async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUids = []) {
+async function getDailyQuestionSelection(userId, filterInput, today, answeredQuestionUids = []) {
   const filter = buildQuestionFilter(filterInput)
   const questions = (await QuizQuestion.find(filter)
     .sort({ sourceDocId: 1, paperQuestionNo: 1 })
     .lean())
     .filter((question) => !questionLooksMalformed(question))
 
-  if (questions.length === 0) return null
+  if (questions.length === 0) {
+    return {
+      question: null,
+      recommendationReason: null
+    }
+  }
 
   const attemptSummaryMap = await buildAttemptSummaryMap(userId, questions.map((question) => question.questionUid))
   const candidateTags = [...new Set(questions.flatMap((question) => Array.isArray(question.tags) ? question.tags : []))]
   const tagSummaryMap = await buildTagSummaryMap(userId, candidateTags)
 
-  return pickQuestionByMemoryCurve(questions, {
+  const question = pickQuestionByMemoryCurve(questions, {
     today,
     subject: filter.subject || '',
     levelTag: filter.levelTag || '',
@@ -210,6 +288,22 @@ async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUid
     attemptSummaryMap,
     tagSummaryMap
   })
+
+  return {
+    question,
+    recommendationReason: question
+      ? buildRecommendationReason(question, {
+        today,
+        attemptSummary: attemptSummaryMap.get(question.questionUid) || null,
+        tagSummaryMap
+      })
+      : null
+  }
+}
+
+async function pickDailyQuestion(userId, filterInput, today, answeredQuestionUids = []) {
+  const selection = await getDailyQuestionSelection(userId, filterInput, today, answeredQuestionUids)
+  return selection.question
 }
 
 async function getTodayProgress(userId, today) {
@@ -348,9 +442,16 @@ async function getQuestionFavoriteMap(userId, questionUids = []) {
   return new Map(items.map((item) => [item.questionUid, true]))
 }
 
-async function sanitizeQuestionWithUserState(userId, question) {
+async function sanitizeQuestionWithUserState(userId, question, extra = {}) {
   const payload = sanitizeQuestion(question)
   if (!payload?.questionUid) return payload
+  if (!userId) {
+    return {
+      ...payload,
+      isFavorite: false,
+      recommendationReason: extra.recommendationReason || null
+    }
+  }
   const favorite = await QuizFavoriteItem.exists({
     userId,
     questionUid: payload.questionUid,
@@ -358,7 +459,8 @@ async function sanitizeQuestionWithUserState(userId, question) {
   })
   return {
     ...payload,
-    isFavorite: !!favorite
+    isFavorite: !!favorite,
+    recommendationReason: extra.recommendationReason || null
   }
 }
 
@@ -428,12 +530,16 @@ async function enrichLeaderboard(entries) {
       correctCount: entry.correctCount || 0,
       streak: entry.streak || 0,
       completed: !!entry.completed,
-      date: entry.date
+      date: entry.date || '',
+      accuracy: typeof entry.accuracy === 'number' ? entry.accuracy : null,
+      activeDays: typeof entry.activeDays === 'number' ? entry.activeDays : null,
+      firstAnsweredAt: entry.firstAnsweredAt || null,
+      lastAnsweredAt: entry.lastAnsweredAt || null
     }
   })
 }
 
-router.get('/daily/options', authenticateToken, async (req, res) => {
+router.get('/daily/options', optionalAuthenticateToken, async (req, res) => {
   try {
     const baseMatch = { enabled: true }
     const levels = await QuizQuestion.aggregate([
@@ -468,16 +574,53 @@ router.get('/daily/options', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/daily/current', authenticateToken, async (req, res) => {
+router.get('/daily/current', optionalAuthenticateToken, async (req, res) => {
   try {
     const today = getTodayDate()
+    if (!req.user?.id) {
+      const guestProgress = buildGuestProgressState(req.query)
+      if (guestProgress.completed) {
+        return res.json({
+          date: today,
+          guest: true,
+          completed: true,
+          alreadyAnswered: false,
+          progress: guestProgress,
+          question: null
+        })
+      }
+
+      const excludedQuestionUids = [
+        ...guestProgress.questionUids,
+        ...guestProgress.skippedQuestionUids
+      ]
+      const selection = await getDailyQuestionSelection(null, req.query, today, excludedQuestionUids)
+      const question = selection.question
+
+      if (!question && excludedQuestionUids.length === 0) {
+        return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
+      }
+
+      return res.json({
+        date: today,
+        guest: true,
+        completed: guestProgress.completed,
+        alreadyAnswered: false,
+        progress: guestProgress,
+        question: await sanitizeQuestionWithUserState(null, question, {
+          recommendationReason: selection.recommendationReason
+        })
+      })
+    }
+
     const progress = await getTodayProgress(req.user.id, today)
     const skippedQuestionUids = progress?.skippedQuestionUids || []
     const excludedQuestionUids = [
       ...(progress?.questionUids || []),
       ...skippedQuestionUids
     ]
-    const question = await pickDailyQuestion(req.user.id, req.query, today, excludedQuestionUids)
+    const selection = await getDailyQuestionSelection(req.user.id, req.query, today, excludedQuestionUids)
+    const question = selection.question
 
     if (!question && excludedQuestionUids.length === 0) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
@@ -494,14 +637,16 @@ router.get('/daily/current', authenticateToken, async (req, res) => {
         questionUids: progress?.questionUids || [],
         skippedQuestionUids
       },
-      question: await sanitizeQuestionWithUserState(req.user.id, question)
+      question: await sanitizeQuestionWithUserState(req.user.id, question, {
+        recommendationReason: selection.recommendationReason
+      })
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })
 
-router.post('/daily/skip', authenticateToken, async (req, res) => {
+router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
   try {
     const { questionUid, subject, levelTag, tag, type } = req.body || {}
     if (!questionUid) {
@@ -509,6 +654,44 @@ router.post('/daily/skip', authenticateToken, async (req, res) => {
     }
 
     const today = getTodayDate()
+    if (!req.user?.id) {
+      const guestProgress = buildGuestProgressState(req.body)
+      if (guestProgress.completed) {
+        return res.status(403).json({ error: '游客今日 5 题体验已完成，请登录后继续' })
+      }
+
+      const excludedQuestionUids = [
+        ...guestProgress.questionUids,
+        ...guestProgress.skippedQuestionUids
+      ]
+      const assignedQuestion = await pickDailyQuestion(null, { subject, levelTag, tag, type }, today, excludedQuestionUids)
+
+      if (!assignedQuestion) {
+        return res.status(400).json({ error: '当前筛选下已经没有可跳过的题目了' })
+      }
+
+      if (assignedQuestion.questionUid !== questionUid) {
+        return res.status(400).json({ error: '当前题目已变化，请刷新后重试' })
+      }
+
+      const skippedQuestionUids = [...new Set([...guestProgress.skippedQuestionUids, questionUid])]
+      const nextSelection = await getDailyQuestionSelection(
+        null,
+        { subject, levelTag, tag, type },
+        today,
+        [...guestProgress.questionUids, ...skippedQuestionUids]
+      )
+
+      return res.json({
+        success: true,
+        guest: true,
+        skippedQuestionUids,
+        question: await sanitizeQuestionWithUserState(null, nextSelection.question, {
+          recommendationReason: nextSelection.recommendationReason
+        })
+      })
+    }
+
     const existingProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: today }).lean()
     const excludedQuestionUids = [
       ...(existingProgress?.questionUids || []),
@@ -540,7 +723,7 @@ router.post('/daily/skip', authenticateToken, async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean()
 
-    const nextQuestion = await pickDailyQuestion(
+    const nextSelection = await getDailyQuestionSelection(
       req.user.id,
       { subject, levelTag, tag, type },
       today,
@@ -553,14 +736,16 @@ router.post('/daily/skip', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       skippedQuestionUids: updatedProgress?.skippedQuestionUids || [],
-      question: await sanitizeQuestionWithUserState(req.user.id, nextQuestion)
+      question: await sanitizeQuestionWithUserState(req.user.id, nextSelection.question, {
+        recommendationReason: nextSelection.recommendationReason
+      })
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })
 
-router.post('/daily/submit', authenticateToken, async (req, res) => {
+router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
   try {
     const { questionUid, selectedAnswer, costMs = null, subject, levelTag, tag, type } = req.body || {}
 
@@ -569,6 +754,47 @@ router.post('/daily/submit', authenticateToken, async (req, res) => {
     }
 
     const today = getTodayDate()
+    if (!req.user?.id) {
+      const guestProgress = buildGuestProgressState(req.body)
+      if (guestProgress.completed && !guestProgress.questionUids.includes(questionUid)) {
+        return res.status(403).json({ error: '游客今日 5 题体验已完成，请登录后继续' })
+      }
+
+      const question = await QuizQuestion.findOne({ questionUid, enabled: true }).lean()
+
+      if (!question) {
+        return res.status(404).json({ error: '题目不存在' })
+      }
+
+      const normalizedSelectedAnswer = normalizeSubmittedAnswer(selectedAnswer, question.type)
+      const normalizedCorrectAnswer = normalizeSubmittedAnswer(question.answer, question.type)
+      const isCorrect = normalizedSelectedAnswer === normalizedCorrectAnswer
+      const alreadyAnswered = guestProgress.questionUids.includes(questionUid)
+      const questionUids = alreadyAnswered
+        ? guestProgress.questionUids
+        : [...guestProgress.questionUids, questionUid]
+      const answeredCount = Math.min(questionUids.length, GUEST_DAILY_LIMIT)
+      const correctCount = alreadyAnswered
+        ? guestProgress.correctCount
+        : guestProgress.correctCount + (isCorrect ? 1 : 0)
+
+      return res.json({
+        guest: true,
+        alreadyAnswered,
+        correct: isCorrect,
+        correctAnswer: normalizedCorrectAnswer,
+        explanation: question.explanation || '',
+        completed: answeredCount >= GUEST_DAILY_LIMIT,
+        progress: {
+          answeredCount,
+          correctCount,
+          streak: 0,
+          questionUids,
+          skippedQuestionUids: guestProgress.skippedQuestionUids || []
+        }
+      })
+    }
+
     const existingProgress = await QuizDailyProgress.findOne({ userId: req.user.id, date: today })
     const answeredQuestion = await QuizQuestion.findOne({ questionUid }).lean()
     const existingAttempt = await QuizAttempt.findOne({
@@ -843,6 +1069,85 @@ router.post('/favorites/toggle', authenticateToken, async (req, res) => {
   }
 })
 
+router.get('/issues/:questionUid/state', authenticateToken, async (req, res) => {
+  try {
+    const questionUid = String(req.params.questionUid || '').trim()
+    if (!questionUid) {
+      return res.status(400).json({ error: 'questionUid 为必填项' })
+    }
+
+    const issue = await QuizQuestionIssue.findOne({
+      userId: req.user.id,
+      questionUid
+    }).lean()
+
+    res.json({ issue: sanitizeIssueState(issue) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/issues', authenticateToken, async (req, res) => {
+  try {
+    const questionUid = String(req.body?.questionUid || '').trim()
+    const detail = String(req.body?.detail || '').trim()
+    const issueType = normalizeIssueType(req.body?.issueType)
+
+    if (!questionUid) {
+      return res.status(400).json({ error: 'questionUid 为必填项' })
+    }
+
+    if (detail.length > 300) {
+      return res.status(400).json({ error: '补充说明不能超过 300 个字符' })
+    }
+
+    const question = await QuizQuestion.findOne({ questionUid }).lean()
+    if (!question) {
+      return res.status(404).json({ error: '题目不存在' })
+    }
+
+    const now = new Date()
+    const issue = await QuizQuestionIssue.findOneAndUpdate(
+      { userId: req.user.id, questionUid },
+      {
+        $set: {
+          reporterName: req.user.username || '',
+          questionUid,
+          paperUid: question.paperUid || '',
+          source: question.source || 'gesp',
+          sourceTitle: question.sourceTitle || '',
+          sourceDocId: question.sourceDocId ?? null,
+          paperQuestionNo: question.paperQuestionNo ?? null,
+          subject: question.subject || 'C++',
+          levelTag: question.levelTag || '',
+          tags: question.tags || [],
+          type: question.type || 'single',
+          stemPreview: buildStemPreview(question.stemText || question.stem),
+          issueType,
+          detail,
+          status: 'pending',
+          adminNote: '',
+          reportedAt: now,
+          handledAt: null,
+          handledBy: null,
+          handledByName: ''
+        },
+        $setOnInsert: {
+          userId: req.user.id
+        }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean()
+
+    res.json({
+      success: true,
+      issue: sanitizeIssueState(issue)
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 router.post('/favorite/submit', authenticateToken, async (req, res) => {
   try {
     const { questionUid, selectedAnswer, costMs = null } = req.body || {}
@@ -977,6 +1282,58 @@ router.post('/wrongbook/remove', authenticateToken, async (req, res) => {
 
 router.get('/daily/leaderboard', authenticateToken, async (req, res) => {
   try {
+    const scope = String(req.query.scope || 'today').trim().toLowerCase()
+
+    if (scope === 'overall') {
+      const entries = await QuizAttempt.aggregate([
+        {
+          $group: {
+            _id: '$userId',
+            answeredCount: { $sum: 1 },
+            correctCount: {
+              $sum: {
+                $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+              }
+            },
+            activeDates: { $addToSet: '$sessionDate' },
+            firstAnsweredAt: { $min: '$answeredAt' },
+            lastAnsweredAt: { $max: '$answeredAt' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: '$_id',
+            answeredCount: 1,
+            correctCount: 1,
+            activeDays: {
+              $size: {
+                $filter: {
+                  input: '$activeDates',
+                  as: 'date',
+                  cond: { $and: [{ $ne: ['$$date', null] }, { $ne: ['$$date', ''] }] }
+                }
+              }
+            },
+            accuracy: {
+              $cond: [
+                { $gt: ['$answeredCount', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$correctCount', '$answeredCount'] }, 100] }, 1] },
+                0
+              ]
+            },
+            firstAnsweredAt: 1,
+            lastAnsweredAt: 1
+          }
+        },
+        { $sort: { answeredCount: -1, correctCount: -1, accuracy: -1, firstAnsweredAt: 1, userId: 1 } },
+        { $limit: 20 }
+      ])
+
+      const leaderboard = await enrichLeaderboard(entries)
+      return res.json({ scope: 'overall', leaderboard })
+    }
+
     const date = typeof req.query.date === 'string' && req.query.date.trim()
       ? req.query.date.trim()
       : getTodayDate()
@@ -987,7 +1344,7 @@ router.get('/daily/leaderboard', authenticateToken, async (req, res) => {
       .lean()
 
     const leaderboard = await enrichLeaderboard(entries)
-    res.json({ date, leaderboard })
+    res.json({ scope: 'today', date, leaderboard })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

@@ -1,0 +1,191 @@
+{
+  "papers": 56,
+  "resolvedPapers": 56,
+  "questions": 1103,
+  "directAnswerCount": 0,
+  "resolvedQuestions": 1067,
+  "unresolvedQuestions": 36,
+  "aiFillMissing": true,
+  "failures": [
+    {
+      "fileName": "1035 - CSP 2020 提高级第一轮",
+      "questionUid": "downloads-1035-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1044 - CSP 2024 提高级第一轮",
+      "questionUid": "downloads-1044-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1002 - NOIP 2007 提高组初赛试题",
+      "questionUid": "downloads-1002-q11",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1002 - NOIP 2007 提高组初赛试题",
+      "questionUid": "downloads-1002-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1006 - NOIP 2009 提高组初赛试题",
+      "questionUid": "downloads-1006-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1010 - NOIP 2011 提高组初赛试题",
+      "questionUid": "downloads-1010-q12",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1018 - NOIP 2015 提高组初赛试题",
+      "questionUid": "downloads-1018-q16",
+      "error": "?????????: downloads-1018-q16"
+    },
+    {
+      "fileName": "1010 - NOIP 2011 提高组初赛试题",
+      "questionUid": "downloads-1010-q14",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1022 - NOIP 2017 提高组初赛试题",
+      "questionUid": "downloads-1022-q16",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1022 - NOIP 2017 提高组初赛试题",
+      "questionUid": "downloads-1022-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1031 - CSP 2019 提高级第一轮",
+      "questionUid": "downloads-1031-q16",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1031 - CSP 2019 提高级第一轮",
+      "questionUid": "downloads-1031-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1036 - CSP 2021 入门级第一轮",
+      "questionUid": "downloads-1036-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1033 - CSP 2020 第一轮（初赛）模拟",
+      "questionUid": "downloads-1033-q16",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1038 - SCP 2021 第一轮（初赛）模拟",
+      "questionUid": "downloads-1038-q18",
+      "error": "?????????: downloads-1038-q18"
+    },
+    {
+      "fileName": "1038 - SCP 2021 第一轮（初赛）模拟",
+      "questionUid": "downloads-1038-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1042 - CSP 2023 提高级第一轮",
+      "questionUid": "downloads-1042-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1042 - CSP 2023 提高级第一轮",
+      "questionUid": "downloads-1042-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1004 - NOIP 2008 提高组初赛试题",
+      "questionUid": "downloads-1004-q11",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1004 - NOIP 2008 提高组初赛试题",
+      "questionUid": "downloads-1004-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1008 - NOIP 2010 提高组初赛试题",
+      "questionUid": "downloads-1008-q13",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1008 - NOIP 2010 提高组初赛试题",
+      "questionUid": "downloads-1008-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q16",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q17",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1012 - NOIP 2012 提高组初赛试题",
+      "questionUid": "downloads-1012-q20",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q18",
+      "error": "?????????: downloads-1016-q18"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q17",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1016 - NOIP 2014 提高组初赛试题",
+      "questionUid": "downloads-1016-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1020 - NOIP 2016 提高组初赛试题",
+      "questionUid": "downloads-1020-q18",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1029 - NOIP 2018 提高组初赛试题",
+      "questionUid": "downloads-1029-q13",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1029 - NOIP 2018 提高组初赛试题",
+      "questionUid": "downloads-1029-q15",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1034 - CSP 2020 入门级第一轮",
+      "questionUid": "downloads-1034-q18",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1034 - CSP 2020 入门级第一轮",
+      "questionUid": "downloads-1034-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1039 - CSP 2022 入门级第一轮",
+      "questionUid": "downloads-1039-q16",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1039 - CSP 2022 入门级第一轮",
+      "questionUid": "downloads-1039-q19",
+      "error": "Generation failed"
+    },
+    {
+      "fileName": "1120 - CSP 2025 提高级第一轮",
+      "questionUid": "downloads-1120-q3",
+      "error": "Generation failed"
+    }
+  ]
+}

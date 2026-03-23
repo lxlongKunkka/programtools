@@ -1262,7 +1262,7 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
     ]
 
     const payload = {
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.1,
       max_tokens: 32767
@@ -1383,7 +1383,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
     ]
 
     const payload = {
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.3,
       max_tokens: 32767
@@ -1515,7 +1515,7 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
     ]
 
     const payload = {
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.1,
       max_tokens: 1000
@@ -1590,7 +1590,7 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
     ]
 
     const payload = {
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.3,
       max_tokens: 1000
@@ -2454,7 +2454,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
     console.log(`[TopicPlan] Generating with mode=${mode}, topic=${topic}`)
 
     const payload = {
-      model: model || 'gemini-2.5-flash', // Switch default to gemini-2.5-flash
+      model: model || 'gemini-3-flash-preview',
       messages,
       temperature: 0.7,
       max_tokens: 4000
@@ -3121,7 +3121,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
           ]
 
           const payload = {
-            model: model || 'gemini-2.5-flash',
+            model: model || 'gemini-3-flash-preview',
             messages,
             temperature: 0.7,
             max_tokens: 4000
@@ -3270,7 +3270,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // Fix: Pass 'C++' as language, and append content separately
     const solutionPrompt = getSolutionPrompt('C++') + `\n\n题目内容：\n${content}`
     const solutionRes = await axios.post(YUN_API_URL, {
-      model: model || 'gemini-2.5-flash', // Use user selected model or default to fast model
+      model: model || 'gemini-3-flash-preview',
       messages: [{ role: 'user', content: solutionPrompt }],
       temperature: 0.7
     }, {
@@ -3329,7 +3329,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // 2. Generate HTML Report
     const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
     const reportRes = await axios.post(YUN_API_URL, {
-      model: model || 'gemini-2.5-flash',
+      model: model || 'gemini-3-flash-preview',
       messages: [{ role: 'user', content: reportPrompt }],
       temperature: 0.7
     }, {

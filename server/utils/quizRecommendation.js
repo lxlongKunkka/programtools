@@ -139,3 +139,49 @@ export function pickQuestionByMemoryCurve(questions, {
 
   return rankedQuestions[0]?.question || null
 }
+
+export function buildRecommendationReason(question, {
+  today,
+  attemptSummary = null,
+  tagSummaryMap = new Map()
+} = {}) {
+  const tags = Array.isArray(question?.tags) ? question.tags.filter(Boolean) : []
+  const weakTags = tags
+    .map((tag) => ({ tag, score: computeKnowledgeWeaknessScore([tag], tagSummaryMap, { today }) }))
+    .filter((item) => item.score > 12)
+    .sort((left, right) => right.score - left.score)
+
+  if (attemptSummary?.lastIsCorrect === false) {
+    return {
+      code: 'recently-wrong',
+      text: '这道题你最近做错过，系统优先安排回顾。'
+    }
+  }
+
+  if (weakTags.length > 0) {
+    return {
+      code: 'weak-knowledge',
+      text: `你在“${weakTags[0].tag}”这个知识点上还不稳定，系统优先补这一类题。`
+    }
+  }
+
+  if (!attemptSummary) {
+    return {
+      code: 'new-question',
+      text: '这是当前筛选下适合插入练习的新题。'
+    }
+  }
+
+  const daysSinceLastCorrect = getDiffDays(attemptSummary.lastCorrectAt, getTodayAnchor(today))
+  if (Number.isFinite(daysSinceLastCorrect) && daysSinceLastCorrect >= 3) {
+    return {
+      code: 'review-due',
+      text: '这道题距离上次做对已经过了一段时间，到了复习窗口。'
+    }
+  }
+
+  return {
+    code: 'smart-mix',
+    text: '系统结合你的历史正确率和知识点掌握情况做了综合推荐。'
+  }
+}

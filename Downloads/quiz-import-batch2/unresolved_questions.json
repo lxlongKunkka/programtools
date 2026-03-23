@@ -1,0 +1,1528 @@
+[
+  {
+    "questionUid": "downloads-1002-q11",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "设A=B=true，C=D=false，以下逻辑运算表达式值为真的有（ ）",
+    "stemText": "设A=B=true，C=D=false，以下逻辑运算表达式值为真的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "(¬ A∧B)∨(C∧D∨A)",
+        "textPlain": "(¬ A∧B)∨(C∧D∨A)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "¬ (((A∧B)∨C)∧D)",
+        "textPlain": "¬ (((A∧B)∨C)∧D)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "A∧(B∨C∨D)∨D",
+        "textPlain": "A∧(B∨C∨D)∨D",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(A∧(D∨C)) ∧B",
+        "textPlain": "(A∧(D∨C)) ∧B",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q16",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "在下列各软件中，属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "stemText": "在下列各软件中，属于 NOIP 竞赛（复赛）推荐使用的语言环境有（ ）编者注：由于试题为 2007 年的试题，请根据 2007 年的实际情况作答。",
+    "options": [
+      {
+        "key": "A",
+        "text": "gcc",
+        "textPlain": "gcc",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "g++",
+        "textPlain": "g++",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Turbo C",
+        "textPlain": "Turbo C",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "free pascal",
+        "textPlain": "free pascal",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1002-q19",
+    "paperUid": "downloads-1002",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1002,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "在下列关于算法复杂性的说法中，正确的有（ ）",
+    "stemText": "在下列关于算法复杂性的说法中，正确的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "算法的时间复杂度，是指它在某台计算机上具体实现时的运行时间",
+        "textPlain": "算法的时间复杂度，是指它在某台计算机上具体实现时的运行时间",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "算法的时间复杂度，是指对于该算法的一种或几种主要的运算，运算的次数与问题的规模之间的函数关系",
+        "textPlain": "算法的时间复杂度，是指对于该算法的一种或几种主要的运算，运算的次数与问题的规模之间的函数关系",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "一个问题如果是 NPC 类的，就意味着在解决该问题时，不存在一个具有多项式时间复杂度的算法.但这一点还没有得到理论上的证实，也没有被否定",
+        "textPlain": "一个问题如果是 NPC 类的，就意味着在解决该问题时，不存在一个具有多项式时间复杂度的算法.但这一点还没有得到理论上的证实，也没有被否定",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "一个问题如果是 NP 类的，与 C 有相同的结论",
+        "textPlain": "一个问题如果是 NP 类的，与 C 有相同的结论",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1002 - NOIP 2007 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1002/training"
+  },
+  {
+    "questionUid": "downloads-1006-q19",
+    "paperUid": "downloads-1006",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1006,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "排序算法是稳定的意思是关键码相同的记录排序前后相对位置不发生改变，下列哪些排序算法是稳定的：",
+    "stemText": "排序算法是稳定的意思是关键码相同的记录排序前后相对位置不发生改变，下列哪些排序算法是稳定的：",
+    "options": [
+      {
+        "key": "A",
+        "text": "插入排序",
+        "textPlain": "插入排序",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "基数排序",
+        "textPlain": "基数排序",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "归并排序",
+        "textPlain": "归并排序",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "冒泡排序",
+        "textPlain": "冒泡排序",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1006 - NOIP 2009 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1006/training"
+  },
+  {
+    "questionUid": "downloads-1010-q12",
+    "paperUid": "downloads-1010",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1010,
+    "paperQuestionNo": 12,
+    "type": "single",
+    "stem": "在布尔逻辑中，逻辑“或”的性质有（ ）",
+    "stemText": "在布尔逻辑中，逻辑“或”的性质有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "交换律： 𝑃 ∨ 𝑄 = 𝑄 ∨ 𝑃 P∨Q=Q∨P",
+        "textPlain": "交换律： 𝑃 ∨ 𝑄 = 𝑄 ∨ 𝑃 P∨Q=Q∨P",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "结合律： 𝑃 ∨ ( 𝑄 ∨ 𝑅 ) = ( 𝑃 ∨ 𝑄 ) ∨ 𝑅 P∨(Q∨R)=(P∨Q)∨R",
+        "textPlain": "结合律： 𝑃 ∨ ( 𝑄 ∨ 𝑅 ) = ( 𝑃 ∨ 𝑄 ) ∨ 𝑅 P∨(Q∨R)=(P∨Q)∨R",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "幂等律： 𝑃 ∨ 𝑃 = 𝑃 P∨P=P",
+        "textPlain": "幂等律： 𝑃 ∨ 𝑃 = 𝑃 P∨P=P",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "有界律： 𝑃 ∨ 1 = 1 P∨1=1（1 1 表示逻辑真）",
+        "textPlain": "有界律： 𝑃 ∨ 1 = 1 P∨1=1（1 1 表示逻辑真）",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1010 - NOIP 2011 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1010/training"
+  },
+  {
+    "questionUid": "downloads-1010-q14",
+    "paperUid": "downloads-1010",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1010,
+    "paperQuestionNo": 14,
+    "type": "single",
+    "stem": "汇编语言（ ）",
+    "stemText": "汇编语言（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "是一种与具体硬件无关的程序设计语言",
+        "textPlain": "是一种与具体硬件无关的程序设计语言",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "在编写复杂程序时，相对于高级语言而言代码量大，且不易调试",
+        "textPlain": "在编写复杂程序时，相对于高级语言而言代码量大，且不易调试",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "可以直接访问寄存器、内存单元、I/O 端口",
+        "textPlain": "可以直接访问寄存器、内存单元、I/O 端口",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "随着高级语言的诞生，如今已被完全淘汰，不再使用",
+        "textPlain": "随着高级语言的诞生，如今已被完全淘汰，不再使用",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1010 - NOIP 2011 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1010/training"
+  },
+  {
+    "questionUid": "downloads-1014-q17",
+    "paperUid": "downloads-1014",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1014,
+    "paperQuestionNo": 17,
+    "type": "single",
+    "stem": "（ ）的平均时间复杂度为O(nlogn)，其中 n 是待排序的元素个数。",
+    "stemText": "（ ）的平均时间复杂度为O(nlogn)，其中 n 是待排序的元素个数。",
+    "options": [
+      {
+        "key": "A",
+        "text": "快速排序",
+        "textPlain": "快速排序",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "插入排序",
+        "textPlain": "插入排序",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "冒泡排序",
+        "textPlain": "冒泡排序",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "归并排序",
+        "textPlain": "归并排序",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1014 - NOIP 2013 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1014/training"
+  },
+  {
+    "questionUid": "downloads-1018-q16",
+    "paperUid": "downloads-1018",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1018,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "以下属于操作系统的有（ ）",
+    "stemText": "以下属于操作系统的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "Windows XP",
+        "textPlain": "Windows XP",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "UNIX",
+        "textPlain": "UNIX",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Linux",
+        "textPlain": "Linux",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "Mac OS",
+        "textPlain": "Mac OS",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1018 - NOIP 2015 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1018/training"
+  },
+  {
+    "questionUid": "downloads-1022-q16",
+    "paperUid": "downloads-1022",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1022,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "以下排序算法在最坏情况下时间复杂度最优的有（ ）",
+    "stemText": "以下排序算法在最坏情况下时间复杂度最优的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "冒泡排序",
+        "textPlain": "冒泡排序",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "快速排序",
+        "textPlain": "快速排序",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "归并排序",
+        "textPlain": "归并排序",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "堆排",
+        "textPlain": "堆排",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1022 - NOIP 2017 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1022/training"
+  },
+  {
+    "questionUid": "downloads-1022-q19",
+    "paperUid": "downloads-1022",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1022,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "以下是面向对象的高级语言的有（ ）",
+    "stemText": "以下是面向对象的高级语言的有（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "汇编语言",
+        "textPlain": "汇编语言",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "C++",
+        "textPlain": "C++",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "Fortran",
+        "textPlain": "Fortran",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "Java",
+        "textPlain": "Java",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "noip",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1022 - NOIP 2017 提高组初赛试题",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1022/training"
+  },
+  {
+    "questionUid": "downloads-1031-q9",
+    "paperUid": "downloads-1031",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1031,
+    "paperQuestionNo": 9,
+    "type": "single",
+    "stem": "一些数字可以颠倒过来看，例如0,1,8颠倒过来还是本身， 6 颠倒过来是9,9颠倒过来看还是 6 ,其他数字颠倒过来都不构成数字。类似的，一些多位数也可以颠倒过来看，比如 106 颠倒过来是 901。假设某个城市的车牌只有 5 位数字，每一位都可以取 0 到 9。请问这个城市有多少个车牌倒过来恰好还是原来的车牌，并且车牌上的 5 位数能被 3 整除？（ ）",
+    "stemText": "一些数字可以颠倒过来看，例如0,1,8颠倒过来还是本身， 6 颠倒过来是9,9颠倒过来看还是 6 ,其他数字颠倒过来都不构成数字。类似的，一些多位数也可以颠倒过来看，比如 106 颠倒过来是 901。假设某个城市的车牌只有 5 位数字，每一位都可以取 0 到 9。请问这个城市有多少个车牌倒过来恰好还是原来的车牌，并且车牌上的 5 位数能被 3 整除？（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "40",
+        "textPlain": "40",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "25",
+        "textPlain": "25",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "30",
+        "textPlain": "30",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "20",
+        "textPlain": "20",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1031 - CSP 2019 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1031/training"
+  },
+  {
+    "questionUid": "downloads-1031-q16",
+    "paperUid": "downloads-1031",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1031,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "二、阅读程序（程序输入不超过数组或字符串定义的范围；判断题正确填√错误填 X；除特殊说明外，判断题 1.5 分，选择题 4 分，共计 40 分） - 判断题\n1. （1 分）第 16 行输出 ans 时， ans 的值一定大于 i。（ ）\n2. （1 分）程序输出的 ans 小于等于 n。（ ）\n3. 若将第 12 行的 < 改为 !=，程序输出的结果不会改变。（ ）\n4. 当程序执行到第 16 行时，若 ans−i>2，则 a[i+1]≤a[i]。（ ）\n- 选择题\n1. （3 分）若输入的 a 数组是一个严格单调递增的数列, 此程序的时间复杂度（ ）\n2. 最坏情况下，此程序的时间复杂度是（ ）",
+    "stemText": "二、阅读程序（程序输入不超过数组或字符串定义的范围；判断题正确填√错误填 X；除特殊说明外，判断题 1.5 分，选择题 4 分，共计 40 分） - 判断题 1. （1 分）第 16 行输出 ans 时， ans 的值一定大于 i。（ ） 2. （1 分）程序输出的 ans 小于等于 n。（ ） 3. 若将第 12 行的 < 改为 !=，程序输出的结果不会改变。（ ） 4. 当程序执行到第 16 行时，若 ans−i>2，则 a[i+1]≤a[i]。（ ） - 选择题 1. （3 分）若输入的 a 数组是一个严格单调递增的数列, 此程序的时间复杂度（ ） 2. 最坏情况下，此程序的时间复杂度是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "𝑂 ( log ⁡ 𝑛 ) O(logn)",
+        "textPlain": "𝑂 ( log ⁡ 𝑛 ) O(logn)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "𝑂 ( 𝑛 2 ) O(n 2 )",
+        "textPlain": "𝑂 ( 𝑛 2 ) O(n 2 )",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "textPlain": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "𝑂 ( 𝑛 ) O(n)",
+        "textPlain": "𝑂 ( 𝑛 ) O(n)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "𝑂 ( 𝑛 2 ) O(n 2 )",
+        "textPlain": "𝑂 ( 𝑛 2 ) O(n 2 )",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "𝑂 ( log ⁡ 𝑛 ) O(logn)",
+        "textPlain": "𝑂 ( log ⁡ 𝑛 ) O(logn)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "𝑂 ( 𝑛 ) O(n)",
+        "textPlain": "𝑂 ( 𝑛 ) O(n)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "textPlain": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1031 - CSP 2019 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1031/training"
+  },
+  {
+    "questionUid": "downloads-1031-q19",
+    "paperUid": "downloads-1031",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1031,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "三、完善程序（单选题，每小题\n3\n分，共计\n30\n分）\n1. （匠人的自我修养）\n一个匠人决定要学习\nn\n个新技术。要想成功学习一个新技术，他不仅要拥有一定的经验值，而且还必须要先学会若干个相关的技术。学会一个新技术之后，他的经验值会增加一个对应的值。给定每个技术的学习条件和习得后获得的经验值，给定他已有的经验值，请问他最多能学会多少个新技术。\n输入第一行有两个数，分别为新技术个数\nn(l≤n≤103)，以及己有经验值（≤107。\n接下来\nn\n行。第\ni\n行的两个正整数，分别表示学习第\ni\n个技术所需的最低经验值（≤107，以及学会第\ni\n个技术后可获得的经验值（≤107。\n接下来\nn\n行。第\ni\n行的第一个数\nmi​\n（0≤mi​<n，表示第\ni\n个技术的相关技术数量。紧跟着\nm\n个两两不同的数，表示第\ni\n个技术的相关技术编号。\n输出最多能学会的新技术个数。\n下面的程序以\nO(n2)\n的时间复杂度完成这个问题，试补全程序。 1. ①处应填（ ）\n2. ②处应填（ ）\n3. ③处应填（ ）\n4. ④处应填（ ）\n5. ⑤处应填（ ）",
+    "stemText": "三、完善程序（单选题，每小题 3 分，共计 30 分） 1. （匠人的自我修养） 一个匠人决定要学习 n 个新技术。要想成功学习一个新技术，他不仅要拥有一定的经验值，而且还必须要先学会若干个相关的技术。学会一个新技术之后，他的经验值会增加一个对应的值。给定每个技术的学习条件和习得后获得的经验值，给定他已有的经验值，请问他最多能学会多少个新技术。 输入第一行有两个数，分别为新技术个数 n(l≤n≤103)，以及己有经验值（≤107。 接下来 n 行。第 i 行的两个正整数，分别表示学习第 i 个技术所需的最低经验值（≤107，以及学会第 i 个技术后可获得的经验值（≤107。 接下来 n 行。第 i 行的第一个数 mi​ （0≤mi​<n，表示第 i 个技术的相关技术数量。紧跟着 m 个两两不同的数，表示第 i 个技术的相关技术编号。 输出最多能学会的新技术个数。 下面的程序以 O(n2) 的时间复杂度完成这个问题，试补全程序。 1. ①处应填（ ） 2. ②处应填（ ） 3. ③处应填（ ） 4. ④处应填（ ） 5. ⑤处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "unlock[i] <= 0",
+        "textPlain": "unlock[i] <= 0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "unlock[i] >= 0",
+        "textPlain": "unlock[i] >= 0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "unlock[i] == 0",
+        "textPlain": "unlock[i] == 0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "unlock[i] == -1",
+        "textPlain": "unlock[i] == -1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "threshold[i] > points",
+        "textPlain": "threshold[i] > points",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "threshold[i] >= points",
+        "textPlain": "threshold[i] >= points",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "points > threshold[i]",
+        "textPlain": "points > threshold[i]",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "points >= threshold[i]",
+        "textPlain": "points >= threshold[i]",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "target = -1",
+        "textPlain": "target = -1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "cnt[target]",
+        "textPlain": "cnt[target]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "bonus[target] = 0",
+        "textPlain": "bonus[target] = 0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "points += bonus[target]",
+        "textPlain": "points += bonus[target]",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "cnt[child[target][i]] -= 1",
+        "textPlain": "cnt[child[target][i]] -= 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "cnt[child[target][i]] = 0",
+        "textPlain": "cnt[child[target][i]] = 0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "unlock[child[target][i]] -= 1",
+        "textPlain": "unlock[child[target][i]] -= 1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "unlock[child[target][i]] = 0",
+        "textPlain": "unlock[child[target][i]] = 0",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "unlock[i] = cnt[i]",
+        "textPlain": "unlock[i] = cnt[i]",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "unlock[i] = m",
+        "textPlain": "unlock[i] = m",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "unlock[i] = 0",
+        "textPlain": "unlock[i] = 0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "unlock[i] = -1",
+        "textPlain": "unlock[i] = -1",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1031 - CSP 2019 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1031/training"
+  },
+  {
+    "questionUid": "downloads-1036-q20",
+    "paperUid": "downloads-1036",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1036,
+    "paperQuestionNo": 20,
+    "type": "single",
+    "stem": "（2） （矩形计数）\n平面上有\nn\n个关键点，求有多少个四条边都和\nx\n轴或者\ny\n轴平行的矩形，满足四个顶点都是关键点。给出的关键点可能有重复，但完全重合的矩形只计一 次。\n\n![image](https://ipic.luogu.com.cn/v7s04.webp)\n\n试补全枚举算法。\n1. ①处应填（ ）",
+    "stemText": "（2） （矩形计数） 平面上有 n 个关键点，求有多少个四条边都和 x 轴或者 y 轴平行的矩形，满足四个顶点都是关键点。给出的关键点可能有重复，但完全重合的矩形只计一 次。 试补全枚举算法。 1. ①处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "a.x != b.x ? a.x < b.x : a.id < b.id",
+        "textPlain": "a.x != b.x ? a.x < b.x : a.id < b.id",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a.x != b.x ? a.x < b.x : a.y < b.y",
+        "textPlain": "a.x != b.x ? a.x < b.x : a.y < b.y",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "equals(a, b) ? a.id < b.id : a.x < b.x",
+        "textPlain": "equals(a, b) ? a.id < b.id : a.x < b.x",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "equals(a, b) ? a.id < b.id : (a.x != b.x ? a.x < b.x : a.y < b.y) 2. ②处应填（ ）",
+        "textPlain": "equals(a, b) ? a.id < b.id : (a.x != b.x ? a.x < b.x : a.y < b.y) 2. ②处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "i == 0 || cmp(A[i], A[i - 1])",
+        "textPlain": "i == 0 || cmp(A[i], A[i - 1])",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "t == 0 || equals(A[i], A[t - 1])",
+        "textPlain": "t == 0 || equals(A[i], A[t - 1])",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i == 0 || !cmp(A[i], A[i - 1])",
+        "textPlain": "i == 0 || !cmp(A[i], A[i - 1])",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "t == 0 || !equals(A[i], A[t - 1]) 3. ③处应填（ ）",
+        "textPlain": "t == 0 || !equals(A[i], A[t - 1]) 3. ③处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "b - (b - a) / 2 + 1",
+        "textPlain": "b - (b - a) / 2 + 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a + b + 1) >> 1",
+        "textPlain": "a + b + 1) >> 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(a + b) >> 1",
+        "textPlain": "(a + b) >> 1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a + (b - a + 1) / 2 4. ④处应填（ ）",
+        "textPlain": "a + (b - a + 1) / 2 4. ④处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "!cmp(A[mid], p)",
+        "textPlain": "!cmp(A[mid], p)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "cmp(A[mid], p)",
+        "textPlain": "cmp(A[mid], p)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "cmp(p, A[mid])",
+        "textPlain": "cmp(p, A[mid])",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "!cmp(p, A[mid]) 5. ⑤处应填（ ）",
+        "textPlain": "!cmp(p, A[mid]) 5. ⑤处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "A[i].x == A[j].x",
+        "textPlain": "A[i].x == A[j].x",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "A[i].id < A[j].id",
+        "textPlain": "A[i].id < A[j].id",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "A[i].x == A[j].x && A[i].id < A[j].id",
+        "textPlain": "A[i].x == A[j].x && A[i].id < A[j].id",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "A[i].x < A[j].x && A[i].y < A[j].y",
+        "textPlain": "A[i].x < A[j].x && A[i].y < A[j].y",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "a.x != b.x ? a.x < b.x : a.id < b.id",
+        "textPlain": "a.x != b.x ? a.x < b.x : a.id < b.id",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a.x != b.x ? a.x < b.x : a.y < b.y",
+        "textPlain": "a.x != b.x ? a.x < b.x : a.y < b.y",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "equals(a, b) ? a.id < b.id : a.x < b.x",
+        "textPlain": "equals(a, b) ? a.id < b.id : a.x < b.x",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "equals(a, b) ? a.id < b.id : (a.x != b.x ? a.x < b.x : a.y < b.y)",
+        "textPlain": "equals(a, b) ? a.id < b.id : (a.x != b.x ? a.x < b.x : a.y < b.y)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "i == 0 || cmp(A[i], A[i - 1])",
+        "textPlain": "i == 0 || cmp(A[i], A[i - 1])",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "t == 0 || equals(A[i], A[t - 1])",
+        "textPlain": "t == 0 || equals(A[i], A[t - 1])",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i == 0 || !cmp(A[i], A[i - 1])",
+        "textPlain": "i == 0 || !cmp(A[i], A[i - 1])",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "t == 0 || !equals(A[i], A[t - 1])",
+        "textPlain": "t == 0 || !equals(A[i], A[t - 1])",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "b - (b - a) / 2 + 1",
+        "textPlain": "b - (b - a) / 2 + 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(a + b + 1) >> 1",
+        "textPlain": "(a + b + 1) >> 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(a + b) >> 1",
+        "textPlain": "(a + b) >> 1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "a + (b - a + 1) / 2",
+        "textPlain": "a + (b - a + 1) / 2",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "!cmp(A[mid], p)",
+        "textPlain": "!cmp(A[mid], p)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "cmp(A[mid], p)",
+        "textPlain": "cmp(A[mid], p)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "cmp(p, A[mid])",
+        "textPlain": "cmp(p, A[mid])",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "!cmp(p, A[mid])",
+        "textPlain": "!cmp(p, A[mid])",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "A[i].x == A[j].x",
+        "textPlain": "A[i].x == A[j].x",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "A[i].id < A[j].id",
+        "textPlain": "A[i].id < A[j].id",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "A[i].x == A[j].x && A[i].id < A[j].id",
+        "textPlain": "A[i].x == A[j].x && A[i].id < A[j].id",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "A[i].x < A[j].x && A[i].y < A[j].y",
+        "textPlain": "A[i].x < A[j].x && A[i].y < A[j].y",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [
+      "https://ipic.luogu.com.cn/v7s04.webp"
+    ],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1036 - CSP 2021 入门级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1036/training"
+  },
+  {
+    "questionUid": "downloads-1041-q18",
+    "paperUid": "downloads-1041",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1041,
+    "paperQuestionNo": 18,
+    "type": "single",
+    "stem": "## 3. 假设输入的\nn\n是绝对值不超过\n1000\n的整数，完成下面的判断题和单选题。",
+    "stemText": "3. 假设输入的 n 是绝对值不超过 1000 的整数，完成下面的判断题和单选题。",
+    "options": [
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "𝑝 2 + 𝑝 + 1 p 2 +p+1",
+        "textPlain": "𝑝 2 + 𝑝 + 1 p 2 +p+1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "𝑛 2 + 𝑛 + 1 n 2 +n+1",
+        "textPlain": "𝑛 2 + 𝑛 + 1 n 2 +n+1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "𝑛 2 + 1 n 2 +1",
+        "textPlain": "𝑛 2 + 1 n 2 +1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "𝑝 4 + 2 𝑝 2 + 1 p 4 +2p 2 +1",
+        "textPlain": "𝑝 4 + 2 𝑝 2 + 1 p 4 +2p 2 +1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "大于 0 0",
+        "textPlain": "大于 0 0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "大于等于 0 0 且不一定大于 0 0",
+        "textPlain": "大于等于 0 0 且不一定大于 0 0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "小于 0 0",
+        "textPlain": "小于 0 0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "小于等于 0 0 且不一定小于 0 0",
+        "textPlain": "小于等于 0 0 且不一定小于 0 0",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "651 625",
+        "textPlain": "651 625",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "650 729",
+        "textPlain": "650 729",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "651 676",
+        "textPlain": "651 676",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "652 625",
+        "textPlain": "652 625",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1041 - CSP 2023 入门级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1041/training"
+  },
+  {
+    "questionUid": "downloads-1041-q19",
+    "paperUid": "downloads-1041",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1041,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "## 三、完善程序（单选题，每小题 3 分，共计 30 分）\n1. (寻找被移除的元素)问题: 原有长度为 n+1 公差为 1 等差数列，将数列输到程序的数组时移除了一个元素，导致长度为 n 的连续数组可能不再连续，除非被移除的是第一个或最后一个元素。需要在数组不连续时，找出被移除的元素。试补全程序。 1. ①处应填（ ）\n2. ②处应填（ ）\n3. ③处应填（ ）\n4. ④处应填（ ）\n5. ⑤处应填（ ）",
+    "stemText": "三、完善程序（单选题，每小题 3 分，共计 30 分） 1. (寻找被移除的元素)问题: 原有长度为 n+1 公差为 1 等差数列，将数列输到程序的数组时移除了一个元素，导致长度为 n 的连续数组可能不再连续，除非被移除的是第一个或最后一个元素。需要在数组不连续时，找出被移除的元素。试补全程序。 1. ①处应填（ ） 2. ②处应填（ ） 3. ③处应填（ ） 4. ④处应填（ ） 5. ⑤处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "nums[0]",
+        "textPlain": "nums[0]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "right",
+        "textPlain": "right",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "left",
+        "textPlain": "left",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "left=mid+1",
+        "textPlain": "left=mid+1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "right=mid-1",
+        "textPlain": "right=mid-1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "right=mid",
+        "textPlain": "right=mid",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "left=mid",
+        "textPlain": "left=mid",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "left=mid+1",
+        "textPlain": "left=mid+1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "right=mid-1",
+        "textPlain": "right=mid-1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "right=mid",
+        "textPlain": "right=mid",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "left=mid",
+        "textPlain": "left=mid",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "left+nums[0]",
+        "textPlain": "left+nums[0]",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "right+nums[0]",
+        "textPlain": "right+nums[0]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "mid+nums[0]",
+        "textPlain": "mid+nums[0]",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "right+1",
+        "textPlain": "right+1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "nums[0]+n",
+        "textPlain": "nums[0]+n",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "nums[0]+n-1",
+        "textPlain": "nums[0]+n-1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "nums[0]+n+1",
+        "textPlain": "nums[0]+n+1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "nums[n-1]",
+        "textPlain": "nums[n-1]",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "beginner"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1041 - CSP 2023 入门级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1041/training"
+  }
+]

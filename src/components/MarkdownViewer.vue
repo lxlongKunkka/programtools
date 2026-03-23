@@ -1,5 +1,5 @@
 <template>
-  <div class="markdown-viewer" ref="content" v-html="renderedContent"></div>
+  <div class="markdown-viewer" :class="{ 'inline-mode': inline }" ref="content" v-html="renderedContent"></div>
 </template>
 
 <script>
@@ -35,6 +35,10 @@ export default {
     content: {
       type: String,
       default: ''
+    },
+    inline: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -228,11 +232,37 @@ export default {
   font-size: 15px;
   line-height: 1.9;
 }
+.markdown-viewer.inline-mode {
+  padding-bottom: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
 .markdown-viewer > :first-child {
   margin-top: 0;
 }
 .markdown-viewer > :last-child {
   margin-bottom: 0;
+}
+.markdown-viewer.inline-mode > * {
+  margin: 0;
+}
+.markdown-viewer.inline-mode p,
+.markdown-viewer.inline-mode ul,
+.markdown-viewer.inline-mode ol,
+.markdown-viewer.inline-mode blockquote,
+.markdown-viewer.inline-mode table,
+.markdown-viewer.inline-mode .code-block-card,
+.markdown-viewer.inline-mode .sample-block,
+.markdown-viewer.inline-mode .math-block {
+  margin: 0;
+}
+.markdown-viewer.inline-mode p {
+  display: inline;
+}
+.markdown-viewer.inline-mode .math-block {
+  display: inline-block;
+  padding: 4px 8px;
+  vertical-align: middle;
 }
 .markdown-viewer p,
 .markdown-viewer ul,

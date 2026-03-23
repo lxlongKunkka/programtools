@@ -2,10 +2,10 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import User from '../models/User.js'
 import { JWT_SECRET } from '../config.js'
-import { authenticateToken, requireRole } from '../middleware/auth.js'
+import { authenticateToken, requireRole, isUserAccountExpired } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -21,7 +21,7 @@ const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
   keyGenerator: (req) => {
     const username = normalizeLoginIdentifier(req.body?.username) || '__anonymous__'
-    return `${req.ip}:${username}`
+    return `${ipKeyGenerator(req.ip)}:${username}`
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,6 +32,7 @@ const loginLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '注册请求过于频繁，请稍后重试' }
@@ -64,6 +65,9 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     if (!validPassword) return res.status(400).json({ error: 'Invalid password' })
+    if (isUserAccountExpired(user)) {
+      return res.status(403).json({ error: '账号已过期，请联系管理员' })
+    }
 
     // Determine role from DB
     let role = user.role || 'user'

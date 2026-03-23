@@ -6,13 +6,64 @@ import path from 'path'
 import { MAIL_CONFIG, DIRS } from '../config.js'
 import { debugLog, ensureLogsDir } from '../utils/logger.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
+import { markdownToPlainText } from '../utils/gesp/objectiveImport.js'
 import User from '../models/User.js'
 import AppSetting from '../models/AppSetting.js'
+import QuizQuestion from '../models/QuizQuestion.js'
+import QuizQuestionIssue, { ISSUE_STATUSES, ISSUE_TYPES } from '../models/QuizQuestionIssue.js'
 
 const router = express.Router()
+const QUIZ_REVIEW_STATUSES = ['pending', 'reviewed', 'rejected']
 
 // Protect all admin routes
 router.use(authenticateToken, requireRole('admin'))
+
+function normalizeQuizAnswer(answer, question) {
+  const rawAnswer = String(answer || '').trim()
+  if (!rawAnswer) return ''
+
+  if (question.type === 'judge') {
+    const normalized = rawAnswer.toLowerCase()
+    if (['true', 't', '1', 'yes', 'y', '对', '正确'].includes(normalized)) return 'true'
+    if (['false', 'f', '0', 'no', 'n', '错', '错误'].includes(normalized)) return 'false'
+    return rawAnswer
+  }
+
+  return rawAnswer.toUpperCase()
+}
+
+function normalizeQuizTags(value) {
+  const rawItems = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .split(/[\n,，、]/)
+
+  return [...new Set(rawItems
+    .map((item) => String(item || '').trim())
+    .filter(Boolean))]
+}
+
+function buildQuizQuestionAdminPayload(question) {
+  return {
+    questionUid: question.questionUid,
+    paperUid: question.paperUid,
+    source: question.source,
+    sourceDocId: question.sourceDocId,
+    paperQuestionNo: question.paperQuestionNo,
+    type: question.type,
+    stem: question.stem,
+    stemText: question.stemText,
+    options: question.options || [],
+    answer: question.answer || '',
+    explanation: question.explanation || '',
+    explanationText: question.explanationText || '',
+    tags: question.tags || [],
+    levelTag: question.levelTag || '',
+    reviewStatus: question.reviewStatus || 'pending',
+    enabled: question.enabled !== false,
+    updatedAt: question.updatedAt || null
+  }
+}
 
 // Get all users with pagination and search
 router.get('/users', async (req, res) => {
@@ -291,6 +342,266 @@ router.post('/send-test-email', async (req, res) => {
   } catch (e) {
     console.error('send-test-email error:', e)
     return res.status(500).json({ ok: false, error: e.message })
+  }
+})
+
+router.get('/quiz-issues', async (req, res) => {
+  try {
+    const pageNum = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+    const limitNum = Math.max(1, Math.min(100, Number.parseInt(req.query.limit, 10) || 20))
+    const status = String(req.query.status || '').trim()
+    const issueType = String(req.query.issueType || '').trim()
+    const keyword = String(req.query.q || '').trim()
+
+    const query = {}
+    if (ISSUE_STATUSES.includes(status)) {
+      query.status = status
+    }
+    if (ISSUE_TYPES.includes(issueType)) {
+      query.issueType = issueType
+    }
+    if (keyword) {
+      query.$or = [
+        { questionUid: { $regex: keyword, $options: 'i' } },
+        { sourceTitle: { $regex: keyword, $options: 'i' } },
+        { stemPreview: { $regex: keyword, $options: 'i' } },
+        { reporterName: { $regex: keyword, $options: 'i' } },
+        { detail: { $regex: keyword, $options: 'i' } }
+      ]
+    }
+
+    const [items, total, statusStats] = await Promise.all([
+      QuizQuestionIssue.find(query)
+        .sort({ status: 1, reportedAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .lean(),
+      QuizQuestionIssue.countDocuments(query),
+      QuizQuestionIssue.aggregate([
+        { $match: query },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ])
+    ])
+
+    const questionUids = [...new Set(items.map((item) => item.questionUid).filter(Boolean))]
+    const questions = await QuizQuestion.find(
+      { questionUid: { $in: questionUids } },
+      'questionUid enabled reviewStatus updatedAt tags levelTag'
+    ).lean()
+    const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
+
+    res.json({
+      items: items.map((item) => {
+        const question = questionMap.get(item.questionUid)
+        return {
+          ...item,
+          questionEnabled: question ? question.enabled !== false : false,
+          questionReviewStatus: question?.reviewStatus || '',
+          questionUpdatedAt: question?.updatedAt || null,
+          questionTags: question?.tags || item.tags || [],
+          questionLevelTag: question?.levelTag || item.levelTag || ''
+        }
+      }),
+      total,
+      page: pageNum,
+      totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      statusStats: statusStats.reduce((acc, item) => {
+        acc[item._id] = item.count
+        return acc
+      }, {})
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/quiz-questions/:questionUid', async (req, res) => {
+  try {
+    const questionUid = String(req.params.questionUid || '').trim()
+    if (!questionUid) {
+      return res.status(400).json({ error: '缺少 questionUid' })
+    }
+
+    const question = await QuizQuestion.findOne({ questionUid }).lean()
+    if (!question) {
+      return res.status(404).json({ error: '题目不存在' })
+    }
+
+    res.json({ item: buildQuizQuestionAdminPayload(question) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.patch('/quiz-questions/:questionUid', async (req, res) => {
+  try {
+    const questionUid = String(req.params.questionUid || '').trim()
+    if (!questionUid) {
+      return res.status(400).json({ error: '缺少 questionUid' })
+    }
+
+    const question = await QuizQuestion.findOne({ questionUid })
+    if (!question) {
+      return res.status(404).json({ error: '题目不存在' })
+    }
+
+    const nextUpdate = {}
+    let touched = false
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'answer')) {
+      const normalizedAnswer = normalizeQuizAnswer(req.body.answer, question)
+      if (!normalizedAnswer) {
+        return res.status(400).json({ error: '答案不能为空' })
+      }
+
+      if (question.type === 'single') {
+        const validAnswers = new Set((question.options || []).map((item) => String(item.key || '').trim().toUpperCase()).filter(Boolean))
+        if (validAnswers.size > 0 && !validAnswers.has(normalizedAnswer)) {
+          return res.status(400).json({ error: `答案必须是现有选项：${[...validAnswers].join(' / ')}` })
+        }
+      }
+
+      if (question.type === 'judge' && !['true', 'false'].includes(normalizedAnswer)) {
+        return res.status(400).json({ error: '判断题答案只能是 true 或 false' })
+      }
+
+      nextUpdate.answer = normalizedAnswer
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'explanation')) {
+      const explanation = String(req.body.explanation || '').trim()
+      if (explanation.length > 20000) {
+        return res.status(400).json({ error: '解析内容不能超过 20000 个字符' })
+      }
+      nextUpdate.explanation = explanation
+      nextUpdate.explanationText = markdownToPlainText(explanation)
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'tags')) {
+      nextUpdate.tags = normalizeQuizTags(req.body.tags)
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'levelTag')) {
+      const levelTag = String(req.body.levelTag || '').trim()
+      if (levelTag.length > 100) {
+        return res.status(400).json({ error: '级别标签不能超过 100 个字符' })
+      }
+      nextUpdate.levelTag = levelTag
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'reviewStatus')) {
+      const reviewStatus = String(req.body.reviewStatus || '').trim()
+      if (!QUIZ_REVIEW_STATUSES.includes(reviewStatus)) {
+        return res.status(400).json({ error: 'reviewStatus 不合法' })
+      }
+      nextUpdate.reviewStatus = reviewStatus
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'enabled')) {
+      if (typeof req.body.enabled !== 'boolean') {
+        return res.status(400).json({ error: 'enabled 必须是布尔值' })
+      }
+      nextUpdate.enabled = req.body.enabled
+      touched = true
+    }
+
+    if (!touched) {
+      return res.status(400).json({ error: '没有可更新的字段' })
+    }
+
+    Object.assign(question, nextUpdate)
+    await question.save()
+
+    await QuizQuestionIssue.updateMany(
+      { questionUid },
+      {
+        $set: {
+          tags: question.tags || [],
+          levelTag: question.levelTag || ''
+        }
+      }
+    )
+
+    res.json({ item: buildQuizQuestionAdminPayload(question) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.patch('/quiz-issues/:id', async (req, res) => {
+  try {
+    const issue = await QuizQuestionIssue.findById(req.params.id)
+    if (!issue) {
+      return res.status(404).json({ error: '反馈记录不存在' })
+    }
+
+    const nextStatus = String(req.body?.status || '').trim()
+    const adminNote = req.body?.adminNote
+    const questionEnabled = req.body?.questionEnabled
+    const nextUpdate = {}
+    let touched = false
+
+    if (nextStatus) {
+      if (!ISSUE_STATUSES.includes(nextStatus)) {
+        return res.status(400).json({ error: 'status 不合法' })
+      }
+      nextUpdate.status = nextStatus
+      nextUpdate.handledAt = new Date()
+      nextUpdate.handledBy = req.user.id
+      nextUpdate.handledByName = req.user.username || ''
+      touched = true
+    }
+
+    if (typeof adminNote === 'string') {
+      if (adminNote.trim().length > 500) {
+        return res.status(400).json({ error: '管理员备注不能超过 500 个字符' })
+      }
+      nextUpdate.adminNote = adminNote.trim()
+      nextUpdate.handledAt = new Date()
+      nextUpdate.handledBy = req.user.id
+      nextUpdate.handledByName = req.user.username || ''
+      touched = true
+    }
+
+    if (!touched && typeof questionEnabled !== 'boolean') {
+      return res.status(400).json({ error: '没有可更新的字段' })
+    }
+
+    if (touched) {
+      await QuizQuestionIssue.updateOne({ _id: issue._id }, { $set: nextUpdate })
+    }
+
+    if (typeof questionEnabled === 'boolean') {
+      await QuizQuestion.updateOne(
+        { questionUid: issue.questionUid },
+        { $set: { enabled: questionEnabled } }
+      )
+    }
+
+    const refreshedIssue = await QuizQuestionIssue.findById(issue._id).lean()
+    const refreshedQuestion = await QuizQuestion.findOne(
+      { questionUid: issue.questionUid },
+      'questionUid enabled reviewStatus updatedAt tags levelTag'
+    ).lean()
+
+    res.json({
+      success: true,
+      item: {
+        ...refreshedIssue,
+        questionEnabled: refreshedQuestion ? refreshedQuestion.enabled !== false : false,
+        questionReviewStatus: refreshedQuestion?.reviewStatus || '',
+        questionUpdatedAt: refreshedQuestion?.updatedAt || null,
+        questionTags: refreshedQuestion?.tags || refreshedIssue?.tags || [],
+        questionLevelTag: refreshedQuestion?.levelTag || refreshedIssue?.levelTag || ''
+      }
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 

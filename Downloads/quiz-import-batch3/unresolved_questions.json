@@ -1,0 +1,1377 @@
+[
+  {
+    "questionUid": "downloads-1033-q16",
+    "paperUid": "downloads-1033",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1033,
+    "paperQuestionNo": 16,
+    "type": "single",
+    "stem": "二、阅读程序(程序输入不超过数组或字符串定义的范围；判断题正确填 √，错误填 ×。除特殊说明外，判断题 2 分，选择题 3 分，共计 40 分) - 判断题\n1. （1 分）luo 函数中， m 的值不可能是奇数。（ ）\n2. （1 分）若将第 11 行的 < 改为 <=，程序的输出结果可能会改变。（ ）\n3. 若将第 8,9,13 行删除，程序的运行的结果不变（ ）\n4. 在添加合适的头文件后，将第 19 到 21 行替换为 memset(gu,255,sizeof(gu)); 可以起到相同的作用（ ）\n- 选择题\n1. （4 分）若输入数据为 4 8，则输出为（ ）\n2. 最坏情况下，此程序的时间复杂度是（ ）",
+    "stemText": "二、阅读程序(程序输入不超过数组或字符串定义的范围；判断题正确填 √，错误填 ×。除特殊说明外，判断题 2 分，选择题 3 分，共计 40 分) - 判断题 1. （1 分）luo 函数中， m 的值不可能是奇数。（ ） 2. （1 分）若将第 11 行的 < 改为 <=，程序的输出结果可能会改变。（ ） 3. 若将第 8,9,13 行删除，程序的运行的结果不变（ ） 4. 在添加合适的头文件后，将第 19 到 21 行替换为 memset(gu,255,sizeof(gu)); 可以起到相同的作用（ ） - 选择题 1. （4 分）若输入数据为 4 8，则输出为（ ） 2. 最坏情况下，此程序的时间复杂度是（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "7",
+        "textPlain": "7",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "8",
+        "textPlain": "8",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "15",
+        "textPlain": "15",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "16",
+        "textPlain": "16",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "𝑂 ( 𝑚 2 𝑛 ) O(m 2 n)",
+        "textPlain": "𝑂 ( 𝑚 2 𝑛 ) O(m 2 n)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "𝑂 ( 𝑛 𝑚 ! ) O(nm!)",
+        "textPlain": "𝑂 ( 𝑛 𝑚 ! ) O(nm!)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "𝑂 ( 𝑛 2 O(n 2 )",
+        "textPlain": "𝑂 ( 𝑛 2 O(n 2 )",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "𝑂 ( 𝑛 2 𝑚 ) O(n 2 m)",
+        "textPlain": "𝑂 ( 𝑛 2 𝑚 ) O(n 2 m)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1033 - CSP 2020 第一轮（初赛）模拟",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1033/training"
+  },
+  {
+    "questionUid": "downloads-1038-q18",
+    "paperUid": "downloads-1038",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1038,
+    "paperQuestionNo": 18,
+    "type": "single",
+    "stem": "以上程序的输入数据满足1≤n≤100,1≤m≤2n(n−1)​，且只保证不存在重边，即不存在(ui​,vi​)=(uj​,vj​)(i≠j)，边权wi​∈[1,106]。如果 u 到 v 不可达，则认为距离为 INF。完成下面的判断题和单选题。\n- 判断题\n1. 该代码的 dis1[i][j] 不一定是 i 到 j 的最短路。（ ）\n2. 输出 可能 为 1。（ ）\n3. 将第 19 行的 k≤n 修改为 k<n，不影响答案。（ ）\n4. 对于稀疏图（n,m 不同阶）， fun1（ ） 对于单个 i 求 dis[i][j](1≤j≤n)，最快可以做到 Θ((n+m)logm)。（ ）\n- 单选题\n1. 对于以下的输入数据，输出结果为（ ）",
+    "stemText": "以上程序的输入数据满足1≤n≤100,1≤m≤2n(n−1)​，且只保证不存在重边，即不存在(ui​,vi​)=(uj​,vj​)(i≠j)，边权wi​∈[1,106]。如果 u 到 v 不可达，则认为距离为 INF。完成下面的判断题和单选题。 - 判断题 1. 该代码的 dis1[i][j] 不一定是 i 到 j 的最短路。（ ） 2. 输出 可能 为 1。（ ） 3. 将第 19 行的 k≤n 修改为 k<n，不影响答案。（ ） 4. 对于稀疏图（n,m 不同阶）， fun1（ ） 对于单个 i 求 dis[i]j，最快可以做到 Θ((n+m)logm)。（ ） - 单选题 1. 对于以下的输入数据，输出结果为（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "2",
+        "textPlain": "2",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "3",
+        "textPlain": "3",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "4",
+        "textPlain": "4",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "5 1. 若输入数据 n=5，输出 ans 的最大可能值为（ ）",
+        "textPlain": "5 1. 若输入数据 n=5，输出 ans 的最大可能值为（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "4",
+        "textPlain": "4",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "5",
+        "textPlain": "5",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "6",
+        "textPlain": "6",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "7",
+        "textPlain": "7",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "2",
+        "textPlain": "2",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "3",
+        "textPlain": "3",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "4",
+        "textPlain": "4",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "5",
+        "textPlain": "5",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "4",
+        "textPlain": "4",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "5",
+        "textPlain": "5",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "6",
+        "textPlain": "6",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "7",
+        "textPlain": "7",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1038 - SCP 2021 第一轮（初赛）模拟",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1038/training"
+  },
+  {
+    "questionUid": "downloads-1038-q20",
+    "paperUid": "downloads-1038",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1038,
+    "paperQuestionNo": 20,
+    "type": "single",
+    "stem": "1. 小 A 最近喜欢上了一款音游，并希望在结算时得到特定分数，例如 1919810 分。这款音游的得分计算方式如下：一共有 n 个音符，将一千万（107）分平分给所有音符得到基础得分 x=n107​ （保留非整数部分），其中有 m 个音符根据是否击中可以获得 x+1 分或者 0 分，剩下的 n−m 个音符根据击中精度可以获得 x+1， x， 2x​， 0 分中的一个，最后将总得分向下取整即可得到最终得分。\n给定\nn,m，小 A 想知道他可以得到多少种不同的分数。\n输入为两个非负整数，分别表示\nn,m；满足，\n1≤n≤107,0≤m≤n。输出为一个正整数表示答案。试补全程序。 1. ① 处应填（ ）",
+    "stemText": "1. 小 A 最近喜欢上了一款音游，并希望在结算时得到特定分数，例如 1919810 分。这款音游的得分计算方式如下：一共有 n 个音符，将一千万（107）分平分给所有音符得到基础得分 x=n107​ （保留非整数部分），其中有 m 个音符根据是否击中可以获得 x+1 分或者 0 分，剩下的 n−m 个音符根据击中精度可以获得 x+1， x， 2x​， 0 分中的一个，最后将总得分向下取整即可得到最终得分。 给定 n,m，小 A 想知道他可以得到多少种不同的分数。 输入为两个非负整数，分别表示 n,m；满足， 1≤n≤107,0≤m≤n。输出为一个正整数表示答案。试补全程序。 1. ① 处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "n-1",
+        "textPlain": "n-1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "n",
+        "textPlain": "n",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "n+1 2. ② 处应填（",
+        "textPlain": "n+1 2. ② 处应填（",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "n 3. ③ 处应填（",
+        "textPlain": "n 3. ③ 处应填（",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "i - (n - m) - 1",
+        "textPlain": "i - (n - m) - 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "i - (n - m) - j",
+        "textPlain": "i - (n - m) - j",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i - (n - m)",
+        "textPlain": "i - (n - m)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "i - (n - m) + 1 4. ④ 处应填（",
+        "textPlain": "i - (n - m) + 1 4. ④ 处应填（",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(2*i+j) * M / (2*n)",
+        "textPlain": "(2i+j) * M / (2n)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(2*i-j) * M / (2*n)",
+        "textPlain": "(2i-j) * M / (2n)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i * M / n + j * M / (2*n)",
+        "textPlain": "i * M / n + j * M / (2*n)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "i * M / n - j * M / (2*n) 5. ⑤ 处应填（",
+        "textPlain": "i * M / n - j * M / (2*n) 5. ⑤ 处应填（",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "base + upper",
+        "textPlain": "base + upper",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "base + upper + 1",
+        "textPlain": "base + upper + 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "base + lower",
+        "textPlain": "base + lower",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "base + lower + 1",
+        "textPlain": "base + lower + 1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "n-1",
+        "textPlain": "n-1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "n",
+        "textPlain": "n",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "n+1",
+        "textPlain": "n+1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "n",
+        "textPlain": "n",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "i - (n - m) - 1",
+        "textPlain": "i - (n - m) - 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "i - (n - m) - j",
+        "textPlain": "i - (n - m) - j",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i - (n - m)",
+        "textPlain": "i - (n - m)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "i - (n - m) + 1",
+        "textPlain": "i - (n - m) + 1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(2*i+j) * M / (2*n)",
+        "textPlain": "(2i+j) * M / (2n)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(2*i-j) * M / (2*n)",
+        "textPlain": "(2i-j) * M / (2n)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i * M / n + j * M / (2*n)",
+        "textPlain": "i * M / n + j * M / (2*n)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "i * M / n - j * M / (2*n)",
+        "textPlain": "i * M / n - j * M / (2*n)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "base + upper",
+        "textPlain": "base + upper",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "base + upper + 1",
+        "textPlain": "base + upper + 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "base + lower",
+        "textPlain": "base + lower",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "base + lower + 1",
+        "textPlain": "base + lower + 1",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1038 - SCP 2021 第一轮（初赛）模拟",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1038/training"
+  },
+  {
+    "questionUid": "downloads-1042-q18",
+    "paperUid": "downloads-1042",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1042,
+    "paperQuestionNo": 18,
+    "type": "single",
+    "stem": "## 3. 假设输入总是合法的且\n1≤ai​≤108,n≤10000,1≤k≤2n(n−1)​，完成下面的判断题和单选题:",
+    "stemText": "3. 假设输入总是合法的且 1≤ai​≤108,n≤10000,1≤k≤2n(n−1)​，完成下面的判断题和单选题:",
+    "options": [
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "正确",
+        "textPlain": "正确",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "错误",
+        "textPlain": "错误",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "𝑂 ( 𝑛 log ⁡ 𝐴 ) O(nlogA)",
+        "textPlain": "𝑂 ( 𝑛 log ⁡ 𝐴 ) O(nlogA)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "𝑂 ( 𝑛 2 log ⁡ 𝐴 ) O(n 2 logA)",
+        "textPlain": "𝑂 ( 𝑛 2 log ⁡ 𝐴 ) O(n 2 logA)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "𝑂 ( 𝑛 log ⁡ ( 𝑛 𝐴 ) ) O(nlog(nA))",
+        "textPlain": "𝑂 ( 𝑛 log ⁡ ( 𝑛 𝐴 ) ) O(nlog(nA))",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "textPlain": "𝑂 ( 𝑛 log ⁡ 𝑛 ) O(nlogn)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "一定小于",
+        "textPlain": "一定小于",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "一定小于等于且不一定小于",
+        "textPlain": "一定小于等于且不一定小于",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "一定大于等于且不一定大于",
+        "textPlain": "一定大于等于且不一定大于",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "以上三种情况都不对.",
+        "textPlain": "以上三种情况都不对.",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "13",
+        "textPlain": "13",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "14",
+        "textPlain": "14",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "8",
+        "textPlain": "8",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "15",
+        "textPlain": "15",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1042 - CSP 2023 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1042/training"
+  },
+  {
+    "questionUid": "downloads-1042-q19",
+    "paperUid": "downloads-1042",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1042,
+    "paperQuestionNo": 19,
+    "type": "single",
+    "stem": "## 三、完善程序（单选题，每小题 3 分，共计 30 分）",
+    "stemText": "三、完善程序（单选题，每小题 3 分，共计 30 分）",
+    "options": [
+      {
+        "key": "A",
+        "text": "k >= f[u]",
+        "textPlain": "k >= f[u]",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "k <= f[u]",
+        "textPlain": "k <= f[u]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "k > f[u]",
+        "textPlain": "k > f[u]",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "k < f[u]",
+        "textPlain": "k < f[u]",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "deg[v] == 1",
+        "textPlain": "deg[v] == 1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "deg[v] == 0",
+        "textPlain": "deg[v] == 0",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "deg[v] > 1",
+        "textPlain": "deg[v] > 1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "deg[v] > 0",
+        "textPlain": "deg[v] > 0",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "std:min(f[u] + f[v], LIM)",
+        "textPlain": "std:min(f[u] + f[v], LIM)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "std:min(f[u] + f[v] + 1, LIM)",
+        "textPlain": "std:min(f[u] + f[v] + 1, LIM)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "std:min(f[u] * f[v], LIM)",
+        "textPlain": "std:min(f[u] * f[v], LIM)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "std:min(f[u] * (f[v] + 1), LIM)",
+        "textPlain": "std:min(f[u] * (f[v] + 1), LIM)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "u != -1",
+        "textPlain": "u != -1",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "!E[u].empty（ ）",
+        "textPlain": "!E[u].empty（ ）",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "k > 0",
+        "textPlain": "k > 0",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "k > 1",
+        "textPlain": "k > 1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "k+=f[u]",
+        "textPlain": "k+=f[u]",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "k-=f[u]",
+        "textPlain": "k-=f[u]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "k",
+        "textPlain": "k",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "++k",
+        "textPlain": "++k",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1042 - CSP 2023 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1042/training"
+  },
+  {
+    "questionUid": "downloads-1042-q20",
+    "paperUid": "downloads-1042",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1042,
+    "paperQuestionNo": 20,
+    "type": "single",
+    "stem": "## 2.\n（最大值之和）给定整数序列\na0​,⋯,an−1​，求该序列所有非空连续子序列的最大值之和。上述参数满足\n1≤n≤105\n和\n1≤ai​≤108。\n一个序列的非空连续子序列可以用两个下标\nl\n和\nr\n（其中\n0≤l≤r<n）表示，对应的序列为\nal​,al+1​,⋯,ar​。两个非空连续子序列不同，当且仅当下标不同。\n例如，当原序列为\n[1,2,1,2]\n时，要计算子序列\n[1]、\n[2]、\n[1]、\n[2]、\n[1,2]、\n[2,1]、\n[1,2]、\n[1,2,1]、\n[2,1,2]、\n[1,2,1,2]\n的最大值之和，答案为\n18。注意\n[1,1]\n和\n[2,2]\n虽然是原序列的子序列，但不是连续子序列，所以不应该被计算。另外，注意其中有一些值相同的子序列，但由于他们在原序列中的下标不同，属于不同的非空连续子序列，所以会被分别计算。\n解决该问题有许多算法，以下程序使用分治算法，时间复杂度\nO(nlogn)。\n试补全程序。 1. ①处应填（ ）\n2. ②处应填（ ）\n3. ③处应填（ ）\n4. ④处应填（ ）\n5. ⑤处应填（ ）",
+    "stemText": "2. （最大值之和）给定整数序列 a0​,⋯,an−1​，求该序列所有非空连续子序列的最大值之和。上述参数满足 1≤n≤105 和 1≤ai​≤108。 一个序列的非空连续子序列可以用两个下标 l 和 r （其中 0≤l≤r<n）表示，对应的序列为 al​,al+1​,⋯,ar​。两个非空连续子序列不同，当且仅当下标不同。 例如，当原序列为 [1,2,1,2] 时，要计算子序列 [1]、 [2]、 [1]、 [2]、 [1,2]、 [2,1]、 [1,2]、 [1,2,1]、 [2,1,2]、 [1,2,1,2] 的最大值之和，答案为 18。注意 [1,1] 和 [2,2] 虽然是原序列的子序列，但不是连续子序列，所以不应该被计算。另外，注意其中有一些值相同的子序列，但由于他们在原序列中的下标不同，属于不同的非空连续子序列，所以会被分别计算。 解决该问题有许多算法，以下程序使用分治算法，时间复杂度 O(nlogn)。 试补全程序。 1. ①处应填（ ） 2. ②处应填（ ） 3. ③处应填（ ） 4. ④处应填（ ） 5. ⑤处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "pre[i] = std:max(pre[i - 1], a[i - 1])",
+        "textPlain": "pre[i] = std:max(pre[i - 1], a[i - 1])",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "pre[i + 1] = std:max(pre[i],pre[i + 1])",
+        "textPlain": "pre[i + 1] = std:max(pre[i],pre[i + 1])",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "pre[i] = std:max(pre[i -1], a[i])",
+        "textPlain": "pre[i] = std:max(pre[i -1], a[i])",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "pre[i] = std:max(pre[i], pre[i - 1])",
+        "textPlain": "pre[i] = std:max(pre[i], pre[i - 1])",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "a[j] < max",
+        "textPlain": "a[j] < max",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "a[j] < a[i]",
+        "textPlain": "a[j] < a[i]",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "pre[j - mid] < max",
+        "textPlain": "pre[j - mid] < max",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "pre[j - mid] > max",
+        "textPlain": "pre[j - mid] > max",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(long long)(j - mid) * max",
+        "textPlain": "(long long)(j - mid) * max",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(long long)(j - mid) * (i - 1) * max",
+        "textPlain": "(long long)(j - mid) * (i - 1) * max",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "sum[j - mid]",
+        "textPlain": "sum[j - mid]",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "sum[j - mid] * (i - 1)",
+        "textPlain": "sum[j - mid] * (i - 1)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(long long)(r - j) * max",
+        "textPlain": "(long long)(r - j) * max",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(long long)(r - j) * (mid - i) * max",
+        "textPlain": "(long long)(r - j) * (mid - i) * max",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "sum[r - mid] - sum[j - mid]",
+        "textPlain": "sum[r - mid] - sum[j - mid]",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(sum[r - mid] - sum[j - mid]) * (mid - i)",
+        "textPlain": "(sum[r - mid] - sum[j - mid]) * (mid - i)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "solve(0，n)",
+        "textPlain": "solve(0，n)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "solve(0，n - 1)",
+        "textPlain": "solve(0，n - 1)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "solve(1，n)",
+        "textPlain": "solve(1，n)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "solve(1，n - 1)",
+        "textPlain": "solve(1，n - 1)",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "advanced"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1042 - CSP 2023 提高级第一轮",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1042/training"
+  },
+  {
+    "questionUid": "downloads-1114-q11",
+    "paperUid": "downloads-1114",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1114,
+    "paperQuestionNo": 11,
+    "type": "single",
+    "stem": "对于一棵二叉树，它的中序遍历结果为 LKMACBFEHGID，层次遍历结果为 AKBLMCDEFGHI，那么这棵二叉树对应的前序遍历结果为（ ）",
+    "stemText": "对于一棵二叉树，它的中序遍历结果为 LKMACBFEHGID，层次遍历结果为 AKBLMCDEFGHI，那么这棵二叉树对应的前序遍历结果为（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "AKLMBCDEFGHI",
+        "textPlain": "AKLMBCDEFGHI",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "ALMKBDECFHIG",
+        "textPlain": "ALMKBDECFHIG",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "LABMDCHGIKEF",
+        "textPlain": "LABMDCHGIKEF",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "ALKMCBDEFGHI",
+        "textPlain": "ALKMCBDEFGHI",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "bcsp"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1114 - 2024 BCSP-X 上半年活动基础知识测评（初中组）",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1114/training"
+  },
+  {
+    "questionUid": "downloads-1114-q23",
+    "paperUid": "downloads-1114",
+    "source": "downloads",
+    "sourceDomainId": "luogu",
+    "sourceDocId": 1114,
+    "paperQuestionNo": 23,
+    "type": "single",
+    "stem": "（二进制位加权和）给定一个 64 位二进制数 x，假设 x 的二进制表示是a64​a63​…a1​，即x=263a64​+262a63​+⋯+a1​，求出iai​加起来的结果。下面程序将使用倍增法解决该问题，我们以“求 x 二进制表示下 1 的个数”这一问题为例介绍倍增法的思想。在一开始，我们把给定的 x 看作是分成了 64 块，每块长度为 1，每个块内的二进制数表示原数这个块内的 1 的个数。我们将进行若干轮操作，每轮合并两个相邻的块，让块长翻倍，合并成的新块上存的二进制数就是两个原块上存的二进制数加起来。这个示例代码可以对0∼65535的 x 求出 1 的个数： 请补全程序： 1. ① 处应填（ ）",
+    "stemText": "（二进制位加权和）给定一个 64 位二进制数 x，假设 x 的二进制表示是a64​a63​…a1​，即x=263a64​+262a63​+⋯+a1​，求出iai​加起来的结果。下面程序将使用倍增法解决该问题，我们以“求 x 二进制表示下 1 的个数”这一问题为例介绍倍增法的思想。在一开始，我们把给定的 x 看作是分成了 64 块，每块长度为 1，每个块内的二进制数表示原数这个块内的 1 的个数。我们将进行若干轮操作，每轮合并两个相邻的块，让块长翻倍，合并成的新块上存的二进制数就是两个原块上存的二进制数加起来。这个示例代码可以对0∼65535的 x 求出 1 的个数： 请补全程序： 1. ① 处应填（ ）",
+    "options": [
+      {
+        "key": "A",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "x",
+        "textPlain": "x",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "1 2. ② 处应填（ ）",
+        "textPlain": "1 2. ② 处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "y",
+        "textPlain": "y",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "1 3. ③ 处应填（ ）",
+        "textPlain": "1 3. ③ 处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(1 << (1 << i))",
+        "textPlain": "(1 << (1 << i))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(1 << i) + 1",
+        "textPlain": "(1 << i) + 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i",
+        "textPlain": "i",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(1ull << (1 << i)) + 1 4. ④ 处应填（ ）",
+        "textPlain": "(1ull << (1 << i)) + 1 4. ④ 处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "((y >> (1 << i)) & R)",
+        "textPlain": "((y >> (1 << i)) & R)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "((y >> i) & Q)",
+        "textPlain": "((y >> i) & Q)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(y & R)",
+        "textPlain": "(y & R)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "((y ^ Q) & R) 5. ⑤ 处应填（ ）",
+        "textPlain": "((y ^ Q) & R) 5. ⑤ 处应填（ ）",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(((x >> (1 << i)) & R) << (1 << i))",
+        "textPlain": "(((x >> (1 << i)) & R) << (1 << i))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(((x >> (1 << i)) & R) << i)",
+        "textPlain": "(((x >> (1 << i)) & R) << i)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(((x >> i) & R) << i)",
+        "textPlain": "(((x >> i) & R) << i)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "x",
+        "textPlain": "x",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "x",
+        "textPlain": "x",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "0",
+        "textPlain": "0",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "y",
+        "textPlain": "y",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "`1",
+        "textPlain": "1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(1 << (1 << i))",
+        "textPlain": "(1 << (1 << i))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(1 << i) + 1",
+        "textPlain": "(1 << i) + 1",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "i",
+        "textPlain": "i",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "(1ull << (1 << i)) + 1",
+        "textPlain": "(1ull << (1 << i)) + 1",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "((y >> (1 << i)) & R)",
+        "textPlain": "((y >> (1 << i)) & R)",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "((y >> i) & Q)",
+        "textPlain": "((y >> i) & Q)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(y & R)",
+        "textPlain": "(y & R)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "((y ^ Q) & R)",
+        "textPlain": "((y ^ Q) & R)",
+        "images": []
+      },
+      {
+        "key": "A",
+        "text": "(((x >> (1 << i)) & R) << (1 << i))",
+        "textPlain": "(((x >> (1 << i)) & R) << (1 << i))",
+        "images": []
+      },
+      {
+        "key": "B",
+        "text": "(((x >> (1 << i)) & R) << i)",
+        "textPlain": "(((x >> (1 << i)) & R) << i)",
+        "images": []
+      },
+      {
+        "key": "C",
+        "text": "(((x >> i) & R) << i)",
+        "textPlain": "(((x >> i) & R) << i)",
+        "images": []
+      },
+      {
+        "key": "D",
+        "text": "x",
+        "textPlain": "x",
+        "images": []
+      }
+    ],
+    "answer": "",
+    "explanation": "",
+    "explanationText": "",
+    "images": [],
+    "tags": [
+      "downloads-import",
+      "objective",
+      "csp",
+      "bcsp"
+    ],
+    "levelTag": "",
+    "subject": "C++",
+    "difficulty": null,
+    "sourceTitle": "1114 - 2024 BCSP-X 上半年活动基础知识测评（初中组）",
+    "enabled": false,
+    "reviewStatus": "draft",
+    "stats": {
+      "totalAttempts": 0,
+      "totalCorrect": 0,
+      "accuracy": 0,
+      "totalWrong": 0
+    },
+    "sourceUrl": "https://ti.luogu.com.cn/problemset/1114/training"
+  }
+]

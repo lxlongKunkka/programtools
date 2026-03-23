@@ -141,7 +141,7 @@ const error = ref(null)
 const result = ref(null)
 const editableMarkdown = ref('')
 
-const selectedModel = ref('gemini-2.5-flash')
+const selectedModel = ref('gemini-3-flash-preview')
 const availableModels = ref([])
 const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
 const isAdmin = userInfo.role === 'admin' || userInfo.priv === -1
@@ -159,15 +159,15 @@ onMounted(async () => {
         availableModels.value = allModels
     } else {
         availableModels.value = allModels.filter(m => {
-            if (m.id === 'gemini-2.0-flash' || m.id === 'gemini-2.5-flash') return true
-            if (m.role === 'admin') return false
-            return true
+          if (m.id === 'gemini-3-flash-preview' || m.id === 'gemini-2.5-flash') return true
+          if (m.role === 'admin') return false
+          return true
         })
     }
     
-    // Prefer gemini-2.5-flash if available, otherwise keep default or pick first
-    if (availableModels.value.find(m => m.id === 'gemini-2.5-flash')) {
-        selectedModel.value = 'gemini-2.5-flash'
+    // Prefer gemini-3-flash-preview if available, otherwise keep default or pick first
+    if (availableModels.value.find(m => m.id === 'gemini-3-flash-preview')) {
+      selectedModel.value = 'gemini-3-flash-preview'
     } else if (!availableModels.value.find(m => m.id === selectedModel.value)) {
         if (availableModels.value.length > 0) {
             selectedModel.value = availableModels.value[0].id
@@ -177,7 +177,7 @@ onMounted(async () => {
   } catch (e) {
     console.error('Failed to fetch models', e)
     availableModels.value = [
-        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+      { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' },
         { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' }
     ]
     if (isAdmin) {

@@ -8,6 +8,7 @@
         </router-link>
       </div>
       <button
+        v-if="!isCompactQuizMobileNav"
         class="nav-toggle"
         type="button"
         :aria-expanded="mobileNavOpen ? 'true' : 'false'"
@@ -17,17 +18,18 @@
         {{ mobileNavOpen ? '收起' : '菜单' }}
       </button>
       <nav
+        v-if="!isCompactQuizMobileNav"
         id="app-navigation"
         class="main-nav"
         :class="{ 'is-open': mobileNavOpen }"
         @click="handleNavClick"
       >
+        <router-link to="/">Quiz</router-link>
         <router-link to="/translate">Translate</router-link>
         <router-link to="/typing">Typing</router-link>
         <router-link v-if="user" to="/course">Course</router-link>
         <router-link v-if="user" to="/progress">进度</router-link>
         <router-link v-if="user" to="/daily">Daily</router-link>
-        <router-link v-if="user" to="/quiz-daily">Quiz</router-link>
         <router-link v-if="user" to="/gesp">GESP</router-link>
         <router-link v-if="user" to="/gesp-map">图谱</router-link>
         <router-link v-if="user" to="/checker">Checker</router-link>
@@ -51,15 +53,26 @@
       </router-view>
     </main>
 
-    <nav v-if="mobileQuickLinks.length" class="mobile-bottom-nav" aria-label="常用导航">
-      <router-link
-        v-for="item in mobileQuickLinks"
-        :key="item.to"
-        :to="item.to"
-        class="mobile-bottom-link"
-      >
-        <span class="mobile-bottom-label">{{ item.label }}</span>
-      </router-link>
+    <nav v-if="mobileBottomItems.length" class="mobile-bottom-nav" :class="{ 'quiz-actions': isQuizDailyRoute }" :aria-label="isQuizDailyRoute ? '客观题快捷操作' : '常用导航'">
+      <template v-for="item in mobileBottomItems" :key="item.key">
+        <router-link
+          v-if="item.type === 'route'"
+          :to="item.to"
+          class="mobile-bottom-link"
+          :class="{ 'is-accent': item.accent }"
+        >
+          <span class="mobile-bottom-label">{{ item.label }}</span>
+        </router-link>
+        <button
+          v-else
+          type="button"
+          class="mobile-bottom-link mobile-bottom-button"
+          :class="{ 'is-accent': item.accent }"
+          @click="handleMobileBottomAction(item.action)"
+        >
+          <span class="mobile-bottom-label">{{ item.label }}</span>
+        </button>
+      </template>
     </nav>
 
     <!-- 全局 Toast -->
@@ -73,9 +86,12 @@
 import { clearModelCache } from './utils/models'
 
 export default {
+  supportEmail: '110076790@qq.com',
+  supportPhone: '13280340286',
   data() {
     return {
       user: null,
+      isMobileViewport: false,
       mobileNavOpen: false,
       toast: {
         show: false,
@@ -85,6 +101,7 @@ export default {
   },
   mounted() {
     this.checkLogin()
+    this.handleResize()
     window.addEventListener('storage', this.checkLogin)
     window.addEventListener('resize', this.handleResize)
     // Custom event for login update within the same tab
@@ -115,21 +132,41 @@ export default {
     isTeacher() {
       return this.user && (this.user.role === 'teacher')
     },
-    mobileQuickLinks() {
+    isQuizDailyRoute() {
+      return this.$route?.path === '/' || this.$route?.path === '/quiz-daily'
+    },
+    isLoginRoute() {
+      return this.$route?.path === '/login'
+    },
+    isCompactQuizMobileNav() {
+      return this.isMobileViewport && (this.isQuizDailyRoute || this.isLoginRoute)
+    },
+    mobileBottomItems() {
+      if (this.isQuizDailyRoute) {
+        return [
+          { key: 'quiz-next', type: 'action', action: 'quiz-next', label: '下一题', accent: true },
+          { key: 'share-wechat', type: 'action', action: 'share-wechat', label: '转发微信' },
+          { key: 'contact-support', type: 'action', action: 'contact-support', label: '联系客服' },
+          this.user
+            ? { key: 'profile', type: 'route', to: '/profile', label: '我的' }
+            : { key: 'login', type: 'route', to: '/login', label: '登录' }
+        ]
+      }
+
       if (this.user) {
         return [
-          { to: '/', label: '首页' },
-          { to: '/course', label: '课程' },
-          { to: '/quiz-daily', label: '客观题' },
-          { to: '/profile', label: '我的' }
+          { key: 'home', type: 'route', to: '/', label: '首页' },
+          { key: 'course', type: 'route', to: '/course', label: '课程' },
+          { key: 'progress', type: 'route', to: '/progress', label: '进度' },
+          { key: 'profile', type: 'route', to: '/profile', label: '我的' }
         ]
       }
 
       return [
-        { to: '/', label: '首页' },
-        { to: '/translate', label: '翻译' },
-        { to: '/typing', label: 'Typing' },
-        { to: '/login', label: '登录' }
+        { key: 'home', type: 'route', to: '/', label: '首页' },
+        { key: 'translate', type: 'route', to: '/translate', label: '翻译' },
+        { key: 'typing', type: 'route', to: '/typing', label: 'Typing' },
+        { key: 'login', type: 'route', to: '/login', label: '登录' }
       ]
     }
   },
@@ -171,8 +208,58 @@ export default {
       }
     },
     handleResize() {
+      this.isMobileViewport = window.innerWidth <= 900
+      if (this.isCompactQuizMobileNav) {
+        this.mobileNavOpen = false
+        return
+      }
+
       if (window.innerWidth > 900 && this.mobileNavOpen) {
         this.mobileNavOpen = false
+      }
+    },
+    async handleMobileBottomAction(action) {
+      if (action === 'quiz-next') {
+        window.dispatchEvent(new CustomEvent('quiz-daily-next-question'))
+        return
+      }
+
+      if (action === 'share-wechat') {
+        const sharePayload = {
+          title: 'Acjudge 客观题日刷',
+          text: '我在 Acjudge 刷 GESP 客观题，发你一起试试。',
+          url: window.location.href
+        }
+
+        try {
+          if (navigator.share) {
+            await navigator.share(sharePayload)
+            this.showToastMessage('已打开系统分享，请选择微信发送')
+            return
+          }
+
+          await navigator.clipboard.writeText(`${sharePayload.title}\n${sharePayload.text}\n${sharePayload.url}`)
+          this.showToastMessage('链接已复制，请到微信里直接粘贴发送')
+        } catch {
+          this.showToastMessage('当前设备暂不支持直接分享')
+        }
+        return
+      }
+
+      if (action === 'contact-support') {
+        const phone = this.$options.supportPhone
+
+        try {
+          window.location.href = `tel:${phone}`
+          this.showToastMessage(`正在拨打马老师：${phone}`)
+        } catch {
+          try {
+            await navigator.clipboard.writeText(phone)
+            this.showToastMessage(`号码已复制：马老师 ${phone}`)
+          } catch {
+            this.showToastMessage(`请手动拨打马老师：${phone}`)
+          }
+        }
       }
     },
     showToastMessage(message) {
@@ -360,10 +447,22 @@ main { padding: 0; }
     transition: background 0.15s, color 0.15s, transform 0.15s;
   }
 
-  .mobile-bottom-link.router-link-active {
+  .mobile-bottom-button {
+    border: none;
+    box-sizing: border-box;
+    background: transparent;
+    font-family: inherit;
+  }
+
+  .mobile-bottom-link.router-link-active,
+  .mobile-bottom-link.is-accent {
     background: #2b9af3;
     color: #fff;
     box-shadow: 0 8px 18px rgba(43, 154, 243, 0.28);
+  }
+
+  .mobile-bottom-nav.quiz-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .mobile-bottom-link:active {

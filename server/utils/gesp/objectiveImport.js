@@ -133,6 +133,30 @@ export function parseObjectiveQuestions(markdown, { answers = {}, paperUid, sour
   return results
 }
 
+export function parseObjectiveSolutions(markdown) {
+  const content = String(markdown || '').replace(/\r\n/g, '\n')
+  const headerPattern = /^(\d+)\),\s*/gm
+  const headers = []
+  let match
+
+  while ((match = headerPattern.exec(content)) !== null) {
+    headers.push({ questionNo: Number(match[1]), index: match.index })
+  }
+
+  const explanations = {}
+  for (let i = 0; i < headers.length; i++) {
+    const start = headers[i].index
+    const end = i + 1 < headers.length ? headers[i + 1].index : content.length
+    const block = content.slice(start, end).trim()
+    const parsed = parseSolutionBlock(block)
+    if (parsed) {
+      explanations[parsed.questionNo] = parsed
+    }
+  }
+
+  return explanations
+}
+
 export function extractMarkdownImages(markdown) {
   const images = []
   const pattern = /!\[[^\]]*\]\(([^)]+)\)/g
@@ -293,4 +317,27 @@ function normalizePaperSubject(subject) {
   if (/^c\+\+$/i.test(text)) return 'C++'
   if (/^python$/i.test(text)) return 'Python'
   return text
+}
+
+function parseSolutionBlock(block) {
+  const headerMatch = block.match(/^(\d+)\),\s*/)
+  if (!headerMatch) return null
+
+  const questionNo = Number(headerMatch[1])
+  const answerMatch = block.match(/>\s*\*\*答案\*\*\s*:\s*([^\n]+)/)
+  const explanationMatch = block.match(/>\s*\*\*解析\*\*\s*:\s*([\s\S]*?)$/)
+
+  const explanation = explanationMatch
+    ? explanationMatch[1]
+        .replace(/^>\s?/gm, '')
+        .replace(/\n---\s*$/m, '')
+        .trim()
+    : ''
+
+  return {
+    questionNo,
+    answer: answerMatch ? normalizeAnswer(answerMatch[1]) : '',
+    explanation,
+    explanationText: markdownToPlainText(explanation)
+  }
 }
