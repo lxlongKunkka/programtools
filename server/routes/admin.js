@@ -43,6 +43,41 @@ function normalizeQuizTags(value) {
     .filter(Boolean))]
 }
 
+function normalizeQuizStem(value) {
+  return String(value || '').trim()
+}
+
+function normalizeQuizOptions(value, questionType) {
+  if (questionType === 'judge') {
+    return []
+  }
+
+  const rawItems = Array.isArray(value) ? value : []
+  const normalized = rawItems
+    .map((item, index) => {
+      const key = String(item?.key || '').trim().toUpperCase() || String.fromCharCode(65 + index)
+      const text = String(item?.text || '').trim()
+      return {
+        key,
+        text,
+        textPlain: markdownToPlainText(text),
+        images: Array.isArray(item?.images) ? item.images.filter(Boolean) : []
+      }
+    })
+    .filter((item) => item.key && item.text)
+
+  if (normalized.length < 2) {
+    throw new Error('单选题至少需要 2 个有效选项')
+  }
+
+  const keys = normalized.map((item) => item.key)
+  if (new Set(keys).size !== keys.length) {
+    throw new Error('选项标识不能重复')
+  }
+
+  return normalized
+}
+
 function buildQuizQuestionAdminPayload(question) {
   return {
     questionUid: question.questionUid,
@@ -447,15 +482,40 @@ router.patch('/quiz-questions/:questionUid', async (req, res) => {
 
     const nextUpdate = {}
     let touched = false
+    const body = req.body || {}
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'answer')) {
-      const normalizedAnswer = normalizeQuizAnswer(req.body.answer, question)
+    if (Object.prototype.hasOwnProperty.call(body, 'stem')) {
+      const stem = normalizeQuizStem(body.stem)
+      if (!stem) {
+        return res.status(400).json({ error: '题干不能为空' })
+      }
+      if (stem.length > 20000) {
+        return res.status(400).json({ error: '题干内容不能超过 20000 个字符' })
+      }
+      nextUpdate.stem = stem
+      nextUpdate.stemText = markdownToPlainText(stem)
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'options')) {
+      try {
+        nextUpdate.options = normalizeQuizOptions(body.options, question.type)
+      } catch (optionError) {
+        return res.status(400).json({ error: optionError.message || '选项不合法' })
+      }
+      touched = true
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'answer')) {
+      const normalizedAnswer = normalizeQuizAnswer(body.answer, question)
       if (!normalizedAnswer) {
         return res.status(400).json({ error: '答案不能为空' })
       }
 
+      const effectiveOptions = nextUpdate.options || question.options || []
+
       if (question.type === 'single') {
-        const validAnswers = new Set((question.options || []).map((item) => String(item.key || '').trim().toUpperCase()).filter(Boolean))
+        const validAnswers = new Set(effectiveOptions.map((item) => String(item.key || '').trim().toUpperCase()).filter(Boolean))
         if (validAnswers.size > 0 && !validAnswers.has(normalizedAnswer)) {
           return res.status(400).json({ error: `答案必须是现有选项：${[...validAnswers].join(' / ')}` })
         }
@@ -469,8 +529,8 @@ router.patch('/quiz-questions/:questionUid', async (req, res) => {
       touched = true
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'explanation')) {
-      const explanation = String(req.body.explanation || '').trim()
+    if (Object.prototype.hasOwnProperty.call(body, 'explanation')) {
+      const explanation = String(body.explanation || '').trim()
       if (explanation.length > 20000) {
         return res.status(400).json({ error: '解析内容不能超过 20000 个字符' })
       }
@@ -479,13 +539,13 @@ router.patch('/quiz-questions/:questionUid', async (req, res) => {
       touched = true
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'tags')) {
-      nextUpdate.tags = normalizeQuizTags(req.body.tags)
+    if (Object.prototype.hasOwnProperty.call(body, 'tags')) {
+      nextUpdate.tags = normalizeQuizTags(body.tags)
       touched = true
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'levelTag')) {
-      const levelTag = String(req.body.levelTag || '').trim()
+    if (Object.prototype.hasOwnProperty.call(body, 'levelTag')) {
+      const levelTag = String(body.levelTag || '').trim()
       if (levelTag.length > 100) {
         return res.status(400).json({ error: '级别标签不能超过 100 个字符' })
       }
@@ -493,8 +553,8 @@ router.patch('/quiz-questions/:questionUid', async (req, res) => {
       touched = true
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'reviewStatus')) {
-      const reviewStatus = String(req.body.reviewStatus || '').trim()
+    if (Object.prototype.hasOwnProperty.call(body, 'reviewStatus')) {
+      const reviewStatus = String(body.reviewStatus || '').trim()
       if (!QUIZ_REVIEW_STATUSES.includes(reviewStatus)) {
         return res.status(400).json({ error: 'reviewStatus 不合法' })
       }
@@ -502,11 +562,11 @@ router.patch('/quiz-questions/:questionUid', async (req, res) => {
       touched = true
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'enabled')) {
-      if (typeof req.body.enabled !== 'boolean') {
+    if (Object.prototype.hasOwnProperty.call(body, 'enabled')) {
+      if (typeof body.enabled !== 'boolean') {
         return res.status(400).json({ error: 'enabled 必须是布尔值' })
       }
-      nextUpdate.enabled = req.body.enabled
+      nextUpdate.enabled = body.enabled
       touched = true
     }
 

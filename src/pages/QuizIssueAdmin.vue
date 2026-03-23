@@ -129,6 +129,35 @@
               </div>
             </div>
 
+            <label class="field-inline textarea-field">
+              <span>题干</span>
+              <textarea v-model="item._questionDraft.stem" :disabled="item._editorSaving" rows="5" placeholder="支持保留原有 Markdown 内容"></textarea>
+            </label>
+
+            <section v-if="item._questionDraft.type === 'single'" class="option-editor-section">
+              <div class="option-editor-header">
+                <span class="block-label">题目选项</span>
+                <button class="btn-action" type="button" :disabled="item._editorSaving" @click="addQuestionOption(item)">
+                  添加选项
+                </button>
+              </div>
+              <div class="option-editor-list">
+                <div v-for="(option, index) in item._questionDraft.options" :key="`${item._id}-edit-${index}`" class="option-editor-item">
+                  <label class="field-inline option-key-field">
+                    <span>标识</span>
+                    <input v-model="option.key" :disabled="item._editorSaving" maxlength="8" placeholder="A">
+                  </label>
+                  <label class="field-inline option-text-field">
+                    <span>内容</span>
+                    <textarea v-model="option.text" :disabled="item._editorSaving" rows="2" placeholder="输入选项内容"></textarea>
+                  </label>
+                  <button class="btn-action subtle option-remove-button" type="button" :disabled="item._editorSaving || item._questionDraft.options.length <= 2" @click="removeQuestionOption(item, index)">
+                    删除
+                  </button>
+                </div>
+              </div>
+            </section>
+
             <div class="editor-grid">
               <label class="field-inline">
                 <span>正确答案</span>
@@ -247,7 +276,14 @@ function createQuestionDraft(question) {
     type: question.type,
     stem: question.stem || '',
     stemText: question.stemText || '',
-    options: Array.isArray(question.options) ? question.options : [],
+    options: Array.isArray(question.options)
+      ? question.options.map((option) => ({
+        key: option?.key || '',
+        text: option?.text || '',
+        textPlain: option?.textPlain || '',
+        images: Array.isArray(option?.images) ? option.images : []
+      }))
+      : [],
     answer: question.answer || '',
     explanation: question.explanation || '',
     tags: Array.isArray(question.tags) ? question.tags : [],
@@ -257,6 +293,21 @@ function createQuestionDraft(question) {
     enabled: question.enabled !== false,
     updatedAt: question.updatedAt || null
   }
+}
+
+function normalizeDraftOptionKey(value, fallbackIndex) {
+  const raw = String(value || '').trim().toUpperCase()
+  if (raw) return raw
+  return String.fromCharCode(65 + fallbackIndex)
+}
+
+function serializeQuestionOptions(draft) {
+  if (draft.type === 'judge') return []
+  return (draft.options || []).map((option, index) => ({
+    key: normalizeDraftOptionKey(option?.key, index),
+    text: String(option?.text || '').trim(),
+    images: Array.isArray(option?.images) ? option.images : []
+  }))
 }
 
 function hydrateItem(item) {
@@ -394,6 +445,8 @@ async function saveQuestionEditor(item) {
     const data = await request(`/api/admin/quiz-questions/${encodeURIComponent(item.questionUid)}`, {
       method: 'PATCH',
       body: JSON.stringify({
+        stem: item._questionDraft.stem,
+        options: serializeQuestionOptions(item._questionDraft),
         answer: item._questionDraft.answer,
         explanation: item._questionDraft.explanation,
         tags: item._questionDraft.tagsText,
@@ -417,6 +470,23 @@ async function saveQuestionEditor(item) {
   } finally {
     item._editorSaving = false
   }
+}
+
+function addQuestionOption(item) {
+  if (!item?._questionDraft || item._questionDraft.type !== 'single') return
+  const nextIndex = item._questionDraft.options.length
+  item._questionDraft.options.push({
+    key: String.fromCharCode(65 + nextIndex),
+    text: '',
+    textPlain: '',
+    images: []
+  })
+}
+
+function removeQuestionOption(item, index) {
+  if (!item?._questionDraft || item._questionDraft.type !== 'single') return
+  if (item._questionDraft.options.length <= 2) return
+  item._questionDraft.options.splice(index, 1)
 }
 
 async function openQuestionSearch(item) {
@@ -727,6 +797,51 @@ onMounted(() => {
   color: #334155;
 }
 
+.option-editor-section {
+  margin: 14px 0;
+}
+
+.option-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.option-editor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.option-editor-item {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.option-key-field input,
+.option-text-field textarea {
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+}
+
+.option-text-field textarea {
+  resize: vertical;
+}
+
+.option-remove-button {
+  align-self: center;
+}
+
 .option-list {
   display: grid;
   gap: 8px;
@@ -804,6 +919,10 @@ onMounted(() => {
   .issue-meta {
     text-align: left;
     min-width: 0;
+  }
+
+  .option-editor-item {
+    grid-template-columns: 1fr;
   }
 }
 </style>
