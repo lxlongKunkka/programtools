@@ -1106,7 +1106,7 @@ export default {
         const importedTasks = await readFolderImportedTasks(files)
 
         if (!importedTasks.length) {
-          this.showToastMessage('未发现可导入的题目目录，需要同时包含 problem.md 与 std.cpp')
+          this.showToastMessage('未发现可导入的题目目录，至少需要包含 problem.md')
           return
         }
 

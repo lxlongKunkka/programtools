@@ -148,7 +148,7 @@ export async function readFolderImportedTasks(files) {
   }
 
   const folderEntries = [...groups.entries()]
-    .filter(([, fileMap]) => fileMap['problem.md'] && (fileMap['std.cpp'] || fileMap['source.cpp']))
+    .filter(([, fileMap]) => fileMap['problem.md'])
     .sort((a, b) => {
       const aBase = a[0].split('/').pop() || a[0]
       const bBase = b[0].split('/').pop() || b[0]
