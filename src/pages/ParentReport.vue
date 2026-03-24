@@ -34,110 +34,123 @@
         </article>
       </section>
 
-      <section class="section-block">
-        <div class="section-head">
-          <h2>Quiz 日报</h2>
-          <p>最近 14 天刷题活跃度、正确率与最近作答。</p>
-        </div>
-        <div class="summary-grid">
-          <article class="summary-card accent"><span>最近答题</span><strong>{{ report.quiz.learner.answeredCount }}</strong></article>
-          <article class="summary-card"><span>正确率</span><strong>{{ report.quiz.learner.accuracy }}%</strong></article>
-          <article class="summary-card"><span>活跃天数</span><strong>{{ report.quiz.learner.activeDays }}</strong></article>
-          <article class="summary-card"><span>连续打卡</span><strong>{{ report.quiz.learner.streak }}</strong></article>
-        </div>
-
-        <div class="content-grid">
-          <article class="panel">
-            <h3>最近打卡</h3>
-            <div v-if="!report.quiz.recentProgress.length" class="empty-inline">最近暂无打卡记录</div>
-            <div v-else class="list-block">
-              <div v-for="item in report.quiz.recentProgress" :key="item.date" class="row-item">
-                <strong>{{ item.date }}</strong>
-                <span>{{ item.answeredCount }} 题 / {{ item.correctCount }} 对</span>
-                <span>{{ item.completed ? '已完成' : '未完成' }}</span>
-              </div>
-            </div>
-          </article>
-
-          <article class="panel">
-            <h3>薄弱知识点</h3>
-            <div v-if="!report.quiz.weakTags.length" class="empty-inline">近 14 天没有明显薄弱点</div>
-            <div v-else class="tag-list">
-              <span v-for="tag in report.quiz.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
-            </div>
-          </article>
+      <section class="section-block report-tabs-wrap">
+        <div class="report-tabs">
+          <button :class="['report-tab', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">
+            <span>Quiz</span>
+            <strong>{{ report.quiz.learner.answeredCount }} 题</strong>
+          </button>
+          <button :class="['report-tab', activeTab === 'course' ? 'active' : '']" @click="activeTab = 'course'">
+            <span>Course</span>
+            <strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong>
+          </button>
         </div>
 
-        <article class="panel">
-          <h3>最近作答</h3>
-          <div v-if="!report.quiz.recentAttempts.length" class="empty-inline">暂无作答记录</div>
-          <div v-else class="attempt-list">
-            <article v-for="attempt in report.quiz.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
-              <div class="attempt-head">
-                <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
-                <span :class="['status-pill', attempt.isCorrect ? 'ok' : 'bad']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
-              </div>
-              <p class="attempt-stem">{{ attempt.stemPreview }}</p>
-              <div class="attempt-meta">
-                <span>作答：{{ attempt.selectedAnswer || '-' }}</span>
-                <span>正确：{{ attempt.correctAnswer || '-' }}</span>
-                <span>{{ formatDateTime(attempt.answeredAt) }}</span>
-              </div>
-            </article>
+        <section v-if="activeTab === 'quiz'" class="tab-panel">
+          <div class="section-head">
+            <h2>Quiz 日报</h2>
+            <p>最近 14 天刷题活跃度、正确率与最近作答。</p>
           </div>
-        </article>
-      </section>
+          <div class="summary-grid">
+            <article class="summary-card accent"><span>最近答题</span><strong>{{ report.quiz.learner.answeredCount }}</strong></article>
+            <article class="summary-card"><span>正确率</span><strong>{{ report.quiz.learner.accuracy }}%</strong></article>
+            <article class="summary-card"><span>活跃天数</span><strong>{{ report.quiz.learner.activeDays }}</strong></article>
+            <article class="summary-card"><span>连续打卡</span><strong>{{ report.quiz.learner.streak }}</strong></article>
+          </div>
 
-      <section class="section-block">
-        <div class="section-head">
-          <h2>Course 日报</h2>
-          <p>课程完成率、当前等级与最近学习轨迹。</p>
-        </div>
-        <div class="summary-grid">
-          <article class="summary-card accent"><span>当前等级</span><strong>L{{ report.course.learner.currentCppLevel }}</strong></article>
-          <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
-          <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
-          <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
-        </div>
-
-        <article class="panel">
-          <h3>各 Level 完成情况</h3>
-          <div v-if="!report.course.levels.length" class="empty-inline">暂无课程进度</div>
-          <div v-else class="level-list">
-            <article v-for="level in report.course.levels" :key="level.levelId" class="level-item">
-              <div class="level-head">
-                <div>
-                  <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
-                  <p>{{ level.group || '未分组' }}</p>
+          <div class="content-grid">
+            <article class="panel">
+              <h3>最近打卡</h3>
+              <div v-if="!report.quiz.recentProgress.length" class="empty-inline">最近暂无打卡记录</div>
+              <div v-else class="list-block">
+                <div v-for="item in report.quiz.recentProgress" :key="item.date" class="row-item">
+                  <strong>{{ item.date }}</strong>
+                  <span>{{ item.answeredCount }} 题 / {{ item.correctCount }} 对</span>
+                  <span>{{ item.completed ? '已完成' : '未完成' }}</span>
                 </div>
-                <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
-              <div class="tag-list">
-                <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
               </div>
             </article>
-          </div>
-        </article>
 
-        <article class="panel">
-          <h3>最近学习轨迹</h3>
-          <div v-if="!report.course.recentActivities.length" class="empty-inline">近 30 天暂无学习记录</div>
-          <div v-else class="attempt-list">
-            <article v-for="activity in report.course.recentActivities" :key="`${activity.action}-${activity.chapterId}-${activity.sessionDate}`" class="attempt-item">
-              <div class="attempt-head">
-                <strong>{{ formatCourseAction(activity.action) }} · {{ activity.chapterTitle || activity.chapterId }}</strong>
-                <span>{{ formatDateTime(activity.lastActiveAt) }}</span>
-              </div>
-              <p class="attempt-stem">{{ activity.subject }} · L{{ activity.level }} {{ activity.levelTitle }}<span v-if="activity.topicTitle"> · {{ activity.topicTitle }}</span></p>
-              <div class="attempt-meta">
-                <span>日期：{{ activity.sessionDate }}</span>
-                <span v-if="activity.problemId">题目：{{ activity.problemId }}</span>
-                <span v-if="activity.group">分组：{{ activity.group }}</span>
+            <article class="panel">
+              <h3>薄弱知识点</h3>
+              <div v-if="!report.quiz.weakTags.length" class="empty-inline">近 14 天没有明显薄弱点</div>
+              <div v-else class="tag-list">
+                <span v-for="tag in report.quiz.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
               </div>
             </article>
           </div>
-        </article>
+
+          <article class="panel">
+            <h3>最近作答</h3>
+            <div v-if="!report.quiz.recentAttempts.length" class="empty-inline">暂无作答记录</div>
+            <div v-else class="attempt-list">
+              <article v-for="attempt in report.quiz.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
+                <div class="attempt-head">
+                  <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
+                  <span :class="['status-pill', attempt.isCorrect ? 'ok' : 'bad']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
+                </div>
+                <p class="attempt-stem">{{ attempt.stemPreview }}</p>
+                <div class="attempt-meta">
+                  <span>作答：{{ attempt.selectedAnswer || '-' }}</span>
+                  <span>正确：{{ attempt.correctAnswer || '-' }}</span>
+                  <span>{{ formatDateTime(attempt.answeredAt) }}</span>
+                </div>
+              </article>
+            </div>
+          </article>
+        </section>
+
+        <section v-else class="tab-panel">
+          <div class="section-head">
+            <h2>Course 日报</h2>
+            <p>课程完成率、当前等级与最近学习轨迹。</p>
+          </div>
+          <div class="summary-grid">
+            <article class="summary-card accent"><span>当前等级</span><strong>L{{ report.course.learner.currentCppLevel }}</strong></article>
+            <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
+            <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
+            <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
+          </div>
+
+          <article class="panel">
+            <h3>各 Level 完成情况</h3>
+            <div v-if="!report.course.levels.length" class="empty-inline">暂无课程进度</div>
+            <div v-else class="level-list">
+              <article v-for="level in report.course.levels" :key="level.levelId" class="level-item">
+                <div class="level-head">
+                  <div>
+                    <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
+                    <p>{{ level.group || '未分组' }}</p>
+                  </div>
+                  <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
+                <div class="tag-list">
+                  <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
+                </div>
+              </article>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>最近学习轨迹</h3>
+            <div v-if="!report.course.recentActivities.length" class="empty-inline">近 30 天暂无学习记录</div>
+            <div v-else class="attempt-list">
+              <article v-for="activity in report.course.recentActivities" :key="`${activity.action}-${activity.chapterId}-${activity.sessionDate}`" class="attempt-item">
+                <div class="attempt-head">
+                  <strong>{{ formatCourseAction(activity.action) }} · {{ activity.chapterTitle || activity.chapterId }}</strong>
+                  <span>{{ formatDateTime(activity.lastActiveAt) }}</span>
+                </div>
+                <p class="attempt-stem">{{ activity.subject }} · L{{ activity.level }} {{ activity.levelTitle }}<span v-if="activity.topicTitle"> · {{ activity.topicTitle }}</span></p>
+                <div class="attempt-meta">
+                  <span>日期：{{ activity.sessionDate }}</span>
+                  <span v-if="activity.problemId">题目：{{ activity.problemId }}</span>
+                  <span v-if="activity.group">分组：{{ activity.group }}</span>
+                </div>
+              </article>
+            </div>
+          </article>
+        </section>
       </section>
     </template>
   </div>
@@ -173,6 +186,7 @@ export default {
   name: 'ParentReport',
   data() {
     return {
+      activeTab: 'quiz',
       loading: true,
       error: '',
       report: createEmptyReport()
@@ -290,6 +304,48 @@ export default {
   line-height: 1.8;
 }
 .section-block { margin-top: 22px; }
+.report-tabs-wrap {
+  padding: 18px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+.report-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.report-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid #d6e0eb;
+  background: #f5f9fd;
+  color: #35506b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.report-tab span {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.report-tab strong {
+  font-size: 20px;
+}
+.report-tab.active {
+  border-color: #2f7ff8;
+  background: linear-gradient(135deg, #eaf3ff 0%, #fff7e6 100%);
+  color: #163656;
+  box-shadow: 0 14px 30px rgba(47, 127, 248, 0.12);
+}
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .section-head { margin-bottom: 12px; }
 .section-head h2 { margin: 0 0 6px; font-size: 22px; }
 .section-head p { margin: 0; color: #5f6d7b; }
@@ -346,6 +402,8 @@ export default {
 }
 @media (max-width: 640px) {
   .hero-card h1 { font-size: 28px; }
+  .report-tabs { grid-template-columns: 1fr; }
+  .report-tab { align-items: flex-start; flex-direction: column; }
   .summary-grid { grid-template-columns: 1fr; }
   .row-item,
   .attempt-head,

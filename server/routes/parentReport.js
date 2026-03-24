@@ -17,7 +17,7 @@ function getExpireAt(validDays = 7) {
 
 function buildPublicUrl(req, token) {
   const origin = `${req.protocol}://${req.get('host')}`
-  return `${origin}/parent-report/${token}`
+  return `${origin}/report/${token}`
 }
 
 function formatDateLabel(value) {
