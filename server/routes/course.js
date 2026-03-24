@@ -240,10 +240,48 @@ function getChapterSolvedProblems(progress, chapter) {
   return [...new Set(solvedProblems)]
 }
 
-function buildScopedTopicSnapshot(topic, progress) {
+async function resolveSolvedProblemDetails(problemIds) {
+  const uniqueIds = [...new Set((Array.isArray(problemIds) ? problemIds : []).filter(Boolean).map(item => String(item)))]
+  if (!uniqueIds.length) return []
+
+  const objectIdValues = uniqueIds.filter(value => mongoose.Types.ObjectId.isValid(value))
+  const objectIdDocs = objectIdValues.length > 0
+    ? await Document.find({ _id: { $in: objectIdValues } }).select('_id domainId docId pid title').lean()
+    : []
+
+  const objectIdMap = new Map(objectIdDocs.map(doc => [String(doc._id), doc]))
+  const unresolvedValues = uniqueIds.filter(value => !objectIdMap.has(value))
+
+  const numericValues = unresolvedValues.filter(value => /^\d+$/.test(value)).map(value => Number(value))
+  const numericDocs = numericValues.length > 0
+    ? await Document.find({ docId: { $in: numericValues } }).select('_id domainId docId pid title').lean()
+    : []
+
+  const numericMap = new Map()
+  numericDocs.forEach(doc => {
+    if (Number.isFinite(doc.docId)) numericMap.set(String(doc.docId), doc)
+  })
+
+  return uniqueIds.map(value => {
+    const doc = objectIdMap.get(value) || numericMap.get(value)
+    return {
+      id: value,
+      domainId: doc?.domainId || '',
+      docId: Number.isFinite(doc?.docId) ? doc.docId : null,
+      pid: doc?.pid || '',
+      title: doc?.title || value,
+      displayName: doc
+        ? `${doc.domainId || 'system'} · ${doc.title || value}`
+        : value
+    }
+  })
+}
+
+async function buildScopedTopicSnapshot(topic, progress) {
   const chapterItems = Array.isArray(topic?.chapters)
-    ? topic.chapters.map(chapter => {
-      const solvedProblems = getChapterSolvedProblems(progress, chapter)
+    ? await Promise.all(topic.chapters.map(async chapter => {
+      const solvedProblemIds = getChapterSolvedProblems(progress, chapter)
+      const solvedProblems = await resolveSolvedProblemDetails(solvedProblemIds)
       return {
         chapterId: chapter.id || '',
         chapterUid: chapter._id ? String(chapter._id) : '',
@@ -252,7 +290,7 @@ function buildScopedTopicSnapshot(topic, progress) {
         solvedProblemCount: solvedProblems.length,
         solvedProblems
       }
-    })
+    }))
     : []
 
   const totalCount = chapterItems.length
@@ -270,10 +308,9 @@ function buildScopedTopicSnapshot(topic, progress) {
   }
 }
 
-function buildScopedLearnerDetailPayload({ learnerId, user, progress, levelDoc, topic = null, recentActivities = [] }) {
+async function buildScopedLearnerDetailPayload({ learnerId, user, progress, levelDoc, topic = null, recentActivities = [] }) {
   const selectedTopics = topic ? [topic] : getLevelTopics(levelDoc)
-  const topicSnapshots = selectedTopics
-    .map(item => buildScopedTopicSnapshot(item, progress))
+  const topicSnapshots = (await Promise.all(selectedTopics.map(item => buildScopedTopicSnapshot(item, progress))))
     .filter(item => item.totalCount > 0)
 
   const totalChapters = topicSnapshots.reduce((sum, item) => sum + item.totalCount, 0)
@@ -1233,7 +1270,7 @@ router.get('/level/:levelId/learners/:learnerId/detail', authenticateToken, asyn
       return res.status(404).json({ error: '学员不存在' })
     }
 
-    res.json(buildScopedLearnerDetailPayload({
+    res.json(await buildScopedLearnerDetailPayload({
       learnerId: learnerIdNum,
       user,
       progress,
@@ -1290,7 +1327,7 @@ router.get('/topic/:topicId/learners/:learnerId/detail', authenticateToken, asyn
       return res.status(404).json({ error: '学员不存在' })
     }
 
-    res.json(buildScopedLearnerDetailPayload({
+    res.json(await buildScopedLearnerDetailPayload({
       learnerId: learnerIdNum,
       user,
       progress,

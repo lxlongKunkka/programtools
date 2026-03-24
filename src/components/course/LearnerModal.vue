@@ -66,8 +66,13 @@
                 </div>
 
                 <div v-if="chapter.solvedProblems.length" class="chapter-problems">
-                  <span v-for="problemId in chapter.solvedProblems" :key="problemId" class="problem-chip">
-                    {{ problemId }}
+                  <span
+                    v-for="problem in chapter.solvedProblems"
+                    :key="problem.id || problem.displayName"
+                    class="problem-chip"
+                    :title="problem.docId ? `${problem.domainId || 'system'} / ${problem.docId}` : (problem.domainId || '')"
+                  >
+                    {{ problem.displayName }}
                   </span>
                 </div>
               </article>
