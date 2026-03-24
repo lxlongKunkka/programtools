@@ -176,7 +176,10 @@
               <article v-for="level in recentCourseLevels" :key="level.levelId" class="level-item">
                 <div class="level-head">
                   <div>
-                    <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
+                    <strong>
+                      {{ level.subject }} · L{{ level.level }} · {{ level.title }}
+                      <span v-if="level.activityLabel" :class="['level-activity-badge', level.activityTone]">{{ level.activityLabel }}</span>
+                    </strong>
                     <p>{{ level.group || '未分组' }}</p>
                   </div>
                   <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
@@ -280,6 +283,49 @@ export default {
       ].join('::')
 
       const levelMap = new Map(levels.map((level) => [makeKey(level), level]))
+      const activityTimeMap = new Map()
+
+      for (const activity of recentActivities) {
+        const key = makeKey(activity)
+        const time = new Date(activity?.lastActiveAt || 0).getTime()
+        if (!Number.isFinite(time) || !time) continue
+        const prev = activityTimeMap.get(key) || 0
+        if (time > prev) activityTimeMap.set(key, time)
+      }
+
+      const withActivityMeta = (level) => {
+        const time = activityTimeMap.get(makeKey(level)) || 0
+        if (!time) {
+          return {
+            ...level,
+            activityLabel: '较早参与',
+            activityTone: 'muted'
+          }
+        }
+
+        const daysSince = Math.floor((Date.now() - time) / 86400000)
+        if (daysSince <= 2) {
+          return {
+            ...level,
+            activityLabel: '最近学习',
+            activityTone: 'fresh'
+          }
+        }
+        if (daysSince <= 7) {
+          return {
+            ...level,
+            activityLabel: '上周学习',
+            activityTone: 'recent'
+          }
+        }
+
+        return {
+          ...level,
+          activityLabel: '较早参与',
+          activityTone: 'muted'
+        }
+      }
+
       const picked = []
       const seen = new Set()
 
@@ -287,16 +333,16 @@ export default {
         const key = makeKey(activity)
         if (seen.has(key) || !levelMap.has(key)) continue
         seen.add(key)
-        picked.push(levelMap.get(key))
+        picked.push(withActivityMeta(levelMap.get(key)))
         if (picked.length >= 3) return picked
       }
 
       const startedLevels = levels.filter((level) => Number(level?.completedChapters || 0) > 0 || Number(level?.completionRate || 0) > 0)
       if (startedLevels.length > 0) {
-        return startedLevels.slice(0, 3)
+        return startedLevels.slice(0, 3).map(withActivityMeta)
       }
 
-      return levels.slice(0, 3)
+      return levels.slice(0, 3).map(withActivityMeta)
     }
   },
   watch: {
@@ -514,6 +560,28 @@ export default {
 }
 .attempt-head, .level-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .attempt-stem, .level-head p { margin: 8px 0 0; color: #5f6d7b; }
+.level-activity-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.level-activity-badge.fresh {
+  background: #dcfce7;
+  color: #166534;
+}
+.level-activity-badge.recent {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.level-activity-badge.muted {
+  background: #f3f4f6;
+  color: #6b7280;
+}
 .attempt-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: #64748b; }
 .status-pill {
   display: inline-flex;
