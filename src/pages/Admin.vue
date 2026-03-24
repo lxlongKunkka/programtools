@@ -103,7 +103,7 @@
         <div class="tool-group">
           <button @click="sendTestEmail" class="btn-tool">发送测试邮件</button>
           <button @click="sendDailyReport" class="btn-tool">发送昨日日报</button>
-          <button @click="$router.push('/admin/quiz-following')" class="btn-tool">学员 Quiz 看板</button>
+          <button @click="$router.push('/learners/dashboard')" class="btn-tool">学员看板</button>
           <button @click="$router.push('/admin/quiz-issues')" class="btn-tool">问题题目维护</button>
           <button @click="$router.push('/problems')" class="btn-tool">题目管理 (翻译/标签)</button>
           <button @click="$router.push('/course')" class="btn-tool">课程设计</button>

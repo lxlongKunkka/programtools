@@ -37,7 +37,7 @@
         <router-link v-if="isPremium" to="/solution-report">Report</router-link>
         <router-link v-if="isPremium" to="/solvedata">Data</router-link>
         <router-link v-if="isPremium" to="/chat">Chat</router-link>
-        <router-link v-if="isTeacher || isAdmin" to="/admin/quiz-following">学员Quiz</router-link>
+        <router-link v-if="isTeacher || isAdmin" to="/learners/dashboard">学员看板</router-link>
         <router-link v-if="isAdmin" to="/admin">Admin</router-link>
         <div v-if="user" class="user-menu">
           <router-link to="/profile" class="username-link">{{ user.username }}</router-link>
