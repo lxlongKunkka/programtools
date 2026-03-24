@@ -1,0 +1,307 @@
+<template>
+  <div class="parent-report-page">
+    <section class="hero-card">
+      <p class="eyebrow">家长日报</p>
+      <h1>{{ learnerName }} 的学习情况</h1>
+      <p class="hero-copy">无需登录即可查看孩子最近的 Quiz 刷题与 Course 学习进展。</p>
+      <div class="hero-meta">
+        <span>生成时间：{{ formatDateTime(report.share?.createdAt) }}</span>
+        <span>最近访问：{{ formatDateTime(report.share?.lastAccessAt) }}</span>
+      </div>
+    </section>
+
+    <section v-if="loading" class="panel empty-panel">加载中...</section>
+    <section v-else-if="error" class="panel empty-panel">{{ error }}</section>
+    <template v-else>
+      <section class="section-block">
+        <div class="section-head">
+          <h2>Quiz 日报</h2>
+          <p>最近 14 天刷题活跃度、正确率与最近作答。</p>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card accent"><span>最近答题</span><strong>{{ report.quiz.learner.answeredCount }}</strong></article>
+          <article class="summary-card"><span>正确率</span><strong>{{ report.quiz.learner.accuracy }}%</strong></article>
+          <article class="summary-card"><span>活跃天数</span><strong>{{ report.quiz.learner.activeDays }}</strong></article>
+          <article class="summary-card"><span>连续打卡</span><strong>{{ report.quiz.learner.streak }}</strong></article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel">
+            <h3>最近打卡</h3>
+            <div v-if="!report.quiz.recentProgress.length" class="empty-inline">最近暂无打卡记录</div>
+            <div v-else class="list-block">
+              <div v-for="item in report.quiz.recentProgress" :key="item.date" class="row-item">
+                <strong>{{ item.date }}</strong>
+                <span>{{ item.answeredCount }} 题 / {{ item.correctCount }} 对</span>
+                <span>{{ item.completed ? '已完成' : '未完成' }}</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>薄弱知识点</h3>
+            <div v-if="!report.quiz.weakTags.length" class="empty-inline">近 14 天没有明显薄弱点</div>
+            <div v-else class="tag-list">
+              <span v-for="tag in report.quiz.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <h3>最近作答</h3>
+          <div v-if="!report.quiz.recentAttempts.length" class="empty-inline">暂无作答记录</div>
+          <div v-else class="attempt-list">
+            <article v-for="attempt in report.quiz.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
+              <div class="attempt-head">
+                <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
+                <span :class="['status-pill', attempt.isCorrect ? 'ok' : 'bad']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
+              </div>
+              <p class="attempt-stem">{{ attempt.stemPreview }}</p>
+              <div class="attempt-meta">
+                <span>作答：{{ attempt.selectedAnswer || '-' }}</span>
+                <span>正确：{{ attempt.correctAnswer || '-' }}</span>
+                <span>{{ formatDateTime(attempt.answeredAt) }}</span>
+              </div>
+            </article>
+          </div>
+        </article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-head">
+          <h2>Course 日报</h2>
+          <p>课程完成率、当前等级与最近学习轨迹。</p>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card accent"><span>当前等级</span><strong>L{{ report.course.learner.currentCppLevel }}</strong></article>
+          <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
+          <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
+          <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
+        </div>
+
+        <article class="panel">
+          <h3>各 Level 完成情况</h3>
+          <div v-if="!report.course.levels.length" class="empty-inline">暂无课程进度</div>
+          <div v-else class="level-list">
+            <article v-for="level in report.course.levels" :key="level.levelId" class="level-item">
+              <div class="level-head">
+                <div>
+                  <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
+                  <p>{{ level.group || '未分组' }}</p>
+                </div>
+                <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
+              <div class="tag-list">
+                <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
+              </div>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h3>最近学习轨迹</h3>
+          <div v-if="!report.course.recentActivities.length" class="empty-inline">近 30 天暂无学习记录</div>
+          <div v-else class="attempt-list">
+            <article v-for="activity in report.course.recentActivities" :key="`${activity.action}-${activity.chapterId}-${activity.sessionDate}`" class="attempt-item">
+              <div class="attempt-head">
+                <strong>{{ formatCourseAction(activity.action) }} · {{ activity.chapterTitle || activity.chapterId }}</strong>
+                <span>{{ formatDateTime(activity.lastActiveAt) }}</span>
+              </div>
+              <p class="attempt-stem">{{ activity.subject }} · L{{ activity.level }} {{ activity.levelTitle }}<span v-if="activity.topicTitle"> · {{ activity.topicTitle }}</span></p>
+              <div class="attempt-meta">
+                <span>日期：{{ activity.sessionDate }}</span>
+                <span v-if="activity.problemId">题目：{{ activity.problemId }}</span>
+                <span v-if="activity.group">分组：{{ activity.group }}</span>
+              </div>
+            </article>
+          </div>
+        </article>
+      </section>
+    </template>
+  </div>
+</template>
+
+<script>
+import request from '../utils/request'
+
+function createEmptyReport() {
+  return {
+    share: null,
+    learner: null,
+    quiz: {
+      learner: { answeredCount: 0, accuracy: 0, activeDays: 0, streak: 0 },
+      recentProgress: [],
+      recentAttempts: [],
+      weakTags: []
+    },
+    course: {
+      learner: { currentCppLevel: 1, completionRate: 0, completedChaptersCount: 0, totalChapters: 0, lastActivityAt: null },
+      levels: [],
+      recentActivities: []
+    }
+  }
+}
+
+export default {
+  name: 'ParentReport',
+  data() {
+    return {
+      loading: true,
+      error: '',
+      report: createEmptyReport()
+    }
+  },
+  computed: {
+    learnerName() {
+      return this.report.learner?.learnerName || '孩子'
+    }
+  },
+  watch: {
+    '$route.params.token': {
+      immediate: true,
+      handler() {
+        this.loadReport()
+      }
+    }
+  },
+  methods: {
+    async loadReport() {
+      const token = String(this.$route.params.token || '').trim()
+      if (!token) {
+        this.error = '家长日报链接无效'
+        this.loading = false
+        return
+      }
+
+      this.loading = true
+      this.error = ''
+      try {
+        const data = await request(`/api/parent-report/${token}`)
+        this.report = {
+          share: data?.share || null,
+          learner: data?.learner || null,
+          quiz: data?.quiz || createEmptyReport().quiz,
+          course: data?.course || createEmptyReport().course
+        }
+      } catch (e) {
+        this.error = e.message || '加载家长日报失败'
+        this.report = createEmptyReport()
+      } finally {
+        this.loading = false
+      }
+    },
+    formatDateTime(value) {
+      if (!value) return '暂无'
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return '暂无'
+      return date.toLocaleString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+    formatCourseAction(value) {
+      if (value === 'view_chapter') return '查看章节'
+      if (value === 'complete_chapter') return '完成章节'
+      if (value === 'pass_problem') return '通过题目'
+      return value || '学习行为'
+    }
+  }
+}
+</script>
+
+<style scoped>
+.parent-report-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 18px 48px;
+  color: #16202a;
+}
+.hero-card,
+.panel,
+.summary-card {
+  background: #fff;
+  border: 1px solid #d8e0ea;
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 34, 58, 0.08);
+}
+.hero-card {
+  padding: 28px;
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, #fffdf8 0%, #eef6ff 100%);
+}
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7a5c00;
+}
+.hero-card h1 { margin: 0 0 10px; font-size: 34px; }
+.hero-copy { margin: 0; color: #51606f; line-height: 1.6; }
+.hero-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; color: #5a6c7e; font-size: 13px; }
+.section-block { margin-top: 22px; }
+.section-head { margin-bottom: 12px; }
+.section-head h2 { margin: 0 0 6px; font-size: 22px; }
+.section-head p { margin: 0; color: #5f6d7b; }
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.summary-card { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.summary-card span { color: #627386; font-size: 13px; }
+.summary-card strong { font-size: 28px; }
+.summary-card.accent { background: linear-gradient(135deg, #fef4d6 0%, #fff 100%); }
+.content-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 14px; }
+.panel { padding: 18px; }
+.panel h3 { margin: 0 0 12px; font-size: 18px; }
+.empty-panel, .empty-inline { color: #738396; text-align: center; }
+.empty-panel { padding: 48px 16px; }
+.list-block, .attempt-list, .level-list { display: flex; flex-direction: column; gap: 10px; }
+.row-item, .attempt-item, .level-item {
+  border: 1px solid #e0e7ef;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fbfdff;
+}
+.row-item { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  background: #eef4ff;
+  color: #31507a;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.attempt-head, .level-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.attempt-stem, .level-head p { margin: 8px 0 0; color: #5f6d7b; }
+.attempt-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: #64748b; }
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.status-pill.ok { background: #dcfce7; color: #166534; }
+.status-pill.bad { background: #fee2e2; color: #991b1b; }
+.progress-bar { height: 8px; border-radius: 999px; background: #e6edf5; margin-top: 12px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #2f7ff8 0%, #67b6ff 100%); }
+@media (max-width: 900px) {
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .hero-card h1 { font-size: 28px; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .row-item,
+  .attempt-head,
+  .level-head,
+  .hero-meta { flex-direction: column; align-items: flex-start; }
+}
+</style>

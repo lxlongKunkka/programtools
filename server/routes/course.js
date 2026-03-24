@@ -524,10 +524,7 @@ async function buildTeacherCourseFollowPayload(teacherId) {
   }
 }
 
-async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
-  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
-  if (!follow) throw new Error('未关注该学员')
-
+export async function buildLearnerCourseDigestPayload(learnerId) {
   const windowStart = getActivityWindowStart(30)
   const [user, progress, levels, recentActivities] = await Promise.all([
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
@@ -551,8 +548,6 @@ async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
       learnerId,
       learnerName: user.uname,
       learnerEmail: user.mail || '',
-      followedAt: follow.createdAt || null,
-      note: follow.note || '',
       currentCppLevel: courseSummary.currentCppLevel,
       currentCppLevelTitle: courseSummary.currentCppLevelTitle,
       subjectLevels: courseSummary.subjectLevels,
@@ -579,6 +574,22 @@ async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
       problemId: item.problemId || '',
       lastActiveAt: item.lastActiveAt || item.updatedAt || item.createdAt || null
     }))
+  }
+}
+
+async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
+  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
+  if (!follow) throw new Error('未关注该学员')
+  const digest = await buildLearnerCourseDigestPayload(learnerId)
+
+  return {
+    learner: {
+      ...digest.learner,
+      followedAt: follow.createdAt || null,
+      note: follow.note || ''
+    },
+    levels: digest.levels,
+    recentActivities: digest.recentActivities
   }
 }
 

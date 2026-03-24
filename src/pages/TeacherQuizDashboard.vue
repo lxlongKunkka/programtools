@@ -192,6 +192,7 @@
                   <td>
                     <div class="row-actions">
                       <button class="link-btn" @click="openQuizDetail(item)">详情</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '生成中...' : '家长日报' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
                   </td>
@@ -249,6 +250,7 @@
                   <td>
                     <div class="row-actions">
                       <button class="link-btn" @click="openCourseDetail(item)">详情</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '生成中...' : '家长日报' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
                   </td>
@@ -457,6 +459,7 @@ export default {
       courseDashboard: createEmptyCourseDashboard(),
       courseDashboardLoading: false,
       followSavingId: null,
+      parentShareLoadingId: null,
       quizDetail: createEmptyQuizDetail(),
       quizDetailLoading: false,
       courseDetail: createEmptyCourseDetail(),
@@ -607,6 +610,27 @@ export default {
         this.showToastMessage(`取消关注失败: ${e.message}`)
       } finally {
         this.followSavingId = null
+      }
+    },
+    async createParentShare(item) {
+      const learnerId = Number(item._id || item.learnerId)
+      if (!learnerId) return
+      this.parentShareLoadingId = learnerId
+      try {
+        const data = await request.post('/api/parent-report/shares', { learnerId })
+        const shareUrl = data?.publicUrl || ''
+        if (shareUrl && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(shareUrl)
+          this.showToastMessage('家长日报链接已复制')
+        } else if (shareUrl) {
+          this.showToastMessage(`家长日报链接：${shareUrl}`)
+        } else {
+          this.showToastMessage('家长日报链接已生成')
+        }
+      } catch (e) {
+        this.showToastMessage(`生成家长日报失败: ${e.message}`)
+      } finally {
+        this.parentShareLoadingId = null
       }
     },
     async openQuizDetail(item) {

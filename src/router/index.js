@@ -11,6 +11,7 @@ const Profile = () => import('../pages/Profile.vue')
 const Admin = () => import('../pages/Admin.vue')
 const QuizIssueAdmin = () => import('../pages/QuizIssueAdmin.vue')
 const TeacherQuizDashboard = () => import('../pages/TeacherQuizDashboard.vue')
+const ParentReport = () => import('../pages/ParentReport.vue')
 const ProblemManager = () => import('../pages/ProblemManager.vue')
 const Typing = () => import('../pages/Typing.vue')
 const LearningMap = () => import('../pages/LearningMap.vue')
@@ -35,6 +36,7 @@ const routes = [
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/quiz-issues', component: QuizIssueAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/quiz-following', component: TeacherQuizDashboard, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
+  { path: '/parent-report/:token', component: ParentReport },
   { path: '/admin/prompts', component: PromptEditor, meta: { requiresAuth: true, allowedRoles: ['admin'] } },
   { path: '/problems', component: ProblemManager, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/translate', component: Translate },

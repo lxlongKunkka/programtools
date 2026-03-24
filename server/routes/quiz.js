@@ -314,19 +314,15 @@ async function buildTeacherQuizFollowPayload(teacherId, days = 7) {
   }
 }
 
-async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14) {
-  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
-  if (!follow) {
-    throw new Error('未关注该学员')
-  }
-
+export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
   const user = await User.findOne({ _id: learnerId }).select('_id uname mail').lean()
   if (!user) {
     throw new Error('学员不存在')
   }
 
-  const windowStart = getWindowStart(days)
-  const [attempts, wrongbookCount, favoriteCount, weakTags] = await Promise.all([
+  const windowDays = Math.min(Math.max(Number(days) || 14, 1), 30)
+  const windowStart = getWindowStart(windowDays)
+  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats] = await Promise.all([
     QuizAttempt.find({ userId: learnerId }).sort({ answeredAt: -1 }).limit(30).lean(),
     QuizWrongbookItem.countDocuments({ userId: learnerId, active: true }),
     QuizFavoriteItem.countDocuments({ userId: learnerId, active: true }),
@@ -343,13 +339,40 @@ async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14)
       { $group: { _id: '$tags', wrongCount: { $sum: 1 } } },
       { $sort: { wrongCount: -1, _id: 1 } },
       { $limit: 8 }
+    ]),
+    QuizDailyProgress.find({ userId: learnerId })
+      .sort({ date: -1 })
+      .limit(windowDays)
+      .lean(),
+    QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: learnerId,
+          answeredAt: { $gte: windowStart }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          answeredCount: { $sum: 1 },
+          correctCount: {
+            $sum: {
+              $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+            }
+          },
+          activeDates: { $addToSet: '$sessionDate' },
+          lastAnsweredAt: { $max: '$answeredAt' }
+        }
+      }
     ])
   ])
 
-  const recentProgress = await QuizDailyProgress.find({ userId: learnerId })
-    .sort({ date: -1 })
-    .limit(Math.min(Math.max(Number(days) || 14, 1), 30))
-    .lean()
+  const latestProgress = recentProgress[0] || null
+  const stats = attemptStats[0] || null
+  const answeredCount = Number(stats?.answeredCount || 0)
+  const correctCount = Number(stats?.correctCount || 0)
+  const accuracy = answeredCount > 0 ? Number(((correctCount / answeredCount) * 100).toFixed(1)) : 0
+  const activeDays = Array.isArray(stats?.activeDates) ? stats.activeDates.filter(Boolean).length : 0
 
   const questionUids = [...new Set(attempts.map((item) => item.questionUid).filter(Boolean))]
   const questions = await QuizQuestion.find(
@@ -363,8 +386,12 @@ async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14)
       learnerId,
       learnerName: user.uname,
       learnerEmail: user.mail || '',
-      followedAt: follow.createdAt || null,
-      note: follow.note || '',
+      answeredCount,
+      correctCount,
+      accuracy,
+      activeDays,
+      streak: Number(latestProgress?.streak || 0),
+      lastAnsweredAt: stats?.lastAnsweredAt || latestProgress?.lastAnsweredAt || null,
       wrongbookActiveCount: wrongbookCount,
       favoriteActiveCount: favoriteCount
     },
@@ -396,6 +423,26 @@ async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14)
       tag: item._id,
       wrongCount: item.wrongCount
     }))
+  }
+}
+
+async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14) {
+  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
+  if (!follow) {
+    throw new Error('未关注该学员')
+  }
+
+  const digest = await buildLearnerQuizDigestPayload(learnerId, days)
+
+  return {
+    learner: {
+      ...digest.learner,
+      followedAt: follow.createdAt || null,
+      note: follow.note || ''
+    },
+    recentProgress: digest.recentProgress,
+    recentAttempts: digest.recentAttempts,
+    weakTags: digest.weakTags
   }
 }
 
