@@ -493,6 +493,9 @@ async function buildCourseProblemCatalog(levels = []) {
         for (const rawRef of Array.isArray(chapter?.problemIds) ? chapter.problemIds : []) {
           pushRef(rawRef, context)
         }
+        for (const rawRef of Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds : []) {
+          pushRef(rawRef, context)
+        }
       }
     }
   }
@@ -548,15 +551,18 @@ function getSubmissionTime(submission) {
   return submission?.submitAt || submission?.judgeAt || submission?.createdAt || submission?.updatedAt || null
 }
 
-async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, limit = 10) {
+async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, limit = 20) {
   const problemCatalog = await buildCourseProblemCatalog(levels)
   if (!problemCatalog.size) return []
 
   const windowStart = getActivityWindowStart(days)
-  const problemQueries = [...problemCatalog.values()].map((item) => ({
-    domainId: item.domainId,
-    pid: item.docId
-  }))
+  const uniqueDocIds = [...new Set([...problemCatalog.values()].map((item) => Number(item.docId)).filter(Number.isFinite))]
+  const catalogByPid = new Map()
+  for (const item of problemCatalog.values()) {
+    const pidKey = Number(item.docId)
+    if (!Number.isFinite(pidKey) || catalogByPid.has(pidKey)) continue
+    catalogByPid.set(pidKey, item)
+  }
 
   const submissions = await Submission.find({
     uid: learnerId,
@@ -569,7 +575,7 @@ async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, 
           { updatedAt: { $gte: windowStart } }
         ]
       },
-      { $or: problemQueries }
+      { pid: { $in: uniqueDocIds } }
     ]
   }).sort({ submitAt: -1, judgeAt: -1, createdAt: -1, updatedAt: -1, _id: -1 }).lean()
 
@@ -578,12 +584,13 @@ async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, 
   const summaryMap = new Map()
   for (const submission of submissions) {
     const key = `${submission.domainId || 'system'}::${submission.pid}`
-    if (!problemCatalog.has(key)) continue
+    const catalogItem = problemCatalog.get(key) || catalogByPid.get(Number(submission.pid))
+    if (!catalogItem) continue
     const eventTime = getSubmissionTime(submission)
 
     if (!summaryMap.has(key)) {
       summaryMap.set(key, {
-        ...problemCatalog.get(key),
+        ...catalogItem,
         lastSubmittedAt: eventTime,
         submitCount: 0,
         accepted: false,
@@ -953,7 +960,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
     UserProgress.findOne({ userId: learnerId }).lean(),
     CourseLevel.find()
-      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title topics.chapters.homeworkIds topics.chapters.problemIds chapters._id chapters.id chapters.title chapters.homeworkIds chapters.problemIds')
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title topics.chapters.homeworkIds topics.chapters.problemIds topics.chapters.optionalProblemIds chapters._id chapters.id chapters.title chapters.homeworkIds chapters.problemIds chapters.optionalProblemIds')
       .sort({ subject: 1, level: 1 })
       .lean(),
     CourseActivity.find({ userId: learnerId, lastActiveAt: { $gte: windowStart } })
