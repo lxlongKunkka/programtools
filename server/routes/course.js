@@ -11,6 +11,7 @@ import User from '../models/User.js'
 import Document from '../models/Document.js'
 import Submission from '../models/Submission.js'
 import ContestStatus from '../models/ContestStatus.js'
+import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -67,6 +68,255 @@ async function resolveProblemIds(problemIdStrings) {
         }
     }
     return resolvedIds
+}
+
+function normalizeSubjectLevels(progress) {
+  let subjectLevels = progress?.subjectLevels
+
+  if (subjectLevels instanceof Map) {
+    subjectLevels = Object.fromEntries(subjectLevels)
+  }
+
+  if (!subjectLevels || typeof subjectLevels !== 'object') {
+    subjectLevels = {}
+  }
+
+  if (!subjectLevels['C++']) {
+    subjectLevels['C++'] = progress?.currentLevel || 1
+  }
+
+  return subjectLevels
+}
+
+function getLevelTopics(levelDoc) {
+  const topics = Array.isArray(levelDoc?.topics)
+    ? levelDoc.topics.filter(topic => Array.isArray(topic.chapters) && topic.chapters.length > 0)
+    : []
+
+  if (topics.length > 0) return topics
+
+  const chapters = Array.isArray(levelDoc?.chapters) ? levelDoc.chapters : []
+  if (!chapters.length) return []
+
+  return [{
+    _id: `legacy-${levelDoc._id}`,
+    title: '章节',
+    chapters
+  }]
+}
+
+function isChapterCompleted(progress, chapter) {
+  if (!progress || !chapter) return false
+
+  if (chapter._id && Array.isArray(progress.completedChapterUids)) {
+    const uidText = chapter._id.toString()
+    if (progress.completedChapterUids.some(uid => uid && uid.toString() === uidText)) {
+      return true
+    }
+  }
+
+  return !!(chapter.id && Array.isArray(progress.completedChapters) && progress.completedChapters.includes(chapter.id))
+}
+
+function buildLevelSnapshot(levelDoc, progress) {
+  const topics = getLevelTopics(levelDoc).map(topic => {
+    const chapters = Array.isArray(topic.chapters) ? topic.chapters : []
+    const completedCount = chapters.reduce((sum, chapter) => sum + (isChapterCompleted(progress, chapter) ? 1 : 0), 0)
+    const totalCount = chapters.length
+
+    return {
+      topicId: String(topic._id || topic.title || ''),
+      title: topic.title || '未命名专题',
+      completedCount,
+      totalCount,
+      completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+    }
+  })
+
+  const totalChapters = topics.reduce((sum, topic) => sum + topic.totalCount, 0)
+  const completedChapters = topics.reduce((sum, topic) => sum + topic.completedCount, 0)
+
+  return {
+    levelId: String(levelDoc._id),
+    level: Number(levelDoc.level || 0),
+    group: levelDoc.group || '',
+    subject: levelDoc.subject || 'C++',
+    title: levelDoc.title || '',
+    completedChapters,
+    totalChapters,
+    completionRate: totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0,
+    topics
+  }
+}
+
+function buildCourseRiskFlags(summary) {
+  const flags = []
+
+  if ((summary.completedChaptersCount || 0) === 0) {
+    flags.push('未开始课程')
+    return flags
+  }
+
+  if ((summary.completionRate || 0) < 10) flags.push('进度偏慢')
+  if ((summary.startedLevelCount || 0) > 0 && (summary.completedLevelCount || 0) === 0) flags.push('尚未完成整级')
+
+  return flags
+}
+
+function buildCourseProgressSummary(progress, levels) {
+  const levelSnapshots = levels
+    .map(level => buildLevelSnapshot(level, progress))
+    .filter(level => level.totalChapters > 0)
+
+  const totalChapters = levelSnapshots.reduce((sum, level) => sum + level.totalChapters, 0)
+  const completedChaptersCount = levelSnapshots.reduce((sum, level) => sum + level.completedChapters, 0)
+  const startedLevelCount = levelSnapshots.filter(level => level.completedChapters > 0).length
+  const completedLevelCount = levelSnapshots.filter(level => level.totalChapters > 0 && level.completedChapters === level.totalChapters).length
+  const totalTopicCount = levelSnapshots.reduce((sum, level) => sum + level.topics.length, 0)
+  const startedTopicCount = levelSnapshots.reduce((sum, level) => sum + level.topics.filter(topic => topic.completedCount > 0).length, 0)
+  const completionRate = totalChapters > 0 ? Number(((completedChaptersCount / totalChapters) * 100).toFixed(1)) : 0
+  const subjectLevels = normalizeSubjectLevels(progress)
+  const currentCppLevel = Number(subjectLevels['C++'] || progress?.currentLevel || 1)
+  const currentCppLevelDoc = levels.find(level => {
+    const subject = level.subject || 'C++'
+    return subject === 'C++' && Number(level.level) === currentCppLevel
+  })
+
+  return {
+    subjectLevels,
+    currentCppLevel,
+    currentCppLevelTitle: currentCppLevelDoc?.title || '',
+    completedChaptersCount,
+    totalChapters,
+    completionRate,
+    startedLevelCount,
+    completedLevelCount,
+    startedTopicCount,
+    totalTopicCount,
+    levels: levelSnapshots
+  }
+}
+
+async function buildTeacherCourseFollowPayload(teacherId) {
+  const follows = await TeacherQuizFollow.find({ teacherId }).sort({ createdAt: -1 }).lean()
+  const learnerIds = follows.map(item => Number(item.learnerId)).filter(Number.isFinite)
+
+  if (!learnerIds.length) {
+    return {
+      summary: {
+        followedCount: 0,
+        startedLearnerCount: 0,
+        averageCompletionRate: 0,
+        averageCompletedChapters: 0,
+        averageCurrentCppLevel: 0
+      },
+      items: []
+    }
+  }
+
+  const [users, progresses, levels] = await Promise.all([
+    User.find({ _id: { $in: learnerIds } }).select('_id uname mail').lean(),
+    UserProgress.find({ userId: { $in: learnerIds } }).lean(),
+    CourseLevel.find()
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id chapters._id chapters.id')
+      .sort({ subject: 1, level: 1 })
+      .lean()
+  ])
+
+  const userMap = new Map(users.map(user => [Number(user._id), user]))
+  const progressMap = new Map(progresses.map(progress => [Number(progress.userId), progress]))
+
+  const items = follows.map(follow => {
+    const learnerId = Number(follow.learnerId)
+    const user = userMap.get(learnerId)
+    const progress = progressMap.get(learnerId)
+    const courseSummary = buildCourseProgressSummary(progress, levels)
+
+    const item = {
+      learnerId,
+      learnerName: user?.uname || `用户 ${learnerId}`,
+      learnerEmail: user?.mail || '',
+      followedAt: follow.createdAt || null,
+      note: follow.note || '',
+      currentCppLevel: courseSummary.currentCppLevel,
+      currentCppLevelTitle: courseSummary.currentCppLevelTitle,
+      subjectLevels: courseSummary.subjectLevels,
+      completedChaptersCount: courseSummary.completedChaptersCount,
+      totalChapters: courseSummary.totalChapters,
+      completionRate: courseSummary.completionRate,
+      startedLevelCount: courseSummary.startedLevelCount,
+      completedLevelCount: courseSummary.completedLevelCount,
+      startedTopicCount: courseSummary.startedTopicCount,
+      totalTopicCount: courseSummary.totalTopicCount
+    }
+
+    return {
+      ...item,
+      riskFlags: buildCourseRiskFlags(item)
+    }
+  })
+
+  const followedCount = items.length
+  const startedLearnerCount = items.filter(item => item.completedChaptersCount > 0).length
+  const averageCompletionRate = followedCount > 0
+    ? Number((items.reduce((sum, item) => sum + item.completionRate, 0) / followedCount).toFixed(1))
+    : 0
+  const averageCompletedChapters = followedCount > 0
+    ? Number((items.reduce((sum, item) => sum + item.completedChaptersCount, 0) / followedCount).toFixed(1))
+    : 0
+  const averageCurrentCppLevel = followedCount > 0
+    ? Number((items.reduce((sum, item) => sum + (item.currentCppLevel || 0), 0) / followedCount).toFixed(1))
+    : 0
+
+  return {
+    summary: {
+      followedCount,
+      startedLearnerCount,
+      averageCompletionRate,
+      averageCompletedChapters,
+      averageCurrentCppLevel
+    },
+    items
+  }
+}
+
+async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
+  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
+  if (!follow) throw new Error('未关注该学员')
+
+  const [user, progress, levels] = await Promise.all([
+    User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
+    UserProgress.findOne({ userId: learnerId }).lean(),
+    CourseLevel.find()
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id chapters._id chapters.id')
+      .sort({ subject: 1, level: 1 })
+      .lean()
+  ])
+
+  if (!user) throw new Error('学员不存在')
+
+  const courseSummary = buildCourseProgressSummary(progress, levels)
+
+  return {
+    learner: {
+      learnerId,
+      learnerName: user.uname,
+      learnerEmail: user.mail || '',
+      followedAt: follow.createdAt || null,
+      note: follow.note || '',
+      currentCppLevel: courseSummary.currentCppLevel,
+      currentCppLevelTitle: courseSummary.currentCppLevelTitle,
+      subjectLevels: courseSummary.subjectLevels,
+      completedChaptersCount: courseSummary.completedChaptersCount,
+      totalChapters: courseSummary.totalChapters,
+      completionRate: courseSummary.completionRate,
+      startedLevelCount: courseSummary.startedLevelCount,
+      completedLevelCount: courseSummary.completedLevelCount,
+      startedTopicCount: courseSummary.startedTopicCount,
+      totalTopicCount: courseSummary.totalTopicCount
+    },
+    levels: courseSummary.levels
+  }
 }
 
 // --- Group Routes ---
@@ -682,6 +932,32 @@ router.get('/topic/:topicId/learners', async (req, res) => {
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/teacher/follows', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const payload = await buildTeacherCourseFollowPayload(Number(req.user.id))
+    res.json(payload)
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || '加载教师课程看板失败' })
+  }
+})
+
+router.get('/teacher/follows/:learnerId/detail', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const learnerId = Number(req.params.learnerId)
+    if (!Number.isFinite(learnerId)) {
+      return res.status(400).json({ error: '学员 ID 不合法' })
+    }
+
+    const payload = await buildTeacherCourseLearnerDetailPayload(Number(req.user.id), learnerId)
+    res.json(payload)
+  } catch (e) {
+    console.error(e)
+    const status = e.message === '未关注该学员' || e.message === '学员不存在' ? 404 : 500
+    res.status(status).json({ error: e.message || '加载学员课程详情失败' })
   }
 })
 

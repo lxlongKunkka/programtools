@@ -2,14 +2,22 @@
   <div class="teacher-quiz-page">
     <section class="hero-card">
       <div>
-        <p class="eyebrow">教师 Quiz 看板</p>
-        <h2>关注学员的刷题参与情况</h2>
-        <p class="hero-copy">先关注自己的学员，再按最近 7 天或 30 天查看答题活跃度、正确率、错题堆积和最近作答明细。</p>
+        <p class="eyebrow">教师学员看板</p>
+        <h2>{{ activeTab === 'quiz' ? '关注学员的 Quiz 刷题情况' : '关注学员的 Course 学习进度' }}</h2>
+        <p class="hero-copy">
+          {{ activeTab === 'quiz'
+            ? '先关注自己的学员，再按最近 7 天或 30 天查看答题活跃度、正确率、错题堆积和最近作答明细。'
+            : '沿用同一批关注学员，直接查看课程完成率、当前等级、已开始 Level 与 Topic 分布。' }}
+        </p>
       </div>
       <div class="hero-actions">
-        <label class="days-select">
+        <div class="tab-switch">
+          <button :class="['tab-btn', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">Quiz</button>
+          <button :class="['tab-btn', activeTab === 'course' ? 'active' : '']" @click="activeTab = 'course'">Course</button>
+        </div>
+        <label v-if="activeTab === 'quiz'" class="days-select">
           <span>观察窗口</span>
-          <select v-model.number="selectedDays" @change="loadDashboard">
+          <select v-model.number="selectedDays" @change="loadQuizDashboard">
             <option :value="7">最近 7 天</option>
             <option :value="14">最近 14 天</option>
             <option :value="30">最近 30 天</option>
@@ -18,26 +26,49 @@
       </div>
     </section>
 
-    <section class="summary-grid">
+    <section v-if="activeTab === 'quiz'" class="summary-grid">
       <article class="summary-card accent">
         <span class="summary-label">已关注学员</span>
-        <strong class="summary-value">{{ dashboard.summary.followedCount }}</strong>
+        <strong class="summary-value">{{ quizDashboard.summary.followedCount }}</strong>
       </article>
       <article class="summary-card">
         <span class="summary-label">窗口内活跃</span>
-        <strong class="summary-value">{{ dashboard.summary.activeLearnerCount }}</strong>
+        <strong class="summary-value">{{ quizDashboard.summary.activeLearnerCount }}</strong>
       </article>
       <article class="summary-card">
         <span class="summary-label">今日已参与</span>
-        <strong class="summary-value">{{ dashboard.summary.activeTodayCount }}</strong>
+        <strong class="summary-value">{{ quizDashboard.summary.activeTodayCount }}</strong>
       </article>
       <article class="summary-card">
         <span class="summary-label">平均正确率</span>
-        <strong class="summary-value">{{ dashboard.summary.averageAccuracy }}%</strong>
+        <strong class="summary-value">{{ quizDashboard.summary.averageAccuracy }}%</strong>
       </article>
       <article class="summary-card">
         <span class="summary-label">人均答题</span>
-        <strong class="summary-value">{{ dashboard.summary.averageAnsweredCount }}</strong>
+        <strong class="summary-value">{{ quizDashboard.summary.averageAnsweredCount }}</strong>
+      </article>
+    </section>
+
+    <section v-else class="summary-grid">
+      <article class="summary-card accent">
+        <span class="summary-label">已关注学员</span>
+        <strong class="summary-value">{{ courseDashboard.summary.followedCount }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">已开始课程</span>
+        <strong class="summary-value">{{ courseDashboard.summary.startedLearnerCount }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">平均完成率</span>
+        <strong class="summary-value">{{ courseDashboard.summary.averageCompletionRate }}%</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">人均完成章节</span>
+        <strong class="summary-value">{{ courseDashboard.summary.averageCompletedChapters }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">平均 C++ 等级</span>
+        <strong class="summary-value">L{{ courseDashboard.summary.averageCurrentCppLevel }}</strong>
       </article>
     </section>
 
@@ -111,78 +142,135 @@
       <section class="panel follow-panel">
         <div class="panel-header">
           <div>
-            <h3>关注学员看板</h3>
-            <p>按风险优先看最近掉队的孩子。</p>
+            <h3>{{ activeTab === 'quiz' ? 'Quiz 关注看板' : 'Course 关注看板' }}</h3>
+            <p>{{ activeTab === 'quiz' ? '按风险优先看最近掉队的孩子。' : '先看完成率和已开始进度，再点开单个学员详情。' }}</p>
           </div>
         </div>
 
-        <div v-if="dashboardLoading" class="empty-state">看板加载中...</div>
-        <div v-else-if="dashboard.items.length === 0" class="empty-state">还没有关注学员，先从左侧添加。</div>
-        <div v-else class="follow-table-wrap">
-          <table class="follow-table">
-            <thead>
-              <tr>
-                <th>学员</th>
-                <th>近{{ selectedDays }}天答题</th>
-                <th>正确率</th>
-                <th>活跃天数</th>
-                <th>今日情况</th>
-                <th>错题本</th>
-                <th>最近作答</th>
-                <th>风险</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in sortedFollowedItems" :key="item.learnerId">
-                <td>
-                  <div class="name-cell">
-                    <strong>{{ item.learnerName }}</strong>
-                    <span>ID {{ item.learnerId }}</span>
-                  </div>
-                </td>
-                <td>{{ item.answeredCount }}</td>
-                <td>{{ item.accuracy }}%</td>
-                <td>{{ item.activeDays }}</td>
-                <td>{{ item.todayAnsweredCount }} / {{ item.todayCorrectCount }}</td>
-                <td>{{ item.wrongbookActiveCount }}</td>
-                <td>{{ formatDateTime(item.lastAnsweredAt) }}</td>
-                <td>
-                  <div class="risk-list">
-                    <span v-if="!item.riskFlags.length" class="risk-pill safe">稳定</span>
-                    <span v-for="flag in item.riskFlags" :key="flag" class="risk-pill">{{ flag }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="link-btn" @click="openLearnerDetail(item)">详情</button>
-                    <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <template v-if="activeTab === 'quiz'">
+          <div v-if="quizDashboardLoading" class="empty-state">看板加载中...</div>
+          <div v-else-if="quizDashboard.items.length === 0" class="empty-state">还没有关注学员，先从左侧添加。</div>
+          <div v-else class="follow-table-wrap">
+            <table class="follow-table">
+              <thead>
+                <tr>
+                  <th>学员</th>
+                  <th>近{{ selectedDays }}天答题</th>
+                  <th>正确率</th>
+                  <th>活跃天数</th>
+                  <th>今日情况</th>
+                  <th>错题本</th>
+                  <th>最近作答</th>
+                  <th>风险</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in sortedQuizItems" :key="item.learnerId">
+                  <td>
+                    <div class="name-cell">
+                      <strong>{{ item.learnerName }}</strong>
+                      <span>ID {{ item.learnerId }}</span>
+                    </div>
+                  </td>
+                  <td>{{ item.answeredCount }}</td>
+                  <td>{{ item.accuracy }}%</td>
+                  <td>{{ item.activeDays }}</td>
+                  <td>{{ item.todayAnsweredCount }} / {{ item.todayCorrectCount }}</td>
+                  <td>{{ item.wrongbookActiveCount }}</td>
+                  <td>{{ formatDateTime(item.lastAnsweredAt) }}</td>
+                  <td>
+                    <div class="risk-list">
+                      <span v-if="!item.riskFlags.length" class="risk-pill safe">稳定</span>
+                      <span v-for="flag in item.riskFlags" :key="flag" class="risk-pill">{{ flag }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="link-btn" @click="openQuizDetail(item)">详情</button>
+                      <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <template v-else>
+          <div v-if="courseDashboardLoading" class="empty-state">看板加载中...</div>
+          <div v-else-if="courseDashboard.items.length === 0" class="empty-state">还没有关注学员，先从左侧添加。</div>
+          <div v-else class="follow-table-wrap">
+            <table class="follow-table">
+              <thead>
+                <tr>
+                  <th>学员</th>
+                  <th>当前等级</th>
+                  <th>已完成章节</th>
+                  <th>完成率</th>
+                  <th>已开始 Level</th>
+                  <th>已完成 Level</th>
+                  <th>已开始 Topic</th>
+                  <th>风险</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in sortedCourseItems" :key="item.learnerId">
+                  <td>
+                    <div class="name-cell">
+                      <strong>{{ item.learnerName }}</strong>
+                      <span>ID {{ item.learnerId }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="name-cell">
+                      <strong>L{{ item.currentCppLevel }}</strong>
+                      <span>{{ item.currentCppLevelTitle || '未匹配标题' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ item.completedChaptersCount }} / {{ item.totalChapters }}</td>
+                  <td>{{ item.completionRate }}%</td>
+                  <td>{{ item.startedLevelCount }}</td>
+                  <td>{{ item.completedLevelCount }}</td>
+                  <td>{{ item.startedTopicCount }} / {{ item.totalTopicCount }}</td>
+                  <td>
+                    <div class="risk-list">
+                      <span v-if="!item.riskFlags.length" class="risk-pill safe">稳定</span>
+                      <span v-for="flag in item.riskFlags" :key="flag" class="risk-pill">{{ flag }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="link-btn" @click="openCourseDetail(item)">详情</button>
+                      <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </section>
     </div>
 
-    <section v-if="detail.learner" class="panel detail-panel">
+    <section v-if="activeTab === 'quiz' && quizDetail.learner" class="panel detail-panel">
       <div class="panel-header detail-header">
         <div>
-          <h3>{{ detail.learner.learnerName }} 的 Quiz 明细</h3>
-          <p>错题本 {{ detail.learner.wrongbookActiveCount }} 题，收藏 {{ detail.learner.favoriteActiveCount }} 题</p>
+          <h3>{{ quizDetail.learner.learnerName }} 的 Quiz 明细</h3>
+          <p>错题本 {{ quizDetail.learner.wrongbookActiveCount }} 题，收藏 {{ quizDetail.learner.favoriteActiveCount }} 题</p>
         </div>
-        <button class="btn-secondary" @click="detail = createEmptyDetail()">关闭</button>
+        <button class="btn-secondary" @click="quizDetail = createEmptyQuizDetail()">关闭</button>
       </div>
 
-      <div v-if="detailLoading" class="empty-state">正在加载明细...</div>
+      <div v-if="quizDetailLoading" class="empty-state">正在加载明细...</div>
       <template v-else>
         <div class="detail-grid">
           <div class="mini-panel">
             <h4>最近打卡</h4>
-            <div v-if="detail.recentProgress.length === 0" class="empty-state small">暂无记录</div>
+            <div v-if="quizDetail.recentProgress.length === 0" class="empty-state small">暂无记录</div>
             <div v-else class="progress-list">
-              <div v-for="item in detail.recentProgress" :key="item.date" class="progress-row">
+              <div v-for="item in quizDetail.recentProgress" :key="item.date" class="progress-row">
                 <span>{{ item.date }}</span>
                 <span>{{ item.answeredCount }} 题 / {{ item.correctCount }} 对</span>
                 <span>{{ item.completed ? '完成' : '未完成' }}</span>
@@ -192,18 +280,18 @@
 
           <div class="mini-panel">
             <h4>薄弱知识点</h4>
-            <div v-if="detail.weakTags.length === 0" class="empty-state small">近 {{ detailDays }} 天没有明显薄弱点</div>
+            <div v-if="quizDetail.weakTags.length === 0" class="empty-state small">近 {{ detailDays }} 天没有明显薄弱点</div>
             <div v-else class="tag-list">
-              <span v-for="tag in detail.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
+              <span v-for="tag in quizDetail.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
             </div>
           </div>
         </div>
 
         <div class="mini-panel attempts-panel">
           <h4>最近作答</h4>
-          <div v-if="detail.recentAttempts.length === 0" class="empty-state small">暂无作答记录</div>
+          <div v-if="quizDetail.recentAttempts.length === 0" class="empty-state small">暂无作答记录</div>
           <div v-else class="attempt-list">
-            <article v-for="attempt in detail.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
+            <article v-for="attempt in quizDetail.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
               <div class="attempt-head">
                 <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
                 <span :class="['attempt-result', attempt.isCorrect ? 'correct' : 'wrong']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
@@ -219,13 +307,68 @@
         </div>
       </template>
     </section>
+
+    <section v-if="activeTab === 'course' && courseDetail.learner" class="panel detail-panel">
+      <div class="panel-header detail-header">
+        <div>
+          <h3>{{ courseDetail.learner.learnerName }} 的 Course 明细</h3>
+          <p>当前 C++ 等级 L{{ courseDetail.learner.currentCppLevel }}，总完成率 {{ courseDetail.learner.completionRate }}%</p>
+        </div>
+        <button class="btn-secondary" @click="courseDetail = createEmptyCourseDetail()">关闭</button>
+      </div>
+
+      <div v-if="courseDetailLoading" class="empty-state">正在加载明细...</div>
+      <template v-else>
+        <div class="detail-grid course-summary-grid">
+          <div class="mini-panel">
+            <h4>课程总览</h4>
+            <div class="progress-list">
+              <div class="progress-row"><span>当前等级</span><span>L{{ courseDetail.learner.currentCppLevel }} {{ courseDetail.learner.currentCppLevelTitle || '' }}</span></div>
+              <div class="progress-row"><span>已完成章节</span><span>{{ courseDetail.learner.completedChaptersCount }} / {{ courseDetail.learner.totalChapters }}</span></div>
+              <div class="progress-row"><span>已开始 Level</span><span>{{ courseDetail.learner.startedLevelCount }}</span></div>
+              <div class="progress-row"><span>已完成 Level</span><span>{{ courseDetail.learner.completedLevelCount }}</span></div>
+              <div class="progress-row"><span>已开始 Topic</span><span>{{ courseDetail.learner.startedTopicCount }} / {{ courseDetail.learner.totalTopicCount }}</span></div>
+            </div>
+          </div>
+
+          <div class="mini-panel">
+            <h4>学科学级</h4>
+            <div class="tag-list">
+              <span v-for="(level, subject) in courseDetail.learner.subjectLevels" :key="subject" class="tag-pill">{{ subject }} · L{{ level }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mini-panel attempts-panel">
+          <h4>各 Level 完成情况</h4>
+          <div v-if="courseDetail.levels.length === 0" class="empty-state small">暂无课程进度</div>
+          <div v-else class="course-level-list">
+            <article v-for="level in courseDetail.levels" :key="level.levelId" class="course-level-item">
+              <div class="course-level-head">
+                <div>
+                  <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
+                  <p>{{ level.group || '未分组' }}</p>
+                </div>
+                <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
+              </div>
+              <div class="course-progress-bar">
+                <div class="course-progress-fill" :style="{ width: `${level.completionRate}%` }"></div>
+              </div>
+              <div class="tag-list level-topic-list">
+                <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill topic-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </template>
+    </section>
   </div>
 </template>
 
 <script>
 import request from '../utils/request'
 
-function createEmptyDashboard() {
+function createEmptyQuizDashboard() {
   return {
     summary: {
       followedCount: 0,
@@ -238,7 +381,20 @@ function createEmptyDashboard() {
   }
 }
 
-function createEmptyDetail() {
+function createEmptyCourseDashboard() {
+  return {
+    summary: {
+      followedCount: 0,
+      startedLearnerCount: 0,
+      averageCompletionRate: 0,
+      averageCompletedChapters: 0,
+      averageCurrentCppLevel: 0
+    },
+    items: []
+  }
+}
+
+function createEmptyQuizDetail() {
   return {
     learner: null,
     recentProgress: [],
@@ -247,11 +403,19 @@ function createEmptyDetail() {
   }
 }
 
+function createEmptyCourseDetail() {
+  return {
+    learner: null,
+    levels: []
+  }
+}
+
 export default {
   name: 'TeacherQuizDashboard',
   inject: ['showToastMessage'],
   data() {
     return {
+      activeTab: 'quiz',
       levels: [],
       selectedGroup: '',
       selectedLevelId: '',
@@ -260,11 +424,15 @@ export default {
       candidates: [],
       candidateLoading: false,
       selectedDays: 7,
-      dashboard: createEmptyDashboard(),
-      dashboardLoading: false,
+      quizDashboard: createEmptyQuizDashboard(),
+      quizDashboardLoading: false,
+      courseDashboard: createEmptyCourseDashboard(),
+      courseDashboardLoading: false,
       followSavingId: null,
-      detail: createEmptyDetail(),
-      detailLoading: false,
+      quizDetail: createEmptyQuizDetail(),
+      quizDetailLoading: false,
+      courseDetail: createEmptyCourseDetail(),
+      courseDetailLoading: false,
       detailDays: 14
     }
   },
@@ -283,25 +451,37 @@ export default {
       return Array.isArray(this.selectedLevel?.topics) ? this.selectedLevel.topics : []
     },
     followedIdSet() {
-      return new Set((this.dashboard.items || []).map((item) => Number(item.learnerId)))
+      return new Set([
+        ...this.quizDashboard.items.map((item) => Number(item.learnerId)),
+        ...this.courseDashboard.items.map((item) => Number(item.learnerId))
+      ])
     },
     filteredCandidates() {
       const keyword = this.candidateQuery.trim().toLowerCase()
       if (!keyword) return this.candidates
       return this.candidates.filter((item) => String(item.uname || '').toLowerCase().includes(keyword))
     },
-    sortedFollowedItems() {
-      return [...(this.dashboard.items || [])].sort((a, b) => {
+    sortedQuizItems() {
+      return [...this.quizDashboard.items].sort((a, b) => {
         if (a.riskFlags.length !== b.riskFlags.length) return b.riskFlags.length - a.riskFlags.length
         if ((a.todayAnsweredCount || 0) !== (b.todayAnsweredCount || 0)) return (a.todayAnsweredCount || 0) - (b.todayAnsweredCount || 0)
         return (a.answeredCount || 0) - (b.answeredCount || 0)
       })
+    },
+    sortedCourseItems() {
+      return [...this.courseDashboard.items].sort((a, b) => {
+        if (a.riskFlags.length !== b.riskFlags.length) return b.riskFlags.length - a.riskFlags.length
+        if ((a.completionRate || 0) !== (b.completionRate || 0)) return (a.completionRate || 0) - (b.completionRate || 0)
+        return (a.completedChaptersCount || 0) - (b.completedChaptersCount || 0)
+      })
     }
   },
   async mounted() {
-    await Promise.all([this.loadLevels(), this.loadDashboard()])
+    await Promise.all([this.loadLevels(), this.loadQuizDashboard(), this.loadCourseDashboard()])
   },
   methods: {
+    createEmptyQuizDetail,
+    createEmptyCourseDetail,
     async loadLevels() {
       try {
         const data = await request('/api/course/levels')
@@ -310,18 +490,32 @@ export default {
         this.showToastMessage(`加载课程失败: ${e.message}`)
       }
     },
-    async loadDashboard() {
-      this.dashboardLoading = true
+    async loadQuizDashboard() {
+      this.quizDashboardLoading = true
       try {
         const data = await request(`/api/quiz/teacher/follows?days=${this.selectedDays}`)
-        this.dashboard = {
-          summary: data?.summary || createEmptyDashboard().summary,
+        this.quizDashboard = {
+          summary: data?.summary || createEmptyQuizDashboard().summary,
           items: Array.isArray(data?.items) ? data.items : []
         }
       } catch (e) {
-        this.showToastMessage(`加载看板失败: ${e.message}`)
+        this.showToastMessage(`加载 Quiz 看板失败: ${e.message}`)
       } finally {
-        this.dashboardLoading = false
+        this.quizDashboardLoading = false
+      }
+    },
+    async loadCourseDashboard() {
+      this.courseDashboardLoading = true
+      try {
+        const data = await request('/api/course/teacher/follows')
+        this.courseDashboard = {
+          summary: data?.summary || createEmptyCourseDashboard().summary,
+          items: Array.isArray(data?.items) ? data.items : []
+        }
+      } catch (e) {
+        this.showToastMessage(`加载 Course 看板失败: ${e.message}`)
+      } finally {
+        this.courseDashboardLoading = false
       }
     },
     handleGroupChange() {
@@ -358,7 +552,7 @@ export default {
       this.followSavingId = learnerId
       try {
         await request.post('/api/quiz/teacher/follows', { learnerId })
-        await this.loadDashboard()
+        await Promise.all([this.loadQuizDashboard(), this.loadCourseDashboard()])
         this.showToastMessage(`已关注 ${learner.uname || learner.learnerName}`)
       } catch (e) {
         this.showToastMessage(`关注失败: ${e.message}`)
@@ -372,10 +566,13 @@ export default {
       this.followSavingId = learnerId
       try {
         await request.delete(`/api/quiz/teacher/follows/${learnerId}`)
-        if (Number(this.detail.learner?.learnerId) === learnerId) {
-          this.detail = createEmptyDetail()
+        if (Number(this.quizDetail.learner?.learnerId) === learnerId) {
+          this.quizDetail = createEmptyQuizDetail()
         }
-        await this.loadDashboard()
+        if (Number(this.courseDetail.learner?.learnerId) === learnerId) {
+          this.courseDetail = createEmptyCourseDetail()
+        }
+        await Promise.all([this.loadQuizDashboard(), this.loadCourseDashboard()])
         this.showToastMessage(`已取消关注 ${learner.uname || learner.learnerName}`)
       } catch (e) {
         this.showToastMessage(`取消关注失败: ${e.message}`)
@@ -383,21 +580,36 @@ export default {
         this.followSavingId = null
       }
     },
-    async openLearnerDetail(item) {
-      this.detailLoading = true
-      this.detail = createEmptyDetail()
+    async openQuizDetail(item) {
+      this.quizDetailLoading = true
+      this.quizDetail = createEmptyQuizDetail()
       try {
         const data = await request(`/api/quiz/teacher/follows/${item.learnerId}/detail?days=${this.detailDays}`)
-        this.detail = {
+        this.quizDetail = {
           learner: data?.learner || null,
           recentProgress: Array.isArray(data?.recentProgress) ? data.recentProgress : [],
           recentAttempts: Array.isArray(data?.recentAttempts) ? data.recentAttempts : [],
           weakTags: Array.isArray(data?.weakTags) ? data.weakTags : []
         }
       } catch (e) {
-        this.showToastMessage(`加载学员详情失败: ${e.message}`)
+        this.showToastMessage(`加载 Quiz 详情失败: ${e.message}`)
       } finally {
-        this.detailLoading = false
+        this.quizDetailLoading = false
+      }
+    },
+    async openCourseDetail(item) {
+      this.courseDetailLoading = true
+      this.courseDetail = createEmptyCourseDetail()
+      try {
+        const data = await request(`/api/course/teacher/follows/${item.learnerId}/detail`)
+        this.courseDetail = {
+          learner: data?.learner || null,
+          levels: Array.isArray(data?.levels) ? data.levels : []
+        }
+      } catch (e) {
+        this.showToastMessage(`加载 Course 详情失败: ${e.message}`)
+      } finally {
+        this.courseDetailLoading = false
       }
     },
     formatDateTime(value) {
@@ -459,6 +671,35 @@ export default {
   max-width: 760px;
   line-height: 1.7;
   color: #506173;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.tab-switch {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: #eaf1f8;
+  gap: 4px;
+}
+
+.tab-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  color: #486175;
+  font-weight: 600;
+}
+
+.tab-btn.active {
+  background: #0f62fe;
+  color: #fff;
 }
 
 .days-select,
@@ -536,7 +777,8 @@ export default {
 }
 
 .panel-header p,
-.mini-panel p {
+.mini-panel p,
+.course-level-head p {
   margin: 6px 0 0;
   color: #647587;
 }
@@ -554,7 +796,8 @@ export default {
 
 .candidate-list,
 .attempt-list,
-.progress-list {
+.progress-list,
+.course-level-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -562,7 +805,8 @@ export default {
 
 .candidate-item,
 .attempt-item,
-.progress-row {
+.progress-row,
+.course-level-item {
   border: 1px solid #dbe4ed;
   border-radius: 14px;
   padding: 14px;
@@ -645,7 +889,8 @@ export default {
 
 .risk-list,
 .tag-list,
-.row-actions {
+.row-actions,
+.level-topic-list {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -665,6 +910,11 @@ export default {
 .risk-pill.safe {
   background: #e9f8ef;
   color: #1d7b46;
+}
+
+.topic-pill {
+  background: #eef5ff;
+  color: #1f4e8c;
 }
 
 .link-btn {
@@ -692,6 +942,10 @@ export default {
   margin-bottom: 16px;
 }
 
+.course-summary-grid {
+  grid-template-columns: 1.1fr 1fr;
+}
+
 .mini-panel {
   border: 1px solid #dce5ee;
   border-radius: 16px;
@@ -705,10 +959,25 @@ export default {
   gap: 12px;
 }
 
-.attempt-head {
+.attempt-head,
+.course-level-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.course-progress-bar {
+  margin: 12px 0;
+  height: 8px;
+  border-radius: 999px;
+  background: #deebfb;
+  overflow: hidden;
+}
+
+.course-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0f62fe, #37a6ff);
 }
 
 .attempt-result.correct {
@@ -746,6 +1015,11 @@ export default {
 
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero-actions {
+    width: 100%;
+    flex-direction: column;
   }
 }
 </style>
