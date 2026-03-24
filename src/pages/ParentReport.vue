@@ -196,6 +196,24 @@
           </article>
 
           <article class="panel">
+            <h3>近期做过的题目</h3>
+            <div v-if="!report.course.recentSolvedProblems.length" class="empty-inline">近期没有检测到课程做题记录</div>
+            <div v-else class="attempt-list">
+              <article v-for="item in report.course.recentSolvedProblems" :key="`${item.problemId}-${item.chapterId}`" class="attempt-item">
+                <div class="attempt-head">
+                  <strong>{{ item.displayName || item.title }}</strong>
+                  <span class="status-pill ok">已通过</span>
+                </div>
+                <p class="attempt-stem">L{{ item.level }} {{ item.levelTitle }}<span v-if="item.topicTitle"> · {{ item.topicTitle }}</span><span v-if="item.chapterTitle"> · {{ item.chapterTitle }}</span></p>
+                <div class="attempt-meta">
+                  <span>时间：{{ formatDateTime(item.lastPassedAt) }}</span>
+                  <a v-if="item.problemUrl" :href="item.problemUrl" target="_blank" rel="noreferrer">查看题目</a>
+                </div>
+              </article>
+            </div>
+          </article>
+
+          <article class="panel">
             <h3>近期参与的 Level</h3>
             <div v-if="!recentCourseLevels.length" class="empty-inline">暂无课程进度</div>
             <div v-else class="level-list">
@@ -278,6 +296,7 @@ function createEmptyReport() {
       },
       levels: [],
       recentHomeworks: [],
+      recentSolvedProblems: [],
       recentActivities: []
     }
   }

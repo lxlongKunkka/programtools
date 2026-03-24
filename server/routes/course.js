@@ -443,6 +443,45 @@ async function buildRecentHomeworkItems(learnerId, levels, recentActivities = []
   }))
 }
 
+async function buildRecentCourseProblemItems(recentActivities = [], limit = 10) {
+  const passActivities = (Array.isArray(recentActivities) ? recentActivities : [])
+    .filter(item => item?.action === 'pass_problem' && item?.problemId)
+
+  if (!passActivities.length) return []
+
+  const latestProblemActivityMap = new Map()
+  for (const activity of passActivities) {
+    const key = String(activity.problemId || '')
+    if (!key || latestProblemActivityMap.has(key)) continue
+    latestProblemActivityMap.set(key, activity)
+  }
+
+  const pickedActivities = [...latestProblemActivityMap.values()].slice(0, Math.max(Number(limit) || 0, 1))
+  const problemDetails = await resolveSolvedProblemDetails(pickedActivities.map(item => item.problemId))
+  const detailMap = new Map(problemDetails.map(item => [String(item.id), item]))
+
+  return pickedActivities.map(activity => {
+    const detail = detailMap.get(String(activity.problemId || ''))
+    return {
+      problemId: String(activity.problemId || ''),
+      title: detail?.title || activity.problemId || '未命名题目',
+      displayName: detail?.displayName || activity.problemId || '未命名题目',
+      problemUrl: detail?.problemUrl || '',
+      domainId: detail?.domainId || 'system',
+      docId: Number.isFinite(detail?.docId) ? detail.docId : null,
+      pid: detail?.pid || '',
+      chapterId: activity.chapterId || '',
+      chapterTitle: activity.chapterTitle || '',
+      topicTitle: activity.topicTitle || '',
+      level: Number(activity.level || 0),
+      levelTitle: activity.levelTitle || '',
+      subject: activity.subject || 'C++',
+      group: activity.group || '',
+      lastPassedAt: activity.lastActiveAt || activity.updatedAt || activity.createdAt || null
+    }
+  })
+}
+
 function isChapterCompleted(progress, chapter) {
   if (!progress || !chapter) return false
 
@@ -805,6 +844,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
   const courseSummary = buildCourseProgressSummary(progress, levels)
   const currentPosition = buildCurrentCoursePosition(progress, levels, recentActivities)
   const recentHomeworks = await buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition)
+  const recentSolvedProblems = await buildRecentCourseProblemItems(recentActivities)
 
   return {
     learner: {
@@ -831,6 +871,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
     },
     levels: courseSummary.levels,
     recentHomeworks,
+    recentSolvedProblems,
     recentActivities: recentActivities.map(item => ({
       action: item.action,
       sessionDate: item.sessionDate,
