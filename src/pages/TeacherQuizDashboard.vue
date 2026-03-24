@@ -2,8 +2,8 @@
   <div class="teacher-quiz-page">
     <section class="hero-card">
       <div>
-        <p class="eyebrow">教师学员看板</p>
-        <h2>{{ activeTab === 'quiz' ? '关注学员的 Quiz 刷题情况' : '关注学员的 Course 学习进度' }}</h2>
+        <p class="eyebrow">学员学习看板</p>
+        <h2>{{ activeTab === 'quiz' ? 'Quiz 学习看板' : 'Course 学习看板' }}</h2>
         <p class="hero-copy">
           {{ activeTab === 'quiz'
             ? '先关注自己的学员，再按最近 7 天或 30 天查看答题活跃度、正确率、错题堆积和最近作答明细。'
