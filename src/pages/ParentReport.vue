@@ -127,15 +127,20 @@
           </div>
 
           <article class="panel">
-            <h3>最近作答</h3>
+            <h3>近期做的题目</h3>
             <div v-if="!report.quiz.recentAttempts.length" class="empty-inline">暂无作答记录</div>
             <div v-else class="attempt-list">
               <article v-for="attempt in report.quiz.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
                 <div class="attempt-head">
-                  <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
+                  <strong>{{ formatAttemptTitle(attempt) }}</strong>
                   <span :class="['status-pill', attempt.isCorrect ? 'ok' : 'bad']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
                 </div>
                 <p class="attempt-stem">{{ attempt.stemPreview }}</p>
+                <div class="tag-list attempt-tag-list">
+                  <span v-if="attempt.sourceTitle" class="tag-pill subtle-pill">{{ attempt.sourceTitle }}</span>
+                  <span v-if="attempt.levelTag" class="tag-pill subtle-pill">{{ formatQuizLevelTag(attempt.levelTag) }}</span>
+                  <span v-for="tag in attempt.tags || []" :key="`${attempt.questionUid}-${tag}`" class="tag-pill">{{ tag }}</span>
+                </div>
                 <div class="attempt-meta">
                   <span>作答：{{ attempt.selectedAnswer || '-' }}</span>
                   <span>正确：{{ attempt.correctAnswer || '-' }}</span>
@@ -440,6 +445,19 @@ export default {
       if (value === 'complete_chapter') return '完成章节'
       if (value === 'pass_problem') return '通过题目'
       return value || '学习行为'
+    },
+    formatQuizLevelTag(value) {
+      const text = String(value || '').trim()
+      const match = text.match(/^gesp(\d+)$/i)
+      if (!match) return text || '未分级'
+      return `GESP ${Number(match[1])} 级`
+    },
+    formatAttemptTitle(attempt) {
+      if (attempt?.paperQuestionNo) {
+        const source = attempt?.sourceTitle ? `${attempt.sourceTitle} · ` : ''
+        return `${source}第 ${attempt.paperQuestionNo} 题`
+      }
+      return attempt?.sourceTitle || attempt?.questionUid || '未命名题目'
     }
   }
 }
@@ -633,6 +651,9 @@ export default {
   color: #6b7280;
 }
 .attempt-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: #64748b; }
+.attempt-tag-list {
+  margin-top: 10px;
+}
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -644,6 +665,10 @@ export default {
 .status-pill.ok { background: #dcfce7; color: #166534; }
 .status-pill.warn { background: #fef3c7; color: #92400e; }
 .status-pill.bad { background: #fee2e2; color: #991b1b; }
+.tag-pill.subtle-pill {
+  background: #f1f5f9;
+  color: #475569;
+}
 .progress-bar { height: 8px; border-radius: 999px; background: #e6edf5; margin-top: 12px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #2f7ff8 0%, #67b6ff 100%); }
 @media (max-width: 900px) {
