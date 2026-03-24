@@ -264,14 +264,18 @@ async function resolveSolvedProblemDetails(problemIds) {
 
   return uniqueIds.map(value => {
     const doc = objectIdMap.get(value) || numericMap.get(value)
+    const domainId = doc?.domainId || 'system'
+    const docId = Number.isFinite(doc?.docId) ? doc.docId : null
+    const title = doc?.title || value
     return {
       id: value,
-      domainId: doc?.domainId || '',
-      docId: Number.isFinite(doc?.docId) ? doc.docId : null,
+      domainId,
+      docId,
       pid: doc?.pid || '',
-      title: doc?.title || value,
+      title,
+      problemUrl: docId ? `https://acjudge.com/d/${domainId}/p/${docId}` : '',
       displayName: doc
-        ? `${doc.domainId || 'system'} · ${doc.title || value}`
+        ? `${domainId} / ${docId} / ${title}`
         : value
     }
   })

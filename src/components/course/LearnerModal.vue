@@ -66,14 +66,18 @@
                 </div>
 
                 <div v-if="chapter.solvedProblems.length" class="chapter-problems">
-                  <span
+                  <a
                     v-for="problem in chapter.solvedProblems"
                     :key="problem.id || problem.displayName"
-                    class="problem-chip"
-                    :title="problem.docId ? `${problem.domainId || 'system'} / ${problem.docId}` : (problem.domainId || '')"
+                    class="problem-chip problem-link"
+                    :class="{ disabled: !problem.problemUrl }"
+                    :href="problem.problemUrl || undefined"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :title="problem.displayName"
                   >
                     {{ problem.displayName }}
-                  </span>
+                  </a>
                 </div>
               </article>
             </div>
@@ -293,6 +297,19 @@ export default {
   border-radius: 999px;
   background: #e2e8f0;
   color: #334155;
+}
+.problem-link {
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+.problem-link:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+.problem-link.disabled {
+  pointer-events: none;
+  opacity: 0.72;
 }
 .activity-list {
   display: flex;
