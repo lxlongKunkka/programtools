@@ -1,11 +1,12 @@
 import express from 'express'
-import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js'
+import { authenticateToken, optionalAuthenticateToken, requireRole } from '../middleware/auth.js'
 import QuizQuestion from '../models/QuizQuestion.js'
 import QuizAttempt from '../models/QuizAttempt.js'
 import QuizDailyProgress from '../models/QuizDailyProgress.js'
 import QuizFavoriteItem from '../models/QuizFavoriteItem.js'
 import QuizWrongbookItem from '../models/QuizWrongbookItem.js'
 import QuizQuestionIssue, { ISSUE_TYPES } from '../models/QuizQuestionIssue.js'
+import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import User from '../models/User.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
@@ -152,6 +153,250 @@ function formatLevelLabel(levelTag) {
   const match = text.match(/^gesp(\d+)$/i)
   if (!match) return text
   return `GESP ${Number(match[1])} 级`
+}
+
+function getWindowStart(days = 7) {
+  const safeDays = Math.min(Math.max(Number(days) || 7, 1), 90)
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() - (safeDays - 1))
+  return date
+}
+
+function buildLearnerRiskFlags(summary = {}) {
+  const flags = []
+  if (!summary.lastAnsweredAt) {
+    flags.push('从未参与')
+    return flags
+  }
+
+  const daysSinceLastActive = Math.floor((Date.now() - new Date(summary.lastAnsweredAt).getTime()) / 86400000)
+  if (daysSinceLastActive >= 3) flags.push('连续未参与')
+  if ((summary.answeredCount || 0) < 3) flags.push('参与偏低')
+  if ((summary.answeredCount || 0) > 0 && (summary.accuracy || 0) < 60) flags.push('正确率偏低')
+  if ((summary.wrongbookActiveCount || 0) >= 5) flags.push('错题堆积')
+  return flags
+}
+
+async function buildTeacherQuizFollowPayload(teacherId, days = 7) {
+  const follows = await TeacherQuizFollow.find({ teacherId }).sort({ createdAt: -1 }).lean()
+  const learnerIds = follows.map((item) => Number(item.learnerId)).filter(Number.isFinite)
+  if (!learnerIds.length) {
+    return {
+      summary: {
+        followedCount: 0,
+        activeLearnerCount: 0,
+        activeTodayCount: 0,
+        averageAccuracy: 0,
+        averageAnsweredCount: 0
+      },
+      items: []
+    }
+  }
+
+  const windowStart = getWindowStart(days)
+  const today = getTodayDate()
+
+  const [users, attemptStats, latestProgressEntries, todayProgressEntries, wrongbookStats, favoriteStats] = await Promise.all([
+    User.find({ _id: { $in: learnerIds } }).select('_id uname mail').lean(),
+    QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: { $in: learnerIds },
+          answeredAt: { $gte: windowStart }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          answeredCount: { $sum: 1 },
+          correctCount: {
+            $sum: {
+              $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+            }
+          },
+          activeDates: { $addToSet: '$sessionDate' },
+          lastAnsweredAt: { $max: '$answeredAt' }
+        }
+      }
+    ]),
+    QuizDailyProgress.aggregate([
+      { $match: { userId: { $in: learnerIds } } },
+      { $sort: { date: -1 } },
+      {
+        $group: {
+          _id: '$userId',
+          streak: { $first: '$streak' },
+          lastProgressDate: { $first: '$date' },
+          lastProgressAnsweredCount: { $first: '$answeredCount' },
+          lastProgressCorrectCount: { $first: '$correctCount' },
+          lastProgressCompleted: { $first: '$completed' }
+        }
+      }
+    ]),
+    QuizDailyProgress.find({ userId: { $in: learnerIds }, date: today })
+      .select('userId answeredCount correctCount completed lastAnsweredAt')
+      .lean(),
+    QuizWrongbookItem.aggregate([
+      { $match: { userId: { $in: learnerIds }, active: true } },
+      { $group: { _id: '$userId', count: { $sum: 1 } } }
+    ]),
+    QuizFavoriteItem.aggregate([
+      { $match: { userId: { $in: learnerIds }, active: true } },
+      { $group: { _id: '$userId', count: { $sum: 1 } } }
+    ])
+  ])
+
+  const userMap = new Map(users.map((item) => [Number(item._id), item]))
+  const attemptMap = new Map(attemptStats.map((item) => [Number(item._id), item]))
+  const latestProgressMap = new Map(latestProgressEntries.map((item) => [Number(item._id), item]))
+  const todayProgressMap = new Map(todayProgressEntries.map((item) => [Number(item.userId), item]))
+  const wrongbookMap = new Map(wrongbookStats.map((item) => [Number(item._id), Number(item.count || 0)]))
+  const favoriteMap = new Map(favoriteStats.map((item) => [Number(item._id), Number(item.count || 0)]))
+
+  const items = follows.map((follow) => {
+    const learnerId = Number(follow.learnerId)
+    const user = userMap.get(learnerId)
+    const attempts = attemptMap.get(learnerId)
+    const latestProgress = latestProgressMap.get(learnerId)
+    const todayProgress = todayProgressMap.get(learnerId)
+    const answeredCount = Number(attempts?.answeredCount || 0)
+    const correctCount = Number(attempts?.correctCount || 0)
+    const accuracy = answeredCount > 0 ? Number(((correctCount / answeredCount) * 100).toFixed(1)) : 0
+    const activeDays = Array.isArray(attempts?.activeDates)
+      ? attempts.activeDates.filter((item) => item).length
+      : 0
+
+    const summary = {
+      learnerId,
+      learnerName: user?.uname || `用户 ${learnerId}`,
+      learnerEmail: user?.mail || '',
+      note: follow.note || '',
+      followedAt: follow.createdAt || null,
+      answeredCount,
+      correctCount,
+      accuracy,
+      activeDays,
+      lastAnsweredAt: attempts?.lastAnsweredAt || todayProgress?.lastAnsweredAt || null,
+      todayAnsweredCount: Number(todayProgress?.answeredCount || 0),
+      todayCorrectCount: Number(todayProgress?.correctCount || 0),
+      todayCompleted: !!todayProgress?.completed,
+      streak: Number(latestProgress?.streak || 0),
+      wrongbookActiveCount: wrongbookMap.get(learnerId) || 0,
+      favoriteActiveCount: favoriteMap.get(learnerId) || 0
+    }
+
+    return {
+      ...summary,
+      riskFlags: buildLearnerRiskFlags(summary)
+    }
+  })
+
+  const followedCount = items.length
+  const activeLearnerCount = items.filter((item) => item.answeredCount > 0).length
+  const activeTodayCount = items.filter((item) => item.todayAnsweredCount > 0).length
+  const averageAccuracy = followedCount > 0
+    ? Number((items.reduce((sum, item) => sum + item.accuracy, 0) / followedCount).toFixed(1))
+    : 0
+  const averageAnsweredCount = followedCount > 0
+    ? Number((items.reduce((sum, item) => sum + item.answeredCount, 0) / followedCount).toFixed(1))
+    : 0
+
+  return {
+    summary: {
+      followedCount,
+      activeLearnerCount,
+      activeTodayCount,
+      averageAccuracy,
+      averageAnsweredCount
+    },
+    items
+  }
+}
+
+async function buildTeacherLearnerDetailPayload(teacherId, learnerId, days = 14) {
+  const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
+  if (!follow) {
+    throw new Error('未关注该学员')
+  }
+
+  const user = await User.findOne({ _id: learnerId }).select('_id uname mail').lean()
+  if (!user) {
+    throw new Error('学员不存在')
+  }
+
+  const windowStart = getWindowStart(days)
+  const [attempts, wrongbookCount, favoriteCount, weakTags] = await Promise.all([
+    QuizAttempt.find({ userId: learnerId }).sort({ answeredAt: -1 }).limit(30).lean(),
+    QuizWrongbookItem.countDocuments({ userId: learnerId, active: true }),
+    QuizFavoriteItem.countDocuments({ userId: learnerId, active: true }),
+    QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: learnerId,
+          isCorrect: false,
+          answeredAt: { $gte: windowStart }
+        }
+      },
+      { $unwind: '$tags' },
+      { $match: { tags: { $exists: true, $ne: '' } } },
+      { $group: { _id: '$tags', wrongCount: { $sum: 1 } } },
+      { $sort: { wrongCount: -1, _id: 1 } },
+      { $limit: 8 }
+    ])
+  ])
+
+  const recentProgress = await QuizDailyProgress.find({ userId: learnerId })
+    .sort({ date: -1 })
+    .limit(Math.min(Math.max(Number(days) || 14, 1), 30))
+    .lean()
+
+  const questionUids = [...new Set(attempts.map((item) => item.questionUid).filter(Boolean))]
+  const questions = await QuizQuestion.find(
+    { questionUid: { $in: questionUids } },
+    'questionUid stem sourceTitle paperQuestionNo levelTag tags answer type'
+  ).lean()
+  const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
+
+  return {
+    learner: {
+      learnerId,
+      learnerName: user.uname,
+      learnerEmail: user.mail || '',
+      followedAt: follow.createdAt || null,
+      note: follow.note || '',
+      wrongbookActiveCount: wrongbookCount,
+      favoriteActiveCount: favoriteCount
+    },
+    recentProgress: recentProgress.map((item) => ({
+      date: item.date,
+      answeredCount: item.answeredCount || 0,
+      correctCount: item.correctCount || 0,
+      streak: item.streak || 0,
+      completed: !!item.completed,
+      lastAnsweredAt: item.lastAnsweredAt || null
+    })),
+    recentAttempts: attempts.map((item) => {
+      const question = questionMap.get(item.questionUid)
+      return {
+        questionUid: item.questionUid,
+        answeredAt: item.answeredAt,
+        selectedAnswer: item.selectedAnswer,
+        isCorrect: !!item.isCorrect,
+        mode: item.mode || 'practice',
+        sourceTitle: question?.sourceTitle || '',
+        paperQuestionNo: question?.paperQuestionNo || null,
+        levelTag: question?.levelTag || '',
+        tags: question?.tags || [],
+        stemPreview: buildStemPreview(question?.stem || ''),
+        correctAnswer: question ? normalizeSubmittedAnswer(question.answer, question.type) : ''
+      }
+    }),
+    weakTags: weakTags.map((item) => ({
+      tag: item._id,
+      wrongCount: item.wrongCount
+    }))
+  }
 }
 
 function questionLooksMalformed(question) {
@@ -1347,6 +1592,85 @@ router.get('/daily/leaderboard', authenticateToken, async (req, res) => {
     res.json({ scope: 'today', date, leaderboard })
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/teacher/follows', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 90)
+    const payload = await buildTeacherQuizFollowPayload(Number(req.user.id), days)
+    res.json({ days, ...payload })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/teacher/follows', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const learnerId = Number(req.body?.learnerId)
+    const note = String(req.body?.note || '').trim()
+    if (!Number.isFinite(learnerId) || learnerId <= 0) {
+      return res.status(400).json({ error: 'learnerId 不合法' })
+    }
+    if (learnerId === Number(req.user.id)) {
+      return res.status(400).json({ error: '不能关注自己' })
+    }
+
+    const learner = await User.findOne({ _id: learnerId }).select('_id uname role priv').lean()
+    if (!learner) {
+      return res.status(404).json({ error: '学员不存在' })
+    }
+    if (learner.role === 'teacher' || learner.role === 'admin' || learner.priv === -1) {
+      return res.status(400).json({ error: '只能关注普通学员' })
+    }
+
+    const follow = await TeacherQuizFollow.findOneAndUpdate(
+      { teacherId: Number(req.user.id), learnerId },
+      { $setOnInsert: { note } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean()
+
+    res.json({
+      success: true,
+      item: {
+        learnerId,
+        learnerName: learner.uname,
+        followedAt: follow.createdAt || null,
+        note: follow.note || ''
+      }
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.delete('/teacher/follows/:learnerId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const learnerId = Number(req.params.learnerId)
+    if (!Number.isFinite(learnerId) || learnerId <= 0) {
+      return res.status(400).json({ error: 'learnerId 不合法' })
+    }
+
+    await TeacherQuizFollow.deleteOne({ teacherId: Number(req.user.id), learnerId })
+    res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/teacher/follows/:learnerId/detail', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const learnerId = Number(req.params.learnerId)
+    const days = Math.min(Math.max(Number(req.query.days) || 14, 1), 30)
+    if (!Number.isFinite(learnerId) || learnerId <= 0) {
+      return res.status(400).json({ error: 'learnerId 不合法' })
+    }
+
+    const payload = await buildTeacherLearnerDetailPayload(Number(req.user.id), learnerId, days)
+    res.json({ days, ...payload })
+  } catch (e) {
+    const status = e.message === '未关注该学员' || e.message === '学员不存在' ? 404 : 500
+    res.status(status).json({ error: e.message })
   }
 })
 
