@@ -189,8 +189,6 @@ function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), cours
 
   const pickPrimaryLevelTag = (question, tags = []) => {
     const directLevelTag = String(question?.levelTag || '').trim()
-    if (parseLevelNumber(directLevelTag)) return directLevelTag
-
     const matchedCounts = new Map()
     for (const tag of tags) {
       for (const levelTag of KNOWLEDGE_TAG_LEVEL_MAP.get(tag) || []) {
@@ -198,11 +196,30 @@ function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), cours
       }
     }
 
-    return [...matchedCounts.entries()]
+    const rankedLevels = [...matchedCounts.entries()]
       .sort((a, b) => {
         if (b[1] !== a[1]) return b[1] - a[1]
         return (parseLevelNumber(a[0]) || 0) - (parseLevelNumber(b[0]) || 0)
-      })[0]?.[0] || ''
+      })
+
+    if (!parseLevelNumber(directLevelTag)) {
+      return rankedLevels[0]?.[0] || ''
+    }
+
+    if (!rankedLevels.length) {
+      return directLevelTag
+    }
+
+    const [topLevelTag, topCount] = rankedLevels[0]
+    const directCount = Number(matchedCounts.get(directLevelTag) || 0)
+
+    // If knowledge tags clearly point to another level, trust tags over source paper level.
+    if (topLevelTag && topLevelTag !== directLevelTag) {
+      if (directCount === 0 && topCount > 0) return topLevelTag
+      if (topCount >= 2 && topCount > directCount) return topLevelTag
+    }
+
+    return directLevelTag
   }
 
   for (const attempt of items) {
