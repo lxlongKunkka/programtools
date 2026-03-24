@@ -6,6 +6,7 @@
       <p class="hero-copy">无需登录即可查看孩子最近的 Quiz 刷题与 Course 学习进展。</p>
       <div class="hero-meta">
         <span>生成时间：{{ formatDateTime(report.share?.createdAt) }}</span>
+        <span>失效时间：{{ formatDateTime(report.share?.expiresAt) }}</span>
         <span>最近访问：{{ formatDateTime(report.share?.lastAccessAt) }}</span>
       </div>
     </section>
@@ -13,6 +14,26 @@
     <section v-if="loading" class="panel empty-panel">加载中...</section>
     <section v-else-if="error" class="panel empty-panel">{{ error }}</section>
     <template v-else>
+      <section class="narrative-grid">
+        <article class="panel narrative-panel">
+          <h3>今天表现</h3>
+          <p class="narrative-copy">{{ report.narrative.todayPerformance }}</p>
+        </article>
+        <article class="panel narrative-panel">
+          <h3>最近需要关注的点</h3>
+          <div v-if="!report.narrative.recentFocus.length" class="empty-inline">整体状态稳定，近期没有明显风险。</div>
+          <ul v-else class="narrative-list">
+            <li v-for="item in report.narrative.recentFocus" :key="item">{{ item }}</li>
+          </ul>
+        </article>
+        <article class="panel narrative-panel">
+          <h3>老师建议</h3>
+          <ul class="narrative-list">
+            <li v-for="item in report.narrative.teacherAdvice" :key="item">{{ item }}</li>
+          </ul>
+        </article>
+      </section>
+
       <section class="section-block">
         <div class="section-head">
           <h2>Quiz 日报</h2>
@@ -129,6 +150,11 @@ function createEmptyReport() {
   return {
     share: null,
     learner: null,
+    narrative: {
+      todayPerformance: '',
+      recentFocus: [],
+      teacherAdvice: []
+    },
     quiz: {
       learner: { answeredCount: 0, accuracy: 0, activeDays: 0, streak: 0 },
       recentProgress: [],
@@ -181,6 +207,7 @@ export default {
         this.report = {
           share: data?.share || null,
           learner: data?.learner || null,
+          narrative: data?.narrative || createEmptyReport().narrative,
           quiz: data?.quiz || createEmptyReport().quiz,
           course: data?.course || createEmptyReport().course
         }
@@ -242,6 +269,26 @@ export default {
 .hero-card h1 { margin: 0 0 10px; font-size: 34px; }
 .hero-copy { margin: 0; color: #51606f; line-height: 1.6; }
 .hero-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; color: #5a6c7e; font-size: 13px; }
+.narrative-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.narrative-panel {
+  min-height: 180px;
+}
+.narrative-copy {
+  margin: 0;
+  color: #475569;
+  line-height: 1.8;
+}
+.narrative-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #475569;
+  line-height: 1.8;
+}
 .section-block { margin-top: 22px; }
 .section-head { margin-bottom: 12px; }
 .section-head h2 { margin: 0 0 6px; font-size: 22px; }
@@ -295,6 +342,7 @@ export default {
 @media (max-width: 900px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-grid { grid-template-columns: 1fr; }
+  .narrative-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .hero-card h1 { font-size: 28px; }

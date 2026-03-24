@@ -6,6 +6,7 @@ const parentDailyShareSchema = new mongoose.Schema({
   learnerId: { type: Number, required: true },
   token: { type: String, required: true },
   isActive: { type: Boolean, default: true },
+  expiresAt: { type: Date, default: null },
   lastAccessAt: { type: Date, default: null },
   accessCount: { type: Number, default: 0 }
 }, {

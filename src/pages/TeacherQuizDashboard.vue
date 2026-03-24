@@ -175,6 +175,7 @@
                     <div class="name-cell">
                       <strong>{{ item.learnerName }}</strong>
                       <span>ID {{ item.learnerId }}</span>
+                      <span v-if="activeParentShare(item.learnerId)">日报至 {{ formatDateTime(activeParentShare(item.learnerId).expiresAt) }}</span>
                     </div>
                   </td>
                   <td>{{ item.answeredCount }}</td>
@@ -192,7 +193,8 @@
                   <td>
                     <div class="row-actions">
                       <button class="link-btn" @click="openQuizDetail(item)">详情</button>
-                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '生成中...' : '家长日报' }}</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : (activeParentShare(item.learnerId) ? '复制日报' : '生成日报') }}</button>
+                      <button v-if="activeParentShare(item.learnerId)" class="link-btn danger-soft" :disabled="parentShareClosingId === item.learnerId" @click="closeParentShare(item)">{{ parentShareClosingId === item.learnerId ? '关闭中...' : '关闭链接' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
                   </td>
@@ -227,6 +229,7 @@
                     <div class="name-cell">
                       <strong>{{ item.learnerName }}</strong>
                       <span>ID {{ item.learnerId }}</span>
+                      <span v-if="activeParentShare(item.learnerId)">日报至 {{ formatDateTime(activeParentShare(item.learnerId).expiresAt) }}</span>
                     </div>
                   </td>
                   <td>
@@ -250,7 +253,8 @@
                   <td>
                     <div class="row-actions">
                       <button class="link-btn" @click="openCourseDetail(item)">详情</button>
-                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '生成中...' : '家长日报' }}</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : (activeParentShare(item.learnerId) ? '复制日报' : '生成日报') }}</button>
+                      <button v-if="activeParentShare(item.learnerId)" class="link-btn danger-soft" :disabled="parentShareClosingId === item.learnerId" @click="closeParentShare(item)">{{ parentShareClosingId === item.learnerId ? '关闭中...' : '关闭链接' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
                   </td>
@@ -460,6 +464,8 @@ export default {
       courseDashboardLoading: false,
       followSavingId: null,
       parentShareLoadingId: null,
+      parentShareClosingId: null,
+      parentShares: [],
       quizDetail: createEmptyQuizDetail(),
       quizDetailLoading: false,
       courseDetail: createEmptyCourseDetail(),
@@ -509,11 +515,15 @@ export default {
     }
   },
   async mounted() {
-    await Promise.all([this.loadLevels(), this.loadQuizDashboard(), this.loadCourseDashboard()])
+    await Promise.all([this.loadLevels(), this.loadQuizDashboard(), this.loadCourseDashboard(), this.loadParentShares()])
   },
   methods: {
     createEmptyQuizDetail,
     createEmptyCourseDetail,
+    activeParentShare(learnerId) {
+      const targetId = Number(learnerId)
+      return this.parentShares.find((item) => Number(item.learnerId) === targetId && item.isActive && !item.isExpired) || null
+    },
     async loadLevels() {
       try {
         const data = await request('/api/course/levels')
@@ -548,6 +558,15 @@ export default {
         this.showToastMessage(`加载 Course 看板失败: ${e.message}`)
       } finally {
         this.courseDashboardLoading = false
+      }
+    },
+    async loadParentShares() {
+      try {
+        const data = await request('/api/parent-report/shares')
+        this.parentShares = Array.isArray(data?.items) ? data.items : []
+      } catch (e) {
+        this.showToastMessage(`加载家长日报链接失败: ${e.message}`)
+        this.parentShares = []
       }
     },
     handleGroupChange() {
@@ -604,7 +623,7 @@ export default {
         if (Number(this.courseDetail.learner?.learnerId) === learnerId) {
           this.courseDetail = createEmptyCourseDetail()
         }
-        await Promise.all([this.loadQuizDashboard(), this.loadCourseDashboard()])
+        await Promise.all([this.loadQuizDashboard(), this.loadCourseDashboard(), this.loadParentShares()])
         this.showToastMessage(`已取消关注 ${learner.uname || learner.learnerName}`)
       } catch (e) {
         this.showToastMessage(`取消关注失败: ${e.message}`)
@@ -617,8 +636,12 @@ export default {
       if (!learnerId) return
       this.parentShareLoadingId = learnerId
       try {
-        const data = await request.post('/api/parent-report/shares', { learnerId })
-        const shareUrl = data?.publicUrl || ''
+        let shareUrl = this.activeParentShare(learnerId)?.publicUrl || ''
+        if (!shareUrl) {
+          const data = await request.post('/api/parent-report/shares', { learnerId, validDays: 7 })
+          shareUrl = data?.publicUrl || ''
+          await this.loadParentShares()
+        }
         if (shareUrl && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(shareUrl)
           this.showToastMessage('家长日报链接已复制')
@@ -631,6 +654,20 @@ export default {
         this.showToastMessage(`生成家长日报失败: ${e.message}`)
       } finally {
         this.parentShareLoadingId = null
+      }
+    },
+    async closeParentShare(item) {
+      const learnerId = Number(item._id || item.learnerId)
+      if (!learnerId) return
+      this.parentShareClosingId = learnerId
+      try {
+        await request.delete(`/api/parent-report/shares/${learnerId}`)
+        await this.loadParentShares()
+        this.showToastMessage('家长日报链接已关闭')
+      } catch (e) {
+        this.showToastMessage(`关闭家长日报失败: ${e.message}`)
+      } finally {
+        this.parentShareClosingId = null
       }
     },
     async openQuizDetail(item) {
@@ -985,6 +1022,10 @@ export default {
 
 .link-btn.danger {
   color: #ba1b1b;
+}
+
+.link-btn.danger-soft {
+  color: #b45309;
 }
 
 .detail-panel {
