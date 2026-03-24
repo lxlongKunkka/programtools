@@ -322,7 +322,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
 
   const windowDays = Math.min(Math.max(Number(days) || 14, 1), 30)
   const windowStart = getWindowStart(windowDays)
-  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats] = await Promise.all([
+  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats, practicedTags] = await Promise.all([
     QuizAttempt.find({ userId: learnerId }).sort({ answeredAt: -1 }).limit(30).lean(),
     QuizWrongbookItem.countDocuments({ userId: learnerId, active: true }),
     QuizFavoriteItem.countDocuments({ userId: learnerId, active: true }),
@@ -364,6 +364,29 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
           lastAnsweredAt: { $max: '$answeredAt' }
         }
       }
+    ]),
+    QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: learnerId,
+          answeredAt: { $gte: windowStart }
+        }
+      },
+      { $unwind: '$tags' },
+      { $match: { tags: { $exists: true, $ne: '' } } },
+      {
+        $group: {
+          _id: '$tags',
+          attemptCount: { $sum: 1 },
+          correctCount: {
+            $sum: {
+              $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+            }
+          }
+        }
+      },
+      { $sort: { attemptCount: -1, correctCount: -1, _id: 1 } },
+      { $limit: 10 }
     ])
   ])
 
@@ -417,6 +440,17 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
         tags: question?.tags || [],
         stemPreview: buildStemPreview(question?.stem || ''),
         correctAnswer: question ? normalizeSubmittedAnswer(question.answer, question.type) : ''
+      }
+    }),
+    practicedTags: practicedTags.map((item) => {
+      const attemptCount = Number(item.attemptCount || 0)
+      const correctCount = Number(item.correctCount || 0)
+      return {
+        tag: item._id,
+        attemptCount,
+        correctCount,
+        wrongCount: Math.max(attemptCount - correctCount, 0),
+        accuracy: attemptCount > 0 ? Number(((correctCount / attemptCount) * 100).toFixed(1)) : 0
       }
     }),
     weakTags: weakTags.map((item) => ({

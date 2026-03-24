@@ -56,6 +56,8 @@
             <article class="summary-card"><span>正确率</span><strong>{{ report.quiz.learner.accuracy }}%</strong></article>
             <article class="summary-card"><span>活跃天数</span><strong>{{ report.quiz.learner.activeDays }}</strong></article>
             <article class="summary-card"><span>连续打卡</span><strong>{{ report.quiz.learner.streak }}</strong></article>
+            <article class="summary-card"><span>错题本</span><strong>{{ report.quiz.learner.wrongbookActiveCount }}</strong></article>
+            <article class="summary-card"><span>已收藏</span><strong>{{ report.quiz.learner.favoriteActiveCount }}</strong></article>
           </div>
 
           <div class="content-grid">
@@ -71,6 +73,22 @@
               </div>
             </article>
 
+            <article class="panel">
+              <h3>最近 14 天练习标签</h3>
+              <div v-if="!report.quiz.practicedTags.length" class="empty-inline">最近 14 天暂无标签分布</div>
+              <div v-else class="practice-tag-list">
+                <article v-for="tag in report.quiz.practicedTags" :key="tag.tag" class="practice-tag-item">
+                  <div>
+                    <strong>{{ tag.tag }}</strong>
+                    <p>{{ tag.attemptCount }} 题 · 正确率 {{ tag.accuracy }}%</p>
+                  </div>
+                  <span class="tag-meta">错 {{ tag.wrongCount }}</span>
+                </article>
+              </div>
+            </article>
+          </div>
+
+          <div class="content-grid single-column-grid">
             <article class="panel">
               <h3>薄弱知识点</h3>
               <div v-if="!report.quiz.weakTags.length" class="empty-inline">近 14 天没有明显薄弱点</div>
@@ -106,11 +124,40 @@
             <p>课程完成率、当前等级与最近学习轨迹。</p>
           </div>
           <div class="summary-grid">
-            <article class="summary-card accent"><span>当前等级</span><strong>L{{ report.course.learner.currentCppLevel }}</strong></article>
+            <article class="summary-card accent">
+              <span>当前等级</span>
+              <strong>L{{ report.course.learner.currentCppLevel }}</strong>
+              <em>{{ report.course.learner.currentCppLevelTitle || '未匹配等级标题' }}</em>
+            </article>
+            <article class="summary-card"><span>当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
+            <article class="summary-card"><span>当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
             <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
             <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
           </div>
+
+          <article class="panel">
+            <h3>近期关联作业</h3>
+            <div v-if="!report.course.recentHomeworks.length" class="empty-inline">近期没有检测到关联作业</div>
+            <div v-else class="homework-list">
+              <article v-for="item in report.course.recentHomeworks" :key="item.homeworkId" class="homework-item">
+                <div class="homework-head">
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <p>L{{ item.level }} {{ item.levelTitle }}<span v-if="item.topicTitle"> · {{ item.topicTitle }}</span><span v-if="item.chapterTitle"> · {{ item.chapterTitle }}</span></p>
+                  </div>
+                  <span :class="['status-pill', item.score !== null ? 'ok' : (item.attend ? 'warn' : 'bad')]">
+                    {{ item.score !== null ? `得分 ${item.score}` : item.statusLabel }}
+                  </span>
+                </div>
+                <div class="attempt-meta">
+                  <span>题目数：{{ item.problemCount || 0 }}</span>
+                  <span>状态：{{ item.statusLabel }}</span>
+                  <a v-if="item.homeworkUrl" :href="item.homeworkUrl" target="_blank" rel="noreferrer">查看作业</a>
+                </div>
+              </article>
+            </div>
+          </article>
 
           <article class="panel">
             <h3>各 Level 完成情况</h3>
@@ -169,14 +216,25 @@ function createEmptyReport() {
       teacherAdvice: []
     },
     quiz: {
-      learner: { answeredCount: 0, accuracy: 0, activeDays: 0, streak: 0 },
+      learner: { answeredCount: 0, accuracy: 0, activeDays: 0, streak: 0, wrongbookActiveCount: 0, favoriteActiveCount: 0 },
       recentProgress: [],
       recentAttempts: [],
+      practicedTags: [],
       weakTags: []
     },
     course: {
-      learner: { currentCppLevel: 1, completionRate: 0, completedChaptersCount: 0, totalChapters: 0, lastActivityAt: null },
+      learner: {
+        currentCppLevel: 1,
+        currentCppLevelTitle: '',
+        currentTopicTitle: '',
+        currentChapterTitle: '',
+        completionRate: 0,
+        completedChaptersCount: 0,
+        totalChapters: 0,
+        lastActivityAt: null
+      },
       levels: [],
+      recentHomeworks: [],
       recentActivities: []
     }
   }
@@ -358,18 +416,44 @@ export default {
 .summary-card { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
 .summary-card span { color: #627386; font-size: 13px; }
 .summary-card strong { font-size: 28px; }
+.summary-card em { color: #64748b; font-size: 12px; font-style: normal; line-height: 1.5; }
 .summary-card.accent { background: linear-gradient(135deg, #fef4d6 0%, #fff 100%); }
 .content-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 14px; }
+.single-column-grid { grid-template-columns: 1fr; }
 .panel { padding: 18px; }
 .panel h3 { margin: 0 0 12px; font-size: 18px; }
 .empty-panel, .empty-inline { color: #738396; text-align: center; }
 .empty-panel { padding: 48px 16px; }
-.list-block, .attempt-list, .level-list { display: flex; flex-direction: column; gap: 10px; }
+.list-block, .attempt-list, .level-list, .practice-tag-list, .homework-list { display: flex; flex-direction: column; gap: 10px; }
 .row-item, .attempt-item, .level-item {
   border: 1px solid #e0e7ef;
   border-radius: 12px;
   padding: 12px 14px;
   background: #fbfdff;
+}
+.practice-tag-item,
+.homework-item {
+  border: 1px solid #e0e7ef;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fbfdff;
+}
+.practice-tag-item,
+.homework-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.practice-tag-item p,
+.homework-head p {
+  margin: 8px 0 0;
+  color: #5f6d7b;
+}
+.tag-meta {
+  color: #7c3d12;
+  font-size: 12px;
+  font-weight: 700;
 }
 .row-item { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -392,6 +476,7 @@ export default {
   font-weight: 700;
 }
 .status-pill.ok { background: #dcfce7; color: #166534; }
+.status-pill.warn { background: #fef3c7; color: #92400e; }
 .status-pill.bad { background: #fee2e2; color: #991b1b; }
 .progress-bar { height: 8px; border-radius: 999px; background: #e6edf5; margin-top: 12px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #2f7ff8 0%, #67b6ff 100%); }
@@ -405,6 +490,8 @@ export default {
   .report-tabs { grid-template-columns: 1fr; }
   .report-tab { align-items: flex-start; flex-direction: column; }
   .summary-grid { grid-template-columns: 1fr; }
+  .practice-tag-item,
+  .homework-head,
   .row-item,
   .attempt-head,
   .level-head,

@@ -182,6 +182,234 @@ function getLevelTopics(levelDoc) {
   }]
 }
 
+function findCurrentCppLevelDoc(levels, currentCppLevel) {
+  return (Array.isArray(levels) ? levels : []).find(level => {
+    const subject = level?.subject || 'C++'
+    return subject === 'C++' && Number(level?.level || 0) === Number(currentCppLevel || 0)
+  }) || null
+}
+
+function buildChapterContextIndex(levels = []) {
+  const chapterContextMap = new Map()
+
+  for (const level of levels) {
+    for (const topic of getLevelTopics(level)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        if (!chapter?.id) continue
+        chapterContextMap.set(chapter.id, {
+          chapterId: chapter.id,
+          chapterTitle: chapter.title || '未命名章节',
+          topicId: String(topic?._id || topic?.title || ''),
+          topicTitle: topic?.title || '未命名专题',
+          levelId: String(level?._id || ''),
+          level: Number(level?.level || 0),
+          levelTitle: level?.title || '',
+          group: level?.group || '',
+          subject: level?.subject || 'C++',
+          homeworkIds: Array.isArray(chapter?.homeworkIds)
+            ? chapter.homeworkIds.filter(Boolean).map(item => String(item))
+            : []
+        })
+      }
+    }
+  }
+
+  return chapterContextMap
+}
+
+function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
+  const subjectLevels = normalizeSubjectLevels(progress)
+  const currentCppLevel = Number(subjectLevels['C++'] || progress?.currentLevel || 1)
+  const currentLevelDoc = findCurrentCppLevelDoc(levels, currentCppLevel)
+  const chapterContextMap = buildChapterContextIndex(levels)
+
+  if (currentLevelDoc) {
+    for (const topic of getLevelTopics(currentLevelDoc)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        if (!isChapterCompleted(progress, chapter)) {
+          return {
+            levelId: String(currentLevelDoc._id || ''),
+            level: Number(currentLevelDoc.level || 0),
+            levelTitle: currentLevelDoc.title || '',
+            topicId: String(topic?._id || topic?.title || ''),
+            topicTitle: topic?.title || '未命名专题',
+            chapterId: chapter.id || '',
+            chapterTitle: chapter.title || '未命名章节',
+            subject: currentLevelDoc.subject || 'C++',
+            group: currentLevelDoc.group || '',
+            source: 'next_unfinished',
+            homeworkIds: Array.isArray(chapter?.homeworkIds) ? chapter.homeworkIds.filter(Boolean).map(item => String(item)) : []
+          }
+        }
+      }
+    }
+  }
+
+  const recentActivity = (Array.isArray(recentActivities) ? recentActivities : []).find(item => item?.chapterId && chapterContextMap.has(item.chapterId))
+  if (recentActivity) {
+    const context = chapterContextMap.get(recentActivity.chapterId)
+    return {
+      ...context,
+      source: 'recent_activity'
+    }
+  }
+
+  if (currentLevelDoc) {
+    const firstTopic = getLevelTopics(currentLevelDoc)[0]
+    const firstChapter = Array.isArray(firstTopic?.chapters) ? firstTopic.chapters[0] : null
+    if (firstTopic && firstChapter) {
+      return {
+        levelId: String(currentLevelDoc._id || ''),
+        level: Number(currentLevelDoc.level || 0),
+        levelTitle: currentLevelDoc.title || '',
+        topicId: String(firstTopic?._id || firstTopic?.title || ''),
+        topicTitle: firstTopic?.title || '未命名专题',
+        chapterId: firstChapter.id || '',
+        chapterTitle: firstChapter.title || '未命名章节',
+        subject: currentLevelDoc.subject || 'C++',
+        group: currentLevelDoc.group || '',
+        source: 'level_start',
+        homeworkIds: Array.isArray(firstChapter?.homeworkIds) ? firstChapter.homeworkIds.filter(Boolean).map(item => String(item)) : []
+      }
+    }
+  }
+
+  return {
+    levelId: '',
+    level: currentCppLevel,
+    levelTitle: currentLevelDoc?.title || '',
+    topicId: '',
+    topicTitle: '',
+    chapterId: '',
+    chapterTitle: '',
+    subject: 'C++',
+    group: '',
+    source: 'unknown',
+    homeworkIds: []
+  }
+}
+
+function parseContestRef(idStr) {
+  if (!idStr) return { domainId: 'system', contestId: '' }
+  const text = String(idStr)
+  if (!text.includes(':')) return { domainId: 'system', contestId: text }
+  const [domainId, contestId] = text.split(':')
+  return { domainId: domainId || 'system', contestId: contestId || '' }
+}
+
+function buildContestUrl(idStr, type = 'homework') {
+  const { domainId, contestId } = parseContestRef(idStr)
+  const pathSegment = type === 'exam' ? 'contest' : type
+  return contestId ? `https://acjudge.com/d/${domainId}/${pathSegment}/${contestId}` : ''
+}
+
+async function resolveContestDoc(idStr, type = 'homework') {
+  const { domainId, contestId } = parseContestRef(idStr)
+  const docType = type === 'exam' ? 30 : 60
+  if (!contestId) return null
+
+  if (mongoose.Types.ObjectId.isValid(contestId) && contestId.length === 24) {
+    const doc = await Document.findOne({ _id: new mongoose.Types.ObjectId(contestId), domainId })
+      .select('title docId docType domainId pids')
+      .lean()
+    if (doc) return doc
+  }
+
+  const numericId = Number(contestId)
+  if (!Number.isNaN(numericId)) {
+    return Document.findOne({ domainId, docId: numericId, docType })
+      .select('title docId docType domainId pids')
+      .lean()
+  }
+
+  return null
+}
+
+async function buildRecentHomeworkItems(learnerId, levels, recentActivities = [], currentPosition = null, limit = 6) {
+  const chapterContextMap = buildChapterContextIndex(levels)
+  const candidateContexts = []
+  const seenChapters = new Set()
+
+  const pushChapter = (chapterId) => {
+    const text = String(chapterId || '')
+    if (!text || seenChapters.has(text) || !chapterContextMap.has(text)) return
+    seenChapters.add(text)
+    candidateContexts.push(chapterContextMap.get(text))
+  }
+
+  for (const activity of Array.isArray(recentActivities) ? recentActivities : []) {
+    pushChapter(activity?.chapterId)
+  }
+  pushChapter(currentPosition?.chapterId)
+
+  if (!candidateContexts.length && currentPosition?.levelId) {
+    const currentLevelDoc = (Array.isArray(levels) ? levels : []).find(level => String(level?._id || '') === String(currentPosition.levelId || ''))
+    for (const topic of getLevelTopics(currentLevelDoc)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        pushChapter(chapter?.id)
+      }
+    }
+  }
+
+  const homeworkRefs = []
+  const seenHomework = new Set()
+
+  for (const context of candidateContexts) {
+    for (const homeworkId of Array.isArray(context?.homeworkIds) ? context.homeworkIds : []) {
+      const key = String(homeworkId || '')
+      if (!key || seenHomework.has(key)) continue
+      seenHomework.add(key)
+      homeworkRefs.push({
+        homeworkId: key,
+        chapterId: context.chapterId,
+        chapterTitle: context.chapterTitle,
+        topicTitle: context.topicTitle,
+        level: context.level,
+        levelTitle: context.levelTitle,
+        subject: context.subject,
+        group: context.group
+      })
+      if (homeworkRefs.length >= limit) break
+    }
+    if (homeworkRefs.length >= limit) break
+  }
+
+  return Promise.all(homeworkRefs.map(async (item) => {
+    const contestDoc = await resolveContestDoc(item.homeworkId, 'homework')
+    const { domainId, contestId } = parseContestRef(item.homeworkId)
+    const contestStatus = contestDoc
+      ? await ContestStatus.findOne({
+        domainId,
+        docType: contestDoc.docType != null ? contestDoc.docType : 60,
+        docId: contestDoc.docId,
+        uid: learnerId
+      }).lean()
+      : null
+
+    const score = contestStatus?.score ?? (contestStatus?.totalScore ?? null)
+    const attend = !!(contestStatus?.attend || contestStatus?.startTime)
+
+    return {
+      homeworkId: item.homeworkId,
+      title: contestDoc?.title || item.homeworkId,
+      domainId,
+      contestId,
+      problemCount: Array.isArray(contestDoc?.pids) ? contestDoc.pids.length : 0,
+      score,
+      attend,
+      statusLabel: score !== null ? '已得分' : (attend ? '已参与' : '未开始'),
+      chapterId: item.chapterId,
+      chapterTitle: item.chapterTitle,
+      topicTitle: item.topicTitle,
+      level: item.level,
+      levelTitle: item.levelTitle,
+      subject: item.subject,
+      group: item.group,
+      homeworkUrl: buildContestUrl(item.homeworkId, 'homework')
+    }
+  }))
+}
+
 function isChapterCompleted(progress, chapter) {
   if (!progress || !chapter) return false
 
@@ -530,7 +758,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
     UserProgress.findOne({ userId: learnerId }).lean(),
     CourseLevel.find()
-      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id chapters._id chapters.id')
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title topics.chapters.homeworkIds chapters._id chapters.id chapters.title chapters.homeworkIds')
       .sort({ subject: 1, level: 1 })
       .lean(),
     CourseActivity.find({ userId: learnerId, lastActiveAt: { $gte: windowStart } })
@@ -542,6 +770,8 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
   if (!user) throw new Error('学员不存在')
 
   const courseSummary = buildCourseProgressSummary(progress, levels)
+  const currentPosition = buildCurrentCoursePosition(progress, levels, recentActivities)
+  const recentHomeworks = await buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition)
 
   return {
     learner: {
@@ -558,9 +788,14 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
       completedLevelCount: courseSummary.completedLevelCount,
       startedTopicCount: courseSummary.startedTopicCount,
       totalTopicCount: courseSummary.totalTopicCount,
+      currentTopicId: currentPosition.topicId || '',
+      currentTopicTitle: currentPosition.topicTitle || '',
+      currentChapterId: currentPosition.chapterId || '',
+      currentChapterTitle: currentPosition.chapterTitle || '',
       lastActivityAt: recentActivities[0]?.lastActiveAt || null
     },
     levels: courseSummary.levels,
+    recentHomeworks,
     recentActivities: recentActivities.map(item => ({
       action: item.action,
       sessionDate: item.sessionDate,
