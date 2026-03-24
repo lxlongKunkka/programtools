@@ -226,6 +226,97 @@ function buildLevelSnapshot(levelDoc, progress) {
   }
 }
 
+function getChapterSolvedProblems(progress, chapter) {
+  if (!progress || !chapter?.id) return []
+
+  const chapterData = progress.chapterProgress?.get
+    ? progress.chapterProgress.get(chapter.id)
+    : progress.chapterProgress?.[chapter.id]
+
+  const solvedProblems = Array.isArray(chapterData?.solvedProblems)
+    ? chapterData.solvedProblems.filter(Boolean).map(item => String(item))
+    : []
+
+  return [...new Set(solvedProblems)]
+}
+
+function buildScopedTopicSnapshot(topic, progress) {
+  const chapterItems = Array.isArray(topic?.chapters)
+    ? topic.chapters.map(chapter => {
+      const solvedProblems = getChapterSolvedProblems(progress, chapter)
+      return {
+        chapterId: chapter.id || '',
+        chapterUid: chapter._id ? String(chapter._id) : '',
+        title: chapter.title || '未命名章节',
+        completed: isChapterCompleted(progress, chapter),
+        solvedProblemCount: solvedProblems.length,
+        solvedProblems
+      }
+    })
+    : []
+
+  const totalCount = chapterItems.length
+  const completedCount = chapterItems.reduce((sum, chapter) => sum + (chapter.completed ? 1 : 0), 0)
+  const solvedProblemCount = chapterItems.reduce((sum, chapter) => sum + chapter.solvedProblemCount, 0)
+
+  return {
+    topicId: String(topic?._id || topic?.title || ''),
+    title: topic?.title || '未命名专题',
+    completedCount,
+    totalCount,
+    solvedProblemCount,
+    completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+    chapters: chapterItems
+  }
+}
+
+function buildScopedLearnerDetailPayload({ learnerId, user, progress, levelDoc, topic = null, recentActivities = [] }) {
+  const selectedTopics = topic ? [topic] : getLevelTopics(levelDoc)
+  const topicSnapshots = selectedTopics
+    .map(item => buildScopedTopicSnapshot(item, progress))
+    .filter(item => item.totalCount > 0)
+
+  const totalChapters = topicSnapshots.reduce((sum, item) => sum + item.totalCount, 0)
+  const completedChaptersCount = topicSnapshots.reduce((sum, item) => sum + item.completedCount, 0)
+  const solvedProblemCount = topicSnapshots.reduce((sum, item) => sum + item.solvedProblemCount, 0)
+  const completionRate = totalChapters > 0 ? Number(((completedChaptersCount / totalChapters) * 100).toFixed(1)) : 0
+
+  return {
+    learner: {
+      learnerId,
+      learnerName: user?.uname || `用户 ${learnerId}`,
+      learnerEmail: user?.mail || '',
+      scopeType: topic ? 'topic' : 'level',
+      scopeTitle: topic?.title || levelDoc?.title || '',
+      levelId: String(levelDoc?._id || ''),
+      level: Number(levelDoc?.level || 0),
+      levelTitle: levelDoc?.title || '',
+      topicId: topic?._id ? String(topic._id) : '',
+      group: levelDoc?.group || '',
+      subject: levelDoc?.subject || 'C++',
+      completedChaptersCount,
+      totalChapters,
+      solvedProblemCount,
+      completionRate,
+      lastActivityAt: recentActivities[0]?.lastActiveAt || null
+    },
+    topics: topicSnapshots,
+    recentActivities: recentActivities.map(item => ({
+      action: item.action,
+      sessionDate: item.sessionDate,
+      chapterId: item.chapterId,
+      chapterTitle: item.chapterTitle || '',
+      topicTitle: item.topicTitle || '',
+      level: item.level || 0,
+      levelTitle: item.levelTitle || '',
+      subject: item.subject || 'C++',
+      group: item.group || '',
+      problemId: item.problemId || '',
+      lastActiveAt: item.lastActiveAt || item.updatedAt || item.createdAt || null
+    }))
+  }
+}
+
 function buildCourseRiskFlags(summary) {
   const flags = []
 
@@ -924,7 +1015,7 @@ router.get('/level/:levelId/learners', async (req, res) => {
         )
     }
 
-    const progresses = await UserProgress.find(query).select('userId completedChapters completedChapterUids subjectLevels currentLevel')
+    const progresses = await UserProgress.find(query).select('userId completedChapters completedChapterUids subjectLevels currentLevel chapterProgress')
     
     if (progresses.length === 0) return res.json([])
 
@@ -951,31 +1042,50 @@ router.get('/level/:levelId/learners', async (req, res) => {
     const result = users.map(u => {
         const p = activeProgresses.find(prog => prog.userId.toString() === u._id.toString())
         let completedCount = 0
+      let solvedProblemCount = 0
         if (p) {
             const checkChapter = (c) => {
                 if (c._id && p.completedChapterUids && p.completedChapterUids.some(uid => uid.toString() === c._id.toString())) return true
                 if (c.id && p.completedChapters && p.completedChapters.includes(c.id)) return true
                 return false
             }
+
+        const addSolvedProblems = (c) => {
+          const chapterData = p.chapterProgress?.get ? p.chapterProgress.get(c.id) : p.chapterProgress?.[c.id]
+          if (chapterData && Array.isArray(chapterData.solvedProblems)) {
+            solvedProblemCount += chapterData.solvedProblems.length
+          }
+        }
             
             if (levelDoc.topics) {
                 levelDoc.topics.forEach(t => {
-                    if (t.chapters) t.chapters.forEach(c => { if (checkChapter(c)) completedCount++ })
+            if (t.chapters) t.chapters.forEach(c => {
+              if (checkChapter(c)) completedCount++
+              addSolvedProblems(c)
+            })
                 })
             }
             if (levelDoc.chapters) {
-                levelDoc.chapters.forEach(c => { if (checkChapter(c)) completedCount++ })
+          levelDoc.chapters.forEach(c => {
+            if (checkChapter(c)) completedCount++
+            addSolvedProblems(c)
+          })
             }
         }
         return {
             _id: u._id,
             uname: u.uname,
-            completedCount
+        completedCount,
+        solvedProblemCount
         }
     })
     
-    // Sort by completed count descending
-    result.sort((a, b) => b.completedCount - a.completedCount)
+    // Sort by solved problems first, then completed chapters
+    result.sort((a, b) => (
+      (b.solvedProblemCount || 0) - (a.solvedProblemCount || 0)
+      || (b.completedCount || 0) - (a.completedCount || 0)
+      || String(a.uname || '').localeCompare(String(b.uname || ''), 'zh-CN')
+    ))
 
     res.json(result)
 
@@ -1012,17 +1122,18 @@ router.get('/topic/:topicId/learners', async (req, res) => {
     // We fetch completedChapters/Uids to calculate progress for sorting
     const progresses = await UserProgress.find({
       unlockedChapters: { $in: chapterIds }
-    }).select('userId completedChapters completedChapterUids')
+    }).select('userId completedChapters completedChapterUids chapterProgress')
     
     if (progresses.length === 0) {
       return res.json([])
     }
 
     // Calculate completed count for each user for THIS topic
-    const userProgressMap = {} // userId -> count
+    const userProgressMap = {} // userId -> { completedCount, solvedProblemCount }
     
     progresses.forEach(p => {
        let userCompletedCount = 0
+       let solvedProblemCount = 0
        topic.chapters.forEach(chapter => {
            let isCompleted = false
            // Check UID
@@ -1034,8 +1145,16 @@ router.get('/topic/:topicId/learners', async (req, res) => {
                isCompleted = true
            }
            if (isCompleted) userCompletedCount++
+
+             const chapterData = p.chapterProgress?.get ? p.chapterProgress.get(chapter.id) : p.chapterProgress?.[chapter.id]
+             if (chapterData && Array.isArray(chapterData.solvedProblems)) {
+               solvedProblemCount += chapterData.solvedProblems.length
+             }
        })
-       userProgressMap[p.userId] = userCompletedCount
+           userProgressMap[p.userId] = {
+           completedCount: userCompletedCount,
+           solvedProblemCount
+           }
     })
     
     const userIds = [...new Set(progresses.map(p => p.userId))] // Unique user IDs
@@ -1051,24 +1170,137 @@ router.get('/topic/:topicId/learners', async (req, res) => {
     
     // 4. Attach progress and sort
     let usersWithProgress = users.map(u => {
+      const userProgress = userProgressMap[u._id] || { completedCount: 0, solvedProblemCount: 0 }
         return {
             _id: u._id,
             uname: u.uname,
-            completedCount: userProgressMap[u._id] || 0
+        completedCount: userProgress.completedCount,
+        solvedProblemCount: userProgress.solvedProblemCount
         }
     })
 
-    // Filter out users who haven't completed any chapter in this topic
-    usersWithProgress = usersWithProgress.filter(u => u.completedCount > 0)
+    // Keep learners who have either completed chapters or already solved problems in this topic
+    usersWithProgress = usersWithProgress.filter(u => u.completedCount > 0 || u.solvedProblemCount > 0)
     
-    // Sort descending by completed count
-    usersWithProgress.sort((a, b) => b.completedCount - a.completedCount)
+    // Sort by solved problems first, then completed chapters
+    usersWithProgress.sort((a, b) => (
+      (b.solvedProblemCount || 0) - (a.solvedProblemCount || 0)
+      || (b.completedCount || 0) - (a.completedCount || 0)
+      || String(a.uname || '').localeCompare(String(b.uname || ''), 'zh-CN')
+    ))
 
     res.json(usersWithProgress)
     
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/level/:levelId/learners/:learnerId/detail', authenticateToken, async (req, res) => {
+  try {
+    const { levelId, learnerId } = req.params
+    const learnerIdNum = Number(learnerId)
+    if (!Number.isFinite(learnerIdNum)) {
+      return res.status(400).json({ error: '学员 ID 不合法' })
+    }
+
+    const levelDoc = await CourseLevel.findById(levelId)
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title chapters._id chapters.id chapters.title')
+      .lean()
+    if (!levelDoc) {
+      return res.status(404).json({ error: 'Level not found' })
+    }
+
+    const chapterIds = getLevelTopics(levelDoc)
+      .flatMap(topic => Array.isArray(topic.chapters) ? topic.chapters.map(chapter => chapter.id).filter(Boolean) : [])
+
+    const windowStart = getActivityWindowStart(30)
+    const [user, progress, recentActivities] = await Promise.all([
+      User.findOne({ _id: learnerIdNum }).select('_id uname mail').lean(),
+      UserProgress.findOne({ userId: learnerIdNum }).lean(),
+      CourseActivity.find({
+        userId: learnerIdNum,
+        chapterId: { $in: chapterIds },
+        lastActiveAt: { $gte: windowStart }
+      })
+        .sort({ lastActiveAt: -1 })
+        .limit(20)
+        .lean()
+    ])
+
+    if (!user) {
+      return res.status(404).json({ error: '学员不存在' })
+    }
+
+    res.json(buildScopedLearnerDetailPayload({
+      learnerId: learnerIdNum,
+      user,
+      progress,
+      levelDoc,
+      recentActivities
+    }))
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || '加载学员课程详情失败' })
+  }
+})
+
+router.get('/topic/:topicId/learners/:learnerId/detail', authenticateToken, async (req, res) => {
+  try {
+    const { topicId, learnerId } = req.params
+    const learnerIdNum = Number(learnerId)
+    if (!Number.isFinite(learnerIdNum)) {
+      return res.status(400).json({ error: '学员 ID 不合法' })
+    }
+
+    const levelDoc = await CourseLevel.findOne({ 'topics._id': topicId })
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title')
+      .lean()
+    if (!levelDoc) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+
+    const topic = Array.isArray(levelDoc.topics)
+      ? levelDoc.topics.find(item => String(item._id) === String(topicId))
+      : null
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+
+    const chapterIds = Array.isArray(topic.chapters)
+      ? topic.chapters.map(chapter => chapter.id).filter(Boolean)
+      : []
+
+    const windowStart = getActivityWindowStart(30)
+    const [user, progress, recentActivities] = await Promise.all([
+      User.findOne({ _id: learnerIdNum }).select('_id uname mail').lean(),
+      UserProgress.findOne({ userId: learnerIdNum }).lean(),
+      CourseActivity.find({
+        userId: learnerIdNum,
+        chapterId: { $in: chapterIds },
+        lastActiveAt: { $gte: windowStart }
+      })
+        .sort({ lastActiveAt: -1 })
+        .limit(20)
+        .lean()
+    ])
+
+    if (!user) {
+      return res.status(404).json({ error: '学员不存在' })
+    }
+
+    res.json(buildScopedLearnerDetailPayload({
+      learnerId: learnerIdNum,
+      user,
+      progress,
+      levelDoc,
+      topic,
+      recentActivities
+    }))
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || '加载学员课程详情失败' })
   }
 })
 

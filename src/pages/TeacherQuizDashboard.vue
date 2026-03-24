@@ -121,7 +121,7 @@
           <article v-for="learner in filteredCandidates" :key="learner._id" class="candidate-item">
             <div>
               <strong>{{ learner.uname }}</strong>
-              <p>课程完成章节：{{ learner.completedCount || 0 }}</p>
+              <p>课程完成章节：{{ learner.completedCount || 0 }} · 已做 {{ learner.solvedProblemCount || 0 }} 题</p>
             </div>
             <button
               v-if="!followedIdSet.has(Number(learner._id))"

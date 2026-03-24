@@ -79,8 +79,7 @@
       :show="showLearnerModal"
       :learner="selectedLearner"
       :loading="loadingLearnerProgress"
-      :progress="selectedLearnerProgress"
-      :active-levels="learnerActiveLevels"
+      :detail="selectedLearnerDetail"
       @close="closeLearnerModal"
     />
   </div>
@@ -116,53 +115,9 @@ export default {
       // Learner modal state
       showLearnerModal: false,
       selectedLearner: null,
-      selectedLearnerProgress: null,
-      selectedLearnerTopic: null,
+      selectedLearnerDetail: null,
       loadingLearnerProgress: false,
       isInitialLoad: true
-    }
-  },
-
-  computed: {
-    isAdmin() {
-      try {
-        const u = JSON.parse(localStorage.getItem('user_info') || '{}')
-        return u.role === 'admin'
-      } catch { return false }
-    },
-
-    // Computes active levels for the LearnerModal progress display
-    learnerActiveLevels() {
-      if (!this.selectedLearnerProgress || !this.treeData) return []
-      const activeLevels = []
-      const p = this.selectedLearnerProgress
-      const completedIds  = new Set(p.completedChapters || [])
-      const completedUids = new Set(p.completedChapterUids || [])
-      const isDone = c => (c._id && completedUids.has(c._id)) || completedIds.has(c.id)
-
-      this.treeData.forEach(group => {
-        if (!group.levels) return
-        group.levels.forEach(level => {
-          const levelData = { title: level.title, group: group.name, levelNum: level.level, topics: [] }
-          let hasProgress = false
-          if (level.topics && level.topics.length > 0) {
-            level.topics.forEach(topic => {
-              const total = topic.chapters ? topic.chapters.length : 0
-              if (total === 0) return
-              const completed = topic.chapters.filter(c => isDone(c)).length
-              if (completed > 0) {
-                hasProgress = true
-                levelData.topics.push({
-                  title: topic.title, completed, total,
-                  percentage: Math.round((completed / total) * 100)
-                })
-              }
-            })
-          }
-          if (hasProgress) activeLevels.push(levelData)
-        })
-      })
-      return activeLevels
     }
   },
 
@@ -441,12 +396,22 @@ export default {
     },
 
     async viewLearnerProgress(user) {
+      const scopeType = this.selectedNode?.type
+      const scopeId = this.selectedData?._id
+      if (!user?._id || !scopeId || !['level', 'topic'].includes(scopeType)) {
+        return
+      }
+
+      const detailUrl = scopeType === 'level'
+        ? `/api/course/level/${scopeId}/learners/${user._id}/detail`
+        : `/api/course/topic/${scopeId}/learners/${user._id}/detail`
+
       this.selectedLearner = user
       this.showLearnerModal = true
       this.loadingLearnerProgress = true
-      this.selectedLearnerProgress = null
+      this.selectedLearnerDetail = null
       try {
-        this.selectedLearnerProgress = await request(`/api/course/progress/${user._id}`)
+        this.selectedLearnerDetail = await request(detailUrl)
       } catch (e) {
         console.error('Failed to fetch learner progress', e)
       } finally {
@@ -457,8 +422,7 @@ export default {
     closeLearnerModal() {
       this.showLearnerModal = false
       this.selectedLearner = null
-      this.selectedLearnerProgress = null
-      this.selectedLearnerTopic = null
+      this.selectedLearnerDetail = null
     },
 
     onDesignClose() {

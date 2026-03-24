@@ -6,17 +6,22 @@
     </div>
     <div v-show="expanded" class="learners-content">
       <div v-if="loading" class="loading-small">加载中...</div>
-      <div v-else-if="learners.length > 0" class="learners-grid">
+      <div v-else-if="rankedLearners.length > 0" class="learners-grid">
         <div
-          v-for="learner in learners"
+          v-for="(learner, index) in rankedLearners"
           :key="learner._id"
-          class="learner-card"
+          :class="['learner-card', { featured: isFeaturedLearner(learner) }]"
           @click.stop="$emit('view-learner', learner)"
         >
+          <div class="learner-rank">{{ index + 1 }}</div>
           <div class="learner-avatar">{{ learner.uname ? learner.uname.charAt(0).toUpperCase() : '?' }}</div>
           <div class="learner-info">
-            <div class="learner-name">{{ learner.uname }}</div>
+            <div class="learner-name-row">
+              <div class="learner-name">{{ learner.uname }}</div>
+              <span v-if="isFeaturedLearner(learner)" class="featured-badge">最活跃</span>
+            </div>
             <div class="learner-detail" v-if="learner.completedCount !== undefined">已完成 {{ learner.completedCount }} 节</div>
+            <div class="learner-detail" v-if="learner.solvedProblemCount !== undefined">已做 {{ learner.solvedProblemCount }} 题</div>
           </div>
         </div>
       </div>
@@ -50,7 +55,22 @@ export default {
       this.learners = []
     }
   },
+  computed: {
+    rankedLearners() {
+      return [...this.learners].sort((a, b) => (
+        (b.solvedProblemCount || 0) - (a.solvedProblemCount || 0)
+        || (b.completedCount || 0) - (a.completedCount || 0)
+        || String(a.uname || '').localeCompare(String(b.uname || ''), 'zh-CN')
+      ))
+    },
+    topSolvedProblemCount() {
+      return this.rankedLearners.reduce((max, learner) => Math.max(max, Number(learner.solvedProblemCount || 0)), 0)
+    }
+  },
   methods: {
+    isFeaturedLearner(learner) {
+      return this.topSolvedProblemCount > 0 && Number(learner?.solvedProblemCount || 0) === this.topSolvedProblemCount
+    },
     async toggle() {
       this.expanded = !this.expanded
       if (this.expanded && this.learners.length === 0) {
@@ -102,6 +122,7 @@ export default {
 .learner-card {
   display: flex;
   align-items: center;
+  gap: 10px;
   background: #f8f9fa;
   padding: 10px;
   border-radius: 8px;
@@ -114,6 +135,28 @@ export default {
   border-color: #3498db;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   transform: translateY(-2px);
+}
+.learner-card.featured {
+  background: linear-gradient(135deg, #fff5d6 0%, #fffaf0 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.16);
+}
+.learner-rank {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.learner-card.featured .learner-rank {
+  background: #f59e0b;
+  color: #fff;
 }
 .learner-avatar {
   width: 32px;
@@ -130,6 +173,11 @@ export default {
   flex-shrink: 0;
 }
 .learner-info { flex: 1; overflow: hidden; }
+.learner-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .learner-name {
   font-size: 13px;
   font-weight: 500;
@@ -137,6 +185,16 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.featured-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: white;
+  font-weight: 700;
 }
 .learner-detail { font-size: 11px; color: #95a5a6; margin-top: 2px; }
 </style>
