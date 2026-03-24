@@ -170,10 +170,10 @@
           </article>
 
           <article class="panel">
-            <h3>各 Level 完成情况</h3>
-            <div v-if="!report.course.levels.length" class="empty-inline">暂无课程进度</div>
+            <h3>近期参与的 Level</h3>
+            <div v-if="!recentCourseLevels.length" class="empty-inline">暂无课程进度</div>
             <div v-else class="level-list">
-              <article v-for="level in report.course.levels" :key="level.levelId" class="level-item">
+              <article v-for="level in recentCourseLevels" :key="level.levelId" class="level-item">
                 <div class="level-head">
                   <div>
                     <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
@@ -266,6 +266,37 @@ export default {
   computed: {
     learnerName() {
       return this.report.learner?.learnerName || '孩子'
+    },
+    recentCourseLevels() {
+      const levels = Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
+      const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
+      if (!levels.length) return []
+
+      const makeKey = (item) => [
+        String(item?.subject || 'C++'),
+        Number(item?.level || 0),
+        String(item?.levelTitle || item?.title || ''),
+        String(item?.group || '')
+      ].join('::')
+
+      const levelMap = new Map(levels.map((level) => [makeKey(level), level]))
+      const picked = []
+      const seen = new Set()
+
+      for (const activity of recentActivities) {
+        const key = makeKey(activity)
+        if (seen.has(key) || !levelMap.has(key)) continue
+        seen.add(key)
+        picked.push(levelMap.get(key))
+        if (picked.length >= 3) return picked
+      }
+
+      const startedLevels = levels.filter((level) => Number(level?.completedChapters || 0) > 0 || Number(level?.completionRate || 0) > 0)
+      if (startedLevels.length > 0) {
+        return startedLevels.slice(0, 3)
+      }
+
+      return levels.slice(0, 3)
     }
   },
   watch: {
