@@ -8,13 +8,24 @@ import QuizWrongbookItem from '../models/QuizWrongbookItem.js'
 import QuizQuestionIssue, { ISSUE_TYPES } from '../models/QuizQuestionIssue.js'
 import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import User from '../models/User.js'
+import CourseLevel from '../models/CourseLevel.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
-import { KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
+import { KNOWLEDGE_TAG_GROUPS, KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
 import { buildRecommendationReason, pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
 
 const router = express.Router()
 const GUEST_DAILY_LIMIT = 5
+const KNOWLEDGE_TAG_LEVEL_MAP = new Map()
+
+for (const [levelTag, tags] of Object.entries(KNOWLEDGE_TAG_GROUPS)) {
+  for (const tag of tags) {
+    if (!KNOWLEDGE_TAG_LEVEL_MAP.has(tag)) {
+      KNOWLEDGE_TAG_LEVEL_MAP.set(tag, new Set())
+    }
+    KNOWLEDGE_TAG_LEVEL_MAP.get(tag).add(levelTag)
+  }
+}
 
 function getTodayDate() {
   const now = new Date()
@@ -153,6 +164,110 @@ function formatLevelLabel(levelTag) {
   const match = text.match(/^gesp(\d+)$/i)
   if (!match) return text
   return `GESP ${Number(match[1])} 级`
+}
+
+function parseLevelNumber(levelTag) {
+  const text = String(levelTag || '').trim()
+  const match = text.match(/^gesp(\d+)$/i)
+  return match ? Number(match[1]) : null
+}
+
+function buildCourseLevelTitleMap(levelDocs = []) {
+  const map = new Map()
+  for (const levelDoc of Array.isArray(levelDocs) ? levelDocs : []) {
+    const subject = String(levelDoc?.subject || 'C++')
+    const level = Number(levelDoc?.level || 0)
+    if (!level) continue
+    map.set(`${subject}::${level}`, String(levelDoc?.title || ''))
+  }
+  return map
+}
+
+function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), courseLevelTitleMap = new Map()) {
+  const items = Array.isArray(attempts) ? attempts : []
+  const aggregates = new Map()
+
+  const pickPrimaryLevelTag = (question, tags = []) => {
+    const directLevelTag = String(question?.levelTag || '').trim()
+    if (parseLevelNumber(directLevelTag)) return directLevelTag
+
+    const matchedCounts = new Map()
+    for (const tag of tags) {
+      for (const levelTag of KNOWLEDGE_TAG_LEVEL_MAP.get(tag) || []) {
+        matchedCounts.set(levelTag, Number(matchedCounts.get(levelTag) || 0) + 1)
+      }
+    }
+
+    return [...matchedCounts.entries()]
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1]
+        return (parseLevelNumber(a[0]) || 0) - (parseLevelNumber(b[0]) || 0)
+      })[0]?.[0] || ''
+  }
+
+  for (const attempt of items) {
+    const question = questionMap.get(attempt?.questionUid)
+    const normalizedTags = normalizeQuizKnowledgeTags(question?.tags || attempt?.tags || [])
+    const levelTag = pickPrimaryLevelTag(question, normalizedTags)
+    const level = parseLevelNumber(levelTag)
+    if (!levelTag || !level) continue
+
+    const subject = String(question?.subject || 'C++')
+    const key = `${subject}::${levelTag}`
+    const answeredAt = new Date(attempt?.answeredAt || 0).getTime()
+    const matchedTags = normalizedTags.filter((tag) => KNOWLEDGE_TAG_LEVEL_MAP.get(tag)?.has(levelTag))
+
+    if (!aggregates.has(key)) {
+      aggregates.set(key, {
+        levelTag,
+        level,
+        label: formatLevelLabel(levelTag),
+        levelTitle: courseLevelTitleMap.get(`${subject}::${level}`) || '',
+        subject,
+        attemptCount: 0,
+        correctCount: 0,
+        lastAnsweredAt: 0,
+        matchedTagCounts: new Map()
+      })
+    }
+
+    const summary = aggregates.get(key)
+    summary.attemptCount += 1
+    if (attempt?.isCorrect) summary.correctCount += 1
+    if (Number.isFinite(answeredAt) && answeredAt > summary.lastAnsweredAt) {
+      summary.lastAnsweredAt = answeredAt
+    }
+
+    for (const tag of matchedTags.length ? matchedTags : normalizedTags.slice(0, 2)) {
+      summary.matchedTagCounts.set(tag, Number(summary.matchedTagCounts.get(tag) || 0) + 1)
+    }
+  }
+
+  return [...aggregates.values()]
+    .sort((a, b) => {
+      if (b.attemptCount !== a.attemptCount) return b.attemptCount - a.attemptCount
+      if (b.lastAnsweredAt !== a.lastAnsweredAt) return b.lastAnsweredAt - a.lastAnsweredAt
+      return a.level - b.level
+    })
+    .slice(0, 3)
+    .map((item) => ({
+      levelTag: item.levelTag,
+      level: item.level,
+      label: item.label,
+      levelTitle: item.levelTitle,
+      subject: item.subject,
+      attemptCount: item.attemptCount,
+      correctCount: item.correctCount,
+      accuracy: item.attemptCount > 0 ? Number(((item.correctCount / item.attemptCount) * 100).toFixed(1)) : 0,
+      lastAnsweredAt: item.lastAnsweredAt ? new Date(item.lastAnsweredAt).toISOString() : null,
+      matchedTags: [...item.matchedTagCounts.entries()]
+        .sort((a, b) => {
+          if (b[1] !== a[1]) return b[1] - a[1]
+          return a[0].localeCompare(b[0], 'zh-CN')
+        })
+        .slice(0, 4)
+        .map(([tag]) => tag)
+    }))
 }
 
 function getWindowStart(days = 7) {
@@ -322,7 +437,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
 
   const windowDays = Math.min(Math.max(Number(days) || 14, 1), 30)
   const windowStart = getWindowStart(windowDays)
-  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats, practicedTags, recentWrongTags] = await Promise.all([
+  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats, practicedTags, recentWrongTags, courseLevels] = await Promise.all([
     QuizAttempt.find({ userId: learnerId }).sort({ answeredAt: -1 }).limit(30).lean(),
     QuizWrongbookItem.countDocuments({ userId: learnerId, active: true }),
     QuizFavoriteItem.countDocuments({ userId: learnerId, active: true }),
@@ -400,7 +515,8 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
       { $group: { _id: '$tags', count: { $sum: 1 } } },
       { $sort: { count: -1, _id: 1 } },
       { $limit: 3 }
-    ])
+    ]),
+    CourseLevel.find({ subject: 'C++' }).select('level title subject').lean()
   ])
 
   const latestProgress = recentProgress[0] || null
@@ -413,9 +529,15 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
   const questionUids = [...new Set(attempts.map((item) => item.questionUid).filter(Boolean))]
   const questions = await QuizQuestion.find(
     { questionUid: { $in: questionUids } },
-    'questionUid stem sourceTitle paperQuestionNo levelTag tags answer type'
+    'questionUid stem sourceTitle paperQuestionNo levelTag tags answer type subject'
   ).lean()
   const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
+  const courseLevelTitleMap = buildCourseLevelTitleMap(courseLevels)
+  const recentAttemptsInWindow = attempts.filter((item) => {
+    const answeredAt = new Date(item?.answeredAt || 0)
+    return !Number.isNaN(answeredAt.getTime()) && answeredAt >= windowStart
+  })
+  const recentPracticeLevels = buildRecentPracticeLevels(recentAttemptsInWindow, questionMap, courseLevelTitleMap)
 
   return {
     learner: {
@@ -466,6 +588,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
         accuracy: attemptCount > 0 ? Number(((correctCount / attemptCount) * 100).toFixed(1)) : 0
       }
     }),
+    recentPracticeLevels,
     recentWrongTags: recentWrongTags.map((item) => ({
       tag: item._id,
       count: Number(item.count || 0)

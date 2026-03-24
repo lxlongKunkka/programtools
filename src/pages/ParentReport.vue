@@ -90,6 +90,26 @@
 
           <div class="content-grid single-column-grid">
             <article class="panel">
+              <h3>最近做题对应课程 Level</h3>
+              <div v-if="!report.quiz.recentPracticeLevels.length" class="empty-inline">最近做题暂未匹配到课程 Level</div>
+              <div v-else class="practice-tag-list">
+                <article v-for="item in report.quiz.recentPracticeLevels" :key="item.levelTag" class="practice-tag-item practice-level-item">
+                  <div>
+                    <strong>{{ item.subject }} · L{{ item.level }} · {{ item.levelTitle || item.label }}</strong>
+                    <p>
+                      {{ item.attemptCount }} 题 · 正确率 {{ item.accuracy }}%
+                      <span v-if="item.lastAnsweredAt"> · 最近作答 {{ formatDateTime(item.lastAnsweredAt) }}</span>
+                    </p>
+                    <div v-if="item.matchedTags.length" class="tag-list practice-level-tags">
+                      <span v-for="tag in item.matchedTags" :key="`${item.levelTag}-${tag}`" class="tag-pill">{{ tag }}</span>
+                    </div>
+                  </div>
+                  <span class="tag-meta">对 {{ item.correctCount }}</span>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel">
               <h3>最近新增错题标签</h3>
               <div v-if="!report.quiz.recentWrongTags.length" class="empty-inline">最近 14 天没有新增错题标签</div>
               <div v-else class="tag-list">
@@ -233,6 +253,7 @@ function createEmptyReport() {
       recentProgress: [],
       recentAttempts: [],
       practicedTags: [],
+      recentPracticeLevels: [],
       recentWrongTags: [],
       weakTags: []
     },
@@ -528,6 +549,9 @@ export default {
   padding: 12px 14px;
   background: #fbfdff;
 }
+.practice-level-item {
+  align-items: flex-start;
+}
 .practice-tag-item,
 .homework-head {
   display: flex;
@@ -544,6 +568,9 @@ export default {
   color: #7c3d12;
   font-size: 12px;
   font-weight: 700;
+}
+.practice-level-tags {
+  margin-top: 10px;
 }
 .row-item { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
