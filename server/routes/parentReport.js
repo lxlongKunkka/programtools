@@ -32,16 +32,55 @@ function formatDateLabel(value) {
   })
 }
 
+function getPrimaryPracticeLevel(quiz) {
+  return Array.isArray(quiz?.recentPracticeLevels) ? quiz.recentPracticeLevels[0] || null : null
+}
+
+function buildPracticeLevelSummary(quiz) {
+  const level = getPrimaryPracticeLevel(quiz)
+  if (!level) return ''
+
+  const parts = [
+    `最近做题主要集中在 L${level.level}`
+  ]
+
+  if (level.levelTitle) {
+    parts.push(level.levelTitle)
+  }
+
+  parts.push(`共 ${level.attemptCount || 0} 题`)
+  parts.push(`正确率 ${Number(level.accuracy || 0)}%`)
+
+  if (Array.isArray(level.matchedTags) && level.matchedTags.length > 0) {
+    parts.push(`主要知识点：${level.matchedTags.slice(0, 3).join('、')}`)
+  }
+
+  return parts.join('，')
+}
+
 function summarizeTodayPerformance(quiz, course) {
   const latestQuiz = Array.isArray(quiz?.recentProgress) ? quiz.recentProgress[0] : null
   const latestCourse = Array.isArray(course?.recentActivities) ? course.recentActivities[0] : null
+  const practiceSummary = buildPracticeLevelSummary(quiz)
 
   if ((latestQuiz?.answeredCount || 0) > 0) {
+    if (practiceSummary) {
+      return `今天完成了 ${latestQuiz.answeredCount} 道 Quiz，答对 ${latestQuiz.correctCount} 道，当前连续打卡 ${quiz?.learner?.streak || 0} 天。${practiceSummary}。`
+    }
+
     return `今天完成了 ${latestQuiz.answeredCount} 道 Quiz，答对 ${latestQuiz.correctCount} 道，当前连续打卡 ${quiz?.learner?.streak || 0} 天。`
   }
 
   if (latestCourse?.lastActiveAt) {
+    if (practiceSummary) {
+      return `今天主要在 Course 中学习，最近一次学习时间是 ${formatDateLabel(latestCourse.lastActiveAt)}。${practiceSummary}。`
+    }
+
     return `今天主要在 Course 中学习，最近一次学习时间是 ${formatDateLabel(latestCourse.lastActiveAt)}。`
+  }
+
+  if (practiceSummary) {
+    return `${practiceSummary}。`
   }
 
   return '今天暂时还没有新的学习记录，可以提醒孩子安排一个固定学习时段。'
@@ -54,6 +93,14 @@ function buildConcernItems(quiz, course) {
   const completionRate = Number(course?.learner?.completionRate || 0)
   const weakTags = Array.isArray(quiz?.weakTags) ? quiz.weakTags : []
   const lastActivityAt = course?.learner?.lastActivityAt || quiz?.learner?.lastAnsweredAt || null
+  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz)
+  const currentCourseLevel = Number(course?.learner?.currentCppLevel || 0)
+
+  if (primaryPracticeLevel?.level && currentCourseLevel && primaryPracticeLevel.level >= currentCourseLevel + 2) {
+    concerns.push(`最近刷题主要集中在 L${primaryPracticeLevel.level}，但课程当前记录等级还是 L${currentCourseLevel}，存在明显错位，建议老师确认孩子是超前练习还是课程进度尚未同步。`)
+  } else if (primaryPracticeLevel?.level && currentCourseLevel && primaryPracticeLevel.level > currentCourseLevel) {
+    concerns.push(`最近刷题已经更多落在 L${primaryPracticeLevel.level}，高于当前课程记录的 L${currentCourseLevel}，可以留意是否需要上调课程定位。`)
+  }
 
   if (accuracy > 0 && accuracy < 60) {
     concerns.push(`最近 Quiz 正确率只有 ${accuracy}%，建议优先回看错题。`)
@@ -78,9 +125,14 @@ function buildAdviceItems(quiz, course, concerns) {
   const advice = []
   const recentAttempts = Array.isArray(quiz?.recentAttempts) ? quiz.recentAttempts : []
   const recentActivities = Array.isArray(course?.recentActivities) ? course.recentActivities : []
+  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz)
+  const currentCourseLevel = Number(course?.learner?.currentCppLevel || 0)
 
   if (recentAttempts.length > 0) {
     advice.push('先陪孩子复盘最近两道错题，重点说清楚为什么错，而不是只看答案。')
+  }
+  if (primaryPracticeLevel?.level && primaryPracticeLevel.level > currentCourseLevel) {
+    advice.push(`最近刷题已经触达到 L${primaryPracticeLevel.level}，建议优先围绕 ${primaryPracticeLevel.matchedTags?.slice(0, 2).join('、') || '当前常练知识点'} 做定向巩固，再决定是否正式上调课程等级。`)
   }
   if (recentActivities.length > 0) {
     advice.push('课程学习建议保持小步快跑，每次完成 1 节内容后再做题巩固。')
