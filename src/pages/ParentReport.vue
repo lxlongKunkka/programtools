@@ -149,13 +149,13 @@
         <section v-else class="tab-panel">
           <div class="section-head">
             <h2>Course 日报</h2>
-            <p>课程完成率、当前等级与最近学习轨迹。</p>
+            <p>课程完成率、主要刷题级别与最近学习轨迹。</p>
           </div>
           <div class="summary-grid">
             <article class="summary-card accent">
-              <span>当前等级</span>
-              <strong>L{{ report.course.learner.currentCppLevel }}</strong>
-              <em>{{ report.course.learner.currentCppLevelTitle || '未匹配等级标题' }}</em>
+              <span>主要刷题级别</span>
+              <strong>L{{ displayedLevelNumber }}</strong>
+              <em>{{ displayedLevelTitle }}</em>
             </article>
             <article class="summary-card"><span>当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
@@ -290,6 +290,19 @@ export default {
   computed: {
     learnerName() {
       return this.report.learner?.learnerName || '孩子'
+    },
+    dominantPracticeLevel() {
+      const levels = Array.isArray(this.report.quiz?.recentPracticeLevels) ? this.report.quiz.recentPracticeLevels : []
+      return levels[0] || null
+    },
+    displayedLevelNumber() {
+      return Number(this.dominantPracticeLevel?.level || this.report.course?.learner?.currentCppLevel || 1)
+    },
+    displayedLevelTitle() {
+      return this.dominantPracticeLevel?.levelTitle
+        || this.dominantPracticeLevel?.label
+        || this.report.course?.learner?.currentCppLevelTitle
+        || '未匹配等级标题'
     },
     recentCourseLevels() {
       const levels = Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
