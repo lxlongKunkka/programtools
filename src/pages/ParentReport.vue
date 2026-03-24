@@ -202,11 +202,12 @@
               <article v-for="item in report.course.recentSolvedProblems" :key="`${item.problemId}-${item.chapterId}`" class="attempt-item">
                 <div class="attempt-head">
                   <strong>{{ item.displayName || item.title }}</strong>
-                  <span class="status-pill ok">已通过</span>
+                  <span :class="['status-pill', item.accepted ? 'ok' : 'warn']">{{ item.statusLabel || (item.accepted ? '已通过' : '已尝试') }}</span>
                 </div>
                 <p class="attempt-stem">L{{ item.level }} {{ item.levelTitle }}<span v-if="item.topicTitle"> · {{ item.topicTitle }}</span><span v-if="item.chapterTitle"> · {{ item.chapterTitle }}</span></p>
                 <div class="attempt-meta">
-                  <span>时间：{{ formatDateTime(item.lastPassedAt) }}</span>
+                  <span>最近提交：{{ formatDateTime(item.lastSubmittedAt) }}</span>
+                  <span>提交次数：{{ item.submitCount || 0 }}</span>
                   <a v-if="item.problemUrl" :href="item.problemUrl" target="_blank" rel="noreferrer">查看题目</a>
                 </div>
               </article>

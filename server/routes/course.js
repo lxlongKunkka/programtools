@@ -443,43 +443,166 @@ async function buildRecentHomeworkItems(learnerId, levels, recentActivities = []
   }))
 }
 
-async function buildRecentCourseProblemItems(recentActivities = [], limit = 10) {
-  const passActivities = (Array.isArray(recentActivities) ? recentActivities : [])
-    .filter(item => item?.action === 'pass_problem' && item?.problemId)
+async function buildCourseProblemCatalog(levels = []) {
+  const rawContextMap = new Map()
+  const numericRefs = new Set()
+  const objectIdRefs = new Set()
+  const domainDocRefs = []
+  const pidRefs = new Set()
+  const domainPidRefs = []
 
-  if (!passActivities.length) return []
+  const pushRef = (rawRef, context) => {
+    const text = String(rawRef || '').trim()
+    if (!text || rawContextMap.has(text)) return
+    rawContextMap.set(text, context)
 
-  const latestProblemActivityMap = new Map()
-  for (const activity of passActivities) {
-    const key = String(activity.problemId || '')
-    if (!key || latestProblemActivityMap.has(key)) continue
-    latestProblemActivityMap.set(key, activity)
+    if (mongoose.Types.ObjectId.isValid(text)) {
+      objectIdRefs.add(text)
+      return
+    }
+
+    if (text.includes(':')) {
+      const [domainId, value] = text.split(':')
+      if (/^\d+$/.test(value || '')) {
+        domainDocRefs.push({ domainId: domainId || 'system', docId: Number(value) })
+      } else if (value) {
+        domainPidRefs.push({ domainId: domainId || 'system', pid: value })
+      }
+      return
+    }
+
+    if (/^\d+$/.test(text)) {
+      numericRefs.add(Number(text))
+    } else {
+      pidRefs.add(text)
+    }
   }
 
-  const pickedActivities = [...latestProblemActivityMap.values()].slice(0, Math.max(Number(limit) || 0, 1))
-  const problemDetails = await resolveSolvedProblemDetails(pickedActivities.map(item => item.problemId))
-  const detailMap = new Map(problemDetails.map(item => [String(item.id), item]))
-
-  return pickedActivities.map(activity => {
-    const detail = detailMap.get(String(activity.problemId || ''))
-    return {
-      problemId: String(activity.problemId || ''),
-      title: detail?.title || activity.problemId || '未命名题目',
-      displayName: detail?.displayName || activity.problemId || '未命名题目',
-      problemUrl: detail?.problemUrl || '',
-      domainId: detail?.domainId || 'system',
-      docId: Number.isFinite(detail?.docId) ? detail.docId : null,
-      pid: detail?.pid || '',
-      chapterId: activity.chapterId || '',
-      chapterTitle: activity.chapterTitle || '',
-      topicTitle: activity.topicTitle || '',
-      level: Number(activity.level || 0),
-      levelTitle: activity.levelTitle || '',
-      subject: activity.subject || 'C++',
-      group: activity.group || '',
-      lastPassedAt: activity.lastActiveAt || activity.updatedAt || activity.createdAt || null
+  for (const level of Array.isArray(levels) ? levels : []) {
+    for (const topic of getLevelTopics(level)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        const context = {
+          chapterId: chapter?.id || '',
+          chapterTitle: chapter?.title || '',
+          topicTitle: topic?.title || '',
+          level: Number(level?.level || 0),
+          levelTitle: level?.title || '',
+          subject: level?.subject || 'C++',
+          group: level?.group || ''
+        }
+        for (const rawRef of Array.isArray(chapter?.problemIds) ? chapter.problemIds : []) {
+          pushRef(rawRef, context)
+        }
+      }
     }
-  })
+  }
+
+  const [objectIdDocs, numericDocs, domainDocDocs, pidDocs, domainPidDocs] = await Promise.all([
+    objectIdRefs.size > 0
+      ? Document.find({ _id: { $in: [...objectIdRefs] } }).select('_id domainId docId pid title').lean()
+      : [],
+    numericRefs.size > 0
+      ? Document.find({ docId: { $in: [...numericRefs] } }).select('_id domainId docId pid title').lean()
+      : [],
+    domainDocRefs.length > 0
+      ? Document.find({ $or: domainDocRefs }).select('_id domainId docId pid title').lean()
+      : [],
+    pidRefs.size > 0
+      ? Document.find({ pid: { $in: [...pidRefs] } }).select('_id domainId docId pid title').lean()
+      : [],
+    domainPidRefs.length > 0
+      ? Document.find({ $or: domainPidRefs }).select('_id domainId docId pid title').lean()
+      : []
+  ])
+
+  const rawDocMap = new Map()
+  for (const doc of objectIdDocs) rawDocMap.set(String(doc._id), doc)
+  for (const doc of numericDocs) rawDocMap.set(String(doc.docId), doc)
+  for (const doc of domainDocDocs) rawDocMap.set(`${doc.domainId || 'system'}:${doc.docId}`, doc)
+  for (const doc of pidDocs) rawDocMap.set(String(doc.pid || ''), doc)
+  for (const doc of domainPidDocs) rawDocMap.set(`${doc.domainId || 'system'}:${doc.pid || ''}`, doc)
+
+  const bySubmissionKey = new Map()
+  for (const [rawRef, context] of rawContextMap.entries()) {
+    const doc = rawDocMap.get(rawRef)
+    if (!doc || !Number.isFinite(doc.docId)) continue
+    const domainId = doc.domainId || 'system'
+    const submissionKey = `${domainId}::${doc.docId}`
+    if (bySubmissionKey.has(submissionKey)) continue
+    bySubmissionKey.set(submissionKey, {
+      problemId: String(doc._id || rawRef),
+      title: doc.title || rawRef,
+      displayName: `${domainId} / ${doc.docId} / ${doc.title || rawRef}`,
+      problemUrl: `https://acjudge.com/d/${domainId}/p/${doc.docId}`,
+      domainId,
+      docId: doc.docId,
+      pid: doc.pid || '',
+      ...context
+    })
+  }
+
+  return bySubmissionKey
+}
+
+function getSubmissionTime(submission) {
+  return submission?.submitAt || submission?.judgeAt || submission?.createdAt || submission?.updatedAt || null
+}
+
+async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, limit = 10) {
+  const problemCatalog = await buildCourseProblemCatalog(levels)
+  if (!problemCatalog.size) return []
+
+  const windowStart = getActivityWindowStart(days)
+  const problemQueries = [...problemCatalog.values()].map((item) => ({
+    domainId: item.domainId,
+    pid: item.docId
+  }))
+
+  const submissions = await Submission.find({
+    uid: learnerId,
+    $and: [
+      {
+        $or: [
+          { submitAt: { $gte: windowStart } },
+          { judgeAt: { $gte: windowStart } },
+          { createdAt: { $gte: windowStart } },
+          { updatedAt: { $gte: windowStart } }
+        ]
+      },
+      { $or: problemQueries }
+    ]
+  }).sort({ submitAt: -1, judgeAt: -1, createdAt: -1, updatedAt: -1, _id: -1 }).lean()
+
+  if (!submissions.length) return []
+
+  const summaryMap = new Map()
+  for (const submission of submissions) {
+    const key = `${submission.domainId || 'system'}::${submission.pid}`
+    if (!problemCatalog.has(key)) continue
+    const eventTime = getSubmissionTime(submission)
+
+    if (!summaryMap.has(key)) {
+      summaryMap.set(key, {
+        ...problemCatalog.get(key),
+        lastSubmittedAt: eventTime,
+        submitCount: 0,
+        accepted: false,
+        statusLabel: '已尝试'
+      })
+    }
+
+    const item = summaryMap.get(key)
+    item.submitCount += 1
+    if (!item.lastSubmittedAt && eventTime) item.lastSubmittedAt = eventTime
+    if (Number(submission.status) === 1) {
+      item.accepted = true
+      item.statusLabel = '已通过'
+    }
+  }
+
+  return [...summaryMap.values()]
+    .sort((a, b) => new Date(b.lastSubmittedAt || 0).getTime() - new Date(a.lastSubmittedAt || 0).getTime())
+    .slice(0, Math.max(Number(limit) || 0, 1))
 }
 
 function isChapterCompleted(progress, chapter) {
@@ -830,7 +953,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
     UserProgress.findOne({ userId: learnerId }).lean(),
     CourseLevel.find()
-      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title topics.chapters.homeworkIds chapters._id chapters.id chapters.title chapters.homeworkIds')
+      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title topics.chapters.homeworkIds topics.chapters.problemIds chapters._id chapters.id chapters.title chapters.homeworkIds chapters.problemIds')
       .sort({ subject: 1, level: 1 })
       .lean(),
     CourseActivity.find({ userId: learnerId, lastActiveAt: { $gte: windowStart } })
@@ -844,7 +967,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
   const courseSummary = buildCourseProgressSummary(progress, levels)
   const currentPosition = buildCurrentCoursePosition(progress, levels, recentActivities)
   const recentHomeworks = await buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition)
-  const recentSolvedProblems = await buildRecentCourseProblemItems(recentActivities)
+  const recentSolvedProblems = await buildRecentCourseProblemItems(learnerId, levels)
 
   return {
     learner: {
