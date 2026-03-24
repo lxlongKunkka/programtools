@@ -206,6 +206,9 @@ function buildChapterContextIndex(levels = []) {
           levelTitle: level?.title || '',
           group: level?.group || '',
           subject: level?.subject || 'C++',
+          problemIds: Array.isArray(chapter?.problemIds)
+            ? chapter.problemIds.filter(Boolean).map(item => String(item))
+            : [],
           homeworkIds: Array.isArray(chapter?.homeworkIds)
             ? chapter.homeworkIds.filter(Boolean).map(item => String(item))
             : []
@@ -227,6 +230,7 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
     for (const topic of getLevelTopics(currentLevelDoc)) {
       for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
         if (!isChapterCompleted(progress, chapter)) {
+          const solvedProblemCount = getChapterSolvedProblems(progress, chapter).length
           return {
             levelId: String(currentLevelDoc._id || ''),
             level: Number(currentLevelDoc.level || 0),
@@ -235,6 +239,8 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
             topicTitle: topic?.title || '未命名专题',
             chapterId: chapter.id || '',
             chapterTitle: chapter.title || '未命名章节',
+            chapterProblemCount: Array.isArray(chapter?.problemIds) ? chapter.problemIds.filter(Boolean).length : 0,
+            chapterSolvedProblemCount: solvedProblemCount,
             subject: currentLevelDoc.subject || 'C++',
             group: currentLevelDoc.group || '',
             source: 'next_unfinished',
@@ -250,6 +256,8 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
     const context = chapterContextMap.get(recentActivity.chapterId)
     return {
       ...context,
+      chapterProblemCount: Array.isArray(context?.problemIds) ? context.problemIds.length : 0,
+      chapterSolvedProblemCount: getChapterSolvedProblems(progress, { id: context.chapterId }).length,
       source: 'recent_activity'
     }
   }
@@ -258,6 +266,7 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
     const firstTopic = getLevelTopics(currentLevelDoc)[0]
     const firstChapter = Array.isArray(firstTopic?.chapters) ? firstTopic.chapters[0] : null
     if (firstTopic && firstChapter) {
+      const solvedProblemCount = getChapterSolvedProblems(progress, firstChapter).length
       return {
         levelId: String(currentLevelDoc._id || ''),
         level: Number(currentLevelDoc.level || 0),
@@ -266,6 +275,8 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
         topicTitle: firstTopic?.title || '未命名专题',
         chapterId: firstChapter.id || '',
         chapterTitle: firstChapter.title || '未命名章节',
+        chapterProblemCount: Array.isArray(firstChapter?.problemIds) ? firstChapter.problemIds.filter(Boolean).length : 0,
+        chapterSolvedProblemCount: solvedProblemCount,
         subject: currentLevelDoc.subject || 'C++',
         group: currentLevelDoc.group || '',
         source: 'level_start',
@@ -282,6 +293,8 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
     topicTitle: '',
     chapterId: '',
     chapterTitle: '',
+    chapterProblemCount: 0,
+    chapterSolvedProblemCount: 0,
     subject: 'C++',
     group: '',
     source: 'unknown',
@@ -377,6 +390,9 @@ async function buildRecentHomeworkItems(learnerId, levels, recentActivities = []
   return Promise.all(homeworkRefs.map(async (item) => {
     const contestDoc = await resolveContestDoc(item.homeworkId, 'homework')
     const { domainId, contestId } = parseContestRef(item.homeworkId)
+    const problemIds = Array.isArray(contestDoc?.pids)
+      ? contestDoc.pids.map(value => Number(value)).filter(Number.isFinite)
+      : []
     const contestStatus = contestDoc
       ? await ContestStatus.findOne({
         domainId,
@@ -385,16 +401,33 @@ async function buildRecentHomeworkItems(learnerId, levels, recentActivities = []
         uid: learnerId
       }).lean()
       : null
+    const acceptedProblems = problemIds.length > 0
+      ? await Submission.aggregate([
+        {
+          $match: {
+            uid: learnerId,
+            domainId,
+            pid: { $in: problemIds },
+            status: 1
+          }
+        },
+        { $group: { _id: '$pid' } },
+        { $count: 'acceptedCount' }
+      ])
+      : []
 
     const score = contestStatus?.score ?? (contestStatus?.totalScore ?? null)
     const attend = !!(contestStatus?.attend || contestStatus?.startTime)
+    const completedProblemCount = Number(acceptedProblems[0]?.acceptedCount || 0)
+    const problemCount = problemIds.length
 
     return {
       homeworkId: item.homeworkId,
       title: contestDoc?.title || item.homeworkId,
       domainId,
       contestId,
-      problemCount: Array.isArray(contestDoc?.pids) ? contestDoc.pids.length : 0,
+      problemCount,
+      completedProblemCount,
       score,
       attend,
       statusLabel: score !== null ? '已得分' : (attend ? '已参与' : '未开始'),
@@ -792,6 +825,8 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
       currentTopicTitle: currentPosition.topicTitle || '',
       currentChapterId: currentPosition.chapterId || '',
       currentChapterTitle: currentPosition.chapterTitle || '',
+      currentChapterProblemCount: Number(currentPosition.chapterProblemCount || 0),
+      currentChapterSolvedProblemCount: Number(currentPosition.chapterSolvedProblemCount || 0),
       lastActivityAt: recentActivities[0]?.lastActiveAt || null
     },
     levels: courseSummary.levels,

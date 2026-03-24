@@ -322,7 +322,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
 
   const windowDays = Math.min(Math.max(Number(days) || 14, 1), 30)
   const windowStart = getWindowStart(windowDays)
-  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats, practicedTags] = await Promise.all([
+  const [attempts, wrongbookCount, favoriteCount, weakTags, recentProgress, attemptStats, practicedTags, recentWrongTags] = await Promise.all([
     QuizAttempt.find({ userId: learnerId }).sort({ answeredAt: -1 }).limit(30).lean(),
     QuizWrongbookItem.countDocuments({ userId: learnerId, active: true }),
     QuizFavoriteItem.countDocuments({ userId: learnerId, active: true }),
@@ -387,6 +387,19 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
       },
       { $sort: { attemptCount: -1, correctCount: -1, _id: 1 } },
       { $limit: 10 }
+    ]),
+    QuizWrongbookItem.aggregate([
+      {
+        $match: {
+          userId: learnerId,
+          createdAt: { $gte: windowStart }
+        }
+      },
+      { $unwind: '$tags' },
+      { $match: { tags: { $exists: true, $ne: '' } } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 3 }
     ])
   ])
 
@@ -453,6 +466,10 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
         accuracy: attemptCount > 0 ? Number(((correctCount / attemptCount) * 100).toFixed(1)) : 0
       }
     }),
+    recentWrongTags: recentWrongTags.map((item) => ({
+      tag: item._id,
+      count: Number(item.count || 0)
+    })),
     weakTags: weakTags.map((item) => ({
       tag: item._id,
       wrongCount: item.wrongCount

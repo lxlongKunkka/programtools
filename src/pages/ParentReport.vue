@@ -90,6 +90,14 @@
 
           <div class="content-grid single-column-grid">
             <article class="panel">
+              <h3>最近新增错题标签</h3>
+              <div v-if="!report.quiz.recentWrongTags.length" class="empty-inline">最近 14 天没有新增错题标签</div>
+              <div v-else class="tag-list">
+                <span v-for="tag in report.quiz.recentWrongTags" :key="tag.tag" class="tag-pill warn-pill">{{ tag.tag }} · {{ tag.count }}</span>
+              </div>
+            </article>
+
+            <article class="panel">
               <h3>薄弱知识点</h3>
               <div v-if="!report.quiz.weakTags.length" class="empty-inline">近 14 天没有明显薄弱点</div>
               <div v-else class="tag-list">
@@ -131,6 +139,7 @@
             </article>
             <article class="summary-card"><span>当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
+            <article class="summary-card"><span>本章节做题</span><strong>{{ report.course.learner.currentChapterSolvedProblemCount }} / {{ report.course.learner.currentChapterProblemCount }}</strong></article>
             <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
             <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
             <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
@@ -151,6 +160,7 @@
                   </span>
                 </div>
                 <div class="attempt-meta">
+                  <span>完成：{{ item.completedProblemCount || 0 }} / {{ item.problemCount || 0 }}</span>
                   <span>题目数：{{ item.problemCount || 0 }}</span>
                   <span>状态：{{ item.statusLabel }}</span>
                   <a v-if="item.homeworkUrl" :href="item.homeworkUrl" target="_blank" rel="noreferrer">查看作业</a>
@@ -220,6 +230,7 @@ function createEmptyReport() {
       recentProgress: [],
       recentAttempts: [],
       practicedTags: [],
+      recentWrongTags: [],
       weakTags: []
     },
     course: {
@@ -228,6 +239,8 @@ function createEmptyReport() {
         currentCppLevelTitle: '',
         currentTopicTitle: '',
         currentChapterTitle: '',
+        currentChapterProblemCount: 0,
+        currentChapterSolvedProblemCount: 0,
         completionRate: 0,
         completedChaptersCount: 0,
         totalChapters: 0,
@@ -463,6 +476,10 @@ export default {
   border-radius: 999px;
   padding: 6px 10px;
   font-size: 12px;
+}
+.tag-pill.warn-pill {
+  background: #fff1d6;
+  color: #9a5b00;
 }
 .attempt-head, .level-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .attempt-stem, .level-head p { margin: 8px 0 0; color: #5f6d7b; }
