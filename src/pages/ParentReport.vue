@@ -157,8 +157,9 @@
               <strong>L{{ displayedLevelNumber }}</strong>
               <em>{{ displayedLevelTitle }}</em>
             </article>
-            <article class="summary-card"><span>当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
-            <article class="summary-card"><span>当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
+            <article class="summary-card"><span>主要练习知识点</span><strong>{{ displayedPracticeTags }}</strong></article>
+            <article class="summary-card"><span>课程当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
+            <article class="summary-card"><span>课程当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>本章节做题</span><strong>{{ report.course.learner.currentChapterSolvedProblemCount }} / {{ report.course.learner.currentChapterProblemCount }}</strong></article>
             <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
             <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
@@ -303,6 +304,15 @@ export default {
         || this.dominantPracticeLevel?.label
         || this.report.course?.learner?.currentCppLevelTitle
         || '未匹配等级标题'
+    },
+    displayedPracticeTags() {
+      const tags = Array.isArray(this.dominantPracticeLevel?.matchedTags) ? this.dominantPracticeLevel.matchedTags : []
+      if (tags.length > 0) return tags.slice(0, 3).join('、')
+
+      const practicedTags = Array.isArray(this.report.quiz?.practicedTags) ? this.report.quiz.practicedTags : []
+      if (practicedTags.length > 0) return practicedTags.slice(0, 3).map((item) => item.tag).join('、')
+
+      return '暂无'
     },
     recentCourseLevels() {
       const levels = Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
