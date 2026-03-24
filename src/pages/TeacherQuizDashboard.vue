@@ -59,6 +59,10 @@
         <strong class="summary-value">{{ courseDashboard.summary.startedLearnerCount }}</strong>
       </article>
       <article class="summary-card">
+        <span class="summary-label">近 14 天活跃</span>
+        <strong class="summary-value">{{ courseDashboard.summary.activeLearnerCount }}</strong>
+      </article>
+      <article class="summary-card">
         <span class="summary-label">平均完成率</span>
         <strong class="summary-value">{{ courseDashboard.summary.averageCompletionRate }}%</strong>
       </article>
@@ -208,8 +212,9 @@
                   <th>当前等级</th>
                   <th>已完成章节</th>
                   <th>完成率</th>
+                  <th>近 14 天活跃</th>
                   <th>已开始 Level</th>
-                  <th>已完成 Level</th>
+                  <th>最近学习</th>
                   <th>已开始 Topic</th>
                   <th>风险</th>
                   <th></th>
@@ -231,8 +236,9 @@
                   </td>
                   <td>{{ item.completedChaptersCount }} / {{ item.totalChapters }}</td>
                   <td>{{ item.completionRate }}%</td>
+                  <td>{{ item.activeDays }} 天 / 完成 {{ item.recentCompletedCount }} 节</td>
                   <td>{{ item.startedLevelCount }}</td>
-                  <td>{{ item.completedLevelCount }}</td>
+                  <td>{{ formatDateTime(item.lastActivityAt) }}</td>
                   <td>{{ item.startedTopicCount }} / {{ item.totalTopicCount }}</td>
                   <td>
                     <div class="risk-list">
@@ -325,6 +331,7 @@
             <div class="progress-list">
               <div class="progress-row"><span>当前等级</span><span>L{{ courseDetail.learner.currentCppLevel }} {{ courseDetail.learner.currentCppLevelTitle || '' }}</span></div>
               <div class="progress-row"><span>已完成章节</span><span>{{ courseDetail.learner.completedChaptersCount }} / {{ courseDetail.learner.totalChapters }}</span></div>
+              <div class="progress-row"><span>最近学习</span><span>{{ formatDateTime(courseDetail.learner.lastActivityAt) }}</span></div>
               <div class="progress-row"><span>已开始 Level</span><span>{{ courseDetail.learner.startedLevelCount }}</span></div>
               <div class="progress-row"><span>已完成 Level</span><span>{{ courseDetail.learner.completedLevelCount }}</span></div>
               <div class="progress-row"><span>已开始 Topic</span><span>{{ courseDetail.learner.startedTopicCount }} / {{ courseDetail.learner.totalTopicCount }}</span></div>
@@ -360,6 +367,25 @@
             </article>
           </div>
         </div>
+
+        <div class="mini-panel attempts-panel">
+          <h4>最近学习轨迹</h4>
+          <div v-if="courseDetail.recentActivities.length === 0" class="empty-state small">近 30 天暂无学习日志</div>
+          <div v-else class="attempt-list">
+            <article v-for="activity in courseDetail.recentActivities" :key="`${activity.action}-${activity.chapterId}-${activity.sessionDate}`" class="attempt-item">
+              <div class="attempt-head">
+                <strong>{{ formatCourseAction(activity.action) }} · {{ activity.chapterTitle || activity.chapterId }}</strong>
+                <span>{{ formatDateTime(activity.lastActiveAt) }}</span>
+              </div>
+              <p class="attempt-stem">{{ activity.subject }} · L{{ activity.level }} {{ activity.levelTitle }}<span v-if="activity.topicTitle"> · {{ activity.topicTitle }}</span></p>
+              <div class="attempt-meta">
+                <span>日期：{{ activity.sessionDate }}</span>
+                <span v-if="activity.problemId">题目：{{ activity.problemId }}</span>
+                <span v-if="activity.group">分组：{{ activity.group }}</span>
+              </div>
+            </article>
+          </div>
+        </div>
       </template>
     </section>
   </div>
@@ -386,6 +412,7 @@ function createEmptyCourseDashboard() {
     summary: {
       followedCount: 0,
       startedLearnerCount: 0,
+      activeLearnerCount: 0,
       averageCompletionRate: 0,
       averageCompletedChapters: 0,
       averageCurrentCppLevel: 0
@@ -406,7 +433,8 @@ function createEmptyQuizDetail() {
 function createEmptyCourseDetail() {
   return {
     learner: null,
-    levels: []
+    levels: [],
+    recentActivities: []
   }
 }
 
@@ -471,6 +499,7 @@ export default {
     sortedCourseItems() {
       return [...this.courseDashboard.items].sort((a, b) => {
         if (a.riskFlags.length !== b.riskFlags.length) return b.riskFlags.length - a.riskFlags.length
+        if ((a.activeDays || 0) !== (b.activeDays || 0)) return (a.activeDays || 0) - (b.activeDays || 0)
         if ((a.completionRate || 0) !== (b.completionRate || 0)) return (a.completionRate || 0) - (b.completionRate || 0)
         return (a.completedChaptersCount || 0) - (b.completedChaptersCount || 0)
       })
@@ -604,7 +633,8 @@ export default {
         const data = await request(`/api/course/teacher/follows/${item.learnerId}/detail`)
         this.courseDetail = {
           learner: data?.learner || null,
-          levels: Array.isArray(data?.levels) ? data.levels : []
+          levels: Array.isArray(data?.levels) ? data.levels : [],
+          recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : []
         }
       } catch (e) {
         this.showToastMessage(`加载 Course 详情失败: ${e.message}`)
@@ -622,6 +652,12 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       })
+    },
+    formatCourseAction(value) {
+      if (value === 'view_chapter') return '查看章节'
+      if (value === 'complete_chapter') return '完成章节'
+      if (value === 'pass_problem') return '通过题目'
+      return value || '学习行为'
     }
   }
 }

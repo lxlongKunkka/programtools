@@ -12,6 +12,7 @@ import Document from '../models/Document.js'
 import Submission from '../models/Submission.js'
 import ContestStatus from '../models/ContestStatus.js'
 import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
+import CourseActivity from '../models/CourseActivity.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -88,6 +89,82 @@ function normalizeSubjectLevels(progress) {
   return subjectLevels
 }
 
+function getActivitySessionDate(date = new Date()) {
+  const offset = 8
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+  const nd = new Date(utc + (3600000 * offset))
+  return nd.toISOString().split('T')[0]
+}
+
+function getActivityWindowStart(days = 14) {
+  const safeDays = Math.min(Math.max(Number(days) || 14, 1), 90)
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() - (safeDays - 1))
+  return date
+}
+
+async function findCourseChapterContext(chapterId) {
+  let level = await CourseLevel.findOne({ 'chapters.id': chapterId }).lean()
+  if (level) {
+    const chapter = Array.isArray(level.chapters) ? level.chapters.find(item => item.id === chapterId) : null
+    if (!chapter) return null
+    return { level, chapter, topicTitle: '' }
+  }
+
+  level = await CourseLevel.findOne({ 'topics.chapters.id': chapterId }).lean()
+  if (!level) return null
+
+  for (const topic of level.topics || []) {
+    const chapter = Array.isArray(topic.chapters) ? topic.chapters.find(item => item.id === chapterId) : null
+    if (chapter) {
+      return {
+        level,
+        chapter,
+        topicTitle: topic.title || ''
+      }
+    }
+  }
+
+  return null
+}
+
+async function recordCourseActivity({ userId, chapterId, action, problemId = '', metadata = {} }) {
+  if (!userId || !chapterId || !action) return
+
+  const context = await findCourseChapterContext(chapterId)
+  if (!context?.level || !context?.chapter) return
+
+  const now = new Date()
+  const sessionDate = getActivitySessionDate(now)
+
+  await CourseActivity.findOneAndUpdate(
+    { userId, chapterId, action, sessionDate },
+    {
+      $set: {
+        chapterUid: context.chapter._id || null,
+        chapterTitle: context.chapter.title || '',
+        topicTitle: context.topicTitle || '',
+        levelId: context.level._id || null,
+        level: Number(context.level.level || 0),
+        levelTitle: context.level.title || '',
+        group: context.level.group || '',
+        subject: context.level.subject || 'C++',
+        problemId: String(problemId || ''),
+        metadata,
+        lastActiveAt: now
+      },
+      $setOnInsert: {
+        userId,
+        action,
+        sessionDate,
+        chapterId
+      }
+    },
+    { upsert: true, setDefaultsOnInsert: true }
+  )
+}
+
 function getLevelTopics(levelDoc) {
   const topics = Array.isArray(levelDoc?.topics)
     ? levelDoc.topics.filter(topic => Array.isArray(topic.chapters) && topic.chapters.length > 0)
@@ -152,11 +229,17 @@ function buildLevelSnapshot(levelDoc, progress) {
 function buildCourseRiskFlags(summary) {
   const flags = []
 
-  if ((summary.completedChaptersCount || 0) === 0) {
+  if (!summary.lastActivityAt && (summary.completedChaptersCount || 0) === 0) {
     flags.push('未开始课程')
     return flags
   }
 
+  if (summary.lastActivityAt) {
+    const daysSinceLastActive = Math.floor((Date.now() - new Date(summary.lastActivityAt).getTime()) / 86400000)
+    if (daysSinceLastActive >= 7) flags.push('连续未学习')
+  }
+
+  if ((summary.activeDays || 0) <= 1) flags.push('活跃度偏低')
   if ((summary.completionRate || 0) < 10) flags.push('进度偏慢')
   if ((summary.startedLevelCount || 0) > 0 && (summary.completedLevelCount || 0) === 0) flags.push('尚未完成整级')
 
@@ -208,28 +291,52 @@ async function buildTeacherCourseFollowPayload(teacherId) {
         startedLearnerCount: 0,
         averageCompletionRate: 0,
         averageCompletedChapters: 0,
-        averageCurrentCppLevel: 0
+        averageCurrentCppLevel: 0,
+        activeLearnerCount: 0
       },
       items: []
     }
   }
 
-  const [users, progresses, levels] = await Promise.all([
+  const windowStart = getActivityWindowStart(14)
+  const [users, progresses, levels, activityStats] = await Promise.all([
     User.find({ _id: { $in: learnerIds } }).select('_id uname mail').lean(),
     UserProgress.find({ userId: { $in: learnerIds } }).lean(),
     CourseLevel.find()
       .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id chapters._id chapters.id')
       .sort({ subject: 1, level: 1 })
-      .lean()
+      .lean(),
+    CourseActivity.aggregate([
+      {
+        $match: {
+          userId: { $in: learnerIds },
+          lastActiveAt: { $gte: windowStart }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          activeDays: { $addToSet: '$sessionDate' },
+          recentCompletedCount: {
+            $sum: {
+              $cond: [{ $eq: ['$action', 'complete_chapter'] }, 1, 0]
+            }
+          },
+          lastActivityAt: { $max: '$lastActiveAt' }
+        }
+      }
+    ])
   ])
 
   const userMap = new Map(users.map(user => [Number(user._id), user]))
   const progressMap = new Map(progresses.map(progress => [Number(progress.userId), progress]))
+  const activityMap = new Map(activityStats.map(item => [Number(item._id), item]))
 
   const items = follows.map(follow => {
     const learnerId = Number(follow.learnerId)
     const user = userMap.get(learnerId)
     const progress = progressMap.get(learnerId)
+    const activity = activityMap.get(learnerId)
     const courseSummary = buildCourseProgressSummary(progress, levels)
 
     const item = {
@@ -247,7 +354,10 @@ async function buildTeacherCourseFollowPayload(teacherId) {
       startedLevelCount: courseSummary.startedLevelCount,
       completedLevelCount: courseSummary.completedLevelCount,
       startedTopicCount: courseSummary.startedTopicCount,
-      totalTopicCount: courseSummary.totalTopicCount
+      totalTopicCount: courseSummary.totalTopicCount,
+      activeDays: Array.isArray(activity?.activeDays) ? activity.activeDays.length : 0,
+      recentCompletedCount: Number(activity?.recentCompletedCount || 0),
+      lastActivityAt: activity?.lastActivityAt || null
     }
 
     return {
@@ -267,6 +377,7 @@ async function buildTeacherCourseFollowPayload(teacherId) {
   const averageCurrentCppLevel = followedCount > 0
     ? Number((items.reduce((sum, item) => sum + (item.currentCppLevel || 0), 0) / followedCount).toFixed(1))
     : 0
+  const activeLearnerCount = items.filter(item => item.activeDays > 0).length
 
   return {
     summary: {
@@ -274,7 +385,8 @@ async function buildTeacherCourseFollowPayload(teacherId) {
       startedLearnerCount,
       averageCompletionRate,
       averageCompletedChapters,
-      averageCurrentCppLevel
+      averageCurrentCppLevel,
+      activeLearnerCount
     },
     items
   }
@@ -284,12 +396,17 @@ async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
   const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
   if (!follow) throw new Error('未关注该学员')
 
-  const [user, progress, levels] = await Promise.all([
+  const windowStart = getActivityWindowStart(30)
+  const [user, progress, levels, recentActivities] = await Promise.all([
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
     UserProgress.findOne({ userId: learnerId }).lean(),
     CourseLevel.find()
       .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id chapters._id chapters.id')
       .sort({ subject: 1, level: 1 })
+      .lean(),
+    CourseActivity.find({ userId: learnerId, lastActiveAt: { $gte: windowStart } })
+      .sort({ lastActiveAt: -1 })
+      .limit(20)
       .lean()
   ])
 
@@ -313,9 +430,23 @@ async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
       startedLevelCount: courseSummary.startedLevelCount,
       completedLevelCount: courseSummary.completedLevelCount,
       startedTopicCount: courseSummary.startedTopicCount,
-      totalTopicCount: courseSummary.totalTopicCount
+      totalTopicCount: courseSummary.totalTopicCount,
+      lastActivityAt: recentActivities[0]?.lastActiveAt || null
     },
-    levels: courseSummary.levels
+    levels: courseSummary.levels,
+    recentActivities: recentActivities.map(item => ({
+      action: item.action,
+      sessionDate: item.sessionDate,
+      chapterId: item.chapterId,
+      chapterTitle: item.chapterTitle || '',
+      topicTitle: item.topicTitle || '',
+      level: item.level || 0,
+      levelTitle: item.levelTitle || '',
+      subject: item.subject || 'C++',
+      group: item.group || '',
+      problemId: item.problemId || '',
+      lastActiveAt: item.lastActiveAt || item.updatedAt || item.createdAt || null
+    }))
   }
 }
 
@@ -704,6 +835,12 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
         }
         populatedChapter.optionalProblemIds = populatedProblems
     }
+
+    await recordCourseActivity({
+      userId,
+      chapterId: chapter.id,
+      action: 'view_chapter'
+    })
 
     res.json(populatedChapter)
 
@@ -1317,6 +1454,13 @@ router.post('/submit-problem', authenticateToken, async (req, res) => {
     }
     
     await progress.save()
+    await recordCourseActivity({
+      userId,
+      chapterId,
+      action: 'pass_problem',
+      problemId,
+      metadata: { source: 'submit-problem' }
+    })
     res.json({ success: true, progress })
   } catch (e) {
     console.error(e)
@@ -1368,6 +1512,12 @@ router.post('/complete-chapter', authenticateToken, async (req, res) => {
     }
 
     await progress.save()
+    await recordCourseActivity({
+      userId,
+      chapterId,
+      action: 'complete_chapter',
+      metadata: { source: 'complete-chapter' }
+    })
     res.json({ success: true, progress })
   } catch (e) {
     console.error(e)
@@ -1449,6 +1599,13 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
        }
        
        await progress.save()
+       await recordCourseActivity({
+         userId,
+         chapterId,
+         action: 'pass_problem',
+         problemId,
+         metadata: { source: 'check-problem' }
+       })
        return res.json({ passed: true, progress })
     } else {
        return res.json({ passed: false, message: '未找到 AC 提交记录' })
