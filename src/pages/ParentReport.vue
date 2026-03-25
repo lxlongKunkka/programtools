@@ -337,6 +337,8 @@ export default {
       const practicedTags = Array.isArray(this.report.quiz?.practicedTags) ? this.report.quiz.practicedTags : []
       if (practicedTags.length > 0) return practicedTags.slice(0, 3).map((item) => item.tag).join('、')
 
+      if (this.dominantPracticeLevel) return '该批题目未标注知识点'
+
       return '暂无'
     },
     recentCourseLevels() {
