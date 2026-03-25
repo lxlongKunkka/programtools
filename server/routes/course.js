@@ -106,6 +106,13 @@ function normalizeCourseSubjectLabel(subject) {
   return text
 }
 
+function getCourseSubjectSortRank(subject) {
+  const normalized = normalizeCourseSubjectLabel(subject)
+  if (normalized === 'C++') return 1
+  if (normalized === 'Python') return 2
+  return 99
+}
+
 function normalizeSubjectLevelMeta(progress) {
   const normalizeMapLike = (value) => {
     if (value instanceof Map) return Object.fromEntries(value)
@@ -847,6 +854,16 @@ function buildCourseProgressSummary(progress, levels) {
   const levelSnapshots = levels
     .map(level => buildLevelSnapshot(level, progress))
     .filter(level => level.totalChapters > 0)
+    .sort((a, b) => {
+      const rankDiff = getCourseSubjectSortRank(a.subject) - getCourseSubjectSortRank(b.subject)
+      if (rankDiff !== 0) return rankDiff
+
+      const subjectCompare = normalizeCourseSubjectLabel(a.subject).localeCompare(normalizeCourseSubjectLabel(b.subject), 'zh-CN')
+      if (subjectCompare !== 0) return subjectCompare
+
+      if ((a.level || 0) !== (b.level || 0)) return (a.level || 0) - (b.level || 0)
+      return String(a.title || '').localeCompare(String(b.title || ''), 'zh-CN')
+    })
 
   const totalChapters = levelSnapshots.reduce((sum, level) => sum + level.totalChapters, 0)
   const completedChaptersCount = levelSnapshots.reduce((sum, level) => sum + level.completedChapters, 0)
