@@ -14,6 +14,26 @@ export const KNOWLEDGE_TAG_GROUPS = {
 export const LEVEL_TAGS = Object.keys(KNOWLEDGE_TAG_GROUPS)
 export const KNOWLEDGE_TAGS = [...new Set(Object.values(KNOWLEDGE_TAG_GROUPS).flat())]
 export const KNOWLEDGE_TAG_SET = new Set(KNOWLEDGE_TAGS)
+export const KNOWLEDGE_TAG_ALIASES = new Map([
+  ['广度优先搜索', 'BFS'],
+  ['宽度优先搜索', 'BFS'],
+  ['广搜', 'BFS'],
+  ['breadth-first search', 'BFS'],
+  ['深度优先搜索', 'DFS'],
+  ['深搜', 'DFS'],
+  ['depth-first search', 'DFS'],
+  ['动态规划', 'DP'],
+  ['线性动态规划', '线性DP'],
+  ['线性 dp', '线性DP'],
+  ['背包动态规划', '背包DP'],
+  ['背包 dp', '背包DP'],
+  ['0-1 bfs', 'BFS进阶'],
+  ['多源bfs', 'BFS进阶'],
+  ['多源 bfs', 'BFS进阶'],
+  ['双向bfs', 'BFS进阶'],
+  ['双向 bfs', 'BFS进阶'],
+  ['0-1 dp', 'DP']
+])
 
 export function normalizeQuizKnowledgeTags(tags = []) {
   const values = Array.isArray(tags) ? tags : [tags]
@@ -21,8 +41,47 @@ export function normalizeQuizKnowledgeTags(tags = []) {
 
   for (const value of values) {
     const text = String(value || '').trim()
-    if (!text || !KNOWLEDGE_TAG_SET.has(text) || normalized.includes(text)) continue
-    normalized.push(text)
+    if (!text) continue
+
+    if (KNOWLEDGE_TAG_SET.has(text) && !normalized.includes(text)) {
+      normalized.push(text)
+      continue
+    }
+
+    const aliasMatch = KNOWLEDGE_TAG_ALIASES.get(text)
+    if (aliasMatch && !normalized.includes(aliasMatch)) {
+      normalized.push(aliasMatch)
+    }
+  }
+
+  return normalized
+}
+
+export function extractQuizKnowledgeTagsFromText(...parts) {
+  const combined = parts
+    .flat()
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join('\n')
+
+  if (!combined) return []
+
+  const normalized = []
+  const lowerText = combined.toLowerCase()
+
+  for (const tag of KNOWLEDGE_TAGS) {
+    if (combined.includes(tag) && !normalized.includes(tag)) {
+      normalized.push(tag)
+    }
+  }
+
+  for (const [alias, tag] of KNOWLEDGE_TAG_ALIASES.entries()) {
+    const matched = /[A-Za-z]/.test(alias)
+      ? lowerText.includes(alias.toLowerCase())
+      : combined.includes(alias)
+    if (matched && !normalized.includes(tag)) {
+      normalized.push(tag)
+    }
   }
 
   return normalized
@@ -75,5 +134,5 @@ export function parseQuizKnowledgeTaggingResult(content) {
     }
   }
 
-  return normalizeQuizKnowledgeTags(KNOWLEDGE_TAGS.filter((tag) => text.includes(tag)))
+  return extractQuizKnowledgeTagsFromText(text)
 }

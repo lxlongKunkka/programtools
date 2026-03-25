@@ -11,7 +11,7 @@ import User from '../models/User.js'
 import CourseLevel from '../models/CourseLevel.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
-import { KNOWLEDGE_TAG_GROUPS, KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
+import { KNOWLEDGE_TAG_GROUPS, KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, extractQuizKnowledgeTagsFromText, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
 import { buildRecommendationReason, pickQuestionByMemoryCurve } from '../utils/quizRecommendation.js'
 
 const router = express.Router()
@@ -187,6 +187,23 @@ function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), cours
   const items = Array.isArray(attempts) ? attempts : []
   const aggregates = new Map()
 
+  const resolveQuestionKnowledgeTags = (question, attempt) => {
+    const explicitTags = normalizeQuizKnowledgeTags([
+      ...(Array.isArray(question?.tags) ? question.tags : []),
+      ...(Array.isArray(attempt?.tags) ? attempt.tags : [])
+    ])
+    if (explicitTags.length) return explicitTags
+
+    return extractQuizKnowledgeTagsFromText(
+      question?.stemText,
+      question?.stem,
+      question?.explanationText,
+      question?.explanation,
+      question?.sourceTitle,
+      attempt?.stemPreview
+    )
+  }
+
   const pickPrimaryLevelTag = (question, tags = []) => {
     const directLevelTag = String(question?.levelTag || '').trim()
     const matchedCounts = new Map()
@@ -224,7 +241,7 @@ function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), cours
 
   for (const attempt of items) {
     const question = questionMap.get(attempt?.questionUid)
-    const normalizedTags = normalizeQuizKnowledgeTags(question?.tags || attempt?.tags || [])
+    const normalizedTags = resolveQuestionKnowledgeTags(question, attempt)
     const levelTag = pickPrimaryLevelTag(question, normalizedTags)
     const level = parseLevelNumber(levelTag)
     if (!levelTag || !level) continue
@@ -546,7 +563,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
   const questionUids = [...new Set(attempts.map((item) => item.questionUid).filter(Boolean))]
   const questions = await QuizQuestion.find(
     { questionUid: { $in: questionUids } },
-    'questionUid stem sourceTitle paperQuestionNo levelTag tags answer type subject'
+    'questionUid stem stemText explanation explanationText sourceTitle paperQuestionNo levelTag tags answer type subject'
   ).lean()
   const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
   const courseLevelTitleMap = buildCourseLevelTitleMap(courseLevels)
