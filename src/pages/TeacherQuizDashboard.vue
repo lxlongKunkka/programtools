@@ -215,7 +215,7 @@
                     <div class="name-cell">
                       <strong>{{ item.learnerName }}</strong>
                       <span>ID {{ item.learnerId }}</span>
-                      <span v-if="activeParentShare(item.learnerId)">日报至 {{ formatDateTime(activeParentShare(item.learnerId).expiresAt) }}</span>
+                      <span v-if="activeParentShare(item.learnerId)">已开启家长日报</span>
                     </div>
                   </td>
                   <td>{{ item.answeredCount }}</td>
@@ -269,7 +269,7 @@
                     <div class="name-cell">
                       <strong>{{ item.learnerName }}</strong>
                       <span>ID {{ item.learnerId }}</span>
-                      <span v-if="activeParentShare(item.learnerId)">日报至 {{ formatDateTime(activeParentShare(item.learnerId).expiresAt) }}</span>
+                      <span v-if="activeParentShare(item.learnerId)">已开启家长日报</span>
                     </div>
                   </td>
                   <td>
@@ -732,7 +732,7 @@ export default {
       try {
         let shareUrl = this.activeParentShare(learnerId)?.publicUrl || ''
         if (!shareUrl) {
-          const data = await request.post('/api/parent-report/shares', { learnerId, validDays: 7 })
+          const data = await request.post('/api/parent-report/shares', { learnerId })
           shareUrl = data?.publicUrl || ''
           await this.loadParentShares()
         }

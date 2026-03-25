@@ -6,7 +6,6 @@
       <p class="hero-copy">无需登录即可查看孩子最近的 Course 学习进展与 Quiz 刷题情况。</p>
       <div class="hero-meta">
         <span>生成时间：{{ formatDateTime(report.share?.createdAt) }}</span>
-        <span>失效时间：{{ formatDateTime(report.share?.expiresAt) }}</span>
         <span>最近访问：{{ formatDateTime(report.share?.lastAccessAt) }}</span>
       </div>
     </section>

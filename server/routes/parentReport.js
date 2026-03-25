@@ -8,13 +8,6 @@ import { buildLearnerCourseDigestPayload } from './course.js'
 
 const router = express.Router()
 
-function getExpireAt(validDays = 7) {
-  const safeDays = Math.min(Math.max(Number(validDays) || 7, 1), 30)
-  const date = new Date()
-  date.setDate(date.getDate() + safeDays)
-  return date
-}
-
 function buildPublicUrl(req, token) {
   const origin = `${req.protocol}://${req.get('host')}`
   return `${origin}/report/${token}`
@@ -211,17 +204,14 @@ function buildDailyNarrative(quiz, course) {
 }
 
 function serializeShare(req, share) {
-  const expiresAt = share?.expiresAt || null
-  const isExpired = !!(expiresAt && new Date(expiresAt).getTime() <= Date.now())
-
   return {
     token: share?.token || '',
     learnerId: Number(share?.learnerId || 0),
     publicUrl: share?.token ? buildPublicUrl(req, share.token) : '',
-    isActive: !!share?.isActive && !isExpired,
-    isExpired,
+    isActive: !!share?.isActive,
+    isExpired: false,
     createdAt: share?.createdAt || null,
-    expiresAt,
+    expiresAt: null,
     lastAccessAt: share?.lastAccessAt || null,
     accessCount: Number(share?.accessCount || 0)
   }
@@ -244,7 +234,6 @@ router.post('/shares', authenticateToken, requireRole(['admin', 'teacher']), asy
   try {
     const teacherId = Number(req.user.id)
     const learnerId = Number(req.body?.learnerId)
-    const validDays = Number(req.body?.validDays || 7)
     if (!Number.isFinite(learnerId)) {
       return res.status(400).json({ error: '学员 ID 不合法' })
     }
@@ -261,7 +250,7 @@ router.post('/shares', authenticateToken, requireRole(['admin', 'teacher']), asy
         $set: {
           token,
           isActive: true,
-          expiresAt: getExpireAt(validDays),
+          expiresAt: null,
           lastAccessAt: null,
           accessCount: 0
         }
@@ -315,11 +304,6 @@ router.get('/:token', async (req, res) => {
     const share = await ParentDailyShare.findOne({ token, isActive: true }).lean()
     if (!share) {
       return res.status(404).json({ error: '家长日报链接不存在或已失效' })
-    }
-
-    if (share.expiresAt && new Date(share.expiresAt).getTime() <= Date.now()) {
-      await ParentDailyShare.updateOne({ _id: share._id }, { $set: { isActive: false } })
-      return res.status(410).json({ error: '家长日报链接已过期' })
     }
 
     const learnerId = Number(share.learnerId)
