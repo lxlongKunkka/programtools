@@ -534,16 +534,13 @@ export default {
     sortedQuizItems() {
       return [...this.quizDashboard.items].sort((a, b) => {
         if (a.riskFlags.length !== b.riskFlags.length) return b.riskFlags.length - a.riskFlags.length
-        if ((a.todayAnsweredCount || 0) !== (b.todayAnsweredCount || 0)) return (a.todayAnsweredCount || 0) - (b.todayAnsweredCount || 0)
-        return (a.answeredCount || 0) - (b.answeredCount || 0)
+        return Number(a.learnerId || 0) - Number(b.learnerId || 0)
       })
     },
     sortedCourseItems() {
       return [...this.courseDashboard.items].sort((a, b) => {
         if (a.riskFlags.length !== b.riskFlags.length) return b.riskFlags.length - a.riskFlags.length
-        if ((a.activeDays || 0) !== (b.activeDays || 0)) return (a.activeDays || 0) - (b.activeDays || 0)
-        if ((a.completionRate || 0) !== (b.completionRate || 0)) return (a.completionRate || 0) - (b.completionRate || 0)
-        return (a.completedChaptersCount || 0) - (b.completedChaptersCount || 0)
+        return Number(a.learnerId || 0) - Number(b.learnerId || 0)
       })
     }
   },
