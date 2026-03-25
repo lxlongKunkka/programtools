@@ -183,7 +183,72 @@ function buildCourseLevelTitleMap(levelDocs = []) {
   return map
 }
 
-function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), courseLevelTitleMap = new Map()) {
+function getLevelTopics(levelDoc) {
+  const topics = Array.isArray(levelDoc?.topics)
+    ? levelDoc.topics.filter((topic) => Array.isArray(topic?.chapters) && topic.chapters.length > 0)
+    : []
+
+  if (topics.length > 0) return topics
+
+  const chapters = Array.isArray(levelDoc?.chapters) ? levelDoc.chapters : []
+  if (!chapters.length) return []
+
+  return [{
+    _id: `legacy-${levelDoc?._id || ''}`,
+    title: '章节',
+    chapters
+  }]
+}
+
+function buildCourseProblemLevelMap(levelDocs = []) {
+  const map = new Map()
+
+  const registerRef = (rawRef, context) => {
+    const text = String(rawRef || '').trim()
+    if (!text) return
+
+    let key = ''
+    if (text.includes(':')) {
+      const [domainId, docIdText] = text.split(':')
+      if (!/^\d+$/.test(docIdText || '')) return
+      key = `${domainId || 'system'}::${Number(docIdText)}`
+    } else {
+      if (!/^\d+$/.test(text)) return
+      key = `*::${Number(text)}`
+    }
+
+    if (!map.has(key)) {
+      map.set(key, context)
+    }
+  }
+
+  for (const levelDoc of Array.isArray(levelDocs) ? levelDocs : []) {
+    const level = Number(levelDoc?.level || 0)
+    if (!level) continue
+
+    const context = {
+      levelTag: `gesp${level}`,
+      level,
+      levelTitle: String(levelDoc?.title || ''),
+      subject: String(levelDoc?.subject || 'C++')
+    }
+
+    for (const topic of getLevelTopics(levelDoc)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        for (const rawRef of Array.isArray(chapter?.problemIds) ? chapter.problemIds : []) {
+          registerRef(rawRef, context)
+        }
+        for (const rawRef of Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds : []) {
+          registerRef(rawRef, context)
+        }
+      }
+    }
+  }
+
+  return map
+}
+
+function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), courseLevelTitleMap = new Map(), courseProblemLevelMap = new Map()) {
   const items = Array.isArray(attempts) ? attempts : []
   const aggregates = new Map()
 
@@ -205,6 +270,15 @@ function buildRecentPracticeLevels(attempts = [], questionMap = new Map(), cours
   }
 
   const pickPrimaryLevelTag = (question, tags = []) => {
+    const sourceDomainId = String(question?.sourceDomainId || question?.source || 'gesp')
+    const sourceDocId = Number(question?.sourceDocId)
+    const mappedCourseLevelTag = Number.isFinite(sourceDocId)
+      ? (courseProblemLevelMap.get(`${sourceDomainId}::${sourceDocId}`)?.levelTag || courseProblemLevelMap.get(`*::${sourceDocId}`)?.levelTag || '')
+      : ''
+    if (parseLevelNumber(mappedCourseLevelTag)) {
+      return mappedCourseLevelTag
+    }
+
     const directLevelTag = String(question?.levelTag || '').trim()
     const matchedCounts = new Map()
     for (const tag of tags) {
@@ -550,7 +624,7 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
       { $sort: { count: -1, _id: 1 } },
       { $limit: 3 }
     ]),
-    CourseLevel.find({ subject: 'C++' }).select('level title subject').lean()
+    CourseLevel.find({ subject: 'C++' }).select('level title subject topics.chapters.problemIds topics.chapters.optionalProblemIds chapters.problemIds chapters.optionalProblemIds').lean()
   ])
 
   const latestProgress = recentProgress[0] || null
@@ -563,15 +637,16 @@ export async function buildLearnerQuizDigestPayload(learnerId, days = 14) {
   const questionUids = [...new Set(attempts.map((item) => item.questionUid).filter(Boolean))]
   const questions = await QuizQuestion.find(
     { questionUid: { $in: questionUids } },
-    'questionUid stem stemText explanation explanationText sourceTitle paperQuestionNo levelTag tags answer type subject'
+    'questionUid stem stemText explanation explanationText source sourceDomainId sourceDocId sourceTitle paperQuestionNo levelTag tags answer type subject'
   ).lean()
   const questionMap = new Map(questions.map((item) => [item.questionUid, item]))
   const courseLevelTitleMap = buildCourseLevelTitleMap(courseLevels)
+  const courseProblemLevelMap = buildCourseProblemLevelMap(courseLevels)
   const recentAttemptsInWindow = attempts.filter((item) => {
     const answeredAt = new Date(item?.answeredAt || 0)
     return !Number.isNaN(answeredAt.getTime()) && answeredAt >= windowStart
   })
-  const recentPracticeLevels = buildRecentPracticeLevels(recentAttemptsInWindow, questionMap, courseLevelTitleMap)
+  const recentPracticeLevels = buildRecentPracticeLevels(recentAttemptsInWindow, questionMap, courseLevelTitleMap, courseProblemLevelMap)
 
   return {
     learner: {
