@@ -220,7 +220,7 @@
           </article>
 
           <article class="panel">
-            <h3>近期参与的 Level</h3>
+            <h3>近期参与的 Level（含当前学习定位）</h3>
             <div v-if="!recentCourseLevels.length" class="empty-inline">暂无课程进度</div>
             <div v-else class="level-list">
               <article v-for="level in recentCourseLevels" :key="level.levelId" class="level-item">
@@ -406,6 +406,10 @@ export default {
       const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
       if (!levels.length) return []
 
+      const currentCourseLevel = Number(this.report.course?.learner?.currentCppLevel || 0)
+      const currentCourseLevelTitle = String(this.report.course?.learner?.currentCppLevelTitle || '')
+      const currentCourseLevelSource = String(this.report.course?.learner?.currentCppLevelSource || '')
+
       const makeKey = (item) => [
         String(item?.subject || 'C++'),
         Number(item?.level || 0),
@@ -457,6 +461,35 @@ export default {
         }
       }
 
+      const currentLevel = levels.find((level) => (
+        Number(level?.level || 0) === currentCourseLevel
+        && String(level?.subject || 'C++') === 'C++'
+      )) || levels.find((level) => (
+        Number(level?.level || 0) === currentCourseLevel
+        && String(level?.title || '') === currentCourseLevelTitle
+      )) || levels.find((level) => Number(level?.level || 0) === currentCourseLevel) || null
+
+      const withCurrentLevelMeta = (level) => ({
+        ...withActivityMeta(level),
+        activityLabel: currentCourseLevelSource === 'manual' ? '老师设定' : '当前学习',
+        activityTone: 'current'
+      })
+
+      const ensureCurrentLevelIncluded = (items) => {
+        const result = [...items]
+        if (!currentLevel) return result.slice(0, 3)
+
+        const currentKey = makeKey(currentLevel)
+        const existingIndex = result.findIndex((item) => makeKey(item) === currentKey)
+        if (existingIndex >= 0) {
+          result.splice(existingIndex, 1, withCurrentLevelMeta(result[existingIndex]))
+        } else {
+          result.unshift(withCurrentLevelMeta(currentLevel))
+        }
+
+        return result.slice(0, 4)
+      }
+
       const picked = []
       const seen = new Set()
 
@@ -465,15 +498,15 @@ export default {
         if (seen.has(key) || !levelMap.has(key)) continue
         seen.add(key)
         picked.push(withActivityMeta(levelMap.get(key)))
-        if (picked.length >= 3) return picked
+        if (picked.length >= 3) return ensureCurrentLevelIncluded(picked)
       }
 
       const startedLevels = levels.filter((level) => Number(level?.completedChapters || 0) > 0 || Number(level?.completionRate || 0) > 0)
       if (startedLevels.length > 0) {
-        return startedLevels.slice(0, 3).map(withActivityMeta)
+        return ensureCurrentLevelIncluded(startedLevels.slice(0, 3).map(withActivityMeta))
       }
 
-      return levels.slice(0, 3).map(withActivityMeta)
+      return ensureCurrentLevelIncluded(levels.slice(0, 3).map(withActivityMeta))
     }
   },
   watch: {
@@ -731,6 +764,10 @@ export default {
 .level-activity-badge.muted {
   background: #f3f4f6;
   color: #6b7280;
+}
+.level-activity-badge.current {
+  background: #fef3c7;
+  color: #92400e;
 }
 .attempt-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: #64748b; }
 .attempt-tag-list {
