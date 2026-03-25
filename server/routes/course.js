@@ -671,12 +671,14 @@ function buildLevelSnapshot(levelDoc, progress) {
   const topics = getLevelTopics(levelDoc).map(topic => {
     const chapters = Array.isArray(topic.chapters) ? topic.chapters : []
     const completedCount = chapters.reduce((sum, chapter) => sum + (isChapterCompleted(progress, chapter) ? 1 : 0), 0)
+    const solvedProblemCount = chapters.reduce((sum, chapter) => sum + getChapterSolvedProblems(progress, chapter).length, 0)
     const totalCount = chapters.length
 
     return {
       topicId: String(topic._id || topic.title || ''),
       title: topic.title || '未命名专题',
       completedCount,
+      solvedProblemCount,
       totalCount,
       completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
     }
@@ -684,6 +686,7 @@ function buildLevelSnapshot(levelDoc, progress) {
 
   const totalChapters = topics.reduce((sum, topic) => sum + topic.totalCount, 0)
   const completedChapters = topics.reduce((sum, topic) => sum + topic.completedCount, 0)
+  const solvedProblemCount = topics.reduce((sum, topic) => sum + topic.solvedProblemCount, 0)
 
   return {
     levelId: String(levelDoc._id),
@@ -693,6 +696,7 @@ function buildLevelSnapshot(levelDoc, progress) {
     title: levelDoc.title || '',
     completedChapters,
     totalChapters,
+    solvedProblemCount,
     completionRate: totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0,
     topics
   }

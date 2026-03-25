@@ -230,7 +230,7 @@
                       {{ level.subject }} · L{{ level.level }} · {{ level.title }}
                       <span v-if="level.activityLabel" :class="['level-activity-badge', level.activityTone]">{{ level.activityLabel }}</span>
                     </strong>
-                    <p>{{ level.group || '未分组' }}</p>
+                    <p>{{ level.group || '未分组' }}<span class="level-stats-inline"> · 已通过 {{ level.solvedProblemCount || 0 }} 题</span></p>
                   </div>
                   <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
                 </div>
@@ -743,6 +743,7 @@ export default {
 }
 .attempt-head, .level-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .attempt-stem, .level-head p { margin: 8px 0 0; color: #5f6d7b; }
+.level-stats-inline { color: #31507a; font-weight: 600; }
 .level-activity-badge {
   display: inline-flex;
   align-items: center;
