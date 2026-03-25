@@ -89,6 +89,27 @@ function normalizeSubjectLevels(progress) {
   return subjectLevels
 }
 
+function normalizeSubjectLevelMeta(progress) {
+  const normalizeMapLike = (value) => {
+    if (value instanceof Map) return Object.fromEntries(value)
+    if (!value || typeof value !== 'object') return {}
+    return value
+  }
+
+  return {
+    sources: normalizeMapLike(progress?.subjectLevelSources),
+    updatedAt: normalizeMapLike(progress?.subjectLevelUpdatedAt),
+    updatedBy: normalizeMapLike(progress?.subjectLevelUpdatedBy)
+  }
+}
+
+function isCppCourseLevel(level) {
+  const subject = String(level?.subject || '').trim()
+  const group = String(level?.group || '').trim()
+  const title = String(level?.title || '').trim()
+  return !subject || subject === 'C++' || subject.includes('C++') || group.includes('C++') || title.includes('C++')
+}
+
 function getActivitySessionDate(date = new Date()) {
   const offset = 8
   const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
@@ -183,10 +204,7 @@ function getLevelTopics(levelDoc) {
 }
 
 function findCurrentCppLevelDoc(levels, currentCppLevel) {
-  return (Array.isArray(levels) ? levels : []).find(level => {
-    const subject = level?.subject || 'C++'
-    return subject === 'C++' && Number(level?.level || 0) === Number(currentCppLevel || 0)
-  }) || null
+  return (Array.isArray(levels) ? levels : []).find(level => isCppCourseLevel(level) && Number(level?.level || 0) === Number(currentCppLevel || 0)) || null
 }
 
 function buildChapterContextIndex(levels = []) {
@@ -821,16 +839,17 @@ function buildCourseProgressSummary(progress, levels) {
   const startedTopicCount = levelSnapshots.reduce((sum, level) => sum + level.topics.filter(topic => topic.completedCount > 0).length, 0)
   const completionRate = totalChapters > 0 ? Number(((completedChaptersCount / totalChapters) * 100).toFixed(1)) : 0
   const subjectLevels = normalizeSubjectLevels(progress)
+  const subjectLevelMeta = normalizeSubjectLevelMeta(progress)
   const currentCppLevel = Number(subjectLevels['C++'] || progress?.currentLevel || 1)
-  const currentCppLevelDoc = levels.find(level => {
-    const subject = level.subject || 'C++'
-    return subject === 'C++' && Number(level.level) === currentCppLevel
-  })
+  const currentCppLevelDoc = findCurrentCppLevelDoc(levels, currentCppLevel)
 
   return {
     subjectLevels,
     currentCppLevel,
     currentCppLevelTitle: currentCppLevelDoc?.title || '',
+    currentCppLevelSource: String(subjectLevelMeta.sources['C++'] || ''),
+    currentCppLevelUpdatedAt: subjectLevelMeta.updatedAt['C++'] || null,
+    currentCppLevelUpdatedBy: Number(subjectLevelMeta.updatedBy['C++'] || 0) || null,
     completedChaptersCount,
     totalChapters,
     completionRate,
@@ -1820,6 +1839,55 @@ router.get('/teacher/follows/:learnerId/detail', authenticateToken, requireRole(
     console.error(e)
     const status = e.message === '未关注该学员' || e.message === '学员不存在' ? 404 : 500
     res.status(status).json({ error: e.message || '加载学员课程详情失败' })
+  }
+})
+
+router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const teacherId = Number(req.user.id)
+    const learnerId = Number(req.params.learnerId)
+    const level = Number(req.body?.level)
+
+    if (!Number.isFinite(learnerId)) {
+      return res.status(400).json({ error: '学员 ID 不合法' })
+    }
+
+    if (!Number.isInteger(level) || level < 1 || level > 10) {
+      return res.status(400).json({ error: '当前等级必须是 1 到 10 之间的整数' })
+    }
+
+    if (req.user.role !== 'admin') {
+      const follow = await TeacherQuizFollow.findOne({ teacherId, learnerId }).lean()
+      if (!follow) {
+        return res.status(404).json({ error: '未关注该学员，无法设置当前等级' })
+      }
+    }
+
+    let progress = await UserProgress.findOne({ userId: learnerId })
+    if (!progress) {
+      progress = new UserProgress({ userId: learnerId })
+    }
+
+    if (!progress.subjectLevels) progress.subjectLevels = new Map()
+    if (!progress.subjectLevelSources) progress.subjectLevelSources = new Map()
+    if (!progress.subjectLevelUpdatedAt) progress.subjectLevelUpdatedAt = new Map()
+    if (!progress.subjectLevelUpdatedBy) progress.subjectLevelUpdatedBy = new Map()
+
+    progress.subjectLevels.set('C++', level)
+    progress.currentLevel = level
+    progress.subjectLevelSources.set('C++', 'manual')
+    progress.subjectLevelUpdatedAt.set('C++', new Date())
+    progress.subjectLevelUpdatedBy.set('C++', teacherId)
+    await progress.save()
+
+    const digest = await buildLearnerCourseDigestPayload(learnerId)
+    res.json({
+      ok: true,
+      learner: digest.learner
+    })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || '设置当前等级失败' })
   }
 })
 

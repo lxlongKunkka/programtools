@@ -12,6 +12,21 @@ const userProgressSchema = new mongoose.Schema({
     of: Number,
     default: {}
   },
+  subjectLevelSources: {
+    type: Map,
+    of: String,
+    default: {}
+  },
+  subjectLevelUpdatedAt: {
+    type: Map,
+    of: Date,
+    default: {}
+  },
+  subjectLevelUpdatedBy: {
+    type: Map,
+    of: Number,
+    default: {}
+  },
 
   // Store unlocked chapter IDs (e.g., "1-1", "1-2") - LEGACY / DISPLAY
   unlockedChapters: { type: [String], default: [] },

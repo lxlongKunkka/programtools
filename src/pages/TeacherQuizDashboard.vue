@@ -325,6 +325,7 @@
         <div>
           <h3>{{ courseDetail.learner.learnerName }} 的 Course 明细</h3>
           <p>当前 C++ 等级 L{{ courseDetail.learner.currentCppLevel }}，总完成率 {{ courseDetail.learner.completionRate }}%</p>
+          <p v-if="courseDetail.learner.currentCppLevelSource === 'manual'" class="detail-hint">老师已手动设定当前等级<span v-if="courseDetail.learner.currentCppLevelUpdatedAt"> · {{ formatDateTime(courseDetail.learner.currentCppLevelUpdatedAt) }}</span></p>
         </div>
         <button class="btn-secondary" @click="courseDetail = createEmptyCourseDetail()">关闭</button>
       </div>
@@ -336,6 +337,17 @@
             <h4>课程总览</h4>
             <div class="progress-list">
               <div class="progress-row"><span>当前等级</span><span>L{{ courseDetail.learner.currentCppLevel }} {{ courseDetail.learner.currentCppLevelTitle || '' }}</span></div>
+              <div class="progress-row level-setting-row">
+                <span>老师设定</span>
+                <div class="level-setting-controls">
+                  <select v-model.number="courseLevelDraft" :disabled="courseLevelSaving">
+                    <option v-for="option in cppLevelOptions" :key="option.level" :value="option.level">L{{ option.level }} {{ option.title }}</option>
+                  </select>
+                  <button class="btn-primary compact-btn" :disabled="courseLevelSaving || !courseDetail.learner || Number(courseLevelDraft) === Number(courseDetail.learner.currentCppLevel)" @click="saveCurrentCourseLevel()">
+                    {{ courseLevelSaving ? '保存中...' : '保存' }}
+                  </button>
+                </div>
+              </div>
               <div class="progress-row"><span>已完成章节</span><span>{{ courseDetail.learner.completedChaptersCount }} / {{ courseDetail.learner.totalChapters }}</span></div>
               <div class="progress-row"><span>最近学习</span><span>{{ formatDateTime(courseDetail.learner.lastActivityAt) }}</span></div>
               <div class="progress-row"><span>已开始 Level</span><span>{{ courseDetail.learner.startedLevelCount }}</span></div>
@@ -470,6 +482,8 @@ export default {
       quizDetailLoading: false,
       courseDetail: createEmptyCourseDetail(),
       courseDetailLoading: false,
+      courseLevelDraft: 1,
+      courseLevelSaving: false,
       detailDays: 14
     }
   },
@@ -497,6 +511,25 @@ export default {
       const keyword = this.candidateQuery.trim().toLowerCase()
       if (!keyword) return this.candidates
       return this.candidates.filter((item) => String(item.uname || '').toLowerCase().includes(keyword))
+    },
+    cppLevelOptions() {
+      const map = new Map()
+      for (const item of this.levels) {
+        const text = [item?.subject, item?.group, item?.title].filter(Boolean).join(' ')
+        if (!text.includes('C++') && item?.subject) continue
+        const level = Number(item?.level || 0)
+        if (!level || map.has(level)) continue
+        map.set(level, {
+          level,
+          title: item?.title || ''
+        })
+      }
+      if (!map.size) {
+        for (let level = 1; level <= 10; level += 1) {
+          map.set(level, { level, title: '' })
+        }
+      }
+      return [...map.values()].sort((a, b) => a.level - b.level)
     },
     sortedQuizItems() {
       return [...this.quizDashboard.items].sort((a, b) => {
@@ -697,10 +730,32 @@ export default {
           levels: Array.isArray(data?.levels) ? data.levels : [],
           recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : []
         }
+        this.courseLevelDraft = Number(this.courseDetail.learner?.currentCppLevel || 1)
       } catch (e) {
         this.showToastMessage(`加载 Course 详情失败: ${e.message}`)
       } finally {
         this.courseDetailLoading = false
+      }
+    },
+    async saveCurrentCourseLevel() {
+      const learnerId = Number(this.courseDetail.learner?.learnerId)
+      const level = Number(this.courseLevelDraft)
+      if (!learnerId || !Number.isInteger(level)) return
+
+      this.courseLevelSaving = true
+      try {
+        const data = await request.put(`/api/course/teacher/follows/${learnerId}/current-level`, { level })
+        this.courseDetail = {
+          ...this.courseDetail,
+          learner: data?.learner || this.courseDetail.learner
+        }
+        this.courseLevelDraft = Number(this.courseDetail.learner?.currentCppLevel || level)
+        await this.loadCourseDashboard()
+        this.showToastMessage(`已将当前 C++ 等级设置为 L${level}`)
+      } catch (e) {
+        this.showToastMessage(`设置当前等级失败: ${e.message}`)
+      } finally {
+        this.courseLevelSaving = false
       }
     },
     formatDateTime(value) {
@@ -880,6 +935,11 @@ export default {
   color: #647587;
 }
 
+.detail-hint {
+  font-size: 13px;
+  color: #506173;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -921,6 +981,28 @@ export default {
 .attempt-stem,
 .attempt-meta {
   margin: 6px 0 0;
+}
+
+.level-setting-row {
+  align-items: center;
+}
+
+.level-setting-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-setting-controls select {
+  min-width: 190px;
+  border: 1px solid #c9d5e3;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.compact-btn {
+  padding: 8px 14px;
 }
 
 .btn-primary,
