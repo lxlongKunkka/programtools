@@ -82,11 +82,28 @@ function normalizeSubjectLevels(progress) {
     subjectLevels = {}
   }
 
+  const normalizedSubjectLevels = {}
+  for (const [rawSubject, rawLevel] of Object.entries(subjectLevels)) {
+    const subject = normalizeCourseSubjectLabel(rawSubject)
+    const level = Number(rawLevel || 0)
+    if (!subject || !level) continue
+    normalizedSubjectLevels[subject] = level
+  }
+  subjectLevels = normalizedSubjectLevels
+
   if (!subjectLevels['C++']) {
     subjectLevels['C++'] = progress?.currentLevel || 1
   }
 
   return subjectLevels
+}
+
+function normalizeCourseSubjectLabel(subject) {
+  const text = String(subject || '').trim()
+  if (!text) return 'C++'
+  if (text === 'C++' || text.includes('C++')) return 'C++'
+  if (text === 'Python' || text.includes('Python')) return 'Python'
+  return text
 }
 
 function normalizeSubjectLevelMeta(progress) {
@@ -223,7 +240,7 @@ function buildChapterContextIndex(levels = []) {
           level: Number(level?.level || 0),
           levelTitle: level?.title || '',
           group: level?.group || '',
-          subject: level?.subject || 'C++',
+          subject: normalizeCourseSubjectLabel(level?.subject),
           problemIds: Array.isArray(chapter?.problemIds)
             ? chapter.problemIds.filter(Boolean).map(item => String(item))
             : [],
@@ -259,7 +276,7 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
             chapterTitle: chapter.title || '未命名章节',
             chapterProblemCount: Array.isArray(chapter?.problemIds) ? chapter.problemIds.filter(Boolean).length : 0,
             chapterSolvedProblemCount: solvedProblemCount,
-            subject: currentLevelDoc.subject || 'C++',
+            subject: normalizeCourseSubjectLabel(currentLevelDoc.subject),
             group: currentLevelDoc.group || '',
             source: 'next_unfinished',
             homeworkIds: Array.isArray(chapter?.homeworkIds) ? chapter.homeworkIds.filter(Boolean).map(item => String(item)) : []
@@ -295,7 +312,7 @@ function buildCurrentCoursePosition(progress, levels, recentActivities = []) {
         chapterTitle: firstChapter.title || '未命名章节',
         chapterProblemCount: Array.isArray(firstChapter?.problemIds) ? firstChapter.problemIds.filter(Boolean).length : 0,
         chapterSolvedProblemCount: solvedProblemCount,
-        subject: currentLevelDoc.subject || 'C++',
+        subject: normalizeCourseSubjectLabel(currentLevelDoc.subject),
         group: currentLevelDoc.group || '',
         source: 'level_start',
         homeworkIds: Array.isArray(firstChapter?.homeworkIds) ? firstChapter.homeworkIds.filter(Boolean).map(item => String(item)) : []
@@ -665,7 +682,7 @@ function buildLevelSnapshot(levelDoc, progress) {
     levelId: String(levelDoc._id),
     level: Number(levelDoc.level || 0),
     group: levelDoc.group || '',
-    subject: levelDoc.subject || 'C++',
+    subject: normalizeCourseSubjectLabel(levelDoc.subject),
     title: levelDoc.title || '',
     completedChapters,
     totalChapters,
@@ -782,7 +799,7 @@ async function buildScopedLearnerDetailPayload({ learnerId, user, progress, leve
       levelTitle: levelDoc?.title || '',
       topicId: topic?._id ? String(topic._id) : '',
       group: levelDoc?.group || '',
-      subject: levelDoc?.subject || 'C++',
+      subject: normalizeCourseSubjectLabel(levelDoc?.subject),
       completedChaptersCount,
       totalChapters,
       solvedProblemCount,
@@ -798,7 +815,7 @@ async function buildScopedLearnerDetailPayload({ learnerId, user, progress, leve
       topicTitle: item.topicTitle || '',
       level: item.level || 0,
       levelTitle: item.levelTitle || '',
-      subject: item.subject || 'C++',
+      subject: normalizeCourseSubjectLabel(item.subject),
       group: item.group || '',
       problemId: item.problemId || '',
       lastActiveAt: item.lastActiveAt || item.updatedAt || item.createdAt || null
