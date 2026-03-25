@@ -32,12 +32,63 @@ function formatDateLabel(value) {
   })
 }
 
-function getPrimaryPracticeLevel(quiz) {
-  return Array.isArray(quiz?.recentPracticeLevels) ? quiz.recentPracticeLevels[0] || null : null
+function getDominantCoursePracticeLevel(course) {
+  const items = Array.isArray(course?.recentSolvedProblems) ? course.recentSolvedProblems : []
+  if (!items.length) return null
+
+  const aggregates = new Map()
+  for (const item of items) {
+    const level = Number(item?.level || 0)
+    if (!level) continue
+
+    const subject = String(item?.subject || 'C++')
+    const levelTitle = String(item?.levelTitle || '')
+    const key = `${subject}::${level}::${levelTitle}`
+    const submittedAt = new Date(item?.lastSubmittedAt || 0).getTime()
+
+    if (!aggregates.has(key)) {
+      aggregates.set(key, {
+        level,
+        levelTitle,
+        label: `L${level}`,
+        subject,
+        attemptCount: 0,
+        correctCount: 0,
+        lastAnsweredAt: 0,
+        matchedTags: new Set()
+      })
+    }
+
+    const summary = aggregates.get(key)
+    summary.attemptCount += Math.max(Number(item?.submitCount || 0), 1)
+    if (item?.accepted) summary.correctCount += 1
+    if (Number.isFinite(submittedAt) && submittedAt > summary.lastAnsweredAt) {
+      summary.lastAnsweredAt = submittedAt
+    }
+    if (item?.topicTitle) summary.matchedTags.add(String(item.topicTitle).trim())
+    if (item?.chapterTitle && summary.matchedTags.size < 3) summary.matchedTags.add(String(item.chapterTitle).trim())
+  }
+
+  return [...aggregates.values()]
+    .sort((a, b) => {
+      if (b.attemptCount !== a.attemptCount) return b.attemptCount - a.attemptCount
+      if (b.lastAnsweredAt !== a.lastAnsweredAt) return b.lastAnsweredAt - a.lastAnsweredAt
+      return a.level - b.level
+    })
+    .map((item) => ({
+      ...item,
+      accuracy: item.attemptCount > 0 ? Number(((item.correctCount / item.attemptCount) * 100).toFixed(1)) : 0,
+      matchedTags: [...item.matchedTags].slice(0, 3)
+    }))[0] || null
 }
 
-function buildPracticeLevelSummary(quiz) {
-  const level = getPrimaryPracticeLevel(quiz)
+function getPrimaryPracticeLevel(quiz, course) {
+  const quizLevel = Array.isArray(quiz?.recentPracticeLevels) ? quiz.recentPracticeLevels[0] || null : null
+  return quizLevel || getDominantCoursePracticeLevel(course)
+}
+
+function buildPracticeLevelSummary(quiz, course) {
+  const level = getPrimaryPracticeLevel(quiz, course)
   if (!level) return ''
 
   const parts = [
@@ -61,7 +112,7 @@ function buildPracticeLevelSummary(quiz) {
 function summarizeTodayPerformance(quiz, course) {
   const latestQuiz = Array.isArray(quiz?.recentProgress) ? quiz.recentProgress[0] : null
   const latestCourse = Array.isArray(course?.recentActivities) ? course.recentActivities[0] : null
-  const practiceSummary = buildPracticeLevelSummary(quiz)
+  const practiceSummary = buildPracticeLevelSummary(quiz, course)
 
   if ((latestQuiz?.answeredCount || 0) > 0) {
     if (practiceSummary) {
@@ -93,7 +144,7 @@ function buildConcernItems(quiz, course) {
   const completionRate = Number(course?.learner?.completionRate || 0)
   const weakTags = Array.isArray(quiz?.weakTags) ? quiz.weakTags : []
   const lastActivityAt = course?.learner?.lastActivityAt || quiz?.learner?.lastAnsweredAt || null
-  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz)
+  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz, course)
   const currentCourseLevel = Number(course?.learner?.currentCppLevel || 0)
 
   if (primaryPracticeLevel?.level && currentCourseLevel && primaryPracticeLevel.level >= currentCourseLevel + 2) {
@@ -125,7 +176,7 @@ function buildAdviceItems(quiz, course, concerns) {
   const advice = []
   const recentAttempts = Array.isArray(quiz?.recentAttempts) ? quiz.recentAttempts : []
   const recentActivities = Array.isArray(course?.recentActivities) ? course.recentActivities : []
-  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz)
+  const primaryPracticeLevel = getPrimaryPracticeLevel(quiz, course)
   const currentCourseLevel = Number(course?.learner?.currentCppLevel || 0)
 
   if (recentAttempts.length > 0) {

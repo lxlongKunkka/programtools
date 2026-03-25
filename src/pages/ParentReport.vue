@@ -317,9 +317,56 @@ export default {
     learnerName() {
       return this.report.learner?.learnerName || '孩子'
     },
+    dominantCoursePracticeLevel() {
+      const items = Array.isArray(this.report.course?.recentSolvedProblems) ? this.report.course.recentSolvedProblems : []
+      if (!items.length) return null
+
+      const aggregates = new Map()
+      for (const item of items) {
+        const level = Number(item?.level || 0)
+        if (!level) continue
+
+        const subject = String(item?.subject || 'C++')
+        const levelTitle = String(item?.levelTitle || '')
+        const key = `${subject}::${level}::${levelTitle}`
+        const submittedAt = new Date(item?.lastSubmittedAt || 0).getTime()
+
+        if (!aggregates.has(key)) {
+          aggregates.set(key, {
+            level,
+            levelTitle,
+            label: `L${level}`,
+            subject,
+            attemptCount: 0,
+            lastAnsweredAt: 0,
+            matchedTags: []
+          })
+        }
+
+        const summary = aggregates.get(key)
+        summary.attemptCount += Math.max(Number(item?.submitCount || 0), 1)
+        if (Number.isFinite(submittedAt) && submittedAt > summary.lastAnsweredAt) {
+          summary.lastAnsweredAt = submittedAt
+        }
+
+        for (const tag of [item?.topicTitle, item?.chapterTitle]) {
+          const text = String(tag || '').trim()
+          if (!text || summary.matchedTags.includes(text)) continue
+          summary.matchedTags.push(text)
+          if (summary.matchedTags.length >= 3) break
+        }
+      }
+
+      return [...aggregates.values()]
+        .sort((a, b) => {
+          if (b.attemptCount !== a.attemptCount) return b.attemptCount - a.attemptCount
+          if (b.lastAnsweredAt !== a.lastAnsweredAt) return b.lastAnsweredAt - a.lastAnsweredAt
+          return a.level - b.level
+        })[0] || null
+    },
     dominantPracticeLevel() {
       const levels = Array.isArray(this.report.quiz?.recentPracticeLevels) ? this.report.quiz.recentPracticeLevels : []
-      return levels[0] || null
+      return levels[0] || this.dominantCoursePracticeLevel || null
     },
     displayedLevelNumber() {
       return Number(this.dominantPracticeLevel?.level || this.report.course?.learner?.currentCppLevel || 1)
