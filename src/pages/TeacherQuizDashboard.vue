@@ -12,8 +12,8 @@
       </div>
       <div class="hero-actions">
         <div class="tab-switch">
-          <button :class="['tab-btn', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">Quiz</button>
           <button :class="['tab-btn', activeTab === 'course' ? 'active' : '']" @click="activeTab = 'course'">Course</button>
+          <button :class="['tab-btn', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">Quiz</button>
         </div>
         <label v-if="activeTab === 'quiz'" class="days-select">
           <span>观察窗口</span>
@@ -461,7 +461,7 @@ export default {
   inject: ['showToastMessage'],
   data() {
     return {
-      activeTab: 'quiz',
+      activeTab: 'course',
       levels: [],
       selectedGroup: '',
       selectedLevelId: '',

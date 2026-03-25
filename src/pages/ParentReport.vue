@@ -3,7 +3,7 @@
     <section class="hero-card">
       <p class="eyebrow">家长日报</p>
       <h1>{{ learnerName }} 的学习情况</h1>
-      <p class="hero-copy">无需登录即可查看孩子最近的 Quiz 刷题与 Course 学习进展。</p>
+      <p class="hero-copy">无需登录即可查看孩子最近的 Course 学习进展与 Quiz 刷题情况。</p>
       <div class="hero-meta">
         <span>生成时间：{{ formatDateTime(report.share?.createdAt) }}</span>
         <span>失效时间：{{ formatDateTime(report.share?.expiresAt) }}</span>
@@ -36,13 +36,13 @@
 
       <section class="section-block report-tabs-wrap">
         <div class="report-tabs">
-          <button :class="['report-tab', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">
-            <span>Quiz</span>
-            <strong>{{ report.quiz.learner.answeredCount }} 题</strong>
-          </button>
           <button :class="['report-tab', activeTab === 'course' ? 'active' : '']" @click="activeTab = 'course'">
             <span>Course</span>
             <strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong>
+          </button>
+          <button :class="['report-tab', activeTab === 'quiz' ? 'active' : '']" @click="activeTab = 'quiz'">
+            <span>Quiz</span>
+            <strong>{{ report.quiz.learner.answeredCount }} 题</strong>
           </button>
         </div>
 
@@ -312,7 +312,7 @@ export default {
   name: 'ParentReport',
   data() {
     return {
-      activeTab: 'quiz',
+      activeTab: 'course',
       loading: true,
       error: '',
       report: createEmptyReport()
