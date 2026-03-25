@@ -41,6 +41,10 @@ function getPreviousDate(dateStr) {
   return date.toISOString().split('T')[0]
 }
 
+function escapeRegex(text) {
+  return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function buildQuestionFilter(input = {}) {
   const filter = { enabled: true }
   if (typeof input.subject === 'string' && input.subject.trim()) {
@@ -1932,6 +1936,98 @@ router.get('/teacher/follows', authenticateToken, requireRole(['admin', 'teacher
     res.json({ days, ...payload })
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/teacher/follow-candidates', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    const keyword = String(req.query.q || '').trim()
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 20)
+
+    if (!keyword) {
+      return res.json({ items: [] })
+    }
+
+    const exactLearnerId = /^\d+$/.test(keyword) ? Number(keyword) : null
+    const keywordRegex = new RegExp(escapeRegex(keyword), 'i')
+
+    const userQuery = {
+      role: { $nin: ['teacher', 'admin'] },
+      priv: { $ne: -1 },
+      $or: [{ uname: keywordRegex }]
+    }
+
+    if (exactLearnerId) {
+      userQuery.$or.unshift({ _id: exactLearnerId })
+    }
+
+    const users = await User.find(userQuery)
+      .select('_id uname mail')
+      .limit(limit * 3)
+      .lean()
+
+    const learnerIds = users.map(item => Number(item._id)).filter(Number.isFinite)
+    if (!learnerIds.length) {
+      return res.json({ items: [] })
+    }
+
+    const summaries = await QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: { $in: learnerIds }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          answeredCount: { $sum: 1 },
+          correctCount: {
+            $sum: {
+              $cond: [{ $eq: ['$isCorrect', true] }, 1, 0]
+            }
+          },
+          lastAnsweredAt: { $max: '$answeredAt' }
+        }
+      }
+    ])
+
+    const summaryMap = new Map(summaries.map(item => [Number(item._id), item]))
+    const items = users
+      .map((user) => {
+        const learnerId = Number(user._id)
+        const summary = summaryMap.get(learnerId)
+        if (!summary || !summary.answeredCount) return null
+
+        return {
+          learnerId,
+          learnerName: user.uname || `用户 ${learnerId}`,
+          learnerEmail: user.mail || '',
+          answeredCount: Number(summary.answeredCount || 0),
+          correctCount: Number(summary.correctCount || 0),
+          accuracy: summary.answeredCount > 0 ? Number(((Number(summary.correctCount || 0) / Number(summary.answeredCount || 0)) * 100).toFixed(1)) : 0,
+          lastAnsweredAt: summary.lastAnsweredAt || null
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const aExact = exactLearnerId && a.learnerId === exactLearnerId ? 1 : 0
+        const bExact = exactLearnerId && b.learnerId === exactLearnerId ? 1 : 0
+        if (aExact !== bExact) return bExact - aExact
+
+        const aPrefix = String(a.learnerName || '').toLowerCase().startsWith(keyword.toLowerCase()) ? 1 : 0
+        const bPrefix = String(b.learnerName || '').toLowerCase().startsWith(keyword.toLowerCase()) ? 1 : 0
+        if (aPrefix !== bPrefix) return bPrefix - aPrefix
+
+        const timeDiff = new Date(b.lastAnsweredAt || 0).getTime() - new Date(a.lastAnsweredAt || 0).getTime()
+        if (timeDiff !== 0) return timeDiff
+        if (b.answeredCount !== a.answeredCount) return b.answeredCount - a.answeredCount
+        return a.learnerId - b.learnerId
+      })
+      .slice(0, limit)
+
+    res.json({ items })
+  } catch (e) {
+    res.status(500).json({ error: e.message || '搜索 Quiz 学员失败' })
   }
 })
 

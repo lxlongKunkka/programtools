@@ -81,7 +81,47 @@
         <div class="panel-header">
           <div>
             <h3>添加关注学员</h3>
-            <p>先按课程层级筛出学员，再加入关注列表。</p>
+            <p>既可以按课程层级筛学员，也可以直接搜索只参加 Quiz 的学员。</p>
+          </div>
+        </div>
+
+        <div class="candidate-search-panel">
+          <div class="candidate-search-head">
+            <strong>直接搜索 Quiz 学员</strong>
+            <p>适用于还没参加 Course、但已经在做 Quiz 的学员。支持学员名或 ID。</p>
+          </div>
+          <div class="candidate-search-row">
+            <label class="search-box quiz-search-box">
+              <span>Quiz 学员搜索</span>
+              <input v-model.trim="quizCandidateQuery" type="text" placeholder="输入学员名或 ID" @keyup.enter="searchQuizCandidates" />
+            </label>
+            <button class="btn-primary" :disabled="quizCandidateLoading || !quizCandidateQuery.trim()" @click="searchQuizCandidates">{{ quizCandidateLoading ? '搜索中...' : '搜索' }}</button>
+          </div>
+          <div v-if="quizCandidateLoading" class="empty-state small">正在搜索 Quiz 学员...</div>
+          <div v-else-if="quizCandidateSearched && quizCandidates.length === 0" class="empty-state small">没有找到符合条件的 Quiz 学员。</div>
+          <div v-else-if="quizCandidates.length > 0" class="candidate-list candidate-list-compact">
+            <article v-for="learner in quizCandidates" :key="learner.learnerId" class="candidate-item">
+              <div>
+                <strong>{{ learner.learnerName }}</strong>
+                <p>Quiz 共答 {{ learner.answeredCount || 0 }} 题 · 正确率 {{ learner.accuracy || 0 }}%<span v-if="learner.lastAnsweredAt"> · 最近作答 {{ formatDateTime(learner.lastAnsweredAt) }}</span></p>
+              </div>
+              <button
+                v-if="!followedIdSet.has(Number(learner.learnerId))"
+                class="btn-primary"
+                :disabled="followSavingId === Number(learner.learnerId)"
+                @click="followLearner(learner)"
+              >
+                {{ followSavingId === Number(learner.learnerId) ? '添加中...' : '关注' }}
+              </button>
+              <button
+                v-else
+                class="btn-secondary"
+                :disabled="followSavingId === Number(learner.learnerId)"
+                @click="unfollowLearner(learner)"
+              >
+                {{ followSavingId === Number(learner.learnerId) ? '处理中...' : '取消关注' }}
+              </button>
+            </article>
           </div>
         </div>
 
@@ -467,8 +507,12 @@ export default {
       selectedLevelId: '',
       selectedTopicId: '',
       candidateQuery: '',
+      quizCandidateQuery: '',
       candidates: [],
+      quizCandidates: [],
       candidateLoading: false,
+      quizCandidateLoading: false,
+      quizCandidateSearched: false,
       selectedDays: 7,
       quizDashboard: createEmptyQuizDashboard(),
       quizDashboardLoading: false,
@@ -625,6 +669,26 @@ export default {
         this.candidates = []
       } finally {
         this.candidateLoading = false
+      }
+    },
+    async searchQuizCandidates() {
+      const keyword = this.quizCandidateQuery.trim()
+      if (!keyword) {
+        this.quizCandidates = []
+        this.quizCandidateSearched = false
+        return
+      }
+
+      this.quizCandidateLoading = true
+      this.quizCandidateSearched = true
+      try {
+        const data = await request(`/api/quiz/teacher/follow-candidates?q=${encodeURIComponent(keyword)}`)
+        this.quizCandidates = Array.isArray(data?.items) ? data.items : []
+      } catch (e) {
+        this.showToastMessage(`搜索 Quiz 学员失败: ${e.message}`)
+        this.quizCandidates = []
+      } finally {
+        this.quizCandidateLoading = false
       }
     },
     async followLearner(learner) {
@@ -944,6 +1008,31 @@ export default {
   margin-bottom: 12px;
 }
 
+.candidate-search-panel {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #dbe4ed;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.candidate-search-head p {
+  margin: 6px 0 0;
+  color: #647587;
+}
+
+.candidate-search-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.quiz-search-box {
+  flex: 1;
+  margin-bottom: 0;
+}
+
 .search-box {
   margin-bottom: 12px;
 }
@@ -955,6 +1044,10 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.candidate-list-compact {
+  margin-top: 12px;
 }
 
 .candidate-item,
@@ -1200,6 +1293,11 @@ export default {
   .hero-actions {
     width: 100%;
     flex-direction: column;
+  }
+
+  .candidate-search-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
