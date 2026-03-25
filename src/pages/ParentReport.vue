@@ -154,13 +154,18 @@
         <section v-else class="tab-panel">
           <div class="section-head">
             <h2>Course 日报</h2>
-            <p>课程完成率、主要刷题级别与最近学习轨迹。</p>
+            <p>老师设定的当前学习定位、最近练习级别与课程学习轨迹。</p>
           </div>
           <div class="summary-grid">
             <article class="summary-card accent">
-              <span>主要刷题级别</span>
-              <strong>L{{ displayedLevelNumber }}</strong>
-              <em>{{ displayedLevelTitle }}</em>
+              <span>当前学习定位</span>
+              <strong>L{{ currentPositionLevelNumber }}</strong>
+              <em>{{ currentPositionLevelTitle }}</em>
+            </article>
+            <article class="summary-card">
+              <span>最近练习级别</span>
+              <strong>{{ recentPracticeLevelNumber ? `L${recentPracticeLevelNumber}` : '暂无' }}</strong>
+              <em>{{ recentPracticeLevelTitle }}</em>
             </article>
             <article class="summary-card"><span>主要练习知识点</span><strong>{{ displayedPracticeTags }}</strong></article>
             <article class="summary-card"><span>课程当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
@@ -368,13 +373,21 @@ export default {
       const levels = Array.isArray(this.report.quiz?.recentPracticeLevels) ? this.report.quiz.recentPracticeLevels : []
       return levels[0] || this.dominantCoursePracticeLevel || null
     },
-    displayedLevelNumber() {
-      return Number(this.dominantPracticeLevel?.level || this.report.course?.learner?.currentCppLevel || 1)
+    currentPositionLevelNumber() {
+      return Number(this.report.course?.learner?.currentCppLevel || 1)
     },
-    displayedLevelTitle() {
+    currentPositionLevelTitle() {
+      const source = String(this.report.course?.learner?.currentCppLevelSource || '')
+      const title = this.report.course?.learner?.currentCppLevelTitle || '未匹配等级标题'
+      return source === 'manual' ? `${title} · 老师设定` : title
+    },
+    recentPracticeLevelNumber() {
+      return Number(this.dominantPracticeLevel?.level || 0) || null
+    },
+    recentPracticeLevelTitle() {
+      if (!this.dominantPracticeLevel) return '最近暂无做题记录'
       return this.dominantPracticeLevel?.levelTitle
         || this.dominantPracticeLevel?.label
-        || this.report.course?.learner?.currentCppLevelTitle
         || '未匹配等级标题'
     },
     displayedPracticeTags() {
