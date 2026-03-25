@@ -236,7 +236,7 @@
                 </div>
                 <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
                 <div class="tag-list">
-                  <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
+                  <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }} · 已通过 {{ topic.solvedProblemCount || 0 }} 题</span>
                 </div>
               </article>
             </div>
