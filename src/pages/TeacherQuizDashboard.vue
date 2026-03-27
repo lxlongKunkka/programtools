@@ -187,7 +187,7 @@
         <div class="panel-header">
           <div>
             <h3>{{ activeTab === 'quiz' ? 'Quiz 关注看板' : 'Course 关注看板' }}</h3>
-            <p>{{ activeTab === 'quiz' ? '按风险优先看最近掉队的孩子。' : '先看完成率和已开始进度，再点开单个学员详情。' }}</p>
+            <p>{{ activeTab === 'quiz' ? '按风险优先看最近掉队的孩子。' : '列表里直接设当前 Level，学员日报作为统一查看入口。' }}</p>
           </div>
         </div>
 
@@ -232,8 +232,8 @@
                   </td>
                   <td>
                     <div class="row-actions">
-                      <button class="link-btn" @click="openQuizDetail(item)">详情</button>
-                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : (activeParentShare(item.learnerId) ? '复制日报' : '生成日报') }}</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="openParentReport(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : '学员日报' }}</button>
+                      <button v-if="activeParentShare(item.learnerId)" class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="copyParentShare(item)">复制链接</button>
                       <button v-if="activeParentShare(item.learnerId)" class="link-btn danger-soft" :disabled="parentShareClosingId === item.learnerId" @click="closeParentShare(item)">{{ parentShareClosingId === item.learnerId ? '关闭中...' : '关闭链接' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
@@ -273,9 +273,18 @@
                     </div>
                   </td>
                   <td>
-                    <div class="name-cell">
+                    <div class="name-cell course-level-cell">
                       <strong>L{{ item.currentCppLevel }}</strong>
                       <span>{{ item.currentCppLevelTitle || '未匹配标题' }}</span>
+                      <span v-if="item.currentCppLevelSource === 'manual'">老师设定</span>
+                      <div class="inline-level-editor">
+                        <select :value="getCourseRowDraft(item)" :disabled="courseRowSavingId === item.learnerId" @change="updateCourseRowDraft(item.learnerId, $event.target.value)">
+                          <option v-for="option in cppLevelOptions" :key="`row-${item.learnerId}-${option.level}`" :value="option.level">L{{ option.level }}</option>
+                        </select>
+                        <button class="btn-primary compact-btn" :disabled="courseRowSavingId === item.learnerId || Number(getCourseRowDraft(item)) === Number(item.currentCppLevel)" @click="saveCourseRowLevel(item)">
+                          {{ courseRowSavingId === item.learnerId ? '保存中...' : '保存' }}
+                        </button>
+                      </div>
                     </div>
                   </td>
                   <td>{{ item.completedChaptersCount }} / {{ item.totalChapters }}</td>
@@ -292,8 +301,8 @@
                   </td>
                   <td>
                     <div class="row-actions">
-                      <button class="link-btn" @click="openCourseDetail(item)">详情</button>
-                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="createParentShare(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : (activeParentShare(item.learnerId) ? '复制日报' : '生成日报') }}</button>
+                      <button class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="openParentReport(item)">{{ parentShareLoadingId === item.learnerId ? '处理中...' : '学员日报' }}</button>
+                      <button v-if="activeParentShare(item.learnerId)" class="link-btn" :disabled="parentShareLoadingId === item.learnerId" @click="copyParentShare(item)">复制链接</button>
                       <button v-if="activeParentShare(item.learnerId)" class="link-btn danger-soft" :disabled="parentShareClosingId === item.learnerId" @click="closeParentShare(item)">{{ parentShareClosingId === item.learnerId ? '关闭中...' : '关闭链接' }}</button>
                       <button class="link-btn danger" @click="unfollowLearner(item)">取消</button>
                     </div>
@@ -305,147 +314,6 @@
         </template>
       </section>
     </div>
-
-    <section v-if="activeTab === 'quiz' && quizDetail.learner" class="panel detail-panel">
-      <div class="panel-header detail-header">
-        <div>
-          <h3>{{ quizDetail.learner.learnerName }} 的 Quiz 明细</h3>
-          <p>错题本 {{ quizDetail.learner.wrongbookActiveCount }} 题，收藏 {{ quizDetail.learner.favoriteActiveCount }} 题</p>
-        </div>
-        <button class="btn-secondary" @click="quizDetail = createEmptyQuizDetail()">关闭</button>
-      </div>
-
-      <div v-if="quizDetailLoading" class="empty-state">正在加载明细...</div>
-      <template v-else>
-        <div class="detail-grid">
-          <div class="mini-panel">
-            <h4>最近打卡</h4>
-            <div v-if="quizDetail.recentProgress.length === 0" class="empty-state small">暂无记录</div>
-            <div v-else class="progress-list">
-              <div v-for="item in quizDetail.recentProgress" :key="item.date" class="progress-row">
-                <span>{{ item.date }}</span>
-                <span>{{ item.answeredCount }} 题 / {{ item.correctCount }} 对</span>
-                <span>{{ item.completed ? '完成' : '未完成' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="mini-panel">
-            <h4>薄弱知识点</h4>
-            <div v-if="quizDetail.weakTags.length === 0" class="empty-state small">近 {{ detailDays }} 天没有明显薄弱点</div>
-            <div v-else class="tag-list">
-              <span v-for="tag in quizDetail.weakTags" :key="tag.tag" class="tag-pill">{{ tag.tag }} · {{ tag.wrongCount }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mini-panel attempts-panel">
-          <h4>最近作答</h4>
-          <div v-if="quizDetail.recentAttempts.length === 0" class="empty-state small">暂无作答记录</div>
-          <div v-else class="attempt-list">
-            <article v-for="attempt in quizDetail.recentAttempts" :key="`${attempt.questionUid}-${attempt.answeredAt}`" class="attempt-item">
-              <div class="attempt-head">
-                <strong>{{ attempt.sourceTitle || attempt.questionUid }}</strong>
-                <span :class="['attempt-result', attempt.isCorrect ? 'correct' : 'wrong']">{{ attempt.isCorrect ? '正确' : '错误' }}</span>
-              </div>
-              <p class="attempt-stem">{{ attempt.stemPreview }}</p>
-              <div class="attempt-meta">
-                <span>作答：{{ attempt.selectedAnswer || '-' }}</span>
-                <span>正确：{{ attempt.correctAnswer || '-' }}</span>
-                <span>{{ formatDateTime(attempt.answeredAt) }}</span>
-              </div>
-            </article>
-          </div>
-        </div>
-      </template>
-    </section>
-
-    <section v-if="activeTab === 'course' && courseDetail.learner" class="panel detail-panel">
-      <div class="panel-header detail-header">
-        <div>
-          <h3>{{ courseDetail.learner.learnerName }} 的 Course 明细</h3>
-          <p>当前 C++ 等级 L{{ courseDetail.learner.currentCppLevel }}，总完成率 {{ courseDetail.learner.completionRate }}%</p>
-          <p v-if="courseDetail.learner.currentCppLevelSource === 'manual'" class="detail-hint">老师已手动设定当前等级<span v-if="courseDetail.learner.currentCppLevelUpdatedAt"> · {{ formatDateTime(courseDetail.learner.currentCppLevelUpdatedAt) }}</span></p>
-        </div>
-        <button class="btn-secondary" @click="courseDetail = createEmptyCourseDetail()">关闭</button>
-      </div>
-
-      <div v-if="courseDetailLoading" class="empty-state">正在加载明细...</div>
-      <template v-else>
-        <div class="detail-grid course-summary-grid">
-          <div class="mini-panel">
-            <h4>课程总览</h4>
-            <div class="progress-list">
-              <div class="progress-row"><span>当前等级</span><span>L{{ courseDetail.learner.currentCppLevel }} {{ courseDetail.learner.currentCppLevelTitle || '' }}</span></div>
-              <div class="progress-row level-setting-row">
-                <span>老师设定</span>
-                <div class="level-setting-controls">
-                  <select v-model.number="courseLevelDraft" :disabled="courseLevelSaving">
-                    <option v-for="option in cppLevelOptions" :key="option.level" :value="option.level">L{{ option.level }} {{ option.title }}</option>
-                  </select>
-                  <button class="btn-primary compact-btn" :disabled="courseLevelSaving || !courseDetail.learner || Number(courseLevelDraft) === Number(courseDetail.learner.currentCppLevel)" @click="saveCurrentCourseLevel()">
-                    {{ courseLevelSaving ? '保存中...' : '保存' }}
-                  </button>
-                </div>
-              </div>
-              <div class="progress-row"><span>已完成章节</span><span>{{ courseDetail.learner.completedChaptersCount }} / {{ courseDetail.learner.totalChapters }}</span></div>
-              <div class="progress-row"><span>最近学习</span><span>{{ formatDateTime(courseDetail.learner.lastActivityAt) }}</span></div>
-              <div class="progress-row"><span>已开始 Level</span><span>{{ courseDetail.learner.startedLevelCount }}</span></div>
-              <div class="progress-row"><span>已完成 Level</span><span>{{ courseDetail.learner.completedLevelCount }}</span></div>
-              <div class="progress-row"><span>已开始 Topic</span><span>{{ courseDetail.learner.startedTopicCount }} / {{ courseDetail.learner.totalTopicCount }}</span></div>
-            </div>
-          </div>
-
-          <div class="mini-panel">
-            <h4>学科学级</h4>
-            <div class="tag-list">
-              <span v-for="(level, subject) in courseDetail.learner.subjectLevels" :key="subject" class="tag-pill">{{ subject }} · L{{ level }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mini-panel attempts-panel">
-          <h4>各 Level 完成情况</h4>
-          <div v-if="courseDetail.levels.length === 0" class="empty-state small">暂无课程进度</div>
-          <div v-else class="course-level-list">
-            <article v-for="level in courseDetail.levels" :key="level.levelId" class="course-level-item">
-              <div class="course-level-head">
-                <div>
-                  <strong>{{ level.subject }} · L{{ level.level }} · {{ level.title }}</strong>
-                  <p>{{ level.group || '未分组' }}</p>
-                </div>
-                <span>{{ level.completedChapters }} / {{ level.totalChapters }} · {{ level.completionRate }}%</span>
-              </div>
-              <div class="course-progress-bar">
-                <div class="course-progress-fill" :style="{ width: `${level.completionRate}%` }"></div>
-              </div>
-              <div class="tag-list level-topic-list">
-                <span v-for="topic in level.topics" :key="topic.topicId" class="tag-pill topic-pill">{{ topic.title }} {{ topic.completedCount }}/{{ topic.totalCount }}</span>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        <div class="mini-panel attempts-panel">
-          <h4>最近学习轨迹</h4>
-          <div v-if="courseDetail.recentActivities.length === 0" class="empty-state small">近 30 天暂无学习日志</div>
-          <div v-else class="attempt-list">
-            <article v-for="activity in courseDetail.recentActivities" :key="`${activity.action}-${activity.chapterId}-${activity.sessionDate}`" class="attempt-item">
-              <div class="attempt-head">
-                <strong>{{ formatCourseAction(activity.action) }} · {{ activity.chapterTitle || activity.chapterId }}</strong>
-                <span>{{ formatDateTime(activity.lastActiveAt) }}</span>
-              </div>
-              <p class="attempt-stem">{{ activity.subject }} · L{{ activity.level }} {{ activity.levelTitle }}<span v-if="activity.topicTitle"> · {{ activity.topicTitle }}</span></p>
-              <div class="attempt-meta">
-                <span>日期：{{ activity.sessionDate }}</span>
-                <span v-if="activity.problemId">题目：{{ activity.problemId }}</span>
-                <span v-if="activity.group">分组：{{ activity.group }}</span>
-              </div>
-            </article>
-          </div>
-        </div>
-      </template>
-    </section>
   </div>
 </template>
 
@@ -479,23 +347,6 @@ function createEmptyCourseDashboard() {
   }
 }
 
-function createEmptyQuizDetail() {
-  return {
-    learner: null,
-    recentProgress: [],
-    recentAttempts: [],
-    weakTags: []
-  }
-}
-
-function createEmptyCourseDetail() {
-  return {
-    learner: null,
-    levels: [],
-    recentActivities: []
-  }
-}
-
 export default {
   name: 'TeacherQuizDashboard',
   inject: ['showToastMessage'],
@@ -519,15 +370,11 @@ export default {
       courseDashboard: createEmptyCourseDashboard(),
       courseDashboardLoading: false,
       followSavingId: null,
+      courseRowSavingId: null,
+      courseRowLevelDrafts: {},
       parentShareLoadingId: null,
       parentShareClosingId: null,
       parentShares: [],
-      quizDetail: createEmptyQuizDetail(),
-      quizDetailLoading: false,
-      courseDetail: createEmptyCourseDetail(),
-      courseDetailLoading: false,
-      courseLevelDraft: 1,
-      courseLevelSaving: false,
       detailDays: 14
     }
   },
@@ -592,11 +439,18 @@ export default {
     await Promise.all([this.loadLevels(), this.loadQuizDashboard(), this.loadCourseDashboard(), this.loadParentShares()])
   },
   methods: {
-    createEmptyQuizDetail,
-    createEmptyCourseDetail,
     activeParentShare(learnerId) {
       const targetId = Number(learnerId)
       return this.parentShares.find((item) => Number(item.learnerId) === targetId && item.isActive && !item.isExpired) || null
+    },
+    syncCourseRowDrafts(items = []) {
+      const nextDrafts = {}
+      for (const item of Array.isArray(items) ? items : []) {
+        const learnerId = Number(item?.learnerId)
+        if (!learnerId) continue
+        nextDrafts[learnerId] = Number(item?.currentCppLevel || 1)
+      }
+      this.courseRowLevelDrafts = nextDrafts
     },
     async loadLevels() {
       try {
@@ -628,6 +482,7 @@ export default {
           summary: data?.summary || createEmptyCourseDashboard().summary,
           items: Array.isArray(data?.items) ? data.items : []
         }
+        this.syncCourseRowDrafts(this.courseDashboard.items)
       } catch (e) {
         this.showToastMessage(`加载 Course 看板失败: ${e.message}`)
       } finally {
@@ -711,12 +566,6 @@ export default {
       this.followSavingId = learnerId
       try {
         await request.delete(`/api/quiz/teacher/follows/${learnerId}`)
-        if (Number(this.quizDetail.learner?.learnerId) === learnerId) {
-          this.quizDetail = createEmptyQuizDetail()
-        }
-        if (Number(this.courseDetail.learner?.learnerId) === learnerId) {
-          this.courseDetail = createEmptyCourseDetail()
-        }
         await Promise.all([this.loadQuizDashboard(), this.loadCourseDashboard(), this.loadParentShares()])
         this.showToastMessage(`已取消关注 ${learner.uname || learner.learnerName}`)
       } catch (e) {
@@ -725,27 +574,47 @@ export default {
         this.followSavingId = null
       }
     },
-    async createParentShare(item) {
+    async ensureParentShare(item) {
+      const learnerId = Number(item._id || item.learnerId)
+      if (!learnerId) return ''
+      const existing = this.activeParentShare(learnerId)?.publicUrl || ''
+      if (existing) return existing
+
+      try {
+        const data = await request.post('/api/parent-report/shares', { learnerId })
+        const shareUrl = data?.publicUrl || ''
+        await this.loadParentShares()
+        return shareUrl
+      } catch (e) {
+        this.showToastMessage(`生成家长日报失败: ${e.message}`)
+        return ''
+      }
+    },
+    async openParentReport(item) {
       const learnerId = Number(item._id || item.learnerId)
       if (!learnerId) return
       this.parentShareLoadingId = learnerId
       try {
-        let shareUrl = this.activeParentShare(learnerId)?.publicUrl || ''
-        if (!shareUrl) {
-          const data = await request.post('/api/parent-report/shares', { learnerId })
-          shareUrl = data?.publicUrl || ''
-          await this.loadParentShares()
-        }
-        if (shareUrl && navigator.clipboard?.writeText) {
+        const shareUrl = await this.ensureParentShare(item)
+        if (!shareUrl) return
+        window.open(shareUrl, '_blank', 'noopener,noreferrer')
+      } finally {
+        this.parentShareLoadingId = null
+      }
+    },
+    async copyParentShare(item) {
+      const learnerId = Number(item._id || item.learnerId)
+      if (!learnerId) return
+      this.parentShareLoadingId = learnerId
+      try {
+        const shareUrl = await this.ensureParentShare(item)
+        if (!shareUrl) return
+        if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(shareUrl)
-          this.showToastMessage('家长日报链接已复制')
-        } else if (shareUrl) {
-          this.showToastMessage(`家长日报链接：${shareUrl}`)
+          this.showToastMessage('学员日报链接已复制')
         } else {
-          this.showToastMessage('家长日报链接已生成')
+          this.showToastMessage(`学员日报链接：${shareUrl}`)
         }
-      } catch (e) {
-        this.showToastMessage(`生成家长日报失败: ${e.message}`)
       } finally {
         this.parentShareLoadingId = null
       }
@@ -764,59 +633,43 @@ export default {
         this.parentShareClosingId = null
       }
     },
-    async openQuizDetail(item) {
-      this.quizDetailLoading = true
-      this.quizDetail = createEmptyQuizDetail()
-      try {
-        const data = await request(`/api/quiz/teacher/follows/${item.learnerId}/detail?days=${this.detailDays}`)
-        this.quizDetail = {
-          learner: data?.learner || null,
-          recentProgress: Array.isArray(data?.recentProgress) ? data.recentProgress : [],
-          recentAttempts: Array.isArray(data?.recentAttempts) ? data.recentAttempts : [],
-          weakTags: Array.isArray(data?.weakTags) ? data.weakTags : []
-        }
-      } catch (e) {
-        this.showToastMessage(`加载 Quiz 详情失败: ${e.message}`)
-      } finally {
-        this.quizDetailLoading = false
+    getCourseRowDraft(item) {
+      const learnerId = Number(item?.learnerId)
+      const draft = this.courseRowLevelDrafts[learnerId]
+      return Number.isFinite(Number(draft)) && Number(draft) > 0 ? Number(draft) : Number(item?.currentCppLevel || 1)
+    },
+    updateCourseRowDraft(learnerId, level) {
+      const targetId = Number(learnerId)
+      const nextLevel = Number(level)
+      this.courseRowLevelDrafts = {
+        ...this.courseRowLevelDrafts,
+        [targetId]: nextLevel
       }
     },
-    async openCourseDetail(item) {
-      this.courseDetailLoading = true
-      this.courseDetail = createEmptyCourseDetail()
-      try {
-        const data = await request(`/api/course/teacher/follows/${item.learnerId}/detail`)
-        this.courseDetail = {
-          learner: data?.learner || null,
-          levels: Array.isArray(data?.levels) ? data.levels : [],
-          recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : []
-        }
-        this.courseLevelDraft = Number(this.courseDetail.learner?.currentCppLevel || 1)
-      } catch (e) {
-        this.showToastMessage(`加载 Course 详情失败: ${e.message}`)
-      } finally {
-        this.courseDetailLoading = false
-      }
-    },
-    async saveCurrentCourseLevel() {
-      const learnerId = Number(this.courseDetail.learner?.learnerId)
-      const level = Number(this.courseLevelDraft)
+    async saveCourseRowLevel(item) {
+      const learnerId = Number(item?.learnerId)
+      const level = Number(this.getCourseRowDraft(item))
       if (!learnerId || !Number.isInteger(level)) return
 
-      this.courseLevelSaving = true
+      this.courseRowSavingId = learnerId
       try {
         const data = await request.put(`/api/course/teacher/follows/${learnerId}/current-level`, { level })
-        this.courseDetail = {
-          ...this.courseDetail,
-          learner: data?.learner || this.courseDetail.learner
+        const learner = data?.learner || null
+        this.courseDashboard = {
+          ...this.courseDashboard,
+          items: this.courseDashboard.items.map((entry) => (
+            Number(entry?.learnerId) === learnerId
+              ? { ...entry, ...(learner || {}), learnerId }
+              : entry
+          ))
         }
-        this.courseLevelDraft = Number(this.courseDetail.learner?.currentCppLevel || level)
+        this.updateCourseRowDraft(learnerId, learner?.currentCppLevel || level)
         await this.loadCourseDashboard()
         this.showToastMessage(`已将当前 C++ 等级设置为 L${level}`)
       } catch (e) {
         this.showToastMessage(`设置当前等级失败: ${e.message}`)
       } finally {
-        this.courseLevelSaving = false
+        this.courseRowSavingId = null
       }
     },
     formatDateTime(value) {
@@ -1150,6 +1003,26 @@ export default {
   gap: 4px;
 }
 
+.course-level-cell {
+  min-width: 180px;
+}
+
+.inline-level-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.inline-level-editor select {
+  min-width: 84px;
+  border: 1px solid #c9d5e3;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: #fff;
+}
+
 .name-cell span,
 .attempt-meta {
   color: #6a7a89;
@@ -1296,6 +1169,12 @@ export default {
   }
 
   .candidate-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inline-level-editor {
+    width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
