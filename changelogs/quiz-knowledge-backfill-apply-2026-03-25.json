@@ -1,0 +1,596 @@
+{
+  "generatedAt": "2026-03-25T09:11:36.137Z",
+  "source": "gesp",
+  "apply": true,
+  "excludedTags": [
+    "环",
+    "函数",
+    "字符串",
+    "模拟",
+    "构造"
+  ],
+  "limit": null,
+  "summary": {
+    "scanned": 1900,
+    "candidates": 331,
+    "updated": 331,
+    "skipped": 1569
+  },
+  "topSuggestedTags": [
+    {
+      "tag": "递归",
+      "count": 82
+    },
+    {
+      "tag": "排序",
+      "count": 69
+    },
+    {
+      "tag": "链表",
+      "count": 48
+    },
+    {
+      "tag": "栈",
+      "count": 40
+    },
+    {
+      "tag": "DP",
+      "count": 35
+    },
+    {
+      "tag": "队列",
+      "count": 21
+    },
+    {
+      "tag": "BFS",
+      "count": 21
+    },
+    {
+      "tag": "二分",
+      "count": 20
+    },
+    {
+      "tag": "二维数组",
+      "count": 20
+    },
+    {
+      "tag": "分治",
+      "count": 20
+    },
+    {
+      "tag": "结构体",
+      "count": 19
+    },
+    {
+      "tag": "位运算",
+      "count": 19
+    },
+    {
+      "tag": "递推",
+      "count": 18
+    },
+    {
+      "tag": "哈希",
+      "count": 17
+    },
+    {
+      "tag": "贪心",
+      "count": 17
+    },
+    {
+      "tag": "DFS",
+      "count": 16
+    },
+    {
+      "tag": "循环结构",
+      "count": 13
+    },
+    {
+      "tag": "数学函数",
+      "count": 8
+    },
+    {
+      "tag": "优先队列",
+      "count": 7
+    },
+    {
+      "tag": "最小生成树",
+      "count": 5
+    },
+    {
+      "tag": "素数筛",
+      "count": 4
+    },
+    {
+      "tag": "一维数组",
+      "count": 4
+    },
+    {
+      "tag": "质因数分解",
+      "count": 3
+    },
+    {
+      "tag": "组合数学",
+      "count": 3
+    },
+    {
+      "tag": "分块",
+      "count": 2
+    },
+    {
+      "tag": "高精度",
+      "count": 2
+    },
+    {
+      "tag": "平衡树",
+      "count": 2
+    },
+    {
+      "tag": "顺序结构",
+      "count": 2
+    },
+    {
+      "tag": "拓扑排序",
+      "count": 2
+    },
+    {
+      "tag": "条件结构",
+      "count": 2
+    }
+  ],
+  "samples": [
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q1",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "数学函数"
+      ],
+      "stemPreview": "定义变量 $double\\ x$ ，如果下⾯代码输⼊为 $100$ ，输出最接近( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q2",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "DP"
+      ],
+      "stemPreview": "对于下⾯动态规划⽅法实现的函数，以下选项中最适合表达其状态转移函数 的为( )。"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q3",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "DP"
+      ],
+      "stemPreview": "下⾯代码可以⽤来求最长上升⼦序列（ $LIS$ ）的长度，如果输⼊是： $5\\ 1\\ 7\\ 3\\ 5\\ 9$ ，则输出是( )。"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q6",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "哈希"
+      ],
+      "stemPreview": "哈希表长 $31$ ，按照下⾯的程序依次输⼊ $4\\ 17\\ 28\\ 30\\ 4$ ，则最后的 $4$ 存⼊哪个位置？"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q7",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "递归"
+      ],
+      "stemPreview": "某⼆叉树 $T$ 的先序遍历序列为： ${A\\ B\\ D\\ F\\ C\\ E\\ G\\ H}$ ，中序遍历序列为： ${B\\ F\\ D\\ A\\ G\\ E\\ H\\ C}$ ，则下列说法中正确的是( )。"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q8",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "一维数组",
+        "递推",
+        "DP"
+      ],
+      "stemPreview": "下⾯代码段可以求两个字符串 $s1$ 和 $s2$ 的最长公共⼦串（ $LCS$ ） ，下列相关描述不正确的是（ ）"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q9",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "栈",
+        "队列",
+        "BFS",
+        "哈希",
+        "优先队列"
+      ],
+      "stemPreview": "图的广度优先搜索中既要维护一个标志数组标志已访问的图的结点，还需哪 种结构存放结点以实现遍历？( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q10",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "哈希"
+      ],
+      "stemPreview": "对关键字序列 ${44， 36，23， 35， 52，73，90， 58}$ 建⽴哈希表 ， 哈希函数为 $h(k)=k%7$ ，执⾏下⾯的 $Insert$ 函数 ，则等概率情况下的平均成功查找长度（即查找成功时的关键字⽐较次数的均值）为"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q11",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "递归",
+        "DFS",
+        "BFS",
+        "DP",
+        "拓扑排序"
+      ],
+      "stemPreview": "学⽣在读期间所上的某些课程中需要先上其他的课程 ，所有课程和课程间的先修关系构成⼀个有向图 $G$ ，有向边 $$ 表⽰课程 $U$ 是课程 $V$ 的先修课，则要找到某门课程 $C$ 的全部先修课下⾯哪种⽅法不可⾏？ ( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q13",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "算法复杂度",
+        "链表"
+      ],
+      "stemPreview": "⽤下⾯的邻接表结构保存⼀个有向图 $G$ ， $InfoType$ 和 $VertexType$ 是定义好的类。设 $G$ 有 $n$ 个顶点、 $e$ 条弧，则求图 $G$ 中某个顶点 $u$ （其顶点序号为 $k$ ）的度的算法复杂度是"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q14",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "递归",
+        "栈",
+        "队列",
+        "DFS",
+        "BFS",
+        "拓扑排序"
+      ],
+      "stemPreview": "给定⼀个简单有向图 $G$ ，判断其中是否存在环路的下列说法哪个最准确？( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q15",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "队列",
+        "BFS"
+      ],
+      "stemPreview": "从顶点 $v1$ 开始遍历下图 $G$ 得到顶点访问序列 ，在下⾯所给的 $4$ 个序列中符合⼴度优先的序列有⼏个？ ( ) $\\{v1\\ v2\\ v3\\ v4\\ v5\\} ， \\{v1\\ v2\\ v4\\ v3\\ v5\\} ， \\{v1\\ "
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q17",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "递归"
+      ],
+      "stemPreview": "⼩杨在开发画笔刷⼩程序( $applet$ )，操作之⼀是选中黄颜⾊，然后在下⾯的左图的中间区域双击后，就变成了右图。这个操作可以⽤图的泛洪算法来实现。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q19",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "DP"
+      ],
+      "stemPreview": "给定⼀个数字序列 $A1，A2，A3， ...，An$ ，要求 $i$ 和 $j$ （$1<=i<=j<=n $)，使 $A i+…+Aj$ 最⼤，可以使⽤动态规划⽅法来求解 。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q21",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "二维数组",
+        "链表"
+      ],
+      "stemPreview": "简单有向图有 $n$ 个顶点和 $e$ 条弧 ，可以⽤邻接矩阵或邻接表来存储 ，⼆者求节点 $u$ 的度的时间复杂度⼀ 样 。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q22",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "哈希"
+      ],
+      "stemPreview": "某个哈希表键值 $x$ 为整数，为其定义哈希函数 $H(x)=x%p$ ，则 $p$ 选择素数时不会产⽣冲突 。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q23",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "递归",
+        "栈",
+        "DP"
+      ],
+      "stemPreview": "动态规划只要推导出状态转移⽅程，就可以写出递归程序来求出最优解。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-7-q24",
+      "source": "gesp",
+      "type": "judge",
+      "levelTag": "gesp7",
+      "sourceTitle": "GESP-C++-2023年12月七级真题卷GESP-C++-2023年12月七级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "BFS"
+      ],
+      "stemPreview": "⼴度优先搜索（ $BFS$ ）能够判断图是否连通 。( )"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q1",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "循环结构",
+        "递归",
+        "栈"
+      ],
+      "stemPreview": "下面 $C++$ 代码用于求斐波那契数列，该数列第 $1$ 、 $2$ 项为 $1$ ，以后各项均是前两项之和。下面有关说法错误 的是( )。 cpp int fiboA(int N) { if(N == 1 || N==2) return"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q2",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "递归"
+      ],
+      "stemPreview": "下面 $C++$ 代码以递归方式实现合并排序，并假设 merge (int T[], int R[], int s, int m, int t) 函数将有序（同样排序规则）的 $T[s...m]$ 和 $T[m+1...t]$ 归并到 $T"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q3",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "递归"
+      ],
+      "stemPreview": "阅读下面的 $C++$ 代码，执行后其输出是( )。 cpp int stepCount = 0; int fracA(int N) { stepCount += 1; cout << stepCount <<\"->\"; int rtn=1"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q4",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序"
+      ],
+      "stemPreview": "下面的 $C++$ 用于对 lstA 排序，使得偶数在前奇数在后，横线处应填入( ) cpp bool isEven(int N) { return N % 2 == 0; } void swap(int &a, int &b) { int"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q5",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "结构体",
+        "链表"
+      ],
+      "stemPreview": "下面的 $C++$ 代码用于将字符串保存到带头节点的双向链表中，并对重复的串计数，然后将最新访问的串的节点放在链头便于查找。横线处应填入代码是（ ）。 cpp typedef struct Node{ string str; int ref"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q6",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "递归"
+      ],
+      "stemPreview": "有关下面 $C++$ 代码说法正确的是（ ）。 cpp int rc; int foo(int x, int y) { int r; if(y == 0) r = x; else{ r = foo(y, x % y); rc++; } re"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q7",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "递归"
+      ],
+      "stemPreview": "下面的 $C++$ 代码实现对 list 的快速排序，有关说法，错误的是（ ）。 cpp vector<int> operator +(vector<int>lA,vector<int>lB) { vector<int>lst; for(i"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q9",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "二分",
+        "分治",
+        "递归",
+        "DP"
+      ],
+      "stemPreview": "下面 $C++$ 代码用于有序 list 的二分查找，有关说法错误的是（ ）。 cpp int _binarySearch(vector<int>lst, int Low, int High, int Target) { if(Low > "
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q10",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "二分"
+      ],
+      "stemPreview": "在上题的 _binarySearch 算法中，如果 lst 中有 $N$ 个元素，其时间复杂度是（ ）。"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q12",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "链表"
+      ],
+      "stemPreview": "有关下面 $C++$ 代码的说法正确的是（ ）。 cpp class Node { public: int Value; Node* Prev; Node* Next; Node(int Val, Node* Prv = NULL, Nod"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q14",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "二分"
+      ],
+      "stemPreview": "小杨想编写一个判断任意输入的整数 $N$ 是否为素数的程序，下面哪个方法不合适？（ ）"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-5-q15",
+      "source": "gesp",
+      "type": "single",
+      "levelTag": "gesp5",
+      "sourceTitle": "GESP-C++-2023年12月五级真题卷GESP-C++-2023年12月五级真题卷",
+      "rawTags": [
+        "GESP"
+      ],
+      "suggestedTags": [
+        "排序",
+        "分治",
+        "递归"
+      ],
+      "stemPreview": "下面的排序算法都要处理多趟数据，哪种排序算法不能保证在下一趟处理时从待处理数据中选出最大或最小的数据？（ ）"
+    }
+  ]
+}

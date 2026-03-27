@@ -69,6 +69,9 @@
       <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">
         📦 批量下载
       </button>
+      <button class="btn-secondary btn-sm" @click="downloadPendingRawMaterials" :disabled="isBatchRunning || !hasPendingRawMaterialTasks">
+        📥 下载未生成素材
+      </button>
     </div>
   </div>
 
@@ -118,6 +121,9 @@
         <div class="detail-actions">
           <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
             {{ isGenerating ? '⏳ 生成中...' : '⚡ 一键生成' }}
+          </button>
+          <button @click="downloadCurrentRawMaterials" :disabled="!currentTaskHasRawMaterials" class="btn-secondary btn-sm">
+            📥 下载原始素材
           </button>
           <button @click="runAndDownload" :disabled="!(manualCode || codeOutput) || !dataOutput" class="btn-secondary btn-sm">
             📦 下载项目包
@@ -299,7 +305,7 @@ import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
 import { loadJsZip } from '../utils/loadJsZip'
 import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
 import { buildBatchReportRequest, getPendingBatchTaskEntries, runBatchTasks } from '../modules/solvedata/batchHelpers'
-import { blobToBase64, createBatchExportBundle } from '../modules/solvedata/exportHelpers'
+import { blobToBase64, createBatchExportBundle, createRawMaterialsExportBundle, hasTaskPendingRawMaterials, hasTaskRawMaterials } from '../modules/solvedata/exportHelpers'
 import { buildMetaRequestPayload, buildSolutionReportPayload, buildSolutionRequestConfig, createInitialGenerationSteps, mergeGeneratedMeta, resolveDataGenerationInput } from '../modules/solvedata/generationHelpers'
 import { createExtensionImportedTask, createFetchedProblemTask, getExtensionImportSuccessMessage, mergeImportedTasks, normalizeExtensionImportRequest, readFolderImportedTasks } from '../modules/solvedata/importHelpers'
 import { buildReportAutoSolutionPrompt, extractStreamingFieldPreview, hasResolvedMetaTitle, mergeTranslationMeta } from '../modules/solvedata/translationReportHelpers'
@@ -474,6 +480,12 @@ export default {
     },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
+    },
+    hasPendingRawMaterialTasks() {
+      return this.tasks.some(task => hasTaskPendingRawMaterials(task))
+    },
+    currentTaskHasRawMaterials() {
+      return hasTaskRawMaterials(this.tasks[this.currentTaskIndex])
     }
   },
   methods: {
@@ -1361,46 +1373,103 @@ export default {
           },
         })
 
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-
-        a.download = zipName
-        document.body.appendChild(a) // Firefox requires appending to body
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-
-        // 静默发送邮件：将 zip 转为 base64 并调用后端
-        try {
-          const base64 = await blobToBase64(blob)
-
-          const filename = zipName
-          const subject = `SolveData 批量导出: ${zipName}`
-
-          fetch('/api/send-package', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
-            body: JSON.stringify({ filename, contentBase64: base64, subject })
-          })
-          .then(async res => {
-            if (!res.ok) {
-              const err = await res.json();
-              console.warn('邮件发送失败:', err);
-            } else {
-                this.showToastMessage('✅ 批量导出成功');
-            }
-          })
-          .catch(e => console.error('邮件请求错误:', e))
-        } catch (e) {
-          console.error('邮件准备失败:', e);
-        }
+        this.downloadBlob(blob, zipName)
+        this.sendPackageEmail(blob, zipName, `SolveData 批量导出: ${zipName}`, '✅ 批量导出成功')
       } catch (e) {
         console.error('Batch download failed', e)
         this.showToastMessage('批量下载失败: ' + e.message)
+      }
+    },
+
+    async downloadPendingRawMaterials() {
+      const pendingTasks = this.tasks.filter(task => hasTaskPendingRawMaterials(task))
+      if (pendingTasks.length === 0) {
+        this.showToastMessage('没有可下载的未生成素材任务')
+        return
+      }
+
+      try {
+        const JSZip = await loadJsZip()
+        const { blob, zipName } = await createRawMaterialsExportBundle({
+          JSZip,
+          tasks: pendingTasks,
+          helperApi: {
+            storage: localStorage,
+            getSmartTitle: (meta, text, id) => this.getSmartTitle(meta, text, id),
+            detectLanguage: (codeOutput) => this.detectLanguage(codeOutput),
+            getBestCodeContent: (codeOutput, manualCode) => this.getBestCodeContent(codeOutput, manualCode),
+          },
+        })
+
+        this.downloadBlob(blob, zipName)
+        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 未生成素材已打包下载')
+      } catch (error) {
+        console.error('Pending raw materials download failed', error)
+        this.showToastMessage('未生成素材下载失败: ' + error.message)
+      }
+    },
+
+    async downloadCurrentRawMaterials() {
+      const currentTask = this.tasks[this.currentTaskIndex]
+      if (!hasTaskRawMaterials(currentTask)) {
+        this.showToastMessage('当前任务没有可下载的原始素材')
+        return
+      }
+
+      try {
+        const JSZip = await loadJsZip()
+        const { blob, zipName } = await createRawMaterialsExportBundle({
+          JSZip,
+          tasks: [currentTask],
+          helperApi: {
+            storage: localStorage,
+            getSmartTitle: (meta, text, id) => this.getSmartTitle(meta, text, id),
+            detectLanguage: (codeOutput) => this.detectLanguage(codeOutput),
+            getBestCodeContent: (codeOutput, manualCode) => this.getBestCodeContent(codeOutput, manualCode),
+          },
+        })
+
+        this.downloadBlob(blob, zipName)
+        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 原始素材已打包下载')
+      } catch (error) {
+        console.error('Current raw materials download failed', error)
+        this.showToastMessage('原始素材下载失败: ' + error.message)
+      }
+    },
+
+    downloadBlob(blob, fileName) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
+
+    async sendPackageEmail(blob, filename, subject, successToast = '') {
+      try {
+        const base64 = await blobToBase64(blob)
+        fetch('/api/send-package', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+          },
+          body: JSON.stringify({ filename, contentBase64: base64, subject })
+        })
+          .then(async res => {
+            if (!res.ok) {
+              const err = await res.json()
+              console.warn('邮件发送失败:', err)
+              return
+            }
+            if (successToast) this.showToastMessage(successToast)
+          })
+          .catch(e => console.error('邮件请求错误:', e))
+      } catch (error) {
+        console.error('邮件准备失败:', error)
       }
     },
 
@@ -2431,51 +2500,9 @@ export default {
         }
 
         const blob = await zip.generateAsync({ type: 'blob' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        
         const zipName = `${problemTitle}.zip`
-        a.download = zipName
-        a.click()
-        URL.revokeObjectURL(url)
-
-        // 静默发送邮件
-        try {
-          const base64 = await (async () => {
-            const reader = new FileReader()
-            const p = new Promise((resolve, reject) => {
-              reader.onload = () => resolve(reader.result)
-              reader.onerror = reject
-            })
-            reader.readAsDataURL(blob)
-            const dataUrl = await p
-            const str = typeof dataUrl === 'string' ? dataUrl : ''
-            const commaIdx = str.indexOf(',')
-            return commaIdx >= 0 ? str.substring(commaIdx + 1) : str
-          })()
-
-          const filename = zipName
-          const subject = `SolveData 项目包: ${problemTitle}`
-
-          fetch('/api/send-package', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-            },
-            body: JSON.stringify({ filename, contentBase64: base64, subject })
-          })
-          .then(async res => {
-            if (!res.ok) {
-              const err = await res.json();
-              console.warn('邮件发送失败:', err);
-            }
-          })
-          .catch(e => console.error('邮件请求错误:', e))
-        } catch (e) {
-          console.error('邮件准备失败:', e);
-        }
+        this.downloadBlob(blob, zipName)
+        this.sendPackageEmail(blob, zipName, `SolveData 项目包: ${problemTitle}`)
         
         this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';
         this.showToast = true;

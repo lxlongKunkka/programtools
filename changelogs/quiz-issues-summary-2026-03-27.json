@@ -1,0 +1,480 @@
+﻿{
+  "count": 18,
+  "items": [
+    {
+      "questionUid": "gesp-2024-09-cpp-1-q4",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "鏁板鍩虹"
+      ],
+      "stemPreview": "C++琛ㄨ揪寮?10 - 3 * 2 鐨勫€兼槸( )銆?,
+      "count": 8,
+      "issueTypes": [
+        "other",
+        "wrong_answer",
+        "wrong_options"
+      ],
+      "details": [
+        "娌℃湁绛旀",
+        "娌℃湁瑙ｆ瀽锛屽洓涓瓟妗堥兘涓嶅",
+        "10-6 涓嶆槸 4 鍚?,
+        "娌℃湁姝ｇ‘鐨勯€夐」鍟?,
+        "閫変粈涔堥兘涓嶅",
+        "鏃犺鍝釜閫夐」閮戒笉瀵癸紝鎸ㄤ釜璇曚篃鍏ㄩ敊"
+      ],
+      "reporters": [
+        "瀛欏槈褰?,
+        "鍏冩緢",
+        "鐜嬫姝?,
+        "瀛欏紜鐒?,
+        "鑲栨鏋?,
+        "钁ｈ嚧杩?,
+        "闄堜繆璞?,
+        "鏈辨尟鍥?
+      ],
+      "reportedAt": "2026-03-25T07:16:06.767Z"
+    },
+    {
+      "questionUid": "gesp-2024-09-cpp-3-q20",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "false",
+      "enabled": true,
+      "reviewStatus": "reviewed",
+      "levelTag": "gesp3",
+      "tags": [
+        "椤哄簭缁撴瀯"
+      ],
+      "stemPreview": "鍒楃▼搴忚緭鍑虹殑鏄?A 銆傦紙 锛?cpp char x=65; x++; cout<<x++<<endl;",
+      "count": 2,
+      "issueTypes": [
+        "other",
+        "wrong_options"
+      ],
+      "details": [
+        "鏃犻€夐」",
+        "娌?鏈?閫?椤?
+      ],
+      "reporters": [
+        "鏉庨噾閾?,
+        "鐜嬫姝?
+      ],
+      "reportedAt": "2026-03-25T12:38:25.797Z"
+    },
+    {
+      "questionUid": "downloads-1015-q19",
+      "source": "downloads",
+      "sourceTitle": "1015 - NOIP 2014 鏅強缁勫垵璧涜瘯棰?,
+      "type": "single",
+      "answer": "B",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp4",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "noip",
+        "beginner",
+        "寰幆缁撴瀯",
+        "妯℃嫙"
+      ],
+      "stemPreview": "鑻ユ湁濡備笅绋嬪簭娈碉紝鍏朵腑s,a,b,c鍧囧凡瀹氫箟涓烘暣鍨嬪彉閲忥紝涓攁,c鍧囧凡璧嬪€硷紝c>0銆?鍒欎笌涓婅堪绋嬪簭娈靛姛鑳界瓑浠风殑璧嬪€艰鍙ユ槸锛?锛?,
+      "count": 1,
+      "issueTypes": [
+        "other"
+      ],
+      "details": [
+        "娌℃湁绋嬪簭娈?
+      ],
+      "reporters": [
+        "鑲栨鏋?
+      ],
+      "reportedAt": "2026-03-25T14:02:28.827Z"
+    },
+    {
+      "questionUid": "downloads-1102-q18",
+      "source": "downloads",
+      "sourceTitle": "1102 - GESP 浜岀骇鏍烽锛圕++ 缁勶級",
+      "type": "judge",
+      "answer": "B",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp2",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "gesp",
+        "sample",
+        "椤哄簭缁撴瀯"
+      ],
+      "stemPreview": "C++ 璇█涓紝娉ㄩ噴铏界劧寰堟湁鐢紝浣嗕笉鑳藉啓澶锛屽惁鍒欎細鎷栨參绋嬪簭杩愯閫熷害銆傦紙 锛?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "闄堜繆璞?
+      ],
+      "reportedAt": "2026-03-25T14:20:28.713Z"
+    },
+    {
+      "questionUid": "downloads-1103-q13",
+      "source": "downloads",
+      "sourceTitle": "1103 - GESP 涓夌骇鏍烽锛圕++ 缁勶級",
+      "type": "single",
+      "answer": "D",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp3",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "gesp",
+        "sample",
+        "椤哄簭缁撴瀯",
+        "鏉′欢缁撴瀯",
+        "寰幆缁撴瀯"
+      ],
+      "stemPreview": "涓嬮潰娴佺▼鍥撅紝杈撳叆 1 2 3锛屼細杈撳嚭锛?锛?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鏉庢辰璧?
+      ],
+      "reportedAt": "2026-03-23T14:35:54.377Z"
+    },
+    {
+      "questionUid": "downloads-1103-q4",
+      "source": "downloads",
+      "sourceTitle": "1103 - GESP 涓夌骇鏍烽锛圕++ 缁勶級",
+      "type": "single",
+      "answer": "C",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp3",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "gesp",
+        "sample",
+        "涓€缁存暟缁?
+      ],
+      "stemPreview": "鑻ユ湁浠ヤ笅浠ｇ爜锛屽垯鏁扮粍 arr 鐨勯暱搴︽槸锛?锛夛紵",
+      "count": 1,
+      "issueTypes": [
+        "ambiguous"
+      ],
+      "details": [],
+      "reporters": [
+        "榛勫湥娑?
+      ],
+      "reportedAt": "2026-03-25T10:24:07.752Z"
+    },
+    {
+      "questionUid": "downloads-1104-q23",
+      "source": "downloads",
+      "sourceTitle": "1104 - GESP 鍥涚骇鏍烽锛圕++ 缁勶級",
+      "type": "judge",
+      "answer": "B",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp4",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "gesp",
+        "sample",
+        "椤哄簭缁撴瀯"
+      ],
+      "stemPreview": "& 鍜?&& 閮芥槸 C++ 璇█鐨勮繍绠楃锛? 鍜?** 涔熼兘鏄€傦紙 锛?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鏉庝紵姣?
+      ],
+      "reportedAt": "2026-03-25T13:06:07.116Z"
+    },
+    {
+      "questionUid": "downloads-1109-q3",
+      "source": "downloads",
+      "sourceTitle": "1109 - 2024 BCSP-X 涓嬪崐骞存椿鍔ㄥ熀纭€鐭ヨ瘑娴嬭瘎锛堝皬瀛︿綆骞寸骇缁勶級",
+      "type": "single",
+      "answer": "B",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "csp",
+        "bcsp",
+        "鏁板鍩虹",
+        "椤哄簭缁撴瀯"
+      ],
+      "stemPreview": "浣犲幓瓒呭競涔扮熆娉夋按锛屽彂鐜拌秴甯傚湪杩涜淇冮攢娲诲姩锛氫拱 3 鐡堕€?1 鐡讹紝鍋囪涓€鐡剁熆娉夋按 1 鍏冿紝浣犳墜閲屾湁 x 鍏冿紙x 鏄鏁存暟锛夛紝浠ヤ笅鍝釜 C++ 鐨勮〃杈惧紡鑳藉璁＄畻鍑烘渶澶氬彲浠ヨ喘涔板灏戠摱鐭挎硥姘达細锛?锛?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "kunkka"
+      ],
+      "reportedAt": "2026-03-27T01:55:19.795Z"
+    },
+    {
+      "questionUid": "gesp-2023-09-cpp-3-q17",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2023骞?鏈堜笁绾х湡棰樺嵎GESP-C++-2023骞?鏈堜笁绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp3",
+      "tags": [
+        "GESP",
+        "浣嶈繍绠?
+      ],
+      "stemPreview": "鍦–++璇█涓紝浣嶈繍绠楃涔熸湁绫讳技鈥滃厛涔橀櫎銆佸悗鍔犲噺鈥濈殑浼樺厛绾ц鍒欍€傚洜姝わ紝浣跨敤鏃跺簲娉ㄦ剰鍚堢悊浣跨敤鎷彿銆?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鏉庝紵姣?
+      ],
+      "reportedAt": "2026-03-24T13:09:08.733Z"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q21",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2023骞?2鏈堝叚绾х湡棰樺嵎GESP-C++-2023骞?2鏈堝叚绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "false",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp6",
+      "tags": [
+        "GESP",
+        "鏍?
+      ],
+      "stemPreview": "鍦ㄤ笅闈?$C++$ 浠ｇ爜涓紝鐢变簬鍒犻櫎浜嗗彉閲?ptr 锛屽洜姝?ptr 鎵€瀵瑰簲鐨勬暟鎹篃闅忎箣鍒犻櫎锛屾晠绗?$8$ 琛屼唬鐮佽鎵ц鏃讹紝灏嗘姤閿欍€傦紙 锛?cpp int * ptr=new int(10); cout<<ptr<<endl; delete ptr; cout<<ptr<<endl;",
+      "count": 1,
+      "issueTypes": [
+        "other"
+      ],
+      "details": [
+        "鍙湁鍥涜浠ｇ爜"
+      ],
+      "reporters": [
+        "鏉庣汗钀?
+      ],
+      "reportedAt": "2026-03-24T13:45:20.699Z"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q7",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2023骞?2鏈堝叚绾х湡棰樺嵎GESP-C++-2023骞?2鏈堝叚绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "B",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp6",
+      "tags": [
+        "GESP",
+        "鎺掑簭"
+      ],
+      "stemPreview": "瀵?$hello$ $world$ 浣跨敤闇嶅か鏇肩紪鐮侊紙 $Huffman$ $Coding$ 锛夛紝鏈€灏?$bit$ 锛堟瘮鐗癸級涓猴紙 锛夈€?,
+      "count": 1,
+      "issueTypes": [
+        "formatting"
+      ],
+      "details": [
+        "瑙ｆ瀽閲岀殑鍝堝か鏇兼爲鏄繖鏍风殑锛歕n(鏍硅妭鐐?11)\n/0 \\1\n(wrd_space:4) (lohe:7)\n/0 \\1 /0 \\1\n(wr:2)(d_space:2) (l:3) (ohe:4)\n/0 \\1 /0 \\1 /0 \\1\n(w:1)(r:1)(d:1)(' ':1) (o:2) (he:2)\n/0 \\1\n(h:1)(e:1)"
+      ],
+      "reporters": [
+        "鏉庣汗钀?
+      ],
+      "reportedAt": "2026-03-25T16:08:31.997Z"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-1-q11",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "D",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "GESP"
+      ],
+      "stemPreview": "涓嬧警鍏充簬鏁村瀷鍙橀噺int x鐨勮祴鍊艰鍙ヤ笉姝ｇ‘鏄? )銆?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_options"
+      ],
+      "details": [],
+      "reporters": [
+        "鐜嬩繚璇楄埅66"
+      ],
+      "reportedAt": "2026-03-25T12:52:50.919Z"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-3-q15",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "C",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp3",
+      "tags": [
+        "GESP"
+      ],
+      "stemPreview": "涓浗璁＄畻鏈哄浼氾紙CCF锛?鍦?024骞?饨?27饨?鐨勯濂栧吀绀间笂棰佸竷浜嗙帇閫夊锛?鐜嬮€夊厛饨ｇ殑閲嶁激璐＄尞鏄紙 锛?銆?,
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鏉庝紵姣?
+      ],
+      "reportedAt": "2026-03-24T13:09:47.441Z"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-3-q21",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎GESP-C++-2024骞?鏈堜笁绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "true",
+      "enabled": true,
+      "reviewStatus": "reviewed",
+      "levelTag": "gesp3",
+      "tags": [
+        "GESP"
+      ],
+      "stemPreview": "鎵р緩涓嬧警C++浠ｇ爜鍚庡皢杈撳嚭 2 銆?锛?锛?cpp int main() { string str=\"gEsP is Interesting\"; int x = str.find(\"s\"); cout << x << endl; cout << endl; return 0; }",
+      "count": 1,
+      "issueTypes": [
+        "wrong_options"
+      ],
+      "details": [
+        "娌￠€夐」"
+      ],
+      "reporters": [
+        "榛勫湥娑?
+      ],
+      "reportedAt": "2026-03-25T12:10:27.692Z"
+    },
+    {
+      "questionUid": "gesp-2024-06-cpp-1-q2",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "D",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "GESP"
+      ],
+      "stemPreview": "C++琛ㄨ揪寮?3 - 3 * 3 / 5 鐨勫€兼槸( )",
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鍚村郴涓?
+      ],
+      "reportedAt": "2026-03-24T14:08:46.232Z"
+    },
+    {
+      "questionUid": "gesp-2024-12-cpp-1-q3",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎",
+      "type": "single",
+      "answer": "A",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "GESP"
+      ],
+      "stemPreview": "鏈夊叧涓嬪垪C++浠ｇ爜鐨勮娉?锛屾纭殑鏄? )銆?cpp printf(\"Hello,GESP!\");",
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鍏冩緢"
+      ],
+      "reportedAt": "2026-03-25T11:20:59.928Z"
+    },
+    {
+      "questionUid": "gesp-2024-12-cpp-3-q20",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2024骞?2鏈堜笁绾х湡棰樺嵎GESP-C++-2024骞?2鏈堜笁绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "true",
+      "enabled": true,
+      "reviewStatus": "reviewed",
+      "levelTag": "gesp3",
+      "tags": [
+        "GESP",
+        "浣嶈繍绠?
+      ],
+      "stemPreview": "涓嬪垪绋嬪簭杈撳嚭鐨勬槸 A 锛?锛?cpp char x=65; x=x&00001111; cout<<x<<endl;",
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鐜嬫旦瀹?"
+      ],
+      "reportedAt": "2026-03-26T07:54:05.762Z"
+    },
+    {
+      "questionUid": "gesp-2025-03-cpp-1-q22",
+      "source": "gesp",
+      "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+      "type": "judge",
+      "answer": "true",
+      "enabled": true,
+      "reviewStatus": "pending",
+      "levelTag": "gesp1",
+      "tags": [
+        "鏉′欢缁撴瀯"
+      ],
+      "stemPreview": "涓嬮潰鐨?C++ 浠ｇ爜鎵ц鍚庡皢鍏堝悗杈撳嚭 7 涓?true銆傦紙 锛?cpp for (int i = 0; i < 10; i++) cout << (i * 2 < i * i) << \" \";",
+      "count": 1,
+      "issueTypes": [
+        "wrong_answer"
+      ],
+      "details": [],
+      "reporters": [
+        "鍏冩緢"
+      ],
+      "reportedAt": "2026-03-26T13:04:46.031Z"
+    }
+  ]
+}

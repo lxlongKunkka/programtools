@@ -13,6 +13,8 @@
     "rebuild:course-progress": "node server/scripts/rebuild-course-progress.js",
     "import:gesp-objective-bank": "node server/scripts/import-gesp-objective-bank.js",
     "tag:quiz-knowledge": "node server/scripts/enrich-quiz-knowledge-tags.js",
+    "audit:quiz-knowledge": "node server/scripts/audit-quiz-knowledge-tags.js",
+    "backfill:quiz-knowledge": "node server/scripts/backfill-quiz-knowledge-from-text.js",
     "export:gesp-objective-bank": "node server/scripts/import-gesp-objective-bank.js --export-only --out-dir=server/temp_gesp/objective_bank_export",
     "deploy": "node deploy.mjs",
     "deploy:rotate-jwt": "cross-env ROTATE_JWT_SECRET=1 node deploy.mjs"

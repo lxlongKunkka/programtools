@@ -309,7 +309,7 @@ router.get('/:token', async (req, res) => {
     const learnerId = Number(share.learnerId)
     const [quiz, course] = await Promise.all([
       buildLearnerQuizDigestPayload(learnerId, 14),
-      buildLearnerCourseDigestPayload(learnerId)
+      buildLearnerCourseDigestPayload(learnerId, { includeParentOverview: true })
     ])
 
     ParentDailyShare.updateOne(

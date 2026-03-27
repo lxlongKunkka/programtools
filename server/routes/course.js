@@ -485,18 +485,18 @@ async function buildRecentHomeworkItems(learnerId, levels, recentActivities = []
   }))
 }
 
-async function buildCourseProblemCatalog(levels = []) {
-  const rawContextMap = new Map()
+async function buildCourseProblemReferenceCatalog(levels = []) {
+  const rawRefSet = new Set()
   const numericRefs = new Set()
   const objectIdRefs = new Set()
   const domainDocRefs = []
   const pidRefs = new Set()
   const domainPidRefs = []
 
-  const pushRef = (rawRef, context) => {
+  const pushRef = (rawRef) => {
     const text = String(rawRef || '').trim()
-    if (!text || rawContextMap.has(text)) return
-    rawContextMap.set(text, context)
+    if (!text || rawRefSet.has(text)) return
+    rawRefSet.add(text)
 
     if (mongoose.Types.ObjectId.isValid(text)) {
       objectIdRefs.add(text)
@@ -523,21 +523,8 @@ async function buildCourseProblemCatalog(levels = []) {
   for (const level of Array.isArray(levels) ? levels : []) {
     for (const topic of getLevelTopics(level)) {
       for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
-        const context = {
-          chapterId: chapter?.id || '',
-          chapterTitle: chapter?.title || '',
-          topicTitle: topic?.title || '',
-          level: Number(level?.level || 0),
-          levelTitle: level?.title || '',
-          subject: level?.subject || 'C++',
-          group: level?.group || ''
-        }
-        for (const rawRef of Array.isArray(chapter?.problemIds) ? chapter.problemIds : []) {
-          pushRef(rawRef, context)
-        }
-        for (const rawRef of Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds : []) {
-          pushRef(rawRef, context)
-        }
+        for (const rawRef of Array.isArray(chapter?.problemIds) ? chapter.problemIds : []) pushRef(rawRef)
+        for (const rawRef of Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds : []) pushRef(rawRef)
       }
     }
   }
@@ -560,33 +547,223 @@ async function buildCourseProblemCatalog(levels = []) {
       : []
   ])
 
-  const rawDocMap = new Map()
-  for (const doc of objectIdDocs) rawDocMap.set(String(doc._id), doc)
-  for (const doc of numericDocs) rawDocMap.set(String(doc.docId), doc)
-  for (const doc of domainDocDocs) rawDocMap.set(`${doc.domainId || 'system'}:${doc.docId}`, doc)
-  for (const doc of pidDocs) rawDocMap.set(String(doc.pid || ''), doc)
-  for (const doc of domainPidDocs) rawDocMap.set(`${doc.domainId || 'system'}:${doc.pid || ''}`, doc)
-
-  const bySubmissionKey = new Map()
-  for (const [rawRef, context] of rawContextMap.entries()) {
-    const doc = rawDocMap.get(rawRef)
-    if (!doc || !Number.isFinite(doc.docId)) continue
+  const byRawRef = new Map()
+  const setResolvedRef = (key, doc) => {
+    if (!key || !doc) return
     const domainId = doc.domainId || 'system'
-    const submissionKey = `${domainId}::${doc.docId}`
-    if (bySubmissionKey.has(submissionKey)) continue
-    bySubmissionKey.set(submissionKey, {
-      problemId: String(doc._id || rawRef),
-      title: doc.title || rawRef,
-      displayName: `${domainId} / ${doc.docId} / ${doc.title || rawRef}`,
-      problemUrl: `https://acjudge.com/d/${domainId}/p/${doc.docId}`,
+    const docId = Number.isFinite(doc.docId) ? doc.docId : null
+    byRawRef.set(key, {
+      problemId: String(doc._id || key),
+      title: doc.title || key,
+      displayName: docId ? `${domainId} / ${docId} / ${doc.title || key}` : (doc.title || key),
+      problemUrl: docId ? `https://acjudge.com/d/${domainId}/p/${docId}` : '',
       domainId,
-      docId: doc.docId,
-      pid: doc.pid || '',
-      ...context
+      docId,
+      pid: doc.pid || ''
     })
   }
 
+  for (const doc of objectIdDocs) setResolvedRef(String(doc._id), doc)
+  for (const doc of numericDocs) setResolvedRef(String(doc.docId), doc)
+  for (const doc of domainDocDocs) setResolvedRef(`${doc.domainId || 'system'}:${doc.docId}`, doc)
+  for (const doc of pidDocs) setResolvedRef(String(doc.pid || ''), doc)
+  for (const doc of domainPidDocs) setResolvedRef(`${doc.domainId || 'system'}:${doc.pid || ''}`, doc)
+
+  return byRawRef
+}
+
+async function buildCourseProblemCatalog(levels = []) {
+  const referenceCatalog = await buildCourseProblemReferenceCatalog(levels)
+  const bySubmissionKey = new Map()
+
+  for (const level of Array.isArray(levels) ? levels : []) {
+    for (const topic of getLevelTopics(level)) {
+      for (const chapter of Array.isArray(topic?.chapters) ? topic.chapters : []) {
+        const context = {
+          chapterId: chapter?.id || '',
+          chapterTitle: chapter?.title || '',
+          topicTitle: topic?.title || '',
+          level: Number(level?.level || 0),
+          levelTitle: level?.title || '',
+          subject: level?.subject || 'C++',
+          group: level?.group || ''
+        }
+
+        const chapterRefs = [
+          ...(Array.isArray(chapter?.problemIds) ? chapter.problemIds : []),
+          ...(Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds : [])
+        ]
+
+        for (const rawRef of chapterRefs) {
+          const text = String(rawRef || '').trim()
+          if (!text) continue
+          const ref = referenceCatalog.get(text)
+          if (!ref || !Number.isFinite(ref.docId)) continue
+          const submissionKey = `${ref.domainId}::${ref.docId}`
+          if (bySubmissionKey.has(submissionKey)) continue
+          bySubmissionKey.set(submissionKey, {
+            ...ref,
+            ...context
+          })
+        }
+      }
+    }
+  }
+
   return bySubmissionKey
+}
+
+function isSolvedCourseProblem(solvedProblemIds, problemRef, rawRef = '') {
+  const solvedSet = new Set((Array.isArray(solvedProblemIds) ? solvedProblemIds : []).filter(Boolean).map(item => String(item)))
+  if (!solvedSet.size) return false
+
+  const candidates = [
+    String(rawRef || '').trim(),
+    String(problemRef?.problemId || '').trim(),
+    Number.isFinite(problemRef?.docId) ? String(problemRef.docId) : '',
+    problemRef?.domainId && Number.isFinite(problemRef?.docId) ? `${problemRef.domainId}:${problemRef.docId}` : '',
+    String(problemRef?.pid || '').trim(),
+    problemRef?.domainId && problemRef?.pid ? `${problemRef.domainId}:${problemRef.pid}` : ''
+  ].filter(Boolean)
+
+  return candidates.some(candidate => solvedSet.has(candidate))
+}
+
+async function buildParentReportCourseOverview(progress, levels = []) {
+  const referenceCatalog = await buildCourseProblemReferenceCatalog(levels)
+  const levelSnapshots = await Promise.all((Array.isArray(levels) ? levels : []).map(async (levelDoc) => {
+    const topics = await Promise.all(getLevelTopics(levelDoc).map(async (topic) => {
+      const chapters = await Promise.all((Array.isArray(topic?.chapters) ? topic.chapters : []).map(async (chapter) => {
+        const solvedProblemIds = getChapterSolvedProblems(progress, chapter)
+        const chapterProblemRefs = [
+          ...(Array.isArray(chapter?.problemIds) ? chapter.problemIds.map((rawRef) => ({ rawRef, optional: false })) : []),
+          ...(Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds.map((rawRef) => ({ rawRef, optional: true })) : [])
+        ]
+
+        const problems = chapterProblemRefs
+          .map((item, index) => {
+            const rawRef = String(item.rawRef || '').trim()
+            if (!rawRef) return null
+            const ref = referenceCatalog.get(rawRef) || {
+              problemId: rawRef,
+              title: rawRef,
+              displayName: rawRef,
+              problemUrl: '',
+              domainId: 'system',
+              docId: null,
+              pid: ''
+            }
+
+            return {
+              problemId: String(ref.problemId || rawRef),
+              rawRef,
+              title: ref.title || rawRef,
+              displayName: ref.displayName || ref.title || rawRef,
+              problemUrl: ref.problemUrl || '',
+              optional: !!item.optional,
+              solved: isSolvedCourseProblem(solvedProblemIds, ref, rawRef),
+              order: index + 1
+            }
+          })
+          .filter(Boolean)
+
+        return {
+          chapterId: chapter?.id || '',
+          chapterUid: chapter?._id ? String(chapter._id) : '',
+          title: chapter?.title || '未命名章节',
+          completed: isChapterCompleted(progress, chapter),
+          totalProblemCount: problems.length,
+          solvedProblemCount: problems.filter(problem => problem.solved).length,
+          problems
+        }
+      }))
+
+      const totalCount = chapters.length
+      const completedCount = chapters.reduce((sum, chapter) => sum + (chapter.completed ? 1 : 0), 0)
+      const solvedProblemCount = chapters.reduce((sum, chapter) => sum + chapter.solvedProblemCount, 0)
+      const totalProblemCount = chapters.reduce((sum, chapter) => sum + chapter.totalProblemCount, 0)
+
+      return {
+        topicId: String(topic?._id || topic?.title || ''),
+        title: topic?.title || '未命名专题',
+        completedCount,
+        totalCount,
+        solvedProblemCount,
+        totalProblemCount,
+        completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+        chapters
+      }
+    }))
+
+    const totalChapters = topics.reduce((sum, topic) => sum + topic.totalCount, 0)
+    const completedChapters = topics.reduce((sum, topic) => sum + topic.completedCount, 0)
+    const solvedProblemCount = topics.reduce((sum, topic) => sum + topic.solvedProblemCount, 0)
+    const totalProblemCount = topics.reduce((sum, topic) => sum + topic.totalProblemCount, 0)
+
+    return {
+      levelId: String(levelDoc._id),
+      level: Number(levelDoc.level || 0),
+      group: levelDoc.group || '',
+      subject: normalizeCourseSubjectLabel(levelDoc.subject),
+      title: levelDoc.title || '',
+      completedChapters,
+      totalChapters,
+      solvedProblemCount,
+      totalProblemCount,
+      completionRate: totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0,
+      topics
+    }
+  }))
+
+  return levelSnapshots
+    .filter(level => level.totalChapters > 0)
+    .sort((a, b) => {
+      const rankDiff = getCourseSubjectSortRank(a.subject) - getCourseSubjectSortRank(b.subject)
+      if (rankDiff !== 0) return rankDiff
+
+      const subjectCompare = normalizeCourseSubjectLabel(a.subject).localeCompare(normalizeCourseSubjectLabel(b.subject), 'zh-CN')
+      if (subjectCompare !== 0) return subjectCompare
+
+      if ((a.level || 0) !== (b.level || 0)) return (a.level || 0) - (b.level || 0)
+      return String(a.title || '').localeCompare(String(b.title || ''), 'zh-CN')
+    })
+}
+
+function pickParentReportDetailedLevels(progress, levels = [], recentActivities = [], currentPosition = null, limit = 3) {
+  const picked = []
+  const seen = new Set()
+
+  const pushLevel = (level) => {
+    const key = String(level?._id || '')
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    picked.push(level)
+  }
+
+  if (currentPosition?.levelId) {
+    pushLevel((Array.isArray(levels) ? levels : []).find(level => String(level?._id || '') === String(currentPosition.levelId || '')))
+  }
+
+  for (const activity of Array.isArray(recentActivities) ? recentActivities : []) {
+    const matched = (Array.isArray(levels) ? levels : []).find(level => (
+      Number(level?.level || 0) === Number(activity?.level || 0)
+      && normalizeCourseSubjectLabel(level?.subject) === normalizeCourseSubjectLabel(activity?.subject)
+    ))
+    pushLevel(matched)
+    if (picked.length >= limit) return picked.slice(0, limit)
+  }
+
+  const startedLevels = (Array.isArray(levels) ? levels : []).filter(level => buildLevelSnapshot(level, progress).completedChapters > 0)
+  for (const level of startedLevels) {
+    pushLevel(level)
+    if (picked.length >= limit) return picked.slice(0, limit)
+  }
+
+  if (!picked.length && Array.isArray(levels) && levels.length > 0) {
+    pushLevel(levels[0])
+  }
+
+  return picked.slice(0, limit)
 }
 
 function getSubmissionTime(submission) {
@@ -669,9 +846,26 @@ function isChapterCompleted(progress, chapter) {
 
 function buildLevelSnapshot(levelDoc, progress) {
   const topics = getLevelTopics(levelDoc).map(topic => {
-    const chapters = Array.isArray(topic.chapters) ? topic.chapters : []
-    const completedCount = chapters.reduce((sum, chapter) => sum + (isChapterCompleted(progress, chapter) ? 1 : 0), 0)
-    const solvedProblemCount = chapters.reduce((sum, chapter) => sum + getChapterSolvedProblems(progress, chapter).length, 0)
+    const chapters = (Array.isArray(topic.chapters) ? topic.chapters : []).map((chapter) => {
+      const solvedProblemCount = getChapterSolvedProblems(progress, chapter).length
+      const requiredCount = Array.isArray(chapter?.problemIds) ? chapter.problemIds.filter(Boolean).length : 0
+      const optionalCount = Array.isArray(chapter?.optionalProblemIds) ? chapter.optionalProblemIds.filter(Boolean).length : 0
+      const totalProblemCount = requiredCount + optionalCount
+      const completed = isChapterCompleted(progress, chapter)
+
+      return {
+        chapterId: chapter?.id || '',
+        chapterUid: chapter?._id ? String(chapter._id) : '',
+        title: chapter?.title || '未命名章节',
+        completed,
+        solvedProblemCount,
+        totalProblemCount,
+        completionRate: totalProblemCount > 0 ? Math.round((solvedProblemCount / totalProblemCount) * 100) : 0
+      }
+    })
+    const completedCount = chapters.reduce((sum, chapter) => sum + (chapter.completed ? 1 : 0), 0)
+    const solvedProblemCount = chapters.reduce((sum, chapter) => sum + chapter.solvedProblemCount, 0)
+    const totalProblemCount = chapters.reduce((sum, chapter) => sum + chapter.totalProblemCount, 0)
     const totalCount = chapters.length
 
     return {
@@ -679,14 +873,17 @@ function buildLevelSnapshot(levelDoc, progress) {
       title: topic.title || '未命名专题',
       completedCount,
       solvedProblemCount,
+      totalProblemCount,
       totalCount,
-      completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+      completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+      chapters
     }
   })
 
   const totalChapters = topics.reduce((sum, topic) => sum + topic.totalCount, 0)
   const completedChapters = topics.reduce((sum, topic) => sum + topic.completedCount, 0)
   const solvedProblemCount = topics.reduce((sum, topic) => sum + topic.solvedProblemCount, 0)
+  const totalProblemCount = topics.reduce((sum, topic) => sum + topic.totalProblemCount, 0)
 
   return {
     levelId: String(levelDoc._id),
@@ -697,6 +894,7 @@ function buildLevelSnapshot(levelDoc, progress) {
     completedChapters,
     totalChapters,
     solvedProblemCount,
+    totalProblemCount,
     completionRate: totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0,
     topics
   }
@@ -1011,7 +1209,7 @@ async function buildTeacherCourseFollowPayload(teacherId) {
   }
 }
 
-export async function buildLearnerCourseDigestPayload(learnerId) {
+export async function buildLearnerCourseDigestPayload(learnerId, options = {}) {
   const windowStart = getActivityWindowStart(30)
   const [user, progress, levels, recentActivities] = await Promise.all([
     User.findOne({ _id: learnerId }).select('_id uname mail').lean(),
@@ -1032,6 +1230,12 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
   const currentPosition = buildCurrentCoursePosition(progress, levels, recentActivities)
   const recentHomeworks = await buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition)
   const recentSolvedProblems = await buildRecentCourseProblemItems(learnerId, levels)
+  const overviewLevels = options?.includeParentOverview
+    ? await buildParentReportCourseOverview(
+      progress,
+      pickParentReportDetailedLevels(progress, levels, recentActivities, currentPosition)
+    )
+    : []
 
   return {
     learner: {
@@ -1060,6 +1264,7 @@ export async function buildLearnerCourseDigestPayload(learnerId) {
       lastActivityAt: recentActivities[0]?.lastActiveAt || null
     },
     levels: courseSummary.levels,
+    overviewLevels,
     recentHomeworks,
     recentSolvedProblems,
     recentActivities: recentActivities.map(item => ({

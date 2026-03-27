@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-03-27T02:11:01.106Z",
+  "apply": true,
+  "questions": [
+    {
+      "questionUid": "gesp-2024-09-cpp-1-q4",
+      "found": true,
+      "patch": [
+        "answer",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1015-q19",
+      "found": true,
+      "patch": [
+        "stem",
+        "stemText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1102-q18",
+      "found": true,
+      "patch": [
+        "answer",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1103-q4",
+      "found": true,
+      "patch": [
+        "stem",
+        "stemText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1104-q23",
+      "found": true,
+      "patch": [
+        "answer",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2023-09-cpp-3-q17",
+      "found": true,
+      "patch": [
+        "answer",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q21",
+      "found": true,
+      "patch": [
+        "stem",
+        "stemText",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q7",
+      "found": true,
+      "patch": [
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2024-12-cpp-1-q3",
+      "found": true,
+      "patch": [
+        "options",
+        "answer",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "questionUid": "gesp-2024-09-cpp-1-q4",
+      "matched": 8,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2024-09-cpp-3-q20",
+      "matched": 2,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "downloads-1015-q19",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1102-q18",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1103-q13",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "downloads-1103-q4",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1104-q23",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1109-q3",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2023-09-cpp-3-q17",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q21",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q7",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-1-q11",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-3-q15",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2024-03-cpp-3-q21",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2024-06-cpp-1-q2",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2024-12-cpp-1-q3",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2024-12-cpp-3-q20",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2025-03-cpp-1-q22",
+      "matched": 1,
+      "status": "ignored"
+    }
+  ]
+}

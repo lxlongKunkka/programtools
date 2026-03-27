@@ -37,8 +37,8 @@ function getImportContext(url) {
   if (isAtcoderContestUrl(url)) return { site: 'AtCoder', mode: 'contest', strategy: 'url' }
   if (isHtojProblemUrl(url)) return { site: '核桃 OJ', mode: 'problem', strategy: 'url' }
   if (isHtojContestUrl(url)) return { site: '核桃 OJ', mode: 'contest', strategy: 'url' }
-  if (isNflsoiProblemUrl(url)) return { site: 'NFLSOI', mode: 'problem', strategy: 'url' }
-  if (isNflsoiContestUrl(url)) return { site: 'NFLSOI', mode: 'contest', strategy: 'url' }
+  if (isNflsoiProblemUrl(url)) return { site: 'NFLSOI', mode: 'problem', strategy: 'scrape' }
+  if (isNflsoiContestUrl(url)) return { site: 'NFLSOI', mode: 'contest', strategy: 'scrape', collectionLabel: '比赛' }
   return null
 }
 
@@ -437,6 +437,350 @@ async function collectCurrentMnaProblem() {
   }
 }
 
+async function collectCurrentNflsoiProblem() {
+  function normalizeUrl(urlOrPath, baseUrl = location.href) {
+    try {
+      return new URL(urlOrPath, baseUrl).href
+    } catch {
+      return urlOrPath
+    }
+  }
+
+  function parseFilename(contentDisposition, fallback) {
+    if (!contentDisposition) return fallback
+    const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+    const raw = match?.[1] || match?.[2]
+    if (!raw) return fallback
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  }
+
+  function isEscaped(str, index) {
+    let slashCount = 0
+    for (let pointer = index - 1; pointer >= 0 && str[pointer] === '\\'; pointer -= 1) slashCount += 1
+    return slashCount % 2 === 1
+  }
+
+  function readAssignedString(source, variableName) {
+    const marker = `${variableName} = "`
+    const start = source.indexOf(marker)
+    if (start === -1) return ''
+    let cursor = start + marker.length
+    let raw = ''
+    while (cursor < source.length) {
+      const ch = source[cursor]
+      if (ch === '"' && !isEscaped(source, cursor)) break
+      raw += ch
+      cursor += 1
+    }
+    if (!raw) return ''
+    try {
+      return JSON.parse(`"${raw}"`)
+    } catch {
+      return ''
+    }
+  }
+
+  function encodeArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    const chunkSize = 0x8000
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+    }
+    return btoa(binary)
+  }
+
+  function cleanupMarkdown(text) {
+    return String(text || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
+  function parseProblemUrl(currentUrl) {
+    const parsed = new URL(currentUrl)
+    const tid = parsed.searchParams.get('tid') || ''
+    let pid = ''
+    let contestId = tid || ''
+
+    const pathMatch = parsed.pathname.match(/^\/p\/([a-zA-Z0-9_]+)/)
+    if (pathMatch) pid = pathMatch[1]
+
+    const legacyMatch = parsed.pathname.match(/^\/contest\/([a-zA-Z0-9]+)\/problem\/([a-zA-Z0-9_]+)/)
+    if (legacyMatch) {
+      contestId = contestId || legacyMatch[1]
+      pid = pid || legacyMatch[2]
+    }
+
+    return {
+      pid,
+      contestId,
+      currentUrl: parsed.href,
+      origin: parsed.origin,
+    }
+  }
+
+  function extractIdentifiersFromPage(html) {
+    const parsed = parseProblemUrl(location.href)
+    const docIdMatch = html.match(/"docId"\s*:\s*(\d+)/)
+    const realPid = docIdMatch?.[1] || parsed.pid
+    return {
+      pid: parsed.pid,
+      realPid,
+      contestId: parsed.contestId,
+      origin: parsed.origin,
+      currentUrl: parsed.currentUrl,
+    }
+  }
+
+  function extractLimits(rawHtml) {
+    const bodyText = document.body?.textContent?.replace(/\s+/g, ' ') || ''
+    const configBlockMatch = rawHtml.match(/"config"\s*:\s*\{([^}]{0,300})\}/)
+    let timeLimit = null
+    let memoryLimit = null
+
+    if (configBlockMatch) {
+      const block = configBlockMatch[1]
+      const tlm = block.match(/"time"\s*:\s*"(\d+)\s*ms"/i)
+      if (tlm) timeLimit = Number(tlm[1])
+      const mlm = block.match(/"memory"\s*:\s*"(\d+)\s*(?:mib|mb|m)"/i)
+      if (mlm) memoryLimit = Number(mlm[1])
+    }
+
+    if (!timeLimit) {
+      const m = bodyText.match(/(\d+)\s*ms/i)
+      if (m) timeLimit = Number(m[1])
+    }
+    if (!memoryLimit) {
+      const m = bodyText.match(/(\d+)\s*(?:MiB|MB|M)(?!\w)/i)
+      if (m) memoryLimit = Number(m[1])
+    }
+
+    return { timeLimit, memoryLimit }
+  }
+
+  function processChildren(node) {
+    let result = ''
+    node.childNodes.forEach((child) => {
+      result += processNode(child)
+    })
+    return result
+  }
+
+  function processNode(node) {
+    if (!node) return ''
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
+    if (!(node instanceof Element)) return ''
+
+    const tag = node.tagName.toLowerCase()
+    if (tag === 'script' || tag === 'style') return ''
+    if (tag === 'span' && node.classList.contains('katex-html')) return ''
+    if (tag === 'span' && (node.classList.contains('katex') || node.classList.contains('katex-display'))) {
+      const latex = node.querySelector('annotation[encoding="application/x-tex"]')?.textContent?.trim() || ''
+      if (!latex) return ''
+      const isDisplay = node.classList.contains('katex-display') || !!node.closest('.katex-display')
+      return isDisplay ? `\n\n$$${latex}$$\n\n` : `$${latex}$`
+    }
+    if (tag === 'p') return `${processChildren(node).trim()}\n\n`
+    if (tag === 'h1') return `# ${processChildren(node).trim()}\n\n`
+    if (tag === 'h2') return `## ${processChildren(node).trim()}\n\n`
+    if (tag === 'h3') return `### ${processChildren(node).trim()}\n\n`
+    if (tag === 'h4') return `#### ${processChildren(node).trim()}\n\n`
+    if (tag === 'pre') return `\`\`\`\n${node.textContent?.trim() || ''}\n\`\`\`\n\n`
+    if (tag === 'code' && node.parentElement?.tagName?.toLowerCase() !== 'pre') return `\`${node.textContent || ''}\``
+    if (tag === 'strong' || tag === 'b') return `**${processChildren(node)}**`
+    if (tag === 'em' || tag === 'i') return `*${processChildren(node)}*`
+    if (tag === 'hr') return '---\n\n'
+    if (tag === 'br') return '\n'
+    if (tag === 'ul') {
+      let out = ''
+      node.querySelectorAll(':scope > li').forEach((li) => {
+        out += `- ${processChildren(li).trim()}\n`
+      })
+      return `${out}\n`
+    }
+    if (tag === 'ol') {
+      let out = ''
+      node.querySelectorAll(':scope > li').forEach((li, index) => {
+        out += `${index + 1}. ${processChildren(li).trim()}\n`
+      })
+      return `${out}\n`
+    }
+    if (tag === 'table') {
+      const rows = []
+      node.querySelectorAll('tr').forEach((tr) => {
+        const cells = [...tr.querySelectorAll('th,td')].map((cell) => processChildren(cell).trim().replace(/\n/g, ' '))
+        if (cells.some(Boolean)) rows.push(cells)
+      })
+      if (!rows.length) return ''
+      let out = rows.map((row) => `| ${row.join(' | ')} |`).join('\n')
+      out = `${out.slice(0, out.indexOf('\n') > -1 ? out.indexOf('\n') : out.length)}${out.includes('\n') ? '' : ''}`
+      const header = `| ${rows[0].map(() => '---').join(' | ')} |`
+      return `${rows[0] ? `| ${rows[0].join(' | ')} |\n${header}\n` : ''}${rows.slice(1).map((row) => `| ${row.join(' | ')} |`).join('\n')}\n\n`
+    }
+    if (tag === 'img') {
+      const src = node.getAttribute('src') || ''
+      if (!src) return ''
+      const alt = node.getAttribute('alt') || ''
+      return `\n![${alt}](${normalizeUrl(src)})\n`
+    }
+    if (tag === 'a') {
+      const href = node.getAttribute('href') || ''
+      const text = processChildren(node).replace(/\s+/g, ' ').trim()
+      if (!href) return text
+      return text ? `[${text}](${normalizeUrl(href)})` : normalizeUrl(href)
+    }
+
+    return processChildren(node)
+  }
+
+  function parseProblemContent(rawHtml, title) {
+    let root = document.querySelector('.problem-content, .typo, .markdown-body')
+    if (!root) root = document.querySelector('main, article')
+    if (!root) {
+      return cleanupMarkdown(`# ${title}\n\n${document.body?.textContent || ''}`)
+    }
+
+    const markdown = `# ${title}\n\n${processChildren(root)}`
+    return cleanupMarkdown(markdown)
+  }
+
+  async function fetchText(url) {
+    const response = await fetch(normalizeUrl(url), { credentials: 'include' })
+    if (!response.ok) throw new Error(`请求失败: ${response.status}`)
+    return response.text()
+  }
+
+  async function fetchBinary(url) {
+    const response = await fetch(normalizeUrl(url), { credentials: 'include' })
+    if (!response.ok) throw new Error(`下载失败: ${response.status}`)
+    const contentType = (response.headers.get('content-type') || '').toLowerCase()
+    if (contentType.includes('text/html')) throw new Error('附件下载返回了 HTML 页面')
+    const buffer = await response.arrayBuffer()
+    return {
+      contentDisposition: response.headers.get('content-disposition') || '',
+      base64: encodeArrayBufferToBase64(buffer),
+      size: buffer.byteLength,
+    }
+  }
+
+  function findAdditionalFileLink() {
+    const links = [...document.querySelectorAll('a[href]')]
+    const scored = links.map((link) => {
+      const href = link.getAttribute('href') || ''
+      const text = (link.textContent || '').replace(/\s+/g, ' ').trim()
+      let score = 0
+      if (/\/p\/[^/]+\/file\//i.test(href)) score += 100
+      if (/additional_file/i.test(href)) score += 50
+      if (/zip|rar|7z|tar|gz/i.test(href)) score += 30
+      if (/附件|样例|下载|file/i.test(text)) score += 20
+      return { href, text, score }
+    }).filter((item) => item.score > 0)
+
+    scored.sort((left, right) => right.score - left.score)
+    return scored[0] || null
+  }
+
+  async function fetchAcCode({ pid, realPid, contestId }) {
+    const candidatePids = [...new Set([realPid, pid].filter(Boolean))]
+    const listPaths = []
+    candidatePids.forEach((currentPid) => {
+      let path = `/record?pid=${encodeURIComponent(currentPid)}&status=1`
+      if (contestId) path += `&tid=${encodeURIComponent(contestId)}`
+      listPaths.push(path)
+    })
+
+    for (const listPath of listPaths) {
+      let listHtml = ''
+      try {
+        listHtml = await fetchText(listPath)
+      } catch {
+        continue
+      }
+
+      const hrefs = [...listHtml.matchAll(/href="(\/record\/[a-f0-9]+)"/g)].map((match) => match[1])
+      for (const href of hrefs.slice(0, 5)) {
+        try {
+          const detailHtml = await fetchText(href)
+          const detailDoc = new DOMParser().parseFromString(detailHtml, 'text/html')
+          const code = detailDoc.querySelector('pre code')?.textContent?.trim()
+          if (code && code.length > 10) {
+            return code.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '').trim()
+          }
+          const formattedCode = readAssignedString(detailHtml, 'formattedCode') || readAssignedString(detailHtml, 'unformattedCode')
+          if (formattedCode) {
+            const codeDoc = new DOMParser().parseFromString(`<div id="code-root">${formattedCode}</div>`, 'text/html')
+            const fallbackCode = codeDoc.querySelector('#code-root')?.textContent?.trim() || ''
+            if (fallbackCode) return fallbackCode.replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '').trim()
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+
+    return ''
+  }
+
+  const rawHtml = document.documentElement.outerHTML || ''
+  const ids = extractIdentifiersFromPage(rawHtml)
+  if (!ids.pid) {
+    throw new Error('当前页面不是 NFLSOI 单题页面')
+  }
+
+  const title = (document.querySelector('h1.problem-title, .problem-title h1, h1')?.textContent || document.title || ids.pid)
+    .replace(/\s+/g, ' ')
+    .trim()
+  const content = parseProblemContent(rawHtml, title)
+  const { timeLimit, memoryLimit } = extractLimits(rawHtml)
+
+  let additionalFile = null
+  const additionalLink = findAdditionalFileLink()
+  if (additionalLink?.href) {
+    const sourceUrl = normalizeUrl(additionalLink.href)
+    try {
+      const binary = await fetchBinary(sourceUrl)
+      additionalFile = {
+        filename: parseFilename(binary.contentDisposition, sourceUrl.split('/').pop() || `${ids.pid}.zip`),
+        base64: binary.base64,
+        size: binary.size,
+        sourceUrl,
+      }
+    } catch {
+      additionalFile = {
+        filename: sourceUrl.split('/').pop() || `${ids.pid}.zip`,
+        size: 0,
+        sourceUrl,
+      }
+    }
+  }
+
+  let acCode = ''
+  try {
+    acCode = await Promise.race([
+      fetchAcCode(ids),
+      new Promise((resolve) => setTimeout(() => resolve(''), 15000)),
+    ])
+  } catch {
+    acCode = ''
+  }
+
+  return {
+    url: ids.currentUrl,
+    title,
+    content,
+    acCode,
+    additionalFile,
+    timeLimit,
+    memoryLimit,
+  }
+}
+
 function collectCurrentMnaCollection() {
   const pageMatch = location.href.match(/\/(contest|course)\/(\d+)/i)
   if (!pageMatch) {
@@ -471,34 +815,153 @@ function collectCurrentMnaCollection() {
   }
 }
 
-async function collectProblemPayloadFromUrl(tabId, url) {
+async function collectCurrentNflsoiCollection() {
+  function normalizeUrl(urlOrPath, baseUrl = location.href) {
+    try {
+      return new URL(urlOrPath, baseUrl).href
+    } catch {
+      return urlOrPath
+    }
+  }
+
+  function parseContestId(url) {
+    const match = String(url || '').match(/\/contest\/([a-zA-Z0-9]+)/)
+    return match ? match[1] : ''
+  }
+
+  function uniqueProblems(problems) {
+    const seen = new Set()
+    return problems.filter((problem) => {
+      const key = `${problem.taskId || ''}:${problem.url || ''}`
+      if (!problem?.url || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
+  function parseProblemLinks(doc, contestId) {
+    const links = [...doc.querySelectorAll('a[href]')]
+    const problems = []
+
+    links.forEach((link) => {
+      const href = link.getAttribute('href') || ''
+      const match = href.match(/^\/p\/([a-zA-Z0-9_]+)\?tid=([a-zA-Z0-9]+)$/)
+      if (!match) return
+      if (contestId && match[2] !== contestId) return
+
+      const cloned = link.cloneNode(true)
+      cloned.querySelectorAll('b').forEach((node) => node.remove())
+      const title = (cloned.textContent || '').replace(/\s+/g, ' ').trim() || match[1]
+      problems.push({
+        label: String.fromCharCode(65 + problems.length),
+        title,
+        taskId: match[1],
+        url: normalizeUrl(href),
+      })
+    })
+
+    return uniqueProblems(problems)
+  }
+
+  const contestId = parseContestId(location.href)
+  if (!contestId) {
+    throw new Error('当前页面不是 NFLSOI 比赛页面')
+  }
+
+  const problemsUrl = normalizeUrl(`/contest/${contestId}/problems`, location.origin)
+  let problemsDoc = document
+  let problems = parseProblemLinks(problemsDoc, contestId)
+
+  if (!problems.length && location.pathname !== `/contest/${contestId}/problems`) {
+    const response = await fetch(problemsUrl, { credentials: 'include' })
+    if (!response.ok) {
+      throw new Error(`无法读取 NFLSOI 比赛题目列表: HTTP ${response.status}`)
+    }
+    const html = await response.text()
+    problemsDoc = new DOMParser().parseFromString(html, 'text/html')
+    problems = parseProblemLinks(problemsDoc, contestId)
+  }
+
+  if (!problems.length) {
+    throw new Error('未能在当前 NFLSOI 比赛页找到题目列表')
+  }
+
+  const title = (
+    problemsDoc.querySelector('h1')?.textContent ||
+    document.querySelector('h1')?.textContent ||
+    problemsDoc.title ||
+    document.title ||
+    `Contest ${contestId}`
+  ).replace(/\s+/g, ' ').trim()
+
+  return {
+    title,
+    collectionLabel: '比赛',
+    problems,
+  }
+}
+
+async function collectProblemPayloadFromUrl(tabId, url, site) {
   await navigateTab(tabId, url)
-  const payload = await runScriptInTab(tabId, collectCurrentMnaProblem)
+  let collector = null
+  if (site === 'MNA') collector = collectCurrentMnaProblem
+  if (site === 'NFLSOI') collector = collectCurrentNflsoiProblem
+  if (!collector) throw new Error(`暂不支持 ${site || '当前站点'} 题目批量抓取`)
+
+  const payload = await runScriptInTab(tabId, collector)
   if (!payload?.content) {
     throw new Error(`抓取失败: ${url}`)
   }
   return payload
 }
 
-async function importSingleProblem(activeTab, targetOrigin) {
-  if (!activeTab?.id || !isMnaProblemUrl(activeTab.url)) {
-    throw new Error('请先在 Edge 中打开 MNA 单题页面，再点击扩展按钮')
+async function importSingleProblem(activeTab, targetOrigin, context) {
+  if (!activeTab?.id || !context?.site) {
+    throw new Error('当前标签页不是支持的单题页面')
   }
 
-  const payload = await runScriptInTab(activeTab.id, collectCurrentMnaProblem)
+  let payload = null
+  if (context.site === 'MNA') {
+    if (!isMnaProblemUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 MNA 单题页面，再点击扩展按钮')
+    }
+    payload = await runScriptInTab(activeTab.id, collectCurrentMnaProblem)
+  } else if (context.site === 'NFLSOI') {
+    if (!isNflsoiProblemUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 NFLSOI 单题页面，再点击扩展按钮')
+    }
+    payload = await runScriptInTab(activeTab.id, collectCurrentNflsoiProblem)
+  } else {
+    throw new Error(`暂不支持 ${context.site} 单题本地抓取`)
+  }
+
   if (!payload) throw new Error('未能抓取到题面数据')
 
   const solveDataTabId = await ensureSolveDataTab(targetOrigin)
   await sendTaskToSolveData(solveDataTabId, payload)
-  return { ok: true, mode: 'problem', site: 'MNA', strategy: 'scrape' }
+  return { ok: true, mode: 'problem', site: context.site, strategy: 'scrape' }
 }
 
-async function importCollection(activeTab, targetOrigin) {
-  if (!activeTab?.id || (!isMnaContestUrl(activeTab.url) && !isMnaCourseUrl(activeTab.url))) {
-    throw new Error('请先在 Edge 中打开 MNA 比赛页或课程页，再点击扩展按钮')
+async function importCollection(activeTab, targetOrigin, context) {
+  if (!activeTab?.id || !context?.site) {
+    throw new Error('请先在 Edge 中打开支持的批量导入页面，再点击扩展按钮')
   }
 
-  const contestInfo = await runScriptInTab(activeTab.id, collectCurrentMnaCollection)
+  let contestInfo = null
+  if (context.site === 'MNA') {
+    if (!isMnaContestUrl(activeTab.url) && !isMnaCourseUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 MNA 比赛页或课程页，再点击扩展按钮')
+    }
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentMnaCollection)
+  } else if (context.site === 'NFLSOI') {
+    if (!isNflsoiContestUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 NFLSOI 比赛页，再点击扩展按钮')
+    }
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentNflsoiCollection)
+  } else {
+    throw new Error(`暂不支持 ${context.site} 批量本地抓取`)
+  }
+
   if (!contestInfo?.problems?.length) {
     throw new Error(`未能在当前${contestInfo?.collectionLabel || '页面'}找到题目列表`)
   }
@@ -512,7 +975,7 @@ async function importCollection(activeTab, targetOrigin) {
   try {
     for (const problem of contestInfo.problems) {
       try {
-        const payload = await collectProblemPayloadFromUrl(collectorTabId, problem.url)
+        const payload = await collectProblemPayloadFromUrl(collectorTabId, problem.url, context.site)
         await sendTaskToSolveData(solveDataTabId, payload)
         importedCount += 1
       } catch (error) {
@@ -533,7 +996,7 @@ async function importCollection(activeTab, targetOrigin) {
   return {
     ok: true,
     mode: 'contest',
-    site: 'MNA',
+    site: context.site,
     strategy: 'scrape',
     collectionLabel: contestInfo.collectionLabel || '比赛',
     contestTitle: contestInfo.title,
@@ -566,11 +1029,11 @@ async function handleImportCurrentPage(targetOrigin = DEFAULT_TARGET_ORIGIN) {
   }
 
   if (context.strategy === 'scrape' && context.mode === 'problem') {
-    return importSingleProblem(activeTab, targetOrigin)
+    return importSingleProblem(activeTab, targetOrigin, context)
   }
 
   if (context.strategy === 'scrape' && context.mode === 'contest') {
-    return importCollection(activeTab, targetOrigin)
+    return importCollection(activeTab, targetOrigin, context)
   }
 
   return importSupportedUrl(activeTab, targetOrigin, context)

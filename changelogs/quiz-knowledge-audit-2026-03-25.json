@@ -1,0 +1,2380 @@
+﻿{
+  "generatedAt": "2026-03-25T08:35:54.909Z",
+  "filter": {
+    "source": null,
+    "types": [
+      "single",
+      "judge"
+    ]
+  },
+  "summary": {
+    "totalQuestions": 2969,
+    "withStoredKnowledge": 1973,
+    "withoutStoredKnowledge": 996,
+    "nonKnowledgeOnly": 996,
+    "missingButExtractable": 689,
+    "mismatchedKnowledge": 510
+  },
+  "bySource": [
+    {
+      "source": "downloads",
+      "total": 1069,
+      "withStoredKnowledge": 1069,
+      "withoutStoredKnowledge": 0,
+      "missingButExtractable": 0,
+      "mismatchedKnowledge": 208
+    },
+    {
+      "source": "gesp",
+      "total": 1900,
+      "withStoredKnowledge": 904,
+      "withoutStoredKnowledge": 996,
+      "missingButExtractable": 689,
+      "mismatchedKnowledge": 302
+    }
+  ],
+  "topStoredKnowledgeTags": [
+    {
+      "tag": "鏁板鍩虹",
+      "count": 408
+    },
+    {
+      "tag": "妯℃嫙",
+      "count": 317
+    },
+    {
+      "tag": "寰幆缁撴瀯",
+      "count": 138
+    },
+    {
+      "tag": "鏍戝舰缁撴瀯",
+      "count": 136
+    },
+    {
+      "tag": "椤哄簭缁撴瀯",
+      "count": 134
+    },
+    {
+      "tag": "绠楁硶澶嶆潅搴?,
+      "count": 131
+    },
+    {
+      "tag": "鎺掑簭",
+      "count": 115
+    },
+    {
+      "tag": "杩涘埗杞崲",
+      "count": 105
+    },
+    {
+      "tag": "鍑芥暟",
+      "count": 97
+    },
+    {
+      "tag": "鏉′欢缁撴瀯",
+      "count": 93
+    },
+    {
+      "tag": "缁勫悎鏁板",
+      "count": 82
+    },
+    {
+      "tag": "閫掑綊",
+      "count": 81
+    },
+    {
+      "tag": "鍥捐鍩虹",
+      "count": 80
+    },
+    {
+      "tag": "浣嶈繍绠?,
+      "count": 77
+    },
+    {
+      "tag": "鏍?,
+      "count": 67
+    },
+    {
+      "tag": "瀛楃涓?,
+      "count": 56
+    },
+    {
+      "tag": "閾捐〃",
+      "count": 53
+    },
+    {
+      "tag": "璐績",
+      "count": 52
+    },
+    {
+      "tag": "缁撴瀯浣?,
+      "count": 50
+    },
+    {
+      "tag": "DFS",
+      "count": 50
+    },
+    {
+      "tag": "鏁板鍑芥暟",
+      "count": 46
+    },
+    {
+      "tag": "DP",
+      "count": 41
+    },
+    {
+      "tag": "閫掓帹",
+      "count": 40
+    },
+    {
+      "tag": "涓€缁存暟缁?,
+      "count": 37
+    },
+    {
+      "tag": "BFS",
+      "count": 34
+    },
+    {
+      "tag": "浜屽垎",
+      "count": 33
+    },
+    {
+      "tag": "浜岀淮鏁扮粍",
+      "count": 32
+    },
+    {
+      "tag": "鏁拌鍩虹",
+      "count": 30
+    },
+    {
+      "tag": "闃熷垪",
+      "count": 27
+    },
+    {
+      "tag": "鍒嗘不",
+      "count": 27
+    }
+  ],
+  "topExtractedKnowledgeTags": [
+    {
+      "tag": "鐜?,
+      "count": 795
+    },
+    {
+      "tag": "鍑芥暟",
+      "count": 625
+    },
+    {
+      "tag": "鎺掑簭",
+      "count": 259
+    },
+    {
+      "tag": "閫掑綊",
+      "count": 250
+    },
+    {
+      "tag": "瀛楃涓?,
+      "count": 177
+    },
+    {
+      "tag": "鏍?,
+      "count": 157
+    },
+    {
+      "tag": "閾捐〃",
+      "count": 129
+    },
+    {
+      "tag": "妯℃嫙",
+      "count": 120
+    },
+    {
+      "tag": "DP",
+      "count": 104
+    },
+    {
+      "tag": "闃熷垪",
+      "count": 95
+    },
+    {
+      "tag": "鏋勯€?,
+      "count": 94
+    },
+    {
+      "tag": "鍒嗘不",
+      "count": 83
+    },
+    {
+      "tag": "浜屽垎",
+      "count": 74
+    },
+    {
+      "tag": "璐績",
+      "count": 71
+    },
+    {
+      "tag": "BFS",
+      "count": 68
+    },
+    {
+      "tag": "閫掓帹",
+      "count": 67
+    },
+    {
+      "tag": "DFS",
+      "count": 64
+    },
+    {
+      "tag": "浣嶈繍绠?,
+      "count": 62
+    },
+    {
+      "tag": "鍝堝笇",
+      "count": 47
+    },
+    {
+      "tag": "缁撴瀯浣?,
+      "count": 43
+    },
+    {
+      "tag": "浜岀淮鏁扮粍",
+      "count": 40
+    },
+    {
+      "tag": "缁勫悎鏁板",
+      "count": 36
+    },
+    {
+      "tag": "寰幆缁撴瀯",
+      "count": 30
+    },
+    {
+      "tag": "鏈€灏忕敓鎴愭爲",
+      "count": 22
+    },
+    {
+      "tag": "鏁板鍑芥暟",
+      "count": 17
+    },
+    {
+      "tag": "浼樺厛闃熷垪",
+      "count": 17
+    },
+    {
+      "tag": "涓€缁存暟缁?,
+      "count": 14
+    },
+    {
+      "tag": "璐ㄥ洜鏁板垎瑙?,
+      "count": 13
+    },
+    {
+      "tag": "杩涘埗杞崲",
+      "count": 11
+    },
+    {
+      "tag": "楂樼簿搴?,
+      "count": 8
+    }
+  ],
+  "topRawNonKnowledgeTags": [
+    {
+      "tag": "downloads-import",
+      "count": 1069
+    },
+    {
+      "tag": "objective",
+      "count": 1069
+    },
+    {
+      "tag": "GESP",
+      "count": 996
+    },
+    {
+      "tag": "noip",
+      "count": 439
+    },
+    {
+      "tag": "beginner",
+      "count": 357
+    },
+    {
+      "tag": "csp",
+      "count": 344
+    },
+    {
+      "tag": "advanced",
+      "count": 309
+    },
+    {
+      "tag": "gesp",
+      "count": 198
+    },
+    {
+      "tag": "sample",
+      "count": 198
+    },
+    {
+      "tag": "bcsp",
+      "count": 98
+    }
+  ],
+  "samples": {
+    "withoutKnowledge": [
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?Windows 绯荤粺涓€氳繃閿洏瀹屾垚瀵归€夊畾鏂囨湰绉诲姩鐨勬寜閿粍鍚堟槸鍏?Ctrl+X 锛岀Щ鍔ㄥ埌鐩爣浣嶇疆鍚庢寜 Ctrl+V 銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "绋嬪簭鍛樼敤 C銆丆++銆丳ython銆丼cratch 绛夌紪鍐欑殑绋嬪簭鑳藉湪 CPU 涓婄洿鎺ユ墽琛屻€?,
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?C++ 璇█涓紝娉ㄩ噴涓嶅疁鍐欏緱杩囧锛屽惁鍒欎細浣垮緱绋嬪簭杩愯閫熷害鍙樻參銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?C++ 璇█涓紝鏍囪瘑绗︿腑鍙互鏈夋暟瀛楋紝浣嗕笉鑳戒互鏁板瓧寮€澶淬€?,
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "'3' 鏄竴涓?int 绫诲瀷甯搁噺銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "if 璇彞涓殑鏉′欢琛ㄨ揪寮忕殑缁撴灉蹇呴』涓?bool 绫诲瀷銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "for 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒祴鍊艰鍙?a = a + 3; 鏄敊璇殑锛屽洜涓鸿繖鏉¤鍙ヤ細瀵艰嚧 a 鏃犳剰涔夈€?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 (a / 4 == 2) 鍜岃〃杈惧紡 (a >= 8 && a <= 11) 鐨勭粨鏋滄€绘槸鐩稿悓鐨勩€?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "琛ㄨ揪寮?(3.5 * 2) 鐨勮绠楃粨鏋滀负 7.0锛屼笖缁撴灉绫诲瀷涓?double 銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "璁＄畻鏈虹‖浠朵富瑕佸寘鎷繍绠楀櫒銆佹帶鍒跺櫒銆佸瓨鍌ㄥ櫒銆佽緭鍏ヨ澶囧拰杈撳嚭璁惧銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "璇炵敓浜?$1958$ 骞寸殑 $103$ 鏈烘槸涓浗绗竴鍙伴€氱敤鏁板瓧鐢靛瓙璁＄畻鏈猴紝姣?$1946$ 骞村湪缇庡浗璇炵敓鐨勭涓€鍙伴€氱敤鐢靛瓙璁＄畻鏈?$ENIAC$ 鏅氫簡鍗佸骞淬€?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝璁＄畻缁撴灉蹇呴』瀛樺偍鍦ㄥ彉閲忎腑鎵嶈兘杈撳嚭銆?,
+        "extractedKnowledgeTags": [
+          "瀛楃涓?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝鏍囪瘑绗︾殑鍛藉悕涓嶈兘瀹屽叏鐢辨暟瀛楃粍鎴愶紝鑷冲皯鏈変竴涓瓧姣嶅氨鍙互銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "10 鏄竴涓?int 绫诲瀷甯搁噺銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "if 璇彞鍙互娌℃湁 else 瀛愬彞銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "do ... while 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 鍜?b 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 a = b 鍙互鍒ゆ柇 a 鍜?b 鏄惁鐩哥瓑銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 a % 4 == 2 鍙互鍒ゆ柇 a 鐨勫€兼槸鍚︿负鍋舵暟銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "琛ㄨ揪寮?37 / 4 鐨勮绠楃粨鏋滀负 $9$ 锛屼笖缁撴灉绫诲瀷涓?int 銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鏃╂湡璁＄畻鏈哄唴瀛樹笉澶熷ぇ锛屽彲浠ュ皢瀛楀簱鍥哄寲鍦ㄤ竴涓寘鍚彧璇诲瓨鍌ㄥ櫒鐨勬墿灞曞崱涓彃鍏ヨ绠楁満涓绘澘甯姪澶勭悊姹夊瓧銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "绁炲▉路澶箹涔嬪厜瓒呯骇璁＄畻鏈烘槸涓浗鑷富鐮斿埗鐨勮秴绾ц绠楁満锛屽湪鍏ㄧ悆瓒呯骇璁＄畻鏈篢OP500鎺掕姒滀腑澶氭鑽ｈ喓姒滈銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 琛ㄨ揪寮?int (3.14) 鐨勫€间负 $3$ 銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 璇彞 cout << (2, 3, \"23\") 鐨勮緭鍑轰负 $2$ , $3$ , $23$ 銆?,
+        "extractedKnowledgeTags": [
+          "瀛楃涓?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 鐨勫惊鐜鍙?for (int i = 0; i < 10; i += 2) 琛ㄧず $i$ 浠?$0$ 寮€濮嬪埌 $10$ 缁撴潫浣嗕笉鍖呭惈 $10$ 锛岄棿闅斾负 $2$ 銆?,
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 琛ㄨ揪寮?('1' + '1') 鐨勫€间负 '2' 銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝 do-while 寰幆涓嶅彲鑳藉鑷存寰幆锛屼絾 while 鏈夊彲鑳姐€?,
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦ㄤ笅闈㈢殑C++浠ｇ爜涓紝鐢变簬寰幆涓殑 continue 鏄棤鏉′欢琚墽琛岋紝鍥犳灏嗗鑷存寰幆銆?cpp for(int i=1; i<10; i++) continue;",
+        "extractedKnowledgeTags": [
+          "妯℃嫙",
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 浠ｇ爜涓紝涓嶅彲浠ュ皢鍙橀噺鍛藉悕涓?cout 锛屽洜涓?cout 鏄?$C++$ 鐨勫叧閿瓧",
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++鏄竴绉嶉珮绾х▼搴忚璁¤瑷€銆?,
+        "extractedKnowledgeTags": [],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      }
+    ],
+    "nonKnowledgeOnly": [
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?Windows 绯荤粺涓€氳繃閿洏瀹屾垚瀵归€夊畾鏂囨湰绉诲姩鐨勬寜閿粍鍚堟槸鍏?Ctrl+X 锛岀Щ鍔ㄥ埌鐩爣浣嶇疆鍚庢寜 Ctrl+V 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "绋嬪簭鍛樼敤 C銆丆++銆丳ython銆丼cratch 绛夌紪鍐欑殑绋嬪簭鑳藉湪 CPU 涓婄洿鎺ユ墽琛屻€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?C++ 璇█涓紝娉ㄩ噴涓嶅疁鍐欏緱杩囧锛屽惁鍒欎細浣垮緱绋嬪簭杩愯閫熷害鍙樻參銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?C++ 璇█涓紝鏍囪瘑绗︿腑鍙互鏈夋暟瀛楋紝浣嗕笉鑳戒互鏁板瓧寮€澶淬€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "'3' 鏄竴涓?int 绫诲瀷甯搁噺銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "if 璇彞涓殑鏉′欢琛ㄨ揪寮忕殑缁撴灉蹇呴』涓?bool 绫诲瀷銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "for 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒祴鍊艰鍙?a = a + 3; 鏄敊璇殑锛屽洜涓鸿繖鏉¤鍙ヤ細瀵艰嚧 a 鏃犳剰涔夈€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 (a / 4 == 2) 鍜岃〃杈惧紡 (a >= 8 && a <= 11) 鐨勭粨鏋滄€绘槸鐩稿悓鐨勩€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "琛ㄨ揪寮?(3.5 * 2) 鐨勮绠楃粨鏋滀负 7.0锛屼笖缁撴灉绫诲瀷涓?double 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "璁＄畻鏈虹‖浠朵富瑕佸寘鎷繍绠楀櫒銆佹帶鍒跺櫒銆佸瓨鍌ㄥ櫒銆佽緭鍏ヨ澶囧拰杈撳嚭璁惧銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "璇炵敓浜?$1958$ 骞寸殑 $103$ 鏈烘槸涓浗绗竴鍙伴€氱敤鏁板瓧鐢靛瓙璁＄畻鏈猴紝姣?$1946$ 骞村湪缇庡浗璇炵敓鐨勭涓€鍙伴€氱敤鐢靛瓙璁＄畻鏈?$ENIAC$ 鏅氫簡鍗佸骞淬€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝璁＄畻缁撴灉蹇呴』瀛樺偍鍦ㄥ彉閲忎腑鎵嶈兘杈撳嚭銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "瀛楃涓?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝鏍囪瘑绗︾殑鍛藉悕涓嶈兘瀹屽叏鐢辨暟瀛楃粍鎴愶紝鑷冲皯鏈変竴涓瓧姣嶅氨鍙互銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "10 鏄竴涓?int 绫诲瀷甯搁噺銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "if 璇彞鍙互娌℃湁 else 瀛愬彞銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "do ... while 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 鍜?b 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 a = b 鍙互鍒ゆ柇 a 鍜?b 鏄惁鐩哥瓑銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "濡傛灉 a 涓?int 绫诲瀷鐨勫彉閲忥紝鍒欒〃杈惧紡 a % 4 == 2 鍙互鍒ゆ柇 a 鐨勫€兼槸鍚︿负鍋舵暟銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "琛ㄨ揪寮?37 / 4 鐨勮绠楃粨鏋滀负 $9$ 锛屼笖缁撴灉绫诲瀷涓?int 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鏃╂湡璁＄畻鏈哄唴瀛樹笉澶熷ぇ锛屽彲浠ュ皢瀛楀簱鍥哄寲鍦ㄤ竴涓寘鍚彧璇诲瓨鍌ㄥ櫒鐨勬墿灞曞崱涓彃鍏ヨ绠楁満涓绘澘甯姪澶勭悊姹夊瓧銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "绁炲▉路澶箹涔嬪厜瓒呯骇璁＄畻鏈烘槸涓浗鑷富鐮斿埗鐨勮秴绾ц绠楁満锛屽湪鍏ㄧ悆瓒呯骇璁＄畻鏈篢OP500鎺掕姒滀腑澶氭鑽ｈ喓姒滈銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 琛ㄨ揪寮?int (3.14) 鐨勫€间负 $3$ 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 璇彞 cout << (2, 3, \"23\") 鐨勮緭鍑轰负 $2$ , $3$ , $23$ 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "瀛楃涓?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 鐨勫惊鐜鍙?for (int i = 0; i < 10; i += 2) 琛ㄧず $i$ 浠?$0$ 寮€濮嬪埌 $10$ 缁撴潫浣嗕笉鍖呭惈 $10$ 锛岄棿闅斾负 $2$ 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 琛ㄨ揪寮?('1' + '1') 鐨勫€间负 '2' 銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝 do-while 寰幆涓嶅彲鑳藉鑷存寰幆锛屼絾 while 鏈夊彲鑳姐€?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦ㄤ笅闈㈢殑C++浠ｇ爜涓紝鐢变簬寰幆涓殑 continue 鏄棤鏉′欢琚墽琛岋紝鍥犳灏嗗鑷存寰幆銆?cpp for(int i=1; i<10; i++) continue;",
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "妯℃嫙",
+          "鐜?
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 浠ｇ爜涓紝涓嶅彲浠ュ皢鍙橀噺鍛藉悕涓?cout 锛屽洜涓?cout 鏄?$C++$ 鐨勫叧閿瓧",
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++鏄竴绉嶉珮绾х▼搴忚璁¤瑷€銆?,
+        "nonKnowledgeTags": [
+          "GESP"
+        ],
+        "extractedKnowledgeTags": []
+      }
+    ],
+    "missingButExtractable": [
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "绋嬪簭鍛樼敤 C銆丆++銆丳ython銆丼cratch 绛夌紪鍐欑殑绋嬪簭鑳藉湪 CPU 涓婄洿鎺ユ墽琛屻€?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?C++ 璇█涓紝鏍囪瘑绗︿腑鍙互鏈夋暟瀛楋紝浣嗕笉鑳戒互鏁板瓧寮€澶淬€?,
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-03-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "for 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝璁＄畻缁撴灉蹇呴』瀛樺偍鍦ㄥ彉閲忎腑鎵嶈兘杈撳嚭銆?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-06-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "do ... while 璇彞鐨勫惊鐜綋鑷冲皯浼氭墽琛屼竴娆°€?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 璇彞 cout << (2, 3, \"23\") 鐨勮緭鍑轰负 $2$ , $3$ , $23$ 銆?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "$C++$ 鐨勫惊鐜鍙?for (int i = 0; i < 10; i += 2) 琛ㄧず $i$ 浠?$0$ 寮€濮嬪埌 $10$ 缁撴潫浣嗕笉鍖呭惈 $10$ 锛岄棿闅斾负 $2$ 銆?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 璇█涓紝 do-while 寰幆涓嶅彲鑳藉鑷存寰幆锛屼絾 while 鏈夊彲鑳姐€?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦ㄤ笅闈㈢殑C++浠ｇ爜涓紝鐢变簬寰幆涓殑 continue 鏄棤鏉′欢琚墽琛岋紝鍥犳灏嗗鑷存寰幆銆?cpp for(int i=1; i<10; i++) continue;",
+        "suggestedKnowledgeTags": [
+          "妯℃嫙",
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-09-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦?$C++$ 浠ｇ爜涓紝涓嶅彲浠ュ皢鍙橀噺鍛藉悕涓?cout 锛屽洜涓?cout 鏄?$C++$ 鐨勫叧閿瓧",
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++琛ㄨ揪寮?int(3.14) 鐨勫€间负3銆? )",
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "for(int i = 1; i < 10; i += 3;) ; 琛ㄧずi浠?寮€濮嬪埌10缁撴潫闂撮殧涓?锛岀浉褰撲簬1銆?銆?銆?0銆傦紙 锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦ㄤ笅闈㈢殑C++浠ｇ爜 while(1) continue; 涓紝鐢变簬寰幆涓殑 continue 鏄棤鏉′欢琚墽琛岋紝鍥犳灏嗗鑷存寰幆銆傦紙 锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++鐨勭▼搴忎腑锛屼笉鑳界敤 scanf 浣滀负鍙橀噺鍚嶃€傦紙 锛?,
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "灏忔潹鏈€杩戝湪鍑嗗鑰僄ESP锛屼粬鐢ㄧ殑Dev C++ 鏉ョ粌涔犲拰杩愯绋嬪簭锛屾墍浠ev C++涔熸槸涓€涓皬鍨嬫搷浣滅郴缁熴€傦紙 锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2023-12-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2023骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "浠讳綍涓€涓?while 寰幆閮藉彲浠ヨ浆鍖栦负绛変环鐨?for 寰幆锛?锛夈€?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q17",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++璇彞 printf(\"%d#%d&\",2,3) 鎵р緩鍚庤緭鍑虹殑鏄?#3&銆?( )",
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?,
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++鍑芥暟scanf()蹇呴』鍚湁鍙傛暟锛?涓斿叾鍙傛暟涓哄瓧绗︿覆鍨嬪瓧饩噺锛?鍏跺姛鑳芥槸鎻愨桨杈撯紛銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?,
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++琛ㄨ揪寮?\"10\"*2 鎵р緩鏃跺皢鎶ラ敊锛?鍥犱负 \"10\" 鏄瓧绗︿覆绫诲瀷饨?鏄暣鏁扮被鍨嬶紝 瀹冧滑鏁版嵁绫诲瀷涓嶅悓锛?涓嶈兘鍦ㄢ紑璧疯繍绠椼€?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++涓紝 while鍙兘鏄寰幆锛?饨絝or寰幆涓嶅彲鑳芥槸姝诲惊鐜€?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++锛?break璇彞饨や簬鎻愬墠缁堚綄褰撳墠灞傛寰幆锛?閫傗饯浜巜hile寰幆锛?浣嗕笉閫傗饯浜巉or寰幆銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q23",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++鐨勭▼搴忎腑锛?cin鏄紑涓悎娉曠殑鍙橀噺鍚嶃€?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-03-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "浠讳綍饧€涓猣or寰幆閮藉彲浠ヨ浆鍖栦负绛変环鐨剋hile寰幆锛?锛?銆?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "C++鐨勬暣鍨?N 琚祴鍊间负5锛?璇彞 printf(\"%d*2\",N) 鎵р緩鍚庡皢杈撳嚭 10 銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?,
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++涓紝 break 璇彞饨や簬缁堚綄褰撳墠灞傛鐨勫惊鐜紝 寰幆鍙互鏄?for 寰幆锛?涔熷彲浠ユ槸 while 寰幆銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++锛?continue 璇彞閫氬父涓?if 璇彞閰嶅悎浣库饯銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "鍦–++浠ｇ爜涓紝 涓嶅彲浠ュ皢鍙橀噺鍛藉悕涓?printf 锛?鍥犱负 printf 鏄疌++璇緮鐨勫叧閿瓧銆?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "GESP娴嬭瘯鏄璁よ瘉鑰呯殑缂栫▼鑳解紥杩涒緩绛夌骇璁よ瘉锛?鍚屸紑绾у埆鐨勮兘饧掑熀鏈笂涓庣紪绋嬭饩斺絾鍏炽€?锛?锛?,
+        "suggestedKnowledgeTags": [
+          "瀛楃涓?,
+          "鍑芥暟",
+          "鎺掑簭",
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-12-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鎵р緩鍚庡皢杈撳嚭10 銆?( ) cpp int N = 0; for (int i = 0; i < 10; i++){ continue; N += 1; } cout << N;",
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-12-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?2鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "GESP"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鎵р緩鍚庡皢杈撳嚭100 銆?( ) cpp int i; for (i = 0; i <= 100; i++) continue; cout << i;",
+        "suggestedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "GESP"
+        ]
+      }
+    ],
+    "mismatchedKnowledge": [
+      {
+        "questionUid": "gesp-2024-09-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "饧╂潹鏈€杩戝紑濮嬪涔燙++缂栫▼锛?饨煎笀璇碈 ++鏄紑闂ㄢ警鍚戝璞＄殑缂栫▼璇緮,涔熸槸饧€闂ㄢ炯绾ц饩斻€?锛?锛?,
+        "storedKnowledgeTags": [
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-09-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "鏁板鍩虹"
+        ],
+        "stemPreview": "N鏄疌++绋嬪簭涓殑鏁村瀷鍙橀噺锛?鍒欒鍙?scanf(\"%d\", &N) 鑳芥帴鏀跺舰濡傛鏁存暟銆?璐熸暣鏁板拰0杈撯紛锛?浣嗗鏋滆緭饧婂惈瀛楁瘝鎴栧甫饧╂暟鐐规暟锛?灏嗗鑷粹絾娉曟墽饩忋€?( )",
+        "storedKnowledgeTags": [
+          "鏁板鍩虹"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-09-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鑳藉鎵р緩锛?鍒欏皢杈撳嚭45銆?锛?锛?cpp for (int i = 0; i < 10; i++) Sum += i; cout << Sum;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-09-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鎵р緩鍚庯紝 鏈€鍚庘紑娆¤緭鍑烘槸10銆?锛?锛?cpp for (int i = 1; i < 10; i+=3) cout << i << endl;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-09-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2024骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "鏉′欢缁撴瀯"
+        ],
+        "stemPreview": "鍦–++锛?break 璇彞閫氬父涓巌f璇彞閰嶅悎浣库饯銆?锛?锛?,
+        "storedKnowledgeTags": [
+          "鏉′欢缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "stemPreview": "鍒犻櫎涓嬮潰 C++ 浠ｇ爜涓殑 continue 涓嶅奖鍝嶇▼搴忕殑鎵ц鏁堟灉銆傦紙 锛?cpp for (int i = 0; i < 100; i++) { if (i % 2 == 0) { printf (\"鍋舵暟\"); continue; } e",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰 C++ 浠ｇ爜鎵ц鏃跺皢鎶ラ敊锛屽洜涓烘墍鍦ㄤ綅缃簲璇ユ槸鍙橀噺鍚嶏紝鑰屼笉鍙互鍋氬彉閲忓悕銆傦紙 锛?cpp for (int _ = 0; _ < 100; _++) cout << \"*\" << endl;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰 C++ 浠ｇ爜琚墽琛屽悗锛屽皢鍏堝悗杈撳嚭 3 鍜?5銆傦紙 锛?cpp for (int i = 3; i < 5; i += 2) printf(\"%d \", i);",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "鏉′欢缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰鐨?C++ 浠ｇ爜鎵ц鍚庡皢鍏堝悗杈撳嚭 7 涓?true銆傦紙 锛?cpp for (int i = 0; i < 10; i++) cout << (i * 2 < i * i) << \" \";",
+        "storedKnowledgeTags": [
+          "鏉′欢缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "C++ 璇█涓?continue 璇彞鍙互鏉ユ彁鍓嶇粨鏉熷惊鐜€傦紙 锛?,
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-03-cpp-1-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "鏁板鍩虹",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "C++ 涓畾涔夋暣鍨嬪彉閲?N锛屾墽琛岃鍙canf(\"%d\", &N); cout << N / 3 * 5;鏃惰緭鍏?3.6锛屽垯杈撳嚭鏄?6銆傦紙 锛?,
+        "storedKnowledgeTags": [
+          "鏁板鍩虹",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "stemPreview": "鍦ㄤ笅闈++浠ｇ爜涓紝鍒犻櫎break璇彞瀵圭▼搴忔墽琛岀粨鏋滄病鏈夊奖鍝嶃€?cpp int i; for (i = 0; i < 10; i++) { continue; cout << i << \"#\"; break; } if (i >= 10) ",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "stemPreview": "鍒犻櫎涓嬮潰C++浠ｇ爜涓殑continue鍚庡叾杈撳嚭鏄?#2#4#6#8#銆?cpp int i; for (i = 0; i < 10; i++) { if (i % 2 == 0) { cout << i << \"#\"; continue; ",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "鏉′欢缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "妯℃嫙"
+        ],
+        "stemPreview": "灏嗕笅闈++浠ｇ爜涓殑 i < 100; i = i + 1 淇敼涓?i < 200; i += i + 1锛屽叾杈撳嚭涓庡綋鍓嶄唬鐮佽緭鍑虹浉鍚屻€?cpp int cnt = 0; for (int i = 0; i < 100; i = i + 1)",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "妯℃嫙"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "浜ゆ崲涓嬮潰C++浠ｇ爜涓殑 i += 2 鍜?cnt += 1锛屼氦鎹㈠墠鍚庡垎鍒繍琛岀殑涓ゆ杈撳嚭鐩稿悓銆?cpp int i, cnt = 0; cnt = 0; while (i < 10) { i += 2; cnt += 1; } cout <<",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰鐨凜++浠ｇ爜鎵ц鍚庡皢杈撳嚭45銆?cpp int cnt; for (int i = 0; i < 10; i++) cnt += 1; cout << cnt;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟",
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-06-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "鍦–++浠ｇ爜涓紝涓嶅彲浠ュ皢鍙橀噺鍛藉悕涓篺alse锛屽洜涓篺alse鏄疌++璇█鐨勫叧閿瓧銆?,
+        "storedKnowledgeTags": [
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鍑芥暟"
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q16",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "妯℃嫙"
+        ],
+        "stemPreview": "鍦ㄩ泦鎴愬紑鍙戠幆澧冮噷璋冭瘯绋嬪簭鏃讹紝瑕佹敞鎰忎笉鑳戒慨鏀规簮绋嬪簭锛屽洜涓哄鏋滀慨鏀癸紝灏辫缁堟璋冭瘯銆佸叧闂鏂囦欢骞堕噸鏂版墦寮€锛屾墠鑳藉啀娆″紑濮嬭皟璇曘€?)",
+        "storedKnowledgeTags": [
+          "妯℃嫙"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q18",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰C++浠ｇ爜鎵ц鍚庡皢杈撳嚭 9銆?cpp for(i = 0; i < 10; i++) break; cout << i;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q19",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰C++浠ｇ爜鎵ц鍚庡皢杈撳嚭 55銆?) cpp n = 0; for(int i = 0; i > -10; i--) n = n + i * -1; cout << n;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q20",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "鏁板鍩虹"
+        ],
+        "stemPreview": "灏嗕笅闈++浠ｇ爜涓殑L1琛岀殑i=0淇敼涓篿=1锛屽叾杈撳嚭涓庡綋鍓嶄唬鐮佽緭鍑虹浉鍚屻€?cpp cnt = 0; for(int i = 0; i < 100; i++)// L1 cnt += i; cout << cnt;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "鏁板鍩虹"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "灏嗕笅闈++浠ｇ爜涓殑 i < 10 淇敼涓?i <= 10 锛屽叾鎵ц鍚庤緭鍑虹浉鍚屻€?) cpp int n,i; n = i = 0; while(i < 10){ n += i; i += 1; } cout << n;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰鐨凜++浠ｇ爜鎵ц鍚庡皢杈撳嚭45銆?) cpp int n,i; n = i = 0; while (i < 10){ i += 1; n += i; } cout << n;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "椤哄簭缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2025-09-cpp-1-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎GESP-C++-2025骞?鏈堜竴绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬮潰C++浠ｇ爜鎵ц鏃跺皢瀵艰嚧鏃犻檺寰幆(涔熺О姝诲惊鐜?銆?) cpp int count = 0; while(count < 5){ count += 1; if(count == 3) continue; cout << count<< ' ",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "downloads-1101-q16",
+        "source": "downloads",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "1101 - GESP 涓€绾ф牱棰橈紙C++ 缁勶級",
+        "rawTags": [
+          "downloads-import",
+          "objective",
+          "gesp",
+          "sample",
+          "鏁板鍩虹"
+        ],
+        "stemPreview": "鎿嶄綔绯荤粺鏄鐢ㄦ埛鍙互鎿嶇旱璁＄畻鏈哄畬鎴愬悇绉嶅姛鑳界殑杞欢銆傦紙 锛?,
+        "storedKnowledgeTags": [
+          "鏁板鍩虹"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "downloads-import",
+          "objective",
+          "gesp",
+          "sample"
+        ]
+      },
+      {
+        "questionUid": "downloads-1101-q21",
+        "source": "downloads",
+        "type": "judge",
+        "levelTag": "gesp1",
+        "sourceTitle": "1101 - GESP 涓€绾ф牱棰橈紙C++ 缁勶級",
+        "rawTags": [
+          "downloads-import",
+          "objective",
+          "gesp",
+          "sample",
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "鑳界敤 while 璇彞缂栧啓鐨勫惊鐜紝灏卞彲浠ヤ娇鐢?for 璇彞缂栧啓鍑哄叿鏈夊悓鏍峰姛鑳界殑寰幆銆傦紙 锛?,
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": [
+          "downloads-import",
+          "objective",
+          "gesp",
+          "sample"
+        ]
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-2-q21",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp2",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆缁撴瀯",
+          "妯℃嫙"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鎵р緩鍚庡皢瀵艰嚧姝诲惊鐜€?锛?锛?cpp for (int i = 0; i < 10; i++) continue;",
+        "storedKnowledgeTags": [
+          "寰幆缁撴瀯",
+          "妯℃嫙"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-2-q22",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp2",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎",
+        "rawTags": [
+          "寰幆宓屽",
+          "妯℃嫙"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鎵р緩鍚庡皢杈撳嚭10銆?锛?锛?cpp int cnt = 0; for (int i = 0; i < 10; i++) for (int j = 0; j < i; j++){ cnt += 1; break; } cout ",
+        "storedKnowledgeTags": [
+          "寰幆宓屽",
+          "妯℃嫙"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-2-q24",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp2",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎",
+        "rawTags": [
+          "妯℃嫙",
+          "寰幆缁撴瀯"
+        ],
+        "stemPreview": "涓嬧警C++浠ｇ爜鑳藉疄鐜版鏁存暟鍚勪綅鏁板瓧涔嬪拰銆?锛?锛?cpp int N,Sum = 0; cin >> N; while (N){ Sum += N % 10; N /= 10; } cout << Sum;",
+        "storedKnowledgeTags": [
+          "妯℃嫙",
+          "寰幆缁撴瀯"
+        ],
+        "extractedKnowledgeTags": [
+          "鐜?
+        ],
+        "nonKnowledgeTags": []
+      },
+      {
+        "questionUid": "gesp-2024-06-cpp-2-q25",
+        "source": "gesp",
+        "type": "judge",
+        "levelTag": "gesp2",
+        "sourceTitle": "GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎GESP-C++-2024骞?鏈堜簩绾х湡棰樺嵎",
+        "rawTags": [
+          "妯℃嫙"
+        ],
+        "stemPreview": "GESP娴嬭瘯鏄璁よ瘉鑰呯殑缂栫▼鑳解紥杩涒緩绛夌骇璁よ瘉锛?鍚屸紑绾у埆鐨勮兘饧掑熀鏈笂涓庣紪绋嬭饩斺絾鍏炽€?锛?锛?,
+        "storedKnowledgeTags": [
+          "妯℃嫙"
+        ],
+        "extractedKnowledgeTags": [
+          "鎺掑簭"
+        ],
+        "nonKnowledgeTags": []
+      }
+    ]
+  }
+}

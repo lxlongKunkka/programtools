@@ -4,6 +4,14 @@ function getBeijingExportTime() {
   return new Date(beijingString)
 }
 
+function sanitizeFileName(value, fallback = 'task') {
+  const text = String(value || '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text || fallback
+}
+
 function createZipOptions(date) {
   return { date }
 }
@@ -108,6 +116,31 @@ export function formatBatchZipName({ username, taskCount, exportTime }) {
   return `batch_export_${username}_${taskCount}tasks_${dateStr}.zip`
 }
 
+export function formatRawMaterialZipName({ username, taskCount, exportTime }) {
+  const dateStr = exportTime.getFullYear() +
+    String(exportTime.getMonth() + 1).padStart(2, '0') +
+    String(exportTime.getDate()).padStart(2, '0') + '_' +
+    String(exportTime.getHours()).padStart(2, '0') +
+    String(exportTime.getMinutes()).padStart(2, '0') +
+    String(exportTime.getSeconds()).padStart(2, '0')
+
+  return `raw_materials_${username}_${taskCount}tasks_${dateStr}.zip`
+}
+
+export function hasTaskRawMaterials(task) {
+  if (!task) return false
+  return Boolean(
+    String(task.problemText || '').trim() ||
+    String(task.manualCode || '').trim() ||
+    task.additionalFile
+  )
+}
+
+export function hasTaskPendingRawMaterials(task) {
+  if (!hasTaskRawMaterials(task)) return false
+  return !String(task?.dataOutput || '').trim()
+}
+
 export async function blobToBase64(blob) {
   const reader = new FileReader()
   const dataUrl = await new Promise((resolve, reject) => {
@@ -186,6 +219,58 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
   const blob = await masterZip.generateAsync({ type: 'blob' })
   const username = getExportUsername(helperApi.storage)
   const zipName = formatBatchZipName({ username, taskCount: completedTasks.length, exportTime })
+
+  return {
+    blob,
+    zipName,
+    exportTime,
+  }
+}
+
+export async function createRawMaterialsExportBundle({ JSZip, tasks, helperApi }) {
+  const masterZip = new JSZip()
+  const exportTime = getBeijingExportTime()
+  const zipOptions = createZipOptions(exportTime)
+  const taskList = Array.isArray(tasks) ? tasks.filter(Boolean) : []
+
+  for (let index = 0; index < taskList.length; index++) {
+    const task = taskList[index]
+    const title = sanitizeFileName(
+      helperApi.getSmartTitle(task.problemMeta, task.translationText || task.problemText, task.id),
+      `task_${index + 1}`
+    )
+    const prefix = String(index + 1).padStart(2, '0')
+    const folder = taskList.length === 1 ? masterZip : masterZip.folder(`${prefix}_${title}`)
+
+    if (task.problemText && task.problemText.trim()) {
+      folder.file('problem.md', task.problemText.trim(), zipOptions)
+    }
+
+    if (task.manualCode && task.manualCode.trim()) {
+      const normalizedCode = helperApi.getBestCodeContent('', task.manualCode)
+      const { ext } = helperApi.detectLanguage(task.manualCode)
+      folder.file(`ac_code.${ext}`, normalizedCode || task.manualCode.trim(), zipOptions)
+    }
+
+    if (task.problemMeta?.sourceUrl) {
+      folder.file('source_url.txt', String(task.problemMeta.sourceUrl).trim(), zipOptions)
+    }
+
+    if (task.additionalFile?.base64) {
+      try {
+        const fileName = sanitizeFileName(task.additionalFile.filename, 'attachment.zip')
+        folder.file(`additional_file/${fileName}`, decodeBase64ToBytes(task.additionalFile.base64), zipOptions)
+      } catch (error) {
+        console.warn('Failed to add raw additional file to zip:', error)
+      }
+    } else if (task.additionalFile?.sourceUrl) {
+      folder.file('additional_file/source_url.txt', String(task.additionalFile.sourceUrl).trim(), zipOptions)
+    }
+  }
+
+  const blob = await masterZip.generateAsync({ type: 'blob' })
+  const username = getExportUsername(helperApi.storage)
+  const zipName = formatRawMaterialZipName({ username, taskCount: taskList.length, exportTime })
 
   return {
     blob,

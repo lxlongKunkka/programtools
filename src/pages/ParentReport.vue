@@ -153,7 +153,7 @@
         <section v-else class="tab-panel">
           <div class="section-head">
             <h2>Course 日报</h2>
-            <p>老师设定的当前学习定位、最近练习级别与课程学习轨迹。</p>
+            <p>保留关键进度，直接看每个章节的题目完成情况。</p>
           </div>
           <div class="summary-grid">
             <article class="summary-card accent">
@@ -174,6 +174,50 @@
             <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
             <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
           </div>
+
+          <article class="panel">
+            <h3>课程进度总览</h3>
+            <div v-if="!courseOverviewGroups.length" class="empty-inline">暂无课程进度图</div>
+            <div v-else class="report-group-sections">
+              <section v-for="group in courseOverviewGroups" :key="group.name" class="report-group-section">
+                <h4 class="report-group-title">{{ group.name }}</h4>
+                <div class="report-level-grid">
+                  <article v-for="level in group.levels" :key="level.levelId" class="report-level-card" :class="getOverviewLevelCardClass(level)">
+                    <div class="report-level-head">
+                      <div class="report-level-head-main">
+                        <span class="report-level-badge">{{ level.subject }} · L{{ level.level }}</span>
+                        <strong>{{ level.title }}</strong>
+                      </div>
+                      <div class="report-level-summary">
+                        <span class="report-level-percent">{{ level.completionRate }}%</span>
+                        <span class="report-level-meta">{{ level.solvedProblemCount || 0 }}/{{ level.totalProblemCount || 0 }} 题</span>
+                      </div>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
+                    <div class="report-topic-list">
+                      <section v-for="topic in level.topics" :key="topic.topicId" class="report-topic-block">
+                        <div class="report-topic-head">
+                          <span class="report-topic-name">{{ topic.title }}</span>
+                          <span class="report-topic-meta">{{ topic.solvedProblemCount || 0 }}/{{ topic.totalProblemCount || 0 }} 题</span>
+                        </div>
+                        <div class="report-chapter-list">
+                          <div v-for="chapter in topic.chapters || []" :key="chapter.chapterId || chapter.chapterUid" class="report-chapter-row">
+                            <div class="report-chapter-main">
+                              <span class="report-chapter-name">{{ chapter.title }}</span>
+                              <div class="report-chapter-track">
+                                <div class="report-chapter-fill" :style="{ width: `${chapter.completionRate || 0}%` }"></div>
+                              </div>
+                            </div>
+                            <span class="report-chapter-meta" :class="getChapterProgressClass(chapter)">{{ chapter.solvedProblemCount || 0 }}/{{ chapter.totalProblemCount || 0 }}</span>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </article>
 
           <article class="panel">
             <h3>近期关联作业</h3>
@@ -300,6 +344,7 @@ function createEmptyReport() {
         lastActivityAt: null
       },
       levels: [],
+      overviewLevels: [],
       recentHomeworks: [],
       recentSolvedProblems: [],
       recentActivities: []
@@ -506,6 +551,24 @@ export default {
       }
 
       return ensureCurrentLevelIncluded(levels.slice(0, 3).map(withActivityMeta))
+    },
+    courseOverviewLevels() {
+      return Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
+    },
+    courseOverviewGroups() {
+      const groups = new Map()
+      for (const level of this.courseOverviewLevels) {
+        const groupName = String(level?.group || level?.subject || '未分组')
+        if (!groups.has(groupName)) groups.set(groupName, { name: groupName, levels: [] })
+        groups.get(groupName).levels.push(level)
+      }
+
+      return [...groups.values()]
+        .map((group) => ({
+          ...group,
+          levels: group.levels.slice().sort((left, right) => Number(left?.level || 0) - Number(right?.level || 0))
+        }))
+        .sort((left, right) => String(left.name).localeCompare(String(right.name), 'zh-CN'))
     }
   },
   watch: {
@@ -572,6 +635,16 @@ export default {
         return `${source}第 ${attempt.paperQuestionNo} 题`
       }
       return attempt?.sourceTitle || attempt?.questionUid || '未命名题目'
+    },
+    getChapterProgressClass(chapter) {
+      if (Number(chapter?.totalProblemCount || 0) > 0 && Number(chapter?.solvedProblemCount || 0) >= Number(chapter?.totalProblemCount || 0)) return 'done'
+      if (Number(chapter?.solvedProblemCount || 0) > 0) return 'started'
+      return 'todo'
+    },
+    getOverviewLevelCardClass(level) {
+      if (Number(level?.completionRate || 0) === 100) return 'done'
+      if (Number(level?.completedChapters || 0) > 0) return 'started'
+      return ''
     }
   }
 }
@@ -790,6 +863,165 @@ export default {
 }
 .progress-bar { height: 8px; border-radius: 999px; background: #e6edf5; margin-top: 12px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #2f7ff8 0%, #67b6ff 100%); }
+.small-empty-inline {
+  text-align: left;
+  font-size: 12px;
+}
+.report-group-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.report-group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.report-group-title {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+.report-level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.report-level-card {
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fbfdff;
+}
+.report-level-card.done {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.report-level-card.started {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.report-level-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-level-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.report-level-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.report-level-head strong {
+  font-size: 14px;
+  color: #1e293b;
+  min-width: 0;
+}
+.report-level-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eaf3ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+}
+.report-level-percent {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 700;
+}
+.report-level-meta {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.report-topic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+.report-topic-block {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #e7eef6;
+}
+.report-topic-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.report-topic-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+.report-topic-meta {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+.report-chapter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.report-chapter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.report-chapter-main {
+  min-width: 0;
+}
+.report-chapter-name {
+  display: block;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.report-chapter-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e6edf5;
+  overflow: hidden;
+}
+.report-chapter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #22c55e 100%);
+}
+.report-chapter-meta {
+  min-width: 48px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+}
+.report-chapter-meta.done {
+  color: #15803d;
+}
+.report-chapter-meta.started {
+  color: #b45309;
+}
+.report-chapter-meta.todo {
+  color: #94a3b8;
+}
 @media (max-width: 900px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-grid { grid-template-columns: 1fr; }
@@ -805,6 +1037,11 @@ export default {
   .row-item,
   .attempt-head,
   .level-head,
-  .hero-meta { flex-direction: column; align-items: flex-start; }
+  .hero-meta,
+  .report-level-head,
+  .report-topic-head { flex-direction: column; align-items: flex-start; }
+  .report-level-summary { align-items: flex-start; }
+  .report-chapter-row { grid-template-columns: 1fr; }
+  .report-chapter-meta { min-width: 0; text-align: left; }
 }
 </style>

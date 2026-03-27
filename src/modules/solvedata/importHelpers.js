@@ -1,5 +1,61 @@
 import { createEmptyTask, isTaskInputEmpty } from './taskState'
 
+function extractFileNameFromUrl(url) {
+  const value = String(url || '').trim()
+  if (!value) return 'attachment'
+  try {
+    const parsed = new URL(value)
+    const pathname = parsed.pathname || ''
+    const fileName = pathname.split('/').filter(Boolean).pop()
+    return fileName || 'attachment'
+  } catch {
+    const clean = value.split('?')[0].split('#')[0]
+    return clean.split('/').filter(Boolean).pop() || 'attachment'
+  }
+}
+
+function encodeBytesToBase64(bytes) {
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+  return btoa(binary)
+}
+
+async function readFileAsBase64(file) {
+  const buffer = await file.arrayBuffer()
+  return encodeBytesToBase64(new Uint8Array(buffer))
+}
+
+function getTaskFolderKey(parts) {
+  const folderParts = parts.slice(0, -1)
+  if (folderParts[folderParts.length - 1] === 'additional_file') {
+    folderParts.pop()
+  }
+  return folderParts.join('/')
+}
+
+function pickImportedCodeFile(fileMap) {
+  const fileNames = Object.keys(fileMap || {})
+  const preferredPatterns = [/^ac_code\./i, /^std\./i, /^source\./i]
+
+  for (const pattern of preferredPatterns) {
+    const matchedName = fileNames.find((name) => pattern.test(name))
+    if (matchedName) return fileMap[matchedName]
+  }
+
+  return null
+}
+
+function pickImportedAttachment(additionalFiles) {
+  const attachmentList = Array.isArray(additionalFiles) ? additionalFiles : []
+  const sourceUrlFile = attachmentList.find((item) => item.name.toLowerCase() === 'source_url.txt')
+  const binaryFile = attachmentList.find((item) => item.name.toLowerCase() !== 'source_url.txt')
+  return { sourceUrlFile, binaryFile }
+}
+
 export function normalizeExtensionImportRequest(rawPayload) {
   if (rawPayload?.kind && rawPayload?.payload) return rawPayload
   return {
@@ -142,13 +198,25 @@ export async function readFolderImportedTasks(files) {
     const parts = relativePath.split('/').filter(Boolean)
     if (parts.length < 2) continue
     const fileName = parts[parts.length - 1]
-    const folderKey = parts.slice(0, -1).join('/')
-    if (!groups.has(folderKey)) groups.set(folderKey, {})
-    groups.get(folderKey)[fileName] = file
+    const folderKey = getTaskFolderKey(parts)
+    const isAdditionalFile = parts[parts.length - 2] === 'additional_file'
+    if (!groups.has(folderKey)) {
+      groups.set(folderKey, {
+        files: {},
+        additionalFiles: [],
+      })
+    }
+
+    const group = groups.get(folderKey)
+    if (isAdditionalFile) {
+      group.additionalFiles.push({ name: fileName, file })
+    } else {
+      group.files[fileName] = file
+    }
   }
 
   const folderEntries = [...groups.entries()]
-    .filter(([, fileMap]) => fileMap['problem.md'])
+    .filter(([, group]) => group.files['problem.md'])
     .sort((a, b) => {
       const aBase = a[0].split('/').pop() || a[0]
       const bBase = b[0].split('/').pop() || b[0]
@@ -161,20 +229,44 @@ export async function readFolderImportedTasks(files) {
     })
 
   const importedTasks = []
-  for (const [folderKey, fileMap] of folderEntries) {
+  for (const [folderKey, group] of folderEntries) {
     const folderName = folderKey.split('/').pop() || folderKey
-    const problemText = await fileMap['problem.md'].text()
-    const codeFile = fileMap['std.cpp'] || fileMap['source.cpp']
+    const problemText = await group.files['problem.md'].text()
+    const codeFile = pickImportedCodeFile(group.files)
     const manualCode = codeFile ? await codeFile.text() : ''
+    const sourceUrlFile = group.files['source_url.txt']
+    const sourceUrl = sourceUrlFile ? (await sourceUrlFile.text()).trim() : ''
+    const { sourceUrlFile: additionalSourceUrlFile, binaryFile } = pickImportedAttachment(group.additionalFiles)
+
+    let additionalFile = null
+    if (binaryFile?.file) {
+      additionalFile = {
+        filename: binaryFile.name,
+        size: Number(binaryFile.file.size || 0),
+        base64: await readFileAsBase64(binaryFile.file),
+      }
+    } else if (additionalSourceUrlFile?.file) {
+      const attachmentSourceUrl = (await additionalSourceUrlFile.file.text()).trim()
+      if (attachmentSourceUrl) {
+        additionalFile = {
+          filename: extractFileNameFromUrl(attachmentSourceUrl),
+          size: 0,
+          sourceUrl: attachmentSourceUrl,
+        }
+      }
+    }
+
     const heading = String(problemText || '').split('\n').map(line => line.trim()).find(Boolean) || ''
     const derivedTitle = heading.replace(/^#\s*/, '').trim() || folderName.replace(/^\d+[-_]?/, '')
     importedTasks.push(createEmptyTask({
       problemText,
       manualCode,
+      additionalFile,
       problemMeta: {
         title: derivedTitle,
         rawTitle: derivedTitle,
         sourceFolder: folderName,
+        ...(sourceUrl ? { sourceUrl } : {}),
       },
     }))
   }
