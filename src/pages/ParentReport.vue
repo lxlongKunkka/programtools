@@ -187,10 +187,11 @@
                       <div class="report-level-head-main">
                         <span class="report-level-badge">{{ level.subject }} · L{{ level.level }}</span>
                         <strong>{{ level.title }}</strong>
+                        <p class="report-level-chapter-meta">已学章节 {{ level.completedChapters || 0 }}/{{ level.totalChapters || 0 }}</p>
                       </div>
                       <div class="report-level-summary">
                         <span class="report-level-percent">{{ level.completionRate }}%</span>
-                        <span class="report-level-meta">{{ level.solvedProblemCount || 0 }}/{{ level.totalProblemCount || 0 }} 题</span>
+                        <span class="report-level-meta">{{ level.completedChapters || 0 }}/{{ level.totalChapters || 0 }} 章节 · {{ level.solvedProblemCount || 0 }}/{{ level.totalProblemCount || 0 }} 题</span>
                       </div>
                     </div>
                     <div class="progress-bar"><div class="progress-fill" :style="{ width: `${level.completionRate}%` }"></div></div>
@@ -198,7 +199,7 @@
                       <section v-for="topic in level.topics" :key="topic.topicId" class="report-topic-block">
                         <div class="report-topic-head">
                           <span class="report-topic-name">{{ topic.title }}</span>
-                          <span class="report-topic-meta">{{ topic.solvedProblemCount || 0 }}/{{ topic.totalProblemCount || 0 }} 题</span>
+                          <span class="report-topic-meta">{{ topic.completedCount || 0 }}/{{ topic.totalCount || 0 }} 章节 · {{ topic.solvedProblemCount || 0 }}/{{ topic.totalProblemCount || 0 }} 题</span>
                         </div>
                         <div class="report-chapter-list">
                           <div v-for="chapter in topic.chapters || []" :key="chapter.chapterId || chapter.chapterUid" class="report-chapter-row">
@@ -925,6 +926,12 @@ export default {
   font-size: 14px;
   color: #1e293b;
   min-width: 0;
+}
+.report-level-chapter-meta {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
 }
 .report-level-badge {
   display: inline-flex;
