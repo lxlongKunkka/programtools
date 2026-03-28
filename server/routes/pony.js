@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import express from 'express'
+import { PRESET_PONY_LEVELS } from '../data/ponyLevels.js'
 import PonyPuzzleLevel from '../models/PonyPuzzleLevel.js'
 import PonyPuzzleSession from '../models/PonyPuzzleSession.js'
 import {
@@ -15,7 +16,7 @@ import {
 import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
-const LEVEL_TARGET = 12
+const LEVEL_TARGET = PRESET_PONY_LEVELS.length
 let levelInitPromise = null
 
 function shuffle(items) {
@@ -189,15 +190,12 @@ function createGeneratedLevel(levelId, size) {
 }
 
 async function initLevels() {
-  const count = await PonyPuzzleLevel.countDocuments()
-  if (count >= LEVEL_TARGET) return
-
-  const existingIds = new Set((await PonyPuzzleLevel.find().select('levelId').lean()).map((item) => Number(item.levelId)))
-  for (let levelId = 1; levelId <= LEVEL_TARGET; levelId += 1) {
-    if (existingIds.has(levelId)) continue
-    const size = levelId <= 4 ? 5 : (levelId <= 8 ? 6 : 7)
-    const level = createGeneratedLevel(levelId, size)
-    await PonyPuzzleLevel.create(level)
+  for (const level of PRESET_PONY_LEVELS) {
+    await PonyPuzzleLevel.updateOne(
+      { levelId: Number(level.levelId) },
+      { $set: level },
+      { upsert: true }
+    )
   }
 }
 
