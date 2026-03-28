@@ -13,6 +13,7 @@ import Submission from '../models/Submission.js'
 import ContestStatus from '../models/ContestStatus.js'
 import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import CourseActivity from '../models/CourseActivity.js'
+import { GAME_ECONOMY_CONFIG, grantCoins } from '../services/gameEconomy.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -2453,7 +2454,8 @@ router.post('/submit-problem', authenticateToken, async (req, res) => {
     }
     
     const chapterData = progress.chapterProgress.get(chapterId)
-    if (!chapterData.solvedProblems.includes(problemId)) {
+    const isNewSolve = !chapterData.solvedProblems.includes(problemId)
+    if (isNewSolve) {
       chapterData.solvedProblems.push(problemId)
     }
     
@@ -2500,6 +2502,15 @@ router.post('/submit-problem', authenticateToken, async (req, res) => {
       problemId,
       metadata: { source: 'submit-problem' }
     })
+    if (isNewSolve) {
+      await grantCoins(
+        Number(userId),
+        GAME_ECONOMY_CONFIG.courseProblemCoins,
+        'course_problem_pass',
+        `course-problem-pass:${userId}:${chapterId}:${problemId}`,
+        { chapterId, problemId, source: 'submit-problem' }
+      )
+    }
     res.json({ success: true, progress })
   } catch (e) {
     console.error(e)
@@ -2545,7 +2556,8 @@ router.post('/complete-chapter', authenticateToken, async (req, res) => {
        isCompletedUid = progress.completedChapterUids.some(id => id.toString() === chapter._id.toString())
     }
 
-    if (!isCompletedLegacy || (chapter._id && !isCompletedUid)) {
+    const isNewCompletion = !isCompletedLegacy || (chapter._id && !isCompletedUid)
+    if (isNewCompletion) {
       if (!isCompletedLegacy) progress.completedChapters.push(chapterId)
       await unlockNext(progress, chapterId)
     }
@@ -2557,6 +2569,15 @@ router.post('/complete-chapter', authenticateToken, async (req, res) => {
       action: 'complete_chapter',
       metadata: { source: 'complete-chapter' }
     })
+    if (isNewCompletion) {
+      await grantCoins(
+        Number(userId),
+        GAME_ECONOMY_CONFIG.courseChapterCoins,
+        'course_chapter_complete',
+        `course-chapter-complete:${userId}:${chapterId}`,
+        { chapterId, source: 'complete-chapter' }
+      )
+    }
     res.json({ success: true, progress })
   } catch (e) {
     console.error(e)
@@ -2598,7 +2619,8 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
        }
        
        const chapterData = progress.chapterProgress.get(chapterId)
-       if (!chapterData.solvedProblems.includes(problemId)) {
+       const isNewSolve = !chapterData.solvedProblems.includes(problemId)
+       if (isNewSolve) {
          chapterData.solvedProblems.push(problemId)
        }
        
@@ -2645,6 +2667,15 @@ router.post('/check-problem', authenticateToken, async (req, res) => {
          problemId,
          metadata: { source: 'check-problem' }
        })
+       if (isNewSolve) {
+         await grantCoins(
+           Number(userId),
+           GAME_ECONOMY_CONFIG.courseProblemCoins,
+           'course_problem_pass',
+           `course-problem-pass:${userId}:${chapterId}:${problemId}`,
+           { chapterId, problemId, source: 'check-problem' }
+         )
+       }
        return res.json({ passed: true, progress })
     } else {
        return res.json({ passed: false, message: '未找到 AC 提交记录' })

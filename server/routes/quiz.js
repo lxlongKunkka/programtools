@@ -9,6 +9,7 @@ import QuizQuestionIssue, { ISSUE_TYPES } from '../models/QuizQuestionIssue.js'
 import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import User from '../models/User.js'
 import CourseLevel from '../models/CourseLevel.js'
+import { GAME_ECONOMY_CONFIG, grantCoins } from '../services/gameEconomy.js'
 import { buildDailyProgressUpdate } from '../utils/quizDailyProgress.js'
 import { buildQuizCollectionFilter } from '../utils/quizCollectionFilter.js'
 import { KNOWLEDGE_TAG_GROUPS, KNOWLEDGE_TAGS, KNOWLEDGE_TAG_SET, extractQuizKnowledgeTagsFromText, normalizeQuizKnowledgeTags } from '../utils/quizKnowledgeTags.js'
@@ -1491,6 +1492,16 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
       }
     )
 
+    if (isCorrect) {
+      await grantCoins(
+        Number(req.user.id),
+        GAME_ECONOMY_CONFIG.quizCorrectCoins,
+        'quiz_correct',
+        `quiz-daily-correct:${attemptUid}`,
+        { questionUid, mode: 'daily', sessionDate: today }
+      )
+    }
+
     res.json({
       alreadyAnswered: false,
       correct: isCorrect,
@@ -1768,6 +1779,16 @@ router.post('/favorite/submit', authenticateToken, async (req, res) => {
       answeredAt: now
     })
 
+    if (isCorrect) {
+      await grantCoins(
+        Number(req.user.id),
+        GAME_ECONOMY_CONFIG.quizCorrectCoins,
+        'quiz_correct',
+        `quiz-favorite-correct:${req.user.id}:${questionUid}:${now.getTime()}`,
+        { questionUid, mode: 'practice' }
+      )
+    }
+
     res.json({
       correct: isCorrect,
       correctAnswer: normalizedCorrectAnswer,
@@ -1818,6 +1839,16 @@ router.post('/wrongbook/submit', authenticateToken, async (req, res) => {
       isCorrect,
       answeredAt: now
     })
+
+    if (isCorrect) {
+      await grantCoins(
+        Number(req.user.id),
+        GAME_ECONOMY_CONFIG.quizCorrectCoins,
+        'quiz_correct',
+        `quiz-wrongbook-correct:${req.user.id}:${questionUid}:${now.getTime()}`,
+        { questionUid, mode: 'wrongbook' }
+      )
+    }
 
     res.json({
       correct: isCorrect,
