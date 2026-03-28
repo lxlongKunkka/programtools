@@ -16,6 +16,7 @@ import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 const LEVEL_TARGET = 12
+let levelInitPromise = null
 
 function shuffle(items) {
   const array = [...items]
@@ -200,7 +201,23 @@ async function initLevels() {
   }
 }
 
-initLevels().catch((error) => {
+async function ensureLevelsInitialized() {
+  if (levelInitPromise) return levelInitPromise
+
+  levelInitPromise = (async () => {
+    await initLevels()
+    return PonyPuzzleLevel.countDocuments()
+  })()
+
+  try {
+    return await levelInitPromise
+  } catch (error) {
+    levelInitPromise = null
+    throw error
+  }
+}
+
+ensureLevelsInitialized().catch((error) => {
   console.error('Failed to initialize pony puzzle levels:', error)
 })
 
@@ -254,6 +271,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 
 router.get('/levels', authenticateToken, async (req, res) => {
   try {
+    await ensureLevelsInitialized()
     const userId = Number(req.user.id)
     const profile = await ensureGameProfile(userId)
     recoverProfileEnergy(profile)
@@ -272,6 +290,7 @@ router.get('/levels', authenticateToken, async (req, res) => {
 
 router.post('/sessions/start', authenticateToken, async (req, res) => {
   try {
+    await ensureLevelsInitialized()
     const userId = Number(req.user.id)
     const levelId = Number(req.body?.levelId)
     if (!Number.isInteger(levelId) || levelId <= 0) {
