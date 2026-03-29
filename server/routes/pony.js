@@ -197,6 +197,11 @@ async function initLevels() {
       { upsert: true }
     )
   }
+
+  await PonyPuzzleSession.updateMany(
+    { status: 'active', levelId: { $in: PRESET_PONY_LEVELS.map((level) => Number(level.levelId)) } },
+    { $set: { status: 'abandoned' } }
+  )
 }
 
 async function ensureLevelsInitialized() {
