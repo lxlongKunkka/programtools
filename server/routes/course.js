@@ -668,6 +668,11 @@ async function buildParentReportCourseOverview(progress, levels = []) {
           })
           .filter(Boolean)
 
+        const requiredProblemCount = problems.filter(problem => !problem.optional).length
+        const optionalProblemCount = problems.filter(problem => problem.optional).length
+        const solvedRequiredProblemCount = problems.filter(problem => !problem.optional && problem.solved).length
+        const solvedOptionalProblemCount = problems.filter(problem => problem.optional && problem.solved).length
+
         return {
           chapterId: chapter?.id || '',
           chapterUid: chapter?._id ? String(chapter._id) : '',
@@ -675,6 +680,10 @@ async function buildParentReportCourseOverview(progress, levels = []) {
           completed: isChapterCompleted(progress, chapter),
           totalProblemCount: problems.length,
           solvedProblemCount: problems.filter(problem => problem.solved).length,
+          requiredProblemCount,
+          optionalProblemCount,
+          solvedRequiredProblemCount,
+          solvedOptionalProblemCount,
           problems
         }
       }))

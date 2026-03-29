@@ -4,6 +4,7 @@
 
 - MNA、NFLSOI 单题：在浏览器本地抓取题面、AC 代码和附件，再直接导入 SolveData
 - MNA、NFLSOI 比赛：在浏览器本地按题目顺序抓取，再直接导入 SolveData
+- YbtOJ 单题、题单：在浏览器本地抓取题面，AC 代码尽力抓取；没有公开 AC 提交时仅导入题面
 - AtCoder、核桃 OJ：把当前题目或比赛链接直接交给 SolveData，复用站内现有抓题能力
 
 ## 安装
@@ -16,9 +17,9 @@
 ## 使用
 
 1. 在 Edge 中打开支持的网站页面
-2. 当前支持：MNA、AtCoder、核桃 OJ、NFLSOI
+2. 当前支持：MNA、AtCoder、核桃 OJ、NFLSOI、YbtOJ
 3. 确保目标站点中的 SolveData 页面可正常访问，也就是你已经登录并且有权限打开 `/solvedata`
-4. 如果你导入的是 MNA 或 NFLSOI 页面，浏览器当前账号还需要有权限查看题面、排行榜、提交页面或比赛题单
+4. 如果你导入的是 MNA、NFLSOI 或 YbtOJ 页面，浏览器当前账号还需要有权限查看题面、提交页面或题单
 5. 扩展固定导入到 `https://ai.acjudge.com`
 6. 点击扩展图标即可开始导入，不再弹出选择目标站点的窗口
 7. 扩展会自动识别当前页面是单题、比赛还是课程，并自动打开或切换到 SolveData 页面
@@ -41,6 +42,10 @@
 - 不支持：MNA 课程题 AC 代码
 - 支持：NFLSOI 单题页面本地导入
 - 支持：NFLSOI 比赛整场顺序导入
+- 支持：YbtOJ 单题页面本地导入
+- 支持：YbtOJ 题单页面顺序导入
+- 支持：YbtOJ SVG 数学公式转 Markdown
+- 尽力支持：YbtOJ AC 代码抓取；题单无公开 AC 记录时会自动留空
 - 支持：AtCoder、核桃 OJ 的单题和比赛链接导入
 - 不支持：复杂进度面板与断点续传
 - 不支持：未登录 SolveData 时的持久队列投递

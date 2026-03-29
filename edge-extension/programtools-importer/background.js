@@ -29,10 +29,20 @@ function isNflsoiContestUrl(url) {
   return /https?:\/\/nflsoi\.cc(?::\d+)?\/contest\/[a-z0-9]+(?:\/problems)?\/?(?:\?.*)?$/i.test(url || '')
 }
 
+function isYbtOjProblemUrl(url) {
+  return /https?:\/\/noip\.ybtoj\.com\.cn\/(?:contest\/\d+\/problem\/\d+|problem\/\d+)\/?(?:\?.*)?$/i.test(url || '')
+}
+
+function isYbtOjContestUrl(url) {
+  return /https?:\/\/noip\.ybtoj\.com\.cn\/contest\/\d+\/?(?:\?.*)?$/i.test(url || '')
+}
+
 function getImportContext(url) {
   if (isMnaProblemUrl(url)) return { site: 'MNA', mode: 'problem', strategy: 'scrape' }
   if (isMnaContestUrl(url)) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '比赛' }
   if (isMnaCourseUrl(url)) return { site: 'MNA', mode: 'contest', strategy: 'scrape', collectionLabel: '课程' }
+  if (isYbtOjProblemUrl(url)) return { site: 'YbtOJ', mode: 'problem', strategy: 'scrape' }
+  if (isYbtOjContestUrl(url)) return { site: 'YbtOJ', mode: 'contest', strategy: 'scrape', collectionLabel: '题单' }
   if (isAtcoderProblemUrl(url)) return { site: 'AtCoder', mode: 'problem', strategy: 'url' }
   if (isAtcoderContestUrl(url)) return { site: 'AtCoder', mode: 'contest', strategy: 'url' }
   if (isHtojProblemUrl(url)) return { site: '核桃 OJ', mode: 'problem', strategy: 'url' }
@@ -781,6 +791,497 @@ async function collectCurrentNflsoiProblem() {
   }
 }
 
+async function collectCurrentYbtOjProblem() {
+  function normalizeUrl(urlOrPath, baseUrl = location.href) {
+    try {
+      return new URL(urlOrPath, baseUrl).href
+    } catch {
+      return urlOrPath
+    }
+  }
+
+  function parseFilename(contentDisposition, fallback) {
+    if (!contentDisposition) return fallback
+    const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+    const raw = match?.[1] || match?.[2]
+    if (!raw) return fallback
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  }
+
+  function isEscaped(str, index) {
+    let slashCount = 0
+    for (let pointer = index - 1; pointer >= 0 && str[pointer] === '\\'; pointer -= 1) slashCount += 1
+    return slashCount % 2 === 1
+  }
+
+  function readAssignedString(source, variableName) {
+    const marker = `${variableName} = "`
+    const start = source.indexOf(marker)
+    if (start === -1) return ''
+    let cursor = start + marker.length
+    let raw = ''
+    while (cursor < source.length) {
+      const ch = source[cursor]
+      if (ch === '"' && !isEscaped(source, cursor)) break
+      raw += ch
+      cursor += 1
+    }
+    if (!raw) return ''
+    try {
+      return JSON.parse(`"${raw}"`)
+    } catch {
+      return ''
+    }
+  }
+
+  const MML_CHAR_MAP = {
+    0x2026: '\\ldots', 0x22EF: '\\cdots', 0x22EE: '\\vdots', 0x22F1: '\\ddots',
+    0x00D7: '\\times', 0x00F7: '\\div', 0x00B1: '\\pm', 0x2213: '\\mp',
+    0x2264: '\\le', 0x2265: '\\ge', 0x2260: '\\ne', 0x226A: '\\ll', 0x226B: '\\gg',
+    0x221E: '\\infty', 0x2205: '\\emptyset', 0x2202: '\\partial', 0x2207: '\\nabla',
+    0x2211: '\\sum', 0x220F: '\\prod', 0x222B: '\\int', 0x222C: '\\iint', 0x222D: '\\iiint',
+    0x221A: '\\sqrt', 0x2308: '\\lceil', 0x2309: '\\rceil', 0x230A: '\\lfloor', 0x230B: '\\rfloor',
+    0x2208: '\\in', 0x2209: '\\notin', 0x2282: '\\subset', 0x2283: '\\supset',
+    0x2286: '\\subseteq', 0x2287: '\\supseteq', 0x222A: '\\cup', 0x2229: '\\cap',
+    0x2200: '\\forall', 0x2203: '\\exists', 0x00B7: '\\cdot', 0x2218: '\\circ',
+    0x2192: '\\to', 0x21D2: '\\Rightarrow', 0x21D4: '\\Leftrightarrow',
+    0x2190: '\\leftarrow', 0x21D0: '\\Leftarrow', 0x2194: '\\leftrightarrow',
+    0x2234: '\\therefore', 0x2235: '\\because', 0x2016: '\\|', 0x2223: '\\mid',
+    0x2225: '\\parallel', 0x22A5: '\\perp', 0x22C5: '\\cdot', 0x22C6: '\\star',
+    0x2227: '\\land', 0x2228: '\\lor', 0x00AC: '\\lnot', 0x03B1: '\\alpha',
+    0x03B2: '\\beta', 0x03B3: '\\gamma', 0x03B4: '\\delta', 0x03B5: '\\epsilon',
+    0x03B6: '\\zeta', 0x03B7: '\\eta', 0x03B8: '\\theta', 0x03B9: '\\iota',
+    0x03BA: '\\kappa', 0x03BB: '\\lambda', 0x03BC: '\\mu', 0x03BD: '\\nu',
+    0x03BE: '\\xi', 0x03C0: '\\pi', 0x03C1: '\\rho', 0x03C3: '\\sigma',
+    0x03C4: '\\tau', 0x03C5: '\\upsilon', 0x03C6: '\\varphi', 0x03C7: '\\chi',
+    0x03C8: '\\psi', 0x03C9: '\\omega', 0x0393: '\\Gamma', 0x0394: '\\Delta',
+    0x0398: '\\Theta', 0x039B: '\\Lambda', 0x039E: '\\Xi', 0x03A0: '\\Pi',
+    0x03A3: '\\Sigma', 0x03A5: '\\Upsilon', 0x03A6: '\\Phi', 0x03A8: '\\Psi',
+    0x03A9: '\\Omega', 0x2113: '\\ell', 0x210F: '\\hbar', 0x2118: '\\wp',
+    0x211C: '\\Re', 0x2111: '\\Im', 0x2135: '\\aleph'
+  }
+
+  function decodeDataC(hex) {
+    if (!hex) return ''
+    const cp = parseInt(hex, 16)
+    if (Number.isNaN(cp)) return ''
+    if (MML_CHAR_MAP[cp]) return MML_CHAR_MAP[cp]
+    if (cp >= 0x1D44E && cp <= 0x1D467) return String.fromCharCode(cp - 0x1D44E + 97)
+    if (cp >= 0x1D434 && cp <= 0x1D44D) return String.fromCharCode(cp - 0x1D434 + 65)
+    if (cp >= 0x1D482 && cp <= 0x1D49B) return String.fromCharCode(cp - 0x1D482 + 97)
+    if (cp >= 0x1D468 && cp <= 0x1D481) return String.fromCharCode(cp - 0x1D468 + 65)
+    if (cp >= 0x20 && cp <= 0x7E) return String.fromCharCode(cp)
+    return String.fromCharCode(cp)
+  }
+
+  function getMmlChildrenArr(el) {
+    return [...(el?.children || [])]
+      .filter((child) => child.matches?.('g[data-mml-node]'))
+      .map((child) => decodeMmlNode(child))
+  }
+
+  function decodeMmlChildren(el) {
+    return getMmlChildrenArr(el).join(' ')
+  }
+
+  function decodeMmlNode(el) {
+    const node = el?.getAttribute?.('data-mml-node') || ''
+    if (!node || ['mi', 'mn', 'mo', 'mtext'].includes(node)) {
+      const chars = [...el.querySelectorAll(':scope > use[data-c]')].map((item) => decodeDataC(item.getAttribute('data-c')))
+      if (chars.length > 0) return chars.join('')
+      return decodeMmlChildren(el)
+    }
+
+    if (['math', 'mrow', 'mstyle', 'mpadded', 'mphantom', 'mfenced'].includes(node)) {
+      return decodeMmlChildren(el)
+    }
+
+    if (node === 'msub') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 2 ? `${ch[0]}_{${ch[1]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'msup') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 2 ? `${ch[0]}^{${ch[1]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'msubsup') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 3 ? `${ch[0]}_{${ch[1]}}^{${ch[2]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'mfrac') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 2 ? `\\frac{${ch[0]}}{${ch[1]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'msqrt') return `\\sqrt{${decodeMmlChildren(el)}}`
+    if (node === 'mroot') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 2 ? `\\sqrt[${ch[1]}]{${ch[0]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'mover') {
+      const ch = getMmlChildrenArr(el)
+      if (ch.length < 2) return decodeMmlChildren(el)
+      const acc = { '\\cdot': '\\dot', '−': '\\bar', '∼': '\\tilde', '∧': '\\hat', '⃗': '\\vec' }[ch[1]]
+      return acc ? `${acc}{${ch[0]}}` : `\\overset{${ch[1]}}{${ch[0]}}`
+    }
+    if (node === 'munder') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 2 ? `\\underset{${ch[1]}}{${ch[0]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'munderover') {
+      const ch = getMmlChildrenArr(el)
+      return ch.length >= 3 ? `${ch[0]}_{${ch[1]}}^{${ch[2]}}` : decodeMmlChildren(el)
+    }
+    if (node === 'mtable') {
+      const rows = [...el.querySelectorAll(':scope > g[data-mml-node="mtr"]')].map((tr) => {
+        const cols = [...tr.querySelectorAll(':scope > g[data-mml-node="mtd"]')].map((td) => decodeMmlChildren(td))
+        return cols.join(' & ')
+      })
+      return `\\begin{matrix}${rows.join(' \\\\ ')}\\end{matrix}`
+    }
+
+    return decodeMmlChildren(el)
+  }
+
+  function decodeSvgFormula(svg) {
+    const ariaLabel = svg?.getAttribute?.('aria-label')?.trim?.() || ''
+    if (ariaLabel) return ariaLabel
+
+    const labelledBy = svg?.getAttribute?.('aria-labelledby') || ''
+    if (labelledBy) {
+      const labels = labelledBy.split(/\s+/).map((item) => item.trim()).filter(Boolean)
+      for (const labelId of labels) {
+        const titleNode = document.getElementById(labelId)
+        const titleText = titleNode?.textContent?.trim() || ''
+        if (titleText) return titleText
+      }
+    }
+
+    const inlineTitle = svg?.querySelector?.('title')?.textContent?.trim?.() || ''
+    if (inlineTitle) return inlineTitle
+
+    const inlineDesc = svg?.querySelector?.('desc')?.textContent?.trim?.() || ''
+    if (inlineDesc) return inlineDesc
+
+    const math = svg?.querySelector?.('g[data-mml-node="math"]')
+    if (!math) return null
+    const result = decodeMmlNode(math)
+    return result && result.trim() ? result.trim() : null
+  }
+
+  function hasClass(node, className) {
+    return !!node?.classList?.contains?.(className)
+  }
+
+  function getDirectChildByClass(element, className) {
+    return [...(element?.children || [])].find((child) => hasClass(child, className)) || null
+  }
+
+  function getDirectChildTag(element, tagName) {
+    const safeTagName = String(tagName || '').toLowerCase()
+    return [...(element?.children || [])].find((child) => child.tagName?.toLowerCase() === safeTagName) || null
+  }
+
+  function cleanupMarkdown(text) {
+    return String(text || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/<html[\s\S]*$/i, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
+  function processChildren(node) {
+    return [...(node?.childNodes || [])].map((child) => processNode(child)).join('')
+  }
+
+  function processNode(node) {
+    if (!node) return ''
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
+    if (!(node instanceof Element)) return ''
+
+    const tag = node.tagName.toLowerCase()
+    if (tag === 'script' || tag === 'style') return ''
+    if (tag === 'html' || tag === 'head' || tag === 'body') return ''
+    if (tag === 'form' || tag === 'textarea' || tag === 'input' || tag === 'button') return ''
+    if (hasClass(node, 'monaco-editor') || hasClass(node, 'editor') || node.id === 'editor') return ''
+    if (hasClass(node, 'ui') && hasClass(node, 'buttons')) return ''
+    if (tag === 'svg' && (node.getAttribute('role') === 'img' || node.querySelector('g[data-mml-node]'))) {
+      const latex = decodeSvgFormula(node)
+      return latex ? `$${latex}$` : ''
+    }
+    if (tag === 'p') {
+      const text = processChildren(node).trim()
+      return text ? `${text}\n\n` : ''
+    }
+    if (tag === 'h1') return `# ${processChildren(node).trim()}\n\n`
+    if (tag === 'h2') return `## ${processChildren(node).trim()}\n\n`
+    if (tag === 'h3') return `### ${processChildren(node).trim()}\n\n`
+    if (tag === 'h4') return `#### ${processChildren(node).trim()}\n\n`
+    if (tag === 'pre') return `\`\`\`\n${node.textContent?.trimEnd() || ''}\n\`\`\`\n\n`
+    if (tag === 'code' && node.parentElement?.tagName?.toLowerCase() !== 'pre') return `\`${node.textContent || ''}\``
+    if (tag === 'strong' || tag === 'b') return `**${processChildren(node)}**`
+    if (tag === 'em' || tag === 'i') return `*${processChildren(node)}*`
+    if (tag === 'ul') {
+      const lines = [...node.querySelectorAll(':scope > li')].map((item) => `- ${processChildren(item).trim()}`)
+      return lines.length ? `${lines.join('\n')}\n\n` : ''
+    }
+    if (tag === 'ol') {
+      const lines = [...node.querySelectorAll(':scope > li')].map((item, index) => `${index + 1}. ${processChildren(item).trim()}`)
+      return lines.length ? `${lines.join('\n')}\n\n` : ''
+    }
+    if (tag === 'table') {
+      const rows = [...node.querySelectorAll('tr')].map((tr) => [...tr.querySelectorAll('th,td')].map((cell) => processChildren(cell).trim().replace(/\n/g, ' '))).filter((row) => row.some(Boolean))
+      if (!rows.length) return ''
+      const head = `| ${rows[0].join(' | ')} |`
+      const divider = `| ${rows[0].map(() => '---').join(' | ')} |`
+      const body = rows.slice(1).map((row) => `| ${row.join(' | ')} |`).join('\n')
+      return `${head}\n${divider}${body ? `\n${body}` : ''}\n\n`
+    }
+    if (tag === 'hr') return '---\n\n'
+    if (tag === 'br') return '\n'
+    if (tag === 'img') {
+      const src = node.getAttribute('src') || ''
+      if (!src) return ''
+      const alt = node.getAttribute('alt') || ''
+      return `![${alt}](${normalizeUrl(src)})`
+    }
+    if (tag === 'a') {
+      const href = node.getAttribute('href') || ''
+      const text = processChildren(node).replace(/\s+/g, ' ').trim()
+      if (!href) return text
+      return text ? `[${text}](${normalizeUrl(href)})` : normalizeUrl(href)
+    }
+
+    return processChildren(node)
+  }
+
+  function parseProblemContent(title) {
+    const segments = [...document.querySelectorAll('h4.ui.top.attached.block.header')]
+      .map((header) => ({
+        header,
+        contentRoot: header.nextElementSibling && hasClass(header.nextElementSibling, 'ui') && hasClass(header.nextElementSibling, 'bottom')
+          ? getDirectChildByClass(header.nextElementSibling, 'font-content') || header.nextElementSibling
+          : null,
+      }))
+      .filter((segment) => segment.contentRoot)
+
+    let markdown = `# ${title}\n\n`
+
+    if (segments.length) {
+      for (const segment of segments) {
+        const sectionTitle = segment.header?.textContent?.trim() || ''
+        const contentRoot = segment.contentRoot
+        if (sectionTitle) markdown += `## ${sectionTitle}\n\n`
+        markdown += `${processChildren(contentRoot)}\n\n`
+      }
+      return cleanupMarkdown(markdown)
+    }
+
+    const contentRoot = document.querySelector('.font-content') || getDirectChildByClass(document.querySelector('.ui.main.container'), 'font-content') || getDirectChildTag(document.querySelector('.ui.main.container'), 'main') || null
+    if (!contentRoot) {
+      throw new Error('未找到可解析的 YbtOJ 题面内容区域')
+    }
+    markdown += processChildren(contentRoot)
+    return cleanupMarkdown(markdown)
+  }
+
+  function extractLimits() {
+    const labelText = [...document.querySelectorAll('.ui.label')].map((node) => node.textContent?.replace(/\s+/g, ' ').trim() || '').join(' ')
+    const timeMatch = labelText.match(/时间限制[:：]\s*(\d+)\s*ms/i)
+    const memoryMatch = labelText.match(/内存限制[:：]\s*(\d+)\s*(?:MiB|MB|M)/i)
+    return {
+      timeLimit: timeMatch ? Number(timeMatch[1]) : null,
+      memoryLimit: memoryMatch ? Number(memoryMatch[1]) : null,
+    }
+  }
+
+  async function fetchText(url) {
+    const response = await fetch(normalizeUrl(url), { credentials: 'include' })
+    if (!response.ok) throw new Error(`请求失败: ${response.status}`)
+    return response.text()
+  }
+
+  async function fetchBinary(url) {
+    const response = await fetch(normalizeUrl(url), { credentials: 'include' })
+    if (!response.ok) throw new Error(`下载失败: ${response.status}`)
+    const contentType = (response.headers.get('content-type') || '').toLowerCase()
+    if (contentType.includes('text/html')) throw new Error('附件下载返回了 HTML 页面')
+    const buffer = await response.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    const chunkSize = 0x8000
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+    }
+    return {
+      contentDisposition: response.headers.get('content-disposition') || '',
+      base64: btoa(binary),
+      size: buffer.byteLength,
+    }
+  }
+
+  function findAdditionalFileLink() {
+    const scored = [...document.querySelectorAll('a[href]')].map((link) => {
+      const href = link.getAttribute('href') || ''
+      const text = (link.textContent || '').replace(/\s+/g, ' ').trim()
+      let score = 0
+      if (/\/download\/additional_file/i.test(href)) score += 100
+      if (/additional|sample|zip|file/i.test(href)) score += 25
+      if (/附件|样例|下载|file|zip/i.test(text)) score += 20
+      return { href, text, score }
+    }).filter((item) => item.score > 0)
+
+    scored.sort((left, right) => right.score - left.score)
+    return scored[0] || null
+  }
+
+  function parseProblemIds(url) {
+    const contestMatch = String(url || '').match(/\/contest\/(\d+)\/problem\/(\d+)/i)
+    if (contestMatch) {
+      return { contestId: contestMatch[1], problemNumber: contestMatch[2] }
+    }
+    const problemMatch = String(url || '').match(/\/problem\/(\d+)/i)
+    return problemMatch ? { contestId: '', problemNumber: problemMatch[1] } : null
+  }
+
+  async function fetchAcCode(ids) {
+    if (!ids?.contestId || !ids?.problemNumber) return ''
+    let listHtml = ''
+    try {
+      listHtml = await fetchText(`/contest/${ids.contestId}/submissions?problem_id=${ids.problemNumber}&status=Accepted`)
+    } catch {
+      return ''
+    }
+
+    const hrefs = [...listHtml.matchAll(/href="(\/submission\/\d+)"/g)].map((match) => match[1])
+    const fallbackIds = [...listHtml.matchAll(/submissionId\D+(\d+)/g)].map((match) => `/submission/${match[1]}`)
+    const candidates = [...new Set([...hrefs, ...fallbackIds])]
+
+    for (const href of candidates.slice(0, 5)) {
+      try {
+        const detailHtml = await fetchText(href)
+        const highlighted = readAssignedString(detailHtml, 'unformattedCode') || readAssignedString(detailHtml, 'formattedCode')
+        if (!highlighted) continue
+        const code = highlighted
+          .replace(/<[^>]+>/g, '')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&nbsp;/g, ' ')
+          .replace(/^[ \t]*freopen\b[^\n]*;[ \t]*\r?\n?/gm, '')
+          .trim()
+        if (code) return code
+      } catch {
+        // continue
+      }
+    }
+
+    return ''
+  }
+
+  const ids = parseProblemIds(location.href)
+  if (!ids?.problemNumber) {
+    throw new Error('当前页面不是 YbtOJ 单题页面')
+  }
+
+  const title = (document.querySelector('h1.ui.header, h1')?.textContent || document.title || `题目 ${ids.problemNumber}`)
+    .replace(/\s+/g, ' ')
+    .trim()
+  const content = parseProblemContent(title)
+  const { timeLimit, memoryLimit } = extractLimits()
+
+  let additionalFile = null
+  const additionalLink = findAdditionalFileLink()
+  if (additionalLink?.href) {
+    const sourceUrl = normalizeUrl(additionalLink.href)
+    try {
+      const binary = await fetchBinary(sourceUrl)
+      additionalFile = {
+        filename: parseFilename(binary.contentDisposition, sourceUrl.split('/').pop() || `${ids.problemNumber}.zip`),
+        base64: binary.base64,
+        size: binary.size,
+        sourceUrl,
+      }
+    } catch {
+      additionalFile = {
+        filename: sourceUrl.split('/').pop() || `${ids.problemNumber}.zip`,
+        size: 0,
+        sourceUrl,
+      }
+    }
+  }
+
+  let acCode = ''
+  try {
+    acCode = await Promise.race([
+      fetchAcCode(ids),
+      new Promise((resolve) => setTimeout(() => resolve(''), 12000)),
+    ])
+  } catch {
+    acCode = ''
+  }
+
+  return {
+    url: location.href,
+    title,
+    content,
+    acCode,
+    additionalFile,
+    timeLimit,
+    memoryLimit,
+  }
+}
+
+function collectCurrentYbtOjCollection() {
+  function normalizeUrl(urlOrPath, baseUrl = location.href) {
+    try {
+      return new URL(urlOrPath, baseUrl).href
+    } catch {
+      return urlOrPath
+    }
+  }
+
+  const match = location.href.match(/\/contest\/(\d+)/i)
+  if (!match) {
+    throw new Error('当前页面不是 YbtOJ 题单页面')
+  }
+
+  const contestId = match[1]
+  const title = (document.querySelector('.padding > h1, h1')?.textContent || document.title || `YbtOJ-${contestId}`)
+    .replace(/\s+/g, ' ')
+    .trim()
+  const dedup = new Map()
+  const links = [...document.querySelectorAll(`a[href*="/contest/${contestId}/problem/"]`)]
+
+  for (const link of links) {
+    const href = link.getAttribute('href') || ''
+    const url = normalizeUrl(href, location.origin)
+    const problemMatch = url.match(new RegExp(`/contest/${contestId}/problem/(\\d+)`, 'i'))
+    if (!problemMatch) continue
+    const problemNumber = Number(problemMatch[1])
+    if (!dedup.has(url)) {
+      dedup.set(url, {
+        url,
+        problemNumber,
+        label: (link.textContent || '').replace(/\s+/g, ' ').trim(),
+      })
+    }
+  }
+
+  const problems = [...dedup.values()].sort((left, right) => left.problemNumber - right.problemNumber)
+  return {
+    title,
+    collectionLabel: '题单',
+    problems,
+  }
+}
+
 function collectCurrentMnaCollection() {
   const pageMatch = location.href.match(/\/(contest|course)\/(\d+)/i)
   if (!pageMatch) {
@@ -906,6 +1407,7 @@ async function collectProblemPayloadFromUrl(tabId, url, site) {
   let collector = null
   if (site === 'MNA') collector = collectCurrentMnaProblem
   if (site === 'NFLSOI') collector = collectCurrentNflsoiProblem
+  if (site === 'YbtOJ') collector = collectCurrentYbtOjProblem
   if (!collector) throw new Error(`暂不支持 ${site || '当前站点'} 题目批量抓取`)
 
   const payload = await runScriptInTab(tabId, collector)
@@ -931,6 +1433,11 @@ async function importSingleProblem(activeTab, targetOrigin, context) {
       throw new Error('请先在 Edge 中打开 NFLSOI 单题页面，再点击扩展按钮')
     }
     payload = await runScriptInTab(activeTab.id, collectCurrentNflsoiProblem)
+  } else if (context.site === 'YbtOJ') {
+    if (!isYbtOjProblemUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 YbtOJ 单题页面，再点击扩展按钮')
+    }
+    payload = await runScriptInTab(activeTab.id, collectCurrentYbtOjProblem)
   } else {
     throw new Error(`暂不支持 ${context.site} 单题本地抓取`)
   }
@@ -958,6 +1465,11 @@ async function importCollection(activeTab, targetOrigin, context) {
       throw new Error('请先在 Edge 中打开 NFLSOI 比赛页，再点击扩展按钮')
     }
     contestInfo = await runScriptInTab(activeTab.id, collectCurrentNflsoiCollection)
+  } else if (context.site === 'YbtOJ') {
+    if (!isYbtOjContestUrl(activeTab.url)) {
+      throw new Error('请先在 Edge 中打开 YbtOJ 题单页，再点击扩展按钮')
+    }
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentYbtOjCollection)
   } else {
     throw new Error(`暂不支持 ${context.site} 批量本地抓取`)
   }
@@ -989,7 +1501,8 @@ async function importCollection(activeTab, targetOrigin, context) {
   }
 
   if (importedCount === 0) {
-    const batchLabel = (contestInfo.collectionLabel || '比赛') === '课程' ? '整课导入' : '整场导入'
+    const collectionLabel = contestInfo.collectionLabel || '比赛'
+    const batchLabel = collectionLabel === '课程' ? '整课导入' : (collectionLabel === '题单' ? '整份题单导入' : '整场导入')
     throw new Error(`${batchLabel}失败。${failedProblems[0] || '没有成功抓到任何题目'}`)
   }
 
@@ -1025,7 +1538,7 @@ async function handleImportCurrentPage(targetOrigin = DEFAULT_TARGET_ORIGIN) {
   const activeTab = await getActiveTab()
   const context = getImportContext(activeTab?.url)
   if (!context) {
-    throw new Error('请先打开支持的网站页面。目前支持 MNA、AtCoder、核桃 OJ、NFLSOI')
+    throw new Error('请先打开支持的网站页面。目前支持 MNA、AtCoder、核桃 OJ、NFLSOI、YbtOJ')
   }
 
   if (context.strategy === 'scrape' && context.mode === 'problem') {

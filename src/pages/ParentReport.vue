@@ -209,7 +209,13 @@
                                 <div class="report-chapter-fill" :style="{ width: `${chapter.completionRate || 0}%` }"></div>
                               </div>
                             </div>
-                            <span class="report-chapter-meta" :class="getChapterProgressClass(chapter)">{{ chapter.solvedProblemCount || 0 }}/{{ chapter.totalProblemCount || 0 }}</span>
+                            <div class="report-chapter-meta" :class="getChapterProgressClass(chapter)">
+                              <span class="report-chapter-meta-total">{{ chapter.solvedProblemCount || 0 }}/{{ chapter.totalProblemCount || 0 }}</span>
+                              <span v-if="showChapterBreakdown(chapter)" class="report-chapter-breakdown">
+                                必做 {{ chapter.solvedRequiredProblemCount || 0 }}/{{ chapter.requiredProblemCount || 0 }}
+                                <template v-if="Number(chapter.optionalProblemCount || 0) > 0"> · 选做 {{ chapter.solvedOptionalProblemCount || 0 }}/{{ chapter.optionalProblemCount || 0 }}</template>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </section>
@@ -642,6 +648,9 @@ export default {
       if (Number(chapter?.solvedProblemCount || 0) > 0) return 'started'
       return 'todo'
     },
+    showChapterBreakdown(chapter) {
+      return Number(chapter?.requiredProblemCount || 0) > 0 || Number(chapter?.optionalProblemCount || 0) > 0
+    },
     getOverviewLevelCardClass(level) {
       if (Number(level?.completionRate || 0) === 100) return 'done'
       if (Number(level?.completedChapters || 0) > 0) return 'started'
@@ -1015,10 +1024,22 @@ export default {
   background: linear-gradient(90deg, #60a5fa 0%, #22c55e 100%);
 }
 .report-chapter-meta {
-  min-width: 48px;
+  min-width: 88px;
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.report-chapter-meta-total {
   font-size: 12px;
   font-weight: 700;
+}
+.report-chapter-breakdown {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }
 .report-chapter-meta.done {
   color: #15803d;
@@ -1028,6 +1049,11 @@ export default {
 }
 .report-chapter-meta.todo {
   color: #94a3b8;
+}
+.report-chapter-meta.done .report-chapter-breakdown,
+.report-chapter-meta.started .report-chapter-breakdown,
+.report-chapter-meta.todo .report-chapter-breakdown {
+  color: #64748b;
 }
 @media (max-width: 900px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1049,6 +1075,7 @@ export default {
   .report-topic-head { flex-direction: column; align-items: flex-start; }
   .report-level-summary { align-items: flex-start; }
   .report-chapter-row { grid-template-columns: 1fr; }
-  .report-chapter-meta { min-width: 0; text-align: left; }
+  .report-chapter-meta { min-width: 0; text-align: left; align-items: flex-start; }
+  .report-chapter-breakdown { white-space: normal; }
 }
 </style>

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ProgramTools Multi-Site Importer",
-  "version": "0.2.0",
-  "description": "从 MNA、AtCoder、核桃 OJ、NFLSOI 页面导入题目到 SolveData。",
+  "version": "0.2.1",
+  "description": "从 MNA、AtCoder、核桃 OJ、NFLSOI、YbtOJ 页面导入题目到 SolveData。",
   "permissions": [
     "activeTab",
     "tabs",
@@ -16,6 +16,8 @@
     "http://nflsoi.cc/*",
     "http://nflsoi.cc:10611/*",
     "http://nflsoi.cc:20035/*",
+    "http://noip.ybtoj.com.cn/*",
+    "https://noip.ybtoj.com.cn/*",
     "https://ai.acjudge.com/*",
     "https://acjudge.com/*",
     "https://www.acjudge.com/*",
