@@ -226,42 +226,42 @@ const LEVEL_ONE_SCRIPT = [
   {
     kind: 'modal',
     badge: '教学 1/5',
-    title: '先看规则',
-    text: '开局先送你一只已经找到的土拨鼠。第一关不该靠猜，先学会围绕它做排除。',
+    title: '先看单格颜色',
+    text: '第一关不该靠猜。先找只有 1 格的颜色区块，这种格子可以直接确认。',
     ctaText: '明白了',
-    highlightKeys: ['0,2']
+    highlightKeys: ['0,1']
   },
   {
-    kind: 'tip',
+    kind: 'success',
     badge: '教学 2/5',
-    text: '先看这只已经找到的土拨鼠。它所在的同一行、同一列，其他格子都不可能再放。',
-    autoMode: 'mark',
-    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
-    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
+    text: '先长按这个单格颜色，把第一只土拨鼠放下。',
+    autoMode: 'pony',
+    focusKeys: ['0,1'],
+    highlightKeys: ['0,1'],
+    requirement: { type: 'placedAll', keys: ['0,1'] },
+    showTap: true
   },
   {
     kind: 'tip',
     badge: '教学 3/5',
-    text: '还不够，土拨鼠四周也不能挨着。把高亮的相邻格也打叉。',
+    text: '现在把它所在的同一行、同一列里其他格子轻点打叉。',
     autoMode: 'mark',
-    highlightKeys: ['1,1', '1,3'],
-    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
+    highlightKeys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'] }
   },
   {
-    kind: 'success',
+    kind: 'tip',
     badge: '做得好',
-    text: '这样一来，左侧粉色区域就只剩一个合理位置了。现在把它点亮。',
-    autoMode: 'pony',
-    focusKeys: ['1,0'],
-    highlightKeys: ['1,0'],
-    requirement: { type: 'placedAll', keys: ['1,0'] },
-    showTap: true
+    text: '别忘了相邻格也不能放，把高亮的两个邻格也打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['1,0', '1,2'],
+    requirement: { type: 'blockedAll', keys: ['1,0', '1,2'] }
   },
   {
     kind: 'modal',
     badge: '继续挑战',
-    title: '你已经会基础排除了',
-    text: '记住节奏：先排除，再落子。后面几关继续按这个思路推就行。',
+    title: '你已经会第一步了',
+    text: '记住节奏：先找单格颜色，再做行列和相邻排除。剩下几只继续按这个思路推。',
     ctaText: '继续挑战'
   }
 ]
@@ -270,41 +270,41 @@ const LEVEL_TWO_SCRIPT = [
   {
     kind: 'modal',
     badge: '教学 1/5',
-    title: '先占一行一列',
-    text: '这一关重点学会“放下一只后，整行整列都能排除”。',
+    title: '先从单格起手',
+    text: '这一关还是先抓只有 1 格的颜色区块，然后把整行整列拉开。',
     ctaText: '开始'
   },
   {
-    kind: 'tip',
+    kind: 'success',
     badge: '教学 2/5',
-    text: '先从这只已知土拨鼠开始。把同一行、同一列里不能放的位置先打叉。',
-    autoMode: 'mark',
-    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
-    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
+    text: '先长按单格颜色，把第一只土拨鼠放下。',
+    autoMode: 'pony',
+    focusKeys: ['0,1'],
+    highlightKeys: ['0,1'],
+    requirement: { type: 'placedAll', keys: ['0,1'] },
+    showTap: true
   },
   {
-    kind: 'success',
+    kind: 'tip',
     badge: '不错',
-    text: '再补上它四周相邻不能放的位置，这样候选会迅速缩小。',
+    text: '现在把它所在的同一行、同一列其他格子轻点打叉。',
     autoMode: 'mark',
-    highlightKeys: ['1,1', '1,3'],
-    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
+    highlightKeys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'] }
   },
   {
     kind: 'tip',
     badge: '教学 4/5',
-    text: '现在下方粉色区域只剩一个合理位置了，点亮它。',
-    autoMode: 'pony',
-    focusKeys: ['1,0'],
-    highlightKeys: ['1,0'],
-    requirement: { type: 'placedAll', keys: ['1,0'] },
-    showTap: true
+    text: '再把相邻格轻点打叉，候选会继续缩小。',
+    autoMode: 'mark',
+    highlightKeys: ['1,0', '1,2'],
+    requirement: { type: 'blockedAll', keys: ['1,0', '1,2'] }
   },
   {
     kind: 'modal',
     badge: '会了',
-    title: '行列排除已经上手',
-    text: '后面看到确定位置时，就先拉整行整列，再考虑相邻限制。',
+    title: '已经不是靠猜了',
+    text: '后面继续按这个节奏：单格起手，先排除，再确认下一只。',
     ctaText: '继续挑战'
   }
 ]
@@ -314,40 +314,40 @@ const LEVEL_THREE_SCRIPT = [
     kind: 'modal',
     badge: '教学 1/5',
     title: '先缩到唯一候选',
-    text: '这一关练“先打叉，把一个颜色块收缩到只剩一个格”。',
+    text: '颜色块更碎时，也先抓单格颜色，不要直接在大色块里猜。',
     ctaText: '知道了'
   },
   {
-    kind: 'tip',
+    kind: 'success',
     badge: '教学 2/5',
-    text: '先围绕这只已知土拨鼠做排除，把同一行、同一列里不能放的位置打叉。',
-    autoMode: 'mark',
-    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
-    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
+    text: '先长按单格颜色，把第一只土拨鼠放下。',
+    autoMode: 'pony',
+    focusKeys: ['0,1'],
+    highlightKeys: ['0,1'],
+    requirement: { type: 'placedAll', keys: ['0,1'] },
+    showTap: true
   },
   {
-    kind: 'success',
+    kind: 'tip',
+    badge: '教学 3/5',
+    text: '围绕它做排除，把同一行、同一列里不能放的位置打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,2', '0,3', '1,1', '2,1', '3,1'] }
+  },
+  {
+    kind: 'tip',
     badge: '很好',
     text: '再补上它四周相邻不能放的位置。',
     autoMode: 'mark',
-    highlightKeys: ['1,1', '1,3'],
-    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
-  },
-  {
-    kind: 'tip',
-    badge: '教学 4/5',
-    text: '现在左侧大色块已经只剩一个安全格了，点它落子。',
-    autoMode: 'pony',
-    focusKeys: ['1,0'],
-    highlightKeys: ['1,0'],
-    requirement: { type: 'placedAll', keys: ['1,0'] },
-    showTap: true
+    highlightKeys: ['1,0', '1,2'],
+    requirement: { type: 'blockedAll', keys: ['1,0', '1,2'] }
   },
   {
     kind: 'modal',
     badge: '掌握了',
     title: '你已经会“先排除再确认”',
-    text: '从这一关开始，看到颜色块缩成唯一候选时，就可以果断放土拨鼠。',
+    text: '从这一关开始，看到单格颜色或唯一候选时，就可以果断长按放下。',
     ctaText: '继续挑战'
   }
 ]
@@ -698,8 +698,13 @@ export default {
         this.lockedPlacedKeys = []
         this.elapsedSeconds = 0
         this.applyLevelPresetState(data?.level || this.currentLevel)
+        const presetCount = Array.isArray((data?.level || this.currentLevel)?.presetPlacedCells)
+          ? (data?.level || this.currentLevel).presetPlacedCells.length
+          : 0
         this.message = Array.isArray(this.currentLevel?.tutorialTips) && this.currentLevel.tutorialTips.length
-          ? '教学关从已知土拨鼠开始。轻点打叉，长按放置。'
+          ? (presetCount > 0
+            ? '教学关会给出起始土拨鼠。轻点打叉，长按放置。'
+            : '教学关先从单格颜色区块起手。轻点打叉，长按放置。')
           : '本局已开始。轻点打叉，长按放土拨鼠。'
         this.messageTone = 'info'
         this.startTimer()

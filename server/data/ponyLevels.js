@@ -2,28 +2,25 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 1,
     name: '土拨鼠谜题 1',
-    description: '4x4 热身关，先熟悉每种颜色放 1 只土拨鼠。',
-    tutorialTitle: '先学会打叉',
+    description: '4x4 热身关，先学会从只有 1 格的颜色区块起手。',
+    tutorialTitle: '先找单格颜色',
     tutorialTips: [
-      '先切到“打叉”模式，不急着直接放土拨鼠。',
-      '观察已经很满的颜色块，把同一行同一列里明显不可能的位置先打叉。',
-      '当某个颜色块只剩 1 个空位时，再切回“放土拨鼠”落子。'
+      '先找只有 1 格的颜色区块，这格一定能放土拨鼠。',
+      '放下后，再把它所在的同一行、同一列和相邻格轻点打叉。',
+      '当别的颜色块也被缩到只剩 1 格时，再继续长按落子。'
     ],
     size: 4,
     regionBoard: [
-      ['R2', 'R1', 'R1', 'R1'],
-      ['R2', 'R2', 'R1', 'R1'],
-      ['R2', 'R2', 'R4', 'R3'],
-      ['R4', 'R4', 'R4', 'R3']
+      ['R3', 'R1', 'R2', 'R2'],
+      ['R3', 'R3', 'R4', 'R2'],
+      ['R3', 'R3', 'R4', 'R2'],
+      ['R3', 'R4', 'R4', 'R4']
     ],
     solutionCells: [
-      { row: 0, col: 2 },
-      { row: 1, col: 0 },
-      { row: 2, col: 3 },
-      { row: 3, col: 1 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 2 }
+      { row: 0, col: 1 },
+      { row: 1, col: 3 },
+      { row: 2, col: 0 },
+      { row: 3, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 20,
@@ -33,28 +30,25 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 2,
     name: '土拨鼠谜题 2',
-    description: '4x4 热身关，颜色块更整齐，适合建立直觉。',
-    tutorialTitle: '用行列排除',
+    description: '4x4 热身关，继续练习从单格颜色拉开整行整列。',
+    tutorialTitle: '用行列展开排除',
     tutorialTips: [
-      '先找已经确定有土拨鼠的行和列，把它们延伸出去全部打叉。',
-      '同色区域里如果有多个候选格，先用打叉缩小范围。',
-      '尽量做到“先排除，后确认”，这样更稳。'
+      '还是先找只有 1 格的颜色区块，先把第一只放出来。',
+      '放下后，立刻看同一行同一列还能排掉哪些格。',
+      '别急着连放，先靠打叉把别的颜色块缩小到唯一候选。'
     ],
     size: 4,
     regionBoard: [
-      ['R2', 'R2', 'R1', 'R1'],
-      ['R2', 'R2', 'R1', 'R1'],
-      ['R4', 'R3', 'R3', 'R3'],
-      ['R4', 'R4', 'R4', 'R3']
+      ['R3', 'R1', 'R4', 'R2'],
+      ['R3', 'R4', 'R4', 'R2'],
+      ['R3', 'R3', 'R4', 'R2'],
+      ['R3', 'R3', 'R4', 'R2']
     ],
     solutionCells: [
-      { row: 0, col: 2 },
-      { row: 1, col: 0 },
-      { row: 2, col: 3 },
-      { row: 3, col: 1 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 2 }
+      { row: 0, col: 1 },
+      { row: 1, col: 3 },
+      { row: 2, col: 0 },
+      { row: 3, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 22,
@@ -64,28 +58,25 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 3,
     name: '土拨鼠谜题 3',
-    description: '4x4 入门关，开始同时观察颜色块和行列。',
-    tutorialTitle: '打叉后再落子',
+    description: '4x4 入门关，颜色块更碎，但仍能从单格颜色稳定起手。',
+    tutorialTitle: '先缩到唯一候选',
     tutorialTips: [
-      '这一关先把相邻不能放的位置打叉，尤其是对角也不能贴着。',
-      '如果一个颜色块里有格子被行、列、相邻规则同时限制，优先打叉它。',
-      '只在“唯一候选”出现时放土拨鼠，节奏会更轻松。'
+      '先把单格颜色区块放掉，别从大色块硬猜。',
+      '接着优先打叉同一行、同一列和相邻格，把候选缩小。',
+      '看到某个颜色块只剩 1 个安全格时，再长按确认。'
     ],
     size: 4,
     regionBoard: [
-      ['R2', 'R2', 'R1', 'R1'],
-      ['R2', 'R2', 'R1', 'R3'],
-      ['R2', 'R4', 'R3', 'R3'],
-      ['R4', 'R4', 'R4', 'R3']
+      ['R3', 'R1', 'R2', 'R2'],
+      ['R3', 'R3', 'R2', 'R2'],
+      ['R3', 'R3', 'R4', 'R2'],
+      ['R3', 'R4', 'R4', 'R4']
     ],
     solutionCells: [
-      { row: 0, col: 2 },
-      { row: 1, col: 0 },
-      { row: 2, col: 3 },
-      { row: 3, col: 1 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 2 }
+      { row: 0, col: 1 },
+      { row: 1, col: 3 },
+      { row: 2, col: 0 },
+      { row: 3, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 24,
@@ -95,36 +86,11 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 4,
     name: '土拨鼠谜题 4',
-    description: '4x4 入门关，尝试先找只能放的颜色区块。',
+    description: '4x4 入门关，单格颜色起手后，再看大色块如何被逐步压缩。',
     size: 4,
     regionBoard: [
-      ['R1', 'R1', 'R1', 'R2'],
-      ['R1', 'R1', 'R2', 'R2'],
-      ['R3', 'R3', 'R4', 'R2'],
-      ['R3', 'R4', 'R4', 'R4']
-    ],
-    solutionCells: [
-      { row: 0, col: 1 },
-      { row: 1, col: 3 },
-      { row: 2, col: 0 },
-      { row: 3, col: 2 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 1 }
-    ],
-    regionCount: 4,
-    rewardCoins: 26,
-    difficultyLabel: '入门',
-    isSystem: true
-  },
-  {
-    levelId: 5,
-    name: '土拨鼠谜题 5',
-    description: '4x4 入门关，边角与相邻限制会变得更有用。',
-    size: 4,
-    regionBoard: [
-      ['R1', 'R1', 'R2', 'R2'],
-      ['R3', 'R1', 'R1', 'R2'],
+      ['R3', 'R1', 'R2', 'R2'],
+      ['R3', 'R4', 'R2', 'R2'],
       ['R3', 'R4', 'R4', 'R2'],
       ['R3', 'R4', 'R4', 'R2']
     ],
@@ -134,8 +100,27 @@ export const PRESET_PONY_LEVELS = [
       { row: 2, col: 0 },
       { row: 3, col: 2 }
     ],
-    presetPlacedCells: [
-      { row: 0, col: 1 }
+    regionCount: 4,
+    rewardCoins: 26,
+    difficultyLabel: '入门',
+    isSystem: true
+  },
+  {
+    levelId: 5,
+    name: '土拨鼠谜题 5',
+    description: '4x4 入门关，换一套新解型，但仍然从单格颜色稳定起手。',
+    size: 4,
+    regionBoard: [
+      ['R2', 'R2', 'R1', 'R3'],
+      ['R2', 'R4', 'R3', 'R3'],
+      ['R2', 'R4', 'R3', 'R3'],
+      ['R4', 'R4', 'R4', 'R3']
+    ],
+    solutionCells: [
+      { row: 0, col: 2 },
+      { row: 1, col: 0 },
+      { row: 2, col: 3 },
+      { row: 3, col: 1 }
     ],
     regionCount: 4,
     rewardCoins: 28,
@@ -145,22 +130,19 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 6,
     name: '土拨鼠谜题 6',
-    description: '4x4 轻松关，继续练习打叉排除法。',
+    description: '4x4 轻松关，解型翻面之后，继续练习行列与相邻排除。',
     size: 4,
     regionBoard: [
-      ['R1', 'R1', 'R2', 'R2'],
-      ['R3', 'R1', 'R1', 'R2'],
-      ['R3', 'R4', 'R4', 'R2'],
-      ['R3', 'R4', 'R4', 'R4']
+      ['R2', 'R4', 'R1', 'R3'],
+      ['R2', 'R4', 'R4', 'R3'],
+      ['R2', 'R4', 'R3', 'R3'],
+      ['R2', 'R4', 'R3', 'R3']
     ],
     solutionCells: [
-      { row: 0, col: 1 },
-      { row: 1, col: 3 },
-      { row: 2, col: 0 },
-      { row: 3, col: 2 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 1 }
+      { row: 0, col: 2 },
+      { row: 1, col: 0 },
+      { row: 2, col: 3 },
+      { row: 3, col: 1 }
     ],
     regionCount: 4,
     rewardCoins: 30,
@@ -170,22 +152,19 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 7,
     name: '土拨鼠谜题 7',
-    description: '4x4 轻松关，区域更碎一点，但仍然以直观推理为主。',
+    description: '4x4 轻松关，颜色块更碎，但第一步仍然不是猜而是单格确认。',
     size: 4,
     regionBoard: [
-      ['R1', 'R1', 'R1', 'R2'],
-      ['R1', 'R3', 'R2', 'R2'],
-      ['R3', 'R3', 'R4', 'R2'],
-      ['R3', 'R4', 'R4', 'R4']
+      ['R2', 'R2', 'R1', 'R3'],
+      ['R2', 'R2', 'R3', 'R3'],
+      ['R2', 'R4', 'R3', 'R3'],
+      ['R4', 'R4', 'R4', 'R3']
     ],
     solutionCells: [
-      { row: 0, col: 1 },
-      { row: 1, col: 3 },
-      { row: 2, col: 0 },
-      { row: 3, col: 2 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 1 }
+      { row: 0, col: 2 },
+      { row: 1, col: 0 },
+      { row: 2, col: 3 },
+      { row: 3, col: 1 }
     ],
     regionCount: 4,
     rewardCoins: 32,
@@ -195,22 +174,19 @@ export const PRESET_PONY_LEVELS = [
   {
     levelId: 8,
     name: '土拨鼠谜题 8',
-    description: '4x4 轻挑战关，作为 5x5 前的最后过渡。',
+    description: '4x4 轻挑战关，作为 5x5 前的最后过渡，但起手仍有单格颜色可抓。',
     size: 4,
     regionBoard: [
-      ['R1', 'R1', 'R1', 'R1'],
       ['R2', 'R2', 'R1', 'R3'],
+      ['R2', 'R3', 'R3', 'R3'],
       ['R2', 'R4', 'R4', 'R3'],
-      ['R4', 'R4', 'R3', 'R3']
+      ['R4', 'R4', 'R4', 'R3']
     ],
     solutionCells: [
       { row: 0, col: 2 },
       { row: 1, col: 0 },
       { row: 2, col: 3 },
       { row: 3, col: 1 }
-    ],
-    presetPlacedCells: [
-      { row: 0, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 34,
