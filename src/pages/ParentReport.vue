@@ -170,6 +170,9 @@
             <article class="summary-card"><span>课程当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>课程当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>本章节做题</span><strong>{{ report.course.learner.currentChapterSolvedProblemCount }} / {{ report.course.learner.currentChapterProblemCount }}</strong></article>
+            <article class="summary-card"><span>今日 AC 题目</span><strong>{{ report.course.learner.todayAcceptedProblemCount || 0 }}</strong></article>
+            <article class="summary-card"><span>本周 AC 题目</span><strong>{{ report.course.learner.weekAcceptedProblemCount || 0 }}</strong></article>
+            <article class="summary-card"><span>近一月 AC 题目</span><strong>{{ report.course.learner.monthAcceptedProblemCount || 0 }}</strong></article>
             <article class="summary-card"><span>完成率</span><strong>{{ report.course.learner.completionRate }}%</strong></article>
             <article class="summary-card"><span>已完成章节</span><strong>{{ report.course.learner.completedChaptersCount }} / {{ report.course.learner.totalChapters }}</strong></article>
             <article class="summary-card"><span>最近学习</span><strong>{{ formatDateTime(report.course.learner.lastActivityAt) }}</strong></article>
@@ -345,6 +348,9 @@ function createEmptyReport() {
         currentChapterTitle: '',
         currentChapterProblemCount: 0,
         currentChapterSolvedProblemCount: 0,
+        todayAcceptedProblemCount: 0,
+        weekAcceptedProblemCount: 0,
+        monthAcceptedProblemCount: 0,
         completionRate: 0,
         completedChaptersCount: 0,
         totalChapters: 0,

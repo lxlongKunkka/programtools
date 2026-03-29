@@ -150,6 +150,20 @@ function getActivityWindowStart(days = 14) {
   return date
 }
 
+function getTodayStart() {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+function getWeekStart() {
+  const date = getTodayStart()
+  const day = date.getDay()
+  const offset = day === 0 ? 6 : day - 1
+  date.setDate(date.getDate() - offset)
+  return date
+}
+
 async function findCourseChapterContext(chapterId) {
   let level = await CourseLevel.findOne({ 'chapters.id': chapterId }).lean()
   if (level) {
@@ -780,6 +794,78 @@ function getSubmissionTime(submission) {
   return submission?.submitAt || submission?.judgeAt || submission?.createdAt || submission?.updatedAt || null
 }
 
+async function buildCourseAcceptedProblemCounts(learnerId, levels = []) {
+  const problemCatalog = await buildCourseProblemCatalog(levels)
+  if (!problemCatalog.size) {
+    return {
+      todayAcceptedProblemCount: 0,
+      weekAcceptedProblemCount: 0,
+      monthAcceptedProblemCount: 0
+    }
+  }
+
+  const monthStart = getActivityWindowStart(30)
+  const todayStart = getTodayStart()
+  const weekStart = getWeekStart()
+  const uniqueDocIds = [...new Set([...problemCatalog.values()].map((item) => Number(item.docId)).filter(Number.isFinite))]
+  const catalogByPid = new Map()
+
+  for (const item of problemCatalog.values()) {
+    const pidKey = Number(item.docId)
+    if (!Number.isFinite(pidKey) || catalogByPid.has(pidKey)) continue
+    catalogByPid.set(pidKey, item)
+  }
+
+  const acceptedSubmissions = await Submission.find({
+    uid: learnerId,
+    status: 1,
+    $and: [
+      {
+        $or: [
+          { submitAt: { $gte: monthStart } },
+          { judgeAt: { $gte: monthStart } },
+          { createdAt: { $gte: monthStart } },
+          { updatedAt: { $gte: monthStart } }
+        ]
+      },
+      { pid: { $in: uniqueDocIds } }
+    ]
+  }).select('domainId pid submitAt judgeAt createdAt updatedAt').lean()
+
+  if (!acceptedSubmissions.length) {
+    return {
+      todayAcceptedProblemCount: 0,
+      weekAcceptedProblemCount: 0,
+      monthAcceptedProblemCount: 0
+    }
+  }
+
+  const todaySet = new Set()
+  const weekSet = new Set()
+  const monthSet = new Set()
+
+  for (const submission of acceptedSubmissions) {
+    const key = `${submission.domainId || 'system'}::${submission.pid}`
+    const catalogItem = problemCatalog.get(key) || catalogByPid.get(Number(submission.pid))
+    if (!catalogItem) continue
+
+    const eventTime = new Date(getSubmissionTime(submission) || 0)
+    const timestamp = eventTime.getTime()
+    if (!Number.isFinite(timestamp) || !timestamp) continue
+
+    const acceptedKey = `${catalogItem.domainId || submission.domainId || 'system'}::${catalogItem.docId || submission.pid}`
+    monthSet.add(acceptedKey)
+    if (timestamp >= weekStart.getTime()) weekSet.add(acceptedKey)
+    if (timestamp >= todayStart.getTime()) todaySet.add(acceptedKey)
+  }
+
+  return {
+    todayAcceptedProblemCount: todaySet.size,
+    weekAcceptedProblemCount: weekSet.size,
+    monthAcceptedProblemCount: monthSet.size
+  }
+}
+
 async function buildRecentCourseProblemItems(learnerId, levels = [], days = 30, limit = 20) {
   const problemCatalog = await buildCourseProblemCatalog(levels)
   if (!problemCatalog.size) return []
@@ -1238,8 +1324,11 @@ export async function buildLearnerCourseDigestPayload(learnerId, options = {}) {
 
   const courseSummary = buildCourseProgressSummary(progress, levels)
   const currentPosition = buildCurrentCoursePosition(progress, levels, recentActivities)
-  const recentHomeworks = await buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition)
-  const recentSolvedProblems = await buildRecentCourseProblemItems(learnerId, levels)
+  const [recentHomeworks, recentSolvedProblems, acceptedProblemCounts] = await Promise.all([
+    buildRecentHomeworkItems(learnerId, levels, recentActivities, currentPosition),
+    buildRecentCourseProblemItems(learnerId, levels),
+    buildCourseAcceptedProblemCounts(learnerId, levels)
+  ])
   const overviewLevels = options?.includeParentOverview
     ? await buildParentReportCourseOverview(
       progress,
@@ -1271,6 +1360,9 @@ export async function buildLearnerCourseDigestPayload(learnerId, options = {}) {
       currentChapterTitle: currentPosition.chapterTitle || '',
       currentChapterProblemCount: Number(currentPosition.chapterProblemCount || 0),
       currentChapterSolvedProblemCount: Number(currentPosition.chapterSolvedProblemCount || 0),
+      todayAcceptedProblemCount: Number(acceptedProblemCounts?.todayAcceptedProblemCount || 0),
+      weekAcceptedProblemCount: Number(acceptedProblemCounts?.weekAcceptedProblemCount || 0),
+      monthAcceptedProblemCount: Number(acceptedProblemCounts?.monthAcceptedProblemCount || 0),
       lastActivityAt: recentActivities[0]?.lastActiveAt || null
     },
     levels: courseSummary.levels,
