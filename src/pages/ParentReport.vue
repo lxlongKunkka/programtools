@@ -168,7 +168,6 @@
             </article>
             <article class="summary-card"><span>主要练习知识点</span><strong>{{ displayedPracticeTags }}</strong></article>
             <article class="summary-card"><span>近一月进行中课程</span><strong>{{ activeCourseOverviewCount }}</strong></article>
-            <article class="summary-card"><span>课程当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>本章节做题</span><strong>{{ report.course.learner.currentChapterSolvedProblemCount }} / {{ report.course.learner.currentChapterProblemCount }}</strong></article>
             <article class="summary-card"><span>今日 AC 题目</span><strong>{{ report.course.learner.todayAcceptedProblemCount || 0 }}</strong></article>
             <article class="summary-card"><span>本周 AC 题目</span><strong>{{ report.course.learner.weekAcceptedProblemCount || 0 }}</strong></article>
@@ -201,13 +200,19 @@
                     <div class="report-topic-list">
                       <section v-for="topic in level.topics" :key="topic.topicId" class="report-topic-block">
                         <div class="report-topic-head">
-                          <span class="report-topic-name">{{ topic.title }}</span>
+                          <span class="report-topic-name-wrap">
+                            <span class="status-dot" :class="getTopicProgressClass(topic)"></span>
+                            <span class="report-topic-name">{{ topic.title }}</span>
+                          </span>
                           <span class="report-topic-meta">{{ topic.completedCount || 0 }}/{{ topic.totalCount || 0 }} 章节 · {{ topic.solvedProblemCount || 0 }}/{{ topic.totalProblemCount || 0 }} 题</span>
                         </div>
                         <div class="report-chapter-list">
                           <div v-for="chapter in topic.chapters || []" :key="chapter.chapterId || chapter.chapterUid" class="report-chapter-row">
                             <div class="report-chapter-main">
-                              <span class="report-chapter-name">{{ chapter.title }}</span>
+                              <span class="report-chapter-name-wrap">
+                                <span class="status-dot" :class="getChapterProgressClass(chapter)"></span>
+                                <span class="report-chapter-name">{{ chapter.title }}</span>
+                              </span>
                               <div class="report-chapter-track">
                                 <div class="report-chapter-fill" :style="{ width: `${chapter.completionRate || 0}%` }"></div>
                               </div>
@@ -713,6 +718,12 @@ export default {
       if (Number(chapter?.solvedProblemCount || 0) > 0) return 'started'
       return 'todo'
     },
+    getTopicProgressClass(topic) {
+      if (Number(topic?.totalProblemCount || 0) > 0 && Number(topic?.solvedProblemCount || 0) >= Number(topic?.totalProblemCount || 0)) return 'done'
+      if (Number(topic?.completedCount || 0) >= Number(topic?.totalCount || 0) && Number(topic?.totalCount || 0) > 0) return 'done'
+      if (Number(topic?.solvedProblemCount || 0) > 0 || Number(topic?.completedCount || 0) > 0) return 'started'
+      return 'todo'
+    },
     showChapterBreakdown(chapter) {
       return Number(chapter?.requiredProblemCount || 0) > 0 || Number(chapter?.optionalProblemCount || 0) > 0
     },
@@ -1046,6 +1057,13 @@ export default {
   gap: 10px;
   margin-bottom: 8px;
 }
+.report-topic-name-wrap,
+.report-chapter-name-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .report-topic-name {
   font-size: 12px;
   font-weight: 700;
@@ -1075,6 +1093,8 @@ export default {
   font-size: 12px;
   color: #475569;
   line-height: 1.4;
+}
+.report-chapter-name-wrap {
   margin-bottom: 5px;
 }
 .report-chapter-track {
@@ -1119,6 +1139,26 @@ export default {
 .report-chapter-meta.started .report-chapter-breakdown,
 .report-chapter-meta.todo .report-chapter-breakdown {
   color: #64748b;
+}
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(203, 213, 225, 0.18);
+}
+.status-dot.done {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+.status-dot.started {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+.status-dot.todo {
+  background: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(203, 213, 225, 0.18);
 }
 @media (max-width: 900px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
