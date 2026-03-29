@@ -469,8 +469,48 @@ export default {
         String(item?.group || '')
       ].join('::')
     },
-    recentCourseLevels() {
+    recentActiveCourseLevels() {
       const levels = Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
+      const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
+      if (!levels.length) return []
+
+      const makeKey = this.courseLevelKeyFactory
+      const levelMap = new Map(levels.map((level) => [makeKey(level), level]))
+      const byLevelAndSubject = new Map(
+        levels.map((level) => [`${String(level?.subject || 'C++')}::${Number(level?.level || 0)}`, level])
+      )
+
+      const picked = []
+      const seen = new Set()
+      const pushLevel = (level) => {
+        if (!level) return
+        const key = makeKey(level)
+        if (!key || seen.has(key)) return
+        seen.add(key)
+        picked.push(level)
+      }
+
+      for (const activity of recentActivities) {
+        pushLevel(levelMap.get(makeKey(activity)) || byLevelAndSubject.get(`${String(activity?.subject || 'C++')}::${Number(activity?.level || 0)}`))
+      }
+
+      const recentPracticeLevels = Array.isArray(this.report.quiz?.recentPracticeLevels) ? this.report.quiz.recentPracticeLevels : []
+      for (const practiceLevel of recentPracticeLevels) {
+        const subject = String(practiceLevel?.subject || 'C++')
+        const level = Number(practiceLevel?.level || 0)
+        if (!level) continue
+        pushLevel(byLevelAndSubject.get(`${subject}::${level}`))
+      }
+
+      const currentCourseLevel = Number(this.report.course?.learner?.currentCppLevel || 0)
+      if (currentCourseLevel > 0) {
+        pushLevel(byLevelAndSubject.get(`C++::${currentCourseLevel}`))
+      }
+
+      return picked.filter((level) => Number(level?.completionRate || 0) < 100)
+    },
+    recentCourseLevels() {
+      const levels = this.recentActiveCourseLevels
       const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
       if (!levels.length) return []
 
@@ -575,7 +615,7 @@ export default {
       const levels = Array.isArray(this.report.course?.overviewLevels) && this.report.course.overviewLevels.length > 0
         ? this.report.course.overviewLevels
         : (Array.isArray(this.report.course?.levels) ? this.report.course.levels : [])
-      const recentLevels = Array.isArray(this.recentCourseLevels) ? this.recentCourseLevels : []
+      const recentLevels = Array.isArray(this.recentActiveCourseLevels) ? this.recentActiveCourseLevels : []
       if (!levels.length || !recentLevels.length) return []
 
       const makeKey = this.courseLevelKeyFactory
