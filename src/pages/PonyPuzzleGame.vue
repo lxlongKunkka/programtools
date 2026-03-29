@@ -1,165 +1,166 @@
 <template>
   <div class="pony-page">
-    <section class="pony-hero">
-      <div>
-        <p class="pony-eyebrow">Logic Game</p>
-        <h1>小马放置</h1>
-        <p class="pony-copy">每个颜色区块恰好放 1 只小马，同时满足行列不重复，且任意两只小马不能 8 方向相邻。</p>
-      </div>
-      <div class="hero-metrics">
-        <article class="metric-card accent">
-          <span>金币</span>
-          <strong>{{ profile.coins }}</strong>
+    <section v-if="currentLevel" class="marmot-shell">
+      <header class="game-hud">
+        <div class="hud-side left">
+          <div class="resource-pill coin-pill">
+            <span class="resource-icon">◎</span>
+            <strong>{{ profile.coins }}</strong>
+          </div>
+          <div class="resource-stack">
+            <div class="resource-pill energy-pill">
+              <span class="resource-icon">⚡</span>
+              <strong>{{ profile.energy }}</strong>
+              <button class="mini-plus" type="button" :disabled="storeLoading" @click="buyEnergyPack">+</button>
+            </div>
+            <span class="recovery-text">{{ config.energyRecoveryMinutes }} 分钟回 1 点</span>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div class="stage-title">第{{ currentLevel.levelId }}关</div>
+          <div class="life-row" aria-label="剩余机会">
+            <span v-for="index in 3" :key="`life-${index}`" class="life-heart" :class="{ lost: index > currentMistakesLeft }">♥</span>
+          </div>
+          <div class="remaining-pill">
+            <span class="remaining-icon">🐹</span>
+            <span>剩余: {{ remainingMarmots }}</span>
+          </div>
+        </div>
+
+        <div class="hud-side right">
+          <button class="mini-ghost" type="button" @click="selectLevelById(selectedLevelId)">关卡</button>
+          <button class="mini-ghost" type="button" @click="showToastMessage(`已通关 ${completedCount} / ${levels.length}`)">进度</button>
+        </div>
+      </header>
+
+      <section class="rules-strip">
+        <article class="rule-chip">
+          <strong>每种颜色 1 只土拨鼠</strong>
         </article>
-        <article class="metric-card">
-          <span>体力</span>
-          <strong>{{ profile.energy }} / {{ profile.energyMax }}</strong>
+        <article class="rule-chip">
+          <strong>每行每列仅 1 只</strong>
         </article>
-        <article class="metric-card">
-          <span>已通关</span>
-          <strong>{{ completedCount }} / {{ levels.length }}</strong>
+        <article class="rule-chip">
+          <strong>土拨鼠不能相邻</strong>
         </article>
-      </div>
+      </section>
+
+      <section class="level-strip">
+        <button
+          v-for="level in levels"
+          :key="level.levelId"
+          class="level-pill"
+          :class="{
+            active: Number(level.levelId) === Number(selectedLevelId),
+            locked: !level.unlocked,
+            done: level.completed
+          }"
+          @click="selectLevel(level)"
+        >
+          <span>Lv{{ level.levelId }}</span>
+        </button>
+      </section>
+
+      <div v-if="message" class="message-bar" :class="messageTone">{{ message }}</div>
+
+      <section class="board-panel">
+        <div class="board-meta">
+          <div class="meta-card">
+            <span>奖励</span>
+            <strong>{{ currentLevel.rewardCoins }} 金币</strong>
+          </div>
+          <div class="meta-card">
+            <span>模式</span>
+            <strong>{{ modeLabel }}</strong>
+          </div>
+          <div class="meta-card">
+            <span>用时</span>
+            <strong>{{ formatTime(elapsedSeconds) }}</strong>
+          </div>
+        </div>
+
+        <div class="board-shell">
+          <div class="board" :style="boardStyle" @contextmenu.prevent>
+            <template v-for="(row, rowIndex) in currentLevel.regionBoard" :key="`row-${rowIndex}`">
+              <button
+                v-for="(regionId, colIndex) in row"
+                :key="`${rowIndex}-${colIndex}`"
+                class="cell"
+                :class="cellClass(rowIndex, colIndex)"
+                :style="{ '--region-color': regionColor(regionId) }"
+                @click="handleCellClick(rowIndex, colIndex)"
+              >
+                <span v-if="isPlaced(rowIndex, colIndex)" class="marmot-token">🐹</span>
+                <span v-else-if="isBlocked(rowIndex, colIndex)" class="mark-icon">×</span>
+              </button>
+            </template>
+          </div>
+
+          <div v-if="!session" class="overlay-card subtle">
+            <strong>开始一局会消耗 {{ config.energyCostPerGame }} 点体力</strong>
+            <p>本局共有 3 次失误机会。错误放置土拨鼠会扣机会，打叉标记不会。</p>
+          </div>
+
+          <div v-else-if="session.status === 'failed'" class="overlay-card danger">
+            <strong>这局翻车了</strong>
+            <p>机会已经用完，点击重开继续挑战当前关。</p>
+            <button class="primary-btn" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">重新开始</button>
+          </div>
+
+          <div v-else-if="session.status === 'completed'" class="overlay-card success">
+            <strong>通关成功</strong>
+            <p>本关{{ lastRewardCoins > 0 ? `获得 ${lastRewardCoins} 金币` : '奖励已经领取过' }}，用时 {{ formatTime(elapsedSeconds) }}。</p>
+            <div class="overlay-actions">
+              <button class="primary-btn" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">重玩本关</button>
+              <button class="soft-btn" :disabled="!nextUnlockedLevel" @click="selectLevelById(nextUnlockedLevel)">下一关</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="economy-panel">
+        <div class="economy-row">
+          <span>提示价格</span>
+          <strong>{{ config.hintCost }} 金币</strong>
+        </div>
+        <div class="economy-row">
+          <span>体力包</span>
+          <strong>{{ config.energyPackCost }} 金币换 {{ config.energyPackAmount }} 体力</strong>
+        </div>
+        <div class="economy-row">
+          <span>金币来源</span>
+          <strong>Quiz +{{ config.quizCorrectCoins }} / 课程题 +{{ config.courseProblemCoins }} / 完章 +{{ config.courseChapterCoins }}</strong>
+        </div>
+      </section>
+
+      <footer class="tool-dock">
+        <button class="dock-btn soft" type="button" @click="mode = 'erase'">
+          <span class="dock-icon">⌫</span>
+          <span>清除</span>
+        </button>
+        <button class="dock-btn" :class="{ active: mode === 'pony' }" type="button" @click="mode = 'pony'">
+          <span class="dock-icon">🐹</span>
+          <span>放土拨鼠</span>
+        </button>
+        <button class="dock-btn" :class="{ active: mode === 'mark' }" type="button" @click="mode = 'mark'">
+          <span class="dock-icon">×</span>
+          <span>打叉</span>
+        </button>
+        <button class="dock-btn" type="button" :disabled="!session || session.status !== 'active' || hintLoading" @click="buyHint">
+          <span class="dock-icon">💡</span>
+          <span>{{ hintLoading ? '提示中' : '提示' }}</span>
+        </button>
+        <button class="dock-btn accent" type="button" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">
+          <span class="dock-icon">▶</span>
+          <span>{{ session && session.status === 'active' ? '重开' : '开始' }}</span>
+        </button>
+      </footer>
     </section>
 
-    <div class="pony-layout">
-      <aside class="side-column">
-        <section class="panel profile-panel">
-          <div class="panel-head">
-            <h3>资源</h3>
-            <button class="soft-btn" :disabled="storeLoading" @click="buyEnergyPack">购买体力</button>
-          </div>
-          <div class="resource-list">
-            <div class="resource-row"><span>开局消耗</span><strong>{{ config.energyCostPerGame }} 体力</strong></div>
-            <div class="resource-row"><span>提示价格</span><strong>{{ config.hintCost }} 金币</strong></div>
-            <div class="resource-row"><span>体力恢复</span><strong>{{ config.energyRecoveryMinutes }} 分钟 +1</strong></div>
-            <div class="resource-row"><span>体力包</span><strong>{{ config.energyPackCost }} 金币换 {{ config.energyPackAmount }} 体力</strong></div>
-          </div>
-          <p class="economy-note">Quiz 答对和 Course 完成题目/章节都会自动给金币，可直接拿来买体力和提示。</p>
-        </section>
-
-        <section class="panel levels-panel">
-          <div class="panel-head">
-            <h3>关卡</h3>
-            <span class="small-meta">已解锁到 L{{ profile.unlockedLevel || 1 }}</span>
-          </div>
-          <div class="level-list">
-            <button
-              v-for="level in levels"
-              :key="level.levelId"
-              class="level-card"
-              :class="{
-                active: Number(level.levelId) === Number(selectedLevelId),
-                locked: !level.unlocked,
-                done: level.completed
-              }"
-              @click="selectLevel(level)"
-            >
-              <div class="level-row">
-                <strong>第 {{ level.levelId }} 关</strong>
-                <span>{{ level.size }}x{{ level.size }}</span>
-              </div>
-              <p>{{ level.name }}</p>
-              <div class="level-row small-row">
-                <span>{{ level.difficultyLabel }}</span>
-                <span v-if="level.completed">已通关</span>
-                <span v-else-if="level.unlocked">可开始</span>
-                <span v-else>未解锁</span>
-              </div>
-            </button>
-          </div>
-        </section>
-      </aside>
-
-      <main class="main-column">
-        <section class="panel stage-panel" v-if="currentLevel">
-          <div class="stage-head">
-            <div>
-              <p class="small-meta">{{ currentLevel.difficultyLabel }} · 奖励 {{ currentLevel.rewardCoins }} 金币</p>
-              <h2>{{ currentLevel.name }}</h2>
-              <p class="stage-desc">{{ currentLevel.description }}</p>
-            </div>
-            <div class="stage-stats">
-              <div class="stat-pill">
-                <span>剩余机会</span>
-                <strong>{{ currentMistakesLeft }}</strong>
-              </div>
-              <div class="stat-pill">
-                <span>用时</span>
-                <strong>{{ formatTime(elapsedSeconds) }}</strong>
-              </div>
-              <div class="stat-pill">
-                <span>已放小马</span>
-                <strong>{{ placedKeys.length }} / {{ currentLevel.regionCount }}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="toolbar">
-            <button :class="['tool-btn', mode === 'pony' ? 'active' : '']" @click="mode = 'pony'">放小马</button>
-            <button :class="['tool-btn', mode === 'mark' ? 'active' : '']" @click="mode = 'mark'">标记排除</button>
-            <button :class="['tool-btn', mode === 'erase' ? 'active' : '']" @click="mode = 'erase'">擦除</button>
-            <button class="tool-btn" :disabled="!session || session.status !== 'active' || hintLoading" @click="buyHint">{{ hintLoading ? '提示中...' : '购买提示' }}</button>
-            <button class="tool-btn" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">{{ session && session.status === 'active' ? '重新开始' : '开始本关' }}</button>
-          </div>
-
-          <div v-if="message" class="message-bar" :class="messageTone">{{ message }}</div>
-
-          <div class="board-shell">
-            <div class="board" :style="boardStyle" @contextmenu.prevent>
-              <template v-for="(row, rowIndex) in currentLevel.regionBoard" :key="`row-${rowIndex}`">
-                <button
-                  v-for="(regionId, colIndex) in row"
-                  :key="`${rowIndex}-${colIndex}`"
-                  class="cell"
-                  :class="cellClass(rowIndex, colIndex)"
-                  :style="{ '--region-color': regionColor(regionId) }"
-                  @click="handleCellClick(rowIndex, colIndex)"
-                >
-                  <span v-if="isPlaced(rowIndex, colIndex)" class="pony-icon">♞</span>
-                  <span v-else-if="isBlocked(rowIndex, colIndex)" class="mark-icon">×</span>
-                </button>
-              </template>
-            </div>
-
-            <div v-if="!session" class="overlay-card subtle">
-              <strong>开始一局会消耗 {{ config.energyCostPerGame }} 体力</strong>
-              <p>进入后共有 3 次失败机会。标记不会扣机会，只有错误放置小马会扣机会。</p>
-            </div>
-
-            <div v-else-if="session.status === 'failed'" class="overlay-card danger">
-              <strong>本局失败</strong>
-              <p>三次机会已用完，可以重新开始本关继续挑战。</p>
-              <button class="primary-btn" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">再来一局</button>
-            </div>
-
-            <div v-else-if="session.status === 'completed'" class="overlay-card success">
-              <strong>通关成功</strong>
-              <p>用时 {{ formatTime(elapsedSeconds) }}，本关{{ lastRewardCoins > 0 ? `获得 ${lastRewardCoins} 金币` : '奖励已领取过' }}。</p>
-              <div class="overlay-actions">
-                <button class="primary-btn" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">重玩本关</button>
-                <button class="soft-btn" :disabled="!nextUnlockedLevel" @click="selectLevelById(nextUnlockedLevel)">下一关</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="rules-grid">
-            <article class="rule-card">
-              <strong>放置规则</strong>
-              <p>每个颜色区块恰好 1 只小马，每行每列最多 1 只，且小马之间不能贴着放。</p>
-            </article>
-            <article class="rule-card">
-              <strong>金币来源</strong>
-              <p>答对 1 道 Quiz 自动 +{{ config.quizCorrectCoins }} 金币；Course 题目和章节完成也会自动发放。</p>
-            </article>
-          </div>
-        </section>
-
-        <section v-else class="panel stage-panel empty-panel">
-          <p>关卡加载中...</p>
-        </section>
-      </main>
-    </div>
+    <section v-else class="loading-shell">
+      <div class="loading-card">土拨鼠关卡加载中...</div>
+    </section>
   </div>
 </template>
 
@@ -224,6 +225,14 @@ export default {
     completedCount() {
       return this.levels.filter((level) => level.completed).length
     },
+    remainingMarmots() {
+      return Math.max(Number(this.currentLevel?.regionCount || 0) - this.placedKeys.length, 0)
+    },
+    modeLabel() {
+      if (this.mode === 'mark') return '打叉排除'
+      if (this.mode === 'erase') return '清除格子'
+      return '放土拨鼠'
+    },
     nextUnlockedLevel() {
       const next = this.levels.find((level) => Number(level.levelId) === Number(this.currentLevel?.levelId || 0) + 1)
       return next?.unlocked ? next.levelId : null
@@ -254,7 +263,7 @@ export default {
           this.selectedLevelId = this.levels[0]?.levelId || 1
         }
       } catch (error) {
-        this.showToastMessage(`加载小马游戏失败: ${error.message}`)
+        this.showToastMessage(`加载土拨鼠游戏失败: ${error.message}`)
       } finally {
         this.loading = false
       }
@@ -313,7 +322,7 @@ export default {
         this.flashKey = ''
         this.lastRewardCoins = 0
         this.elapsedSeconds = 0
-        this.message = '本局已开始，先观察颜色区块，再下手放小马。'
+        this.message = '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
         this.messageTone = 'info'
         this.startTimer()
       } catch (error) {
@@ -371,7 +380,7 @@ export default {
           this.placedKeys = [...this.placedKeys, key]
           this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
           this.hintKey = ''
-          this.message = '这一步是对的。'
+          this.message = '这一步放对了。'
           this.messageTone = 'success'
           if (this.placedKeys.length >= Number(this.currentLevel?.regionCount || 0)) {
             await this.completeLevel()
@@ -405,7 +414,7 @@ export default {
           if (!this.placedKeys.includes(key)) this.placedKeys = [...this.placedKeys, key]
           this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
           this.hintKey = key
-          this.message = data.hint.message || '已为你揭示一格正确位置。'
+          this.message = data.hint.message || '已经帮你点亮一个正确位置。'
           this.messageTone = 'success'
           if (this.placedKeys.length >= Number(this.currentLevel?.regionCount || 0)) {
             await this.completeLevel()
@@ -474,411 +483,488 @@ export default {
 
 <style scoped>
 .pony-page {
-  max-width: 1380px;
+  --bg-top: #f7fbff;
+  --bg-bottom: #eef5ff;
+  --ink: #1d2b3c;
+  --muted: #6e7b8c;
+  --line: #c8d9ef;
+  --blue: #2d78d2;
+  --blue-deep: #0f5fb8;
+  --pill: rgba(255, 255, 255, 0.92);
+  min-height: calc(100vh - 80px);
+  padding: 18px 12px 104px;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--ink);
+}
+
+.marmot-shell {
+  width: min(100%, 460px);
   margin: 0 auto;
-  padding: 24px 18px 48px;
-  color: #16202a;
 }
 
-.pony-hero,
-.panel,
-.metric-card,
-.rule-card {
-  background: #fff;
-  border: 1px solid #d8e0ea;
-  border-radius: 18px;
-  box-shadow: 0 18px 45px rgba(15, 34, 58, 0.08);
+.game-hud {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
+  align-items: start;
+  gap: 10px;
 }
 
-.pony-hero {
+.hud-side {
   display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 26px;
-  background: linear-gradient(135deg, #fffdf3 0%, #eef7ff 100%);
+  flex-direction: column;
+  gap: 8px;
 }
 
-.pony-eyebrow {
-  margin: 0 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8a5a00;
+.hud-side.right {
+  align-items: flex-end;
 }
 
-.pony-hero h1 {
-  margin: 0;
-  font-size: 34px;
+.resource-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.pony-copy {
-  margin: 10px 0 0;
-  max-width: 760px;
-  color: #526272;
-  line-height: 1.7;
+.resource-pill,
+.remaining-pill,
+.mini-ghost,
+.level-pill,
+.meta-card,
+.economy-panel,
+.rule-chip,
+.board-panel,
+.loading-card {
+  background: var(--pill);
+  border: 1px solid rgba(140, 174, 215, 0.42);
+  box-shadow: 0 10px 30px rgba(66, 97, 142, 0.08);
 }
 
-.hero-metrics {
+.resource-pill {
+  min-height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.coin-pill {
+  color: #cc8a00;
+}
+
+.energy-pill {
+  color: #1792d4;
+}
+
+.resource-icon {
+  font-size: 14px;
+}
+
+.mini-plus,
+.mini-ghost {
+  border: 0;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.mini-plus {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #3b92ff;
+  color: #fff;
+  margin-left: auto;
+}
+
+.mini-ghost {
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: #506175;
+}
+
+.recovery-text {
+  font-size: 11px;
+  color: var(--muted);
+  padding-left: 6px;
+}
+
+.hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stage-title {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.life-row {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.life-heart {
+  font-size: 24px;
+  color: #ff2f55;
+  text-shadow: 0 4px 10px rgba(255, 47, 85, 0.28);
+}
+
+.life-heart.lost {
+  color: #f2b5c0;
+  text-shadow: none;
+}
+
+.remaining-pill {
+  min-width: 126px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #de4837;
+  font-weight: 800;
+}
+
+.remaining-icon {
+  font-size: 18px;
+}
+
+.rules-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  min-width: 420px;
+  gap: 0;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 2px solid rgba(90, 145, 212, 0.72);
+  background: rgba(255, 255, 255, 0.88);
 }
 
-.metric-card {
-  padding: 18px;
+.rule-chip {
+  min-height: 84px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.metric-card span,
-.small-meta,
-.stage-desc,
-.economy-note {
-  color: #647587;
-}
-
-.metric-card strong {
-  font-size: 28px;
-}
-
-.metric-card.accent {
-  background: linear-gradient(135deg, #153f72 0%, #2a73c9 100%);
-  color: #fff;
-  border-color: #153f72;
-}
-
-.metric-card.accent span {
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.pony-layout {
-  display: grid;
-  grid-template-columns: 330px minmax(0, 1fr);
-  gap: 18px;
-  margin-top: 18px;
-}
-
-.side-column,
-.main-column {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.panel {
-  padding: 20px;
-}
-
-.panel-head,
-.stage-head,
-.level-row,
-.resource-row,
-.overlay-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
   align-items: center;
-}
-
-.panel-head h3,
-.stage-head h2 {
-  margin: 0;
-}
-
-.resource-list,
-.level-list,
-.rules-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.resource-row {
-  padding: 10px 0;
-  border-bottom: 1px solid #e7edf3;
-}
-
-.resource-row:last-child {
-  border-bottom: 0;
-}
-
-.economy-note {
-  margin: 14px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.level-card {
-  width: 100%;
-  text-align: left;
-  border: 1px solid #d7e2ec;
-  background: #fbfdff;
-  border-radius: 14px;
-  padding: 14px;
-  cursor: pointer;
-}
-
-.level-card.active {
-  border-color: #2f7ff8;
-  box-shadow: 0 12px 24px rgba(47, 127, 248, 0.12);
-}
-
-.level-card.done {
-  background: #f0fdf4;
-  border-color: #86efac;
-}
-
-.level-card.locked {
-  opacity: 0.58;
-}
-
-.level-card p {
-  margin: 8px 0;
-  color: #324253;
-  font-weight: 700;
-}
-
-.small-row {
-  font-size: 12px;
-  color: #6f8193;
-}
-
-.stage-panel {
-  min-height: 780px;
-}
-
-.stage-stats {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.stat-pill {
+  justify-content: center;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: #f5f9fd;
-  border: 1px solid #dbe5ef;
-  min-width: 108px;
+  text-align: center;
 }
 
-.stat-pill span {
-  display: block;
-  font-size: 12px;
-  color: #6a7a89;
+.rule-chip + .rule-chip {
+  border-left: 1px dashed rgba(122, 153, 194, 0.48);
 }
 
-.stat-pill strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 22px;
+.rule-chip strong {
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.toolbar {
+.level-strip {
+  margin-top: 14px;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 18px;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
-.tool-btn,
-.primary-btn,
-.soft-btn {
-  border: 0;
+.level-pill {
   border-radius: 999px;
+  border: 0;
+  padding: 9px 14px;
+  white-space: nowrap;
   cursor: pointer;
-  padding: 10px 16px;
-  font-weight: 700;
+  font-weight: 800;
+  color: #526171;
 }
 
-.tool-btn,
-.soft-btn {
-  background: #edf3fa;
-  color: #24415e;
-}
-
-.tool-btn.active,
-.primary-btn {
-  background: #0f62fe;
+.level-pill.active {
+  background: linear-gradient(180deg, #3da3ff 0%, #0d71d8 100%);
   color: #fff;
+}
+
+.level-pill.done:not(.active) {
+  background: #ecfdf3;
+  color: #138a54;
+}
+
+.level-pill.locked {
+  opacity: 0.42;
 }
 
 .message-bar {
   margin-top: 14px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 16px;
   font-size: 13px;
+  font-weight: 700;
 }
 
 .message-bar.info {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #eef7ff;
+  color: #1769c5;
 }
 
 .message-bar.success {
-  background: #ecfdf5;
-  color: #15803d;
+  background: #ecfdf3;
+  color: #15784f;
 }
 
 .message-bar.danger {
   background: #fff1f2;
-  color: #be123c;
+  color: #c22b44;
+}
+
+.board-panel {
+  margin-top: 14px;
+  border-radius: 28px;
+  padding: 18px 14px 24px;
+}
+
+.board-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.meta-card {
+  border-radius: 18px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.meta-card span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.meta-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
 }
 
 .board-shell {
   position: relative;
-  margin-top: 18px;
-  min-height: 540px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 16px;
 }
 
 .board {
-  width: min(78vw, 560px);
+  width: 100%;
   aspect-ratio: 1;
   display: grid;
   gap: 6px;
 }
 
 .cell {
-  position: relative;
-  border: 1px solid rgba(18, 32, 52, 0.08);
+  border: 0;
   border-radius: 14px;
   background: var(--region-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(18px, 2vw, 32px);
-  color: #12304d;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.cell:active {
+  transform: scale(0.96);
 }
 
 .cell.placed {
-  box-shadow: inset 0 0 0 3px rgba(15, 98, 254, 0.2);
-  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.15)), var(--region-color);
-}
-
-.cell.blocked {
-  opacity: 0.7;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.88), 0 4px 10px rgba(64, 76, 104, 0.12);
 }
 
 .cell.hinted {
-  outline: 3px solid rgba(245, 158, 11, 0.7);
+  outline: 3px solid rgba(255, 192, 72, 0.84);
 }
 
 .cell.flash {
   animation: flash-wrong 0.45s ease;
 }
 
-.pony-icon {
-  font-size: 1.05em;
+.marmot-token {
+  font-size: clamp(26px, 7vw, 38px);
   line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(76, 48, 24, 0.22));
 }
 
 .mark-icon {
-  font-size: 1.4em;
-  color: rgba(17, 24, 39, 0.45);
+  font-size: clamp(28px, 7vw, 38px);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 900;
 }
 
 .overlay-card {
   position: absolute;
-  inset: auto 24px 24px 24px;
-  padding: 18px;
-  border-radius: 18px;
-  border: 1px solid #dbe4ef;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 16px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(8px);
-  box-shadow: 0 16px 32px rgba(15, 34, 58, 0.12);
+  box-shadow: 0 14px 30px rgba(56, 81, 120, 0.15);
 }
 
 .overlay-card strong {
   display: block;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .overlay-card p {
   margin: 8px 0 0;
-  color: #526272;
-}
-
-.overlay-card.success {
-  border-color: #86efac;
-}
-
-.overlay-card.danger {
-  border-color: #fecdd3;
-}
-
-.rules-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 18px;
-}
-
-.rule-card {
-  padding: 14px;
-}
-
-.rule-card strong {
-  display: block;
-}
-
-.rule-card p {
-  margin: 8px 0 0;
-  color: #5f6f80;
+  color: #536274;
   line-height: 1.6;
 }
 
-.empty-panel {
+.overlay-card.success {
+  border: 1px solid #86efac;
+}
+
+.overlay-card.danger {
+  border: 1px solid #fecdd3;
+}
+
+.overlay-actions {
   display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.economy-panel {
+  margin-top: 14px;
+  border-radius: 22px;
+  padding: 14px 16px;
+}
+
+.economy-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  color: #526171;
+  font-size: 13px;
+}
+
+.economy-row strong {
+  text-align: right;
+  color: #223349;
+}
+
+.tool-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 16px), 468px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  z-index: 12;
+}
+
+.dock-btn,
+.primary-btn,
+.soft-btn {
+  border: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 24px rgba(52, 88, 137, 0.16);
+  cursor: pointer;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
+  color: #43607e;
+  font-weight: 800;
+}
+
+.dock-btn.active,
+.dock-btn.accent,
+.primary-btn {
+  background: linear-gradient(180deg, #38a6ff 0%, #0b70d7 100%);
+  color: #fff;
+}
+
+.dock-btn.soft {
+  background: rgba(220, 239, 249, 0.94);
+}
+
+.dock-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.loading-shell {
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
+}
+
+.loading-card {
+  border-radius: 24px;
+  padding: 24px 28px;
+  font-weight: 800;
 }
 
 @keyframes flash-wrong {
-  0% { transform: scale(1); background: #ffe4e6; }
-  40% { transform: scale(0.96); background: #fecdd3; }
+  0% { transform: scale(1); background: #ffd7df; }
+  45% { transform: scale(0.95); background: #ffb8c4; }
   100% { transform: scale(1); }
 }
 
-@media (max-width: 1120px) {
-  .pony-hero,
-  .pony-layout,
-  .rules-grid {
-    grid-template-columns: 1fr;
-    flex-direction: column;
+@media (min-width: 860px) {
+  .marmot-shell {
+    width: min(100%, 720px);
   }
 
-  .hero-metrics {
-    min-width: 0;
+  .game-hud {
+    grid-template-columns: 160px minmax(0, 1fr) 160px;
+  }
+
+  .tool-dock {
+    position: static;
+    transform: none;
     width: 100%;
+    margin-top: 14px;
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 420px) {
   .pony-page {
-    padding: 16px 12px 42px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
-  .hero-metrics,
-  .rules-grid {
-    grid-template-columns: 1fr;
+  .game-hud {
+    grid-template-columns: 80px minmax(0, 1fr) 80px;
   }
 
-  .stage-head,
-  .panel-head,
-  .level-row,
-  .resource-row,
-  .overlay-actions {
+  .stage-title {
+    font-size: 28px;
+  }
+
+  .rule-chip {
+    min-height: 76px;
+    padding: 8px;
+  }
+
+  .rule-chip strong {
+    font-size: 12px;
+  }
+
+  .economy-row {
     flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .board {
-    width: min(92vw, 420px);
   }
 }
 </style>

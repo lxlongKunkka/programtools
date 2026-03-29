@@ -66,6 +66,12 @@
           <div class="card-title">推箱子</div>
           <div class="card-desc">经典益智游戏，支持自定义关卡。</div>
         </router-link>
+
+        <router-link v-if="showGames && user" to="/pony" class="card">
+          <div class="card-icon">🐹</div>
+          <div class="card-title">土拨鼠放置</div>
+          <div class="card-desc">每种颜色放 1 只土拨鼠，行列不重复，还不能彼此相邻。</div>
+        </router-link>
       </div>
     </section>
 
