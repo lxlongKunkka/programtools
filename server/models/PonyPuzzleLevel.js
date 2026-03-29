@@ -5,6 +5,8 @@ const ponyPuzzleLevelSchema = new mongoose.Schema({
   levelId: { type: Number, required: true, unique: true },
   name: { type: String, required: true },
   description: { type: String, default: '' },
+  tutorialTitle: { type: String, default: '' },
+  tutorialTips: { type: [String], default: [] },
   size: { type: Number, required: true },
   regionBoard: { type: [[String]], required: true },
   solutionCells: {
