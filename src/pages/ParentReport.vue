@@ -458,6 +458,14 @@ export default {
 
       return '暂无'
     },
+    courseLevelKeyFactory() {
+      return (item) => [
+        String(item?.subject || 'C++'),
+        Number(item?.level || 0),
+        String(item?.levelTitle || item?.title || ''),
+        String(item?.group || '')
+      ].join('::')
+    },
     recentCourseLevels() {
       const levels = Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
       const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
@@ -467,12 +475,7 @@ export default {
       const currentCourseLevelTitle = String(this.report.course?.learner?.currentCppLevelTitle || '')
       const currentCourseLevelSource = String(this.report.course?.learner?.currentCppLevelSource || '')
 
-      const makeKey = (item) => [
-        String(item?.subject || 'C++'),
-        Number(item?.level || 0),
-        String(item?.levelTitle || item?.title || ''),
-        String(item?.group || '')
-      ].join('::')
+      const makeKey = this.courseLevelKeyFactory
 
       const levelMap = new Map(levels.map((level) => [makeKey(level), level]))
       const activityTimeMap = new Map()
@@ -566,7 +569,24 @@ export default {
       return ensureCurrentLevelIncluded(levels.slice(0, 3).map(withActivityMeta))
     },
     courseOverviewLevels() {
-      return Array.isArray(this.report.course?.levels) ? this.report.course.levels : []
+      const levels = Array.isArray(this.report.course?.overviewLevels) && this.report.course.overviewLevels.length > 0
+        ? this.report.course.overviewLevels
+        : (Array.isArray(this.report.course?.levels) ? this.report.course.levels : [])
+      const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
+      if (!levels.length || !recentActivities.length) return []
+
+      const makeKey = this.courseLevelKeyFactory
+      const activeLevelKeys = new Set(
+        recentActivities
+          .map((activity) => makeKey(activity))
+          .filter(Boolean)
+      )
+
+      return levels.filter((level) => {
+        const key = makeKey(level)
+        if (!activeLevelKeys.has(key)) return false
+        return Number(level?.completionRate || 0) < 100
+      })
     },
     courseOverviewGroups() {
       const groups = new Map()
