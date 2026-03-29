@@ -268,6 +268,118 @@ const LEVEL_ONE_SCRIPT = [
   }
 ]
 
+const LEVEL_TWO_SCRIPT = [
+  {
+    kind: 'modal',
+    badge: '教学 1/5',
+    title: '先占一行一列',
+    text: '这一关重点学会“放下一只后，整行整列都能排除”。',
+    ctaText: '开始'
+  },
+  {
+    kind: 'tip',
+    badge: '教学 2/5',
+    text: '先点这个高亮格子，放下第一只土拨鼠。',
+    autoMode: 'pony',
+    focusKeys: ['0,2'],
+    highlightKeys: ['0,2'],
+    requirement: { type: 'placedAll', keys: ['0,2'] },
+    showTap: true
+  },
+  {
+    kind: 'success',
+    badge: '不错',
+    text: '同一行和同一列不能再有土拨鼠，把高亮位置全部打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
+  },
+  {
+    kind: 'tip',
+    badge: '教学 4/5',
+    text: '四周相邻也不行，再把这两个贴边格打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['1,1', '1,3'],
+    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
+  },
+  {
+    kind: 'success',
+    badge: '继续',
+    text: '现在下方这块颜色只剩一个合理位置了，点亮它。',
+    autoMode: 'pony',
+    focusKeys: ['3,1'],
+    highlightKeys: ['3,1'],
+    requirement: { type: 'placedAll', keys: ['3,1'] },
+    showTap: true
+  },
+  {
+    kind: 'modal',
+    badge: '会了',
+    title: '行列排除已经上手',
+    text: '后面看到确定位置时，就先拉整行整列，再考虑相邻限制。',
+    ctaText: '继续挑战'
+  }
+]
+
+const LEVEL_THREE_SCRIPT = [
+  {
+    kind: 'modal',
+    badge: '教学 1/5',
+    title: '先缩到唯一候选',
+    text: '这一关练“先打叉，把一个颜色块收缩到只剩一个格”。',
+    ctaText: '知道了'
+  },
+  {
+    kind: 'tip',
+    badge: '教学 2/5',
+    text: '先放这一只土拨鼠，给后面制造排除条件。',
+    autoMode: 'pony',
+    focusKeys: ['1,0'],
+    highlightKeys: ['1,0'],
+    requirement: { type: 'placedAll', keys: ['1,0'] },
+    showTap: true
+  },
+  {
+    kind: 'success',
+    badge: '很好',
+    text: '先把同一行、同一列里不可能的位置全部打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['0,0', '2,0', '3,0', '1,1', '1,2', '1,3'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '2,0', '3,0', '1,1', '1,2', '1,3'] }
+  },
+  {
+    kind: 'tip',
+    badge: '教学 4/5',
+    text: '再把它四周挨着的位置打叉，这样右上颜色块就快只剩一个点了。',
+    autoMode: 'mark',
+    highlightKeys: ['0,1', '2,1'],
+    requirement: { type: 'blockedAll', keys: ['0,1', '2,1'] }
+  },
+  {
+    kind: 'success',
+    badge: '就是这样',
+    text: '现在右上颜色块只剩一个安全格，点它落子。',
+    autoMode: 'pony',
+    focusKeys: ['0,2'],
+    highlightKeys: ['0,2'],
+    requirement: { type: 'placedAll', keys: ['0,2'] },
+    showTap: true
+  },
+  {
+    kind: 'modal',
+    badge: '掌握了',
+    title: '你已经会“先排除再确认”',
+    text: '从这一关开始，看到颜色块缩成唯一候选时，就可以果断放土拨鼠。',
+    ctaText: '继续挑战'
+  }
+]
+
+const TUTORIAL_SCRIPTS = {
+  1: LEVEL_ONE_SCRIPT,
+  2: LEVEL_TWO_SCRIPT,
+  3: LEVEL_THREE_SCRIPT,
+}
+
 export default {
   name: 'PonyPuzzleGame',
   inject: ['showToastMessage'],
@@ -409,8 +521,7 @@ export default {
       return cellKey(row, col)
     },
     getTutorialScript(levelId) {
-      if (Number(levelId) === 1) return LEVEL_ONE_SCRIPT
-      return []
+      return TUTORIAL_SCRIPTS[Number(levelId)] || []
     },
     loadTutorialProgress() {
       try {
