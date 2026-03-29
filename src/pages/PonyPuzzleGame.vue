@@ -46,6 +46,16 @@
         </article>
       </section>
 
+      <section v-if="currentLevel.tutorialTips?.length" class="tutorial-panel">
+        <div class="tutorial-head">
+          <strong>{{ currentLevel.tutorialTitle || '教学提示' }}</strong>
+          <span>前 3 关建议先学会打叉</span>
+        </div>
+        <ol class="tutorial-list">
+          <li v-for="(tip, index) in currentLevel.tutorialTips" :key="`tip-${index}`">{{ tip }}</li>
+        </ol>
+      </section>
+
       <section class="level-strip">
         <button
           v-for="level in levels"
@@ -322,7 +332,9 @@ export default {
         this.flashKey = ''
         this.lastRewardCoins = 0
         this.elapsedSeconds = 0
-        this.message = '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
+        this.message = Array.isArray(this.currentLevel?.tutorialTips) && this.currentLevel.tutorialTips.length
+          ? '教学关先别急着落子，先切到“打叉”模式做排除。'
+          : '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
         this.messageTone = 'info'
         this.startTimer()
       } catch (error) {
@@ -672,6 +684,41 @@ export default {
   padding-bottom: 4px;
 }
 
+.tutorial-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(140, 174, 215, 0.42);
+  box-shadow: 0 10px 30px rgba(66, 97, 142, 0.08);
+}
+
+.tutorial-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.tutorial-head strong {
+  font-size: 15px;
+}
+
+.tutorial-head span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tutorial-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #496076;
+}
+
+.tutorial-list li + li {
+  margin-top: 6px;
+}
+
 .level-pill {
   border-radius: 999px;
   border: 0;
@@ -961,6 +1008,11 @@ export default {
 
   .rule-chip strong {
     font-size: 12px;
+  }
+
+  .tutorial-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .economy-row {

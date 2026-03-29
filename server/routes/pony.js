@@ -231,6 +231,8 @@ function sanitizeLevel(level, profile = null) {
     levelId: Number(level.levelId),
     name: level.name,
     description: level.description,
+    tutorialTitle: level.tutorialTitle || '',
+    tutorialTips: Array.isArray(level.tutorialTips) ? level.tutorialTips : [],
     size: Number(level.size),
     regionBoard: level.regionBoard,
     regionCount: Number(level.regionCount || level.size || 0),

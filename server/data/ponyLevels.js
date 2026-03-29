@@ -3,6 +3,12 @@ export const PRESET_PONY_LEVELS = [
     levelId: 1,
     name: '土拨鼠谜题 1',
     description: '4x4 热身关，先熟悉每种颜色放 1 只土拨鼠。',
+    tutorialTitle: '先学会打叉',
+    tutorialTips: [
+      '先切到“打叉”模式，不急着直接放土拨鼠。',
+      '观察已经很满的颜色块，把同一行同一列里明显不可能的位置先打叉。',
+      '当某个颜色块只剩 1 个空位时，再切回“放土拨鼠”落子。'
+    ],
     size: 4,
     regionBoard: [
       ['R2', 'R1', 'R1', 'R1'],
@@ -25,6 +31,12 @@ export const PRESET_PONY_LEVELS = [
     levelId: 2,
     name: '土拨鼠谜题 2',
     description: '4x4 热身关，颜色块更整齐，适合建立直觉。',
+    tutorialTitle: '用行列排除',
+    tutorialTips: [
+      '先找已经确定有土拨鼠的行和列，把它们延伸出去全部打叉。',
+      '同色区域里如果有多个候选格，先用打叉缩小范围。',
+      '尽量做到“先排除，后确认”，这样更稳。'
+    ],
     size: 4,
     regionBoard: [
       ['R2', 'R2', 'R1', 'R1'],
@@ -47,6 +59,12 @@ export const PRESET_PONY_LEVELS = [
     levelId: 3,
     name: '土拨鼠谜题 3',
     description: '4x4 入门关，开始同时观察颜色块和行列。',
+    tutorialTitle: '打叉后再落子',
+    tutorialTips: [
+      '这一关先把相邻不能放的位置打叉，尤其是对角也不能贴着。',
+      '如果一个颜色块里有格子被行、列、相邻规则同时限制，优先打叉它。',
+      '只在“唯一候选”出现时放土拨鼠，节奏会更轻松。'
+    ],
     size: 4,
     regionBoard: [
       ['R2', 'R2', 'R1', 'R1'],
