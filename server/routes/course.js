@@ -1260,6 +1260,8 @@ async function buildTeacherCourseFollowPayload(teacherId) {
       note: follow.note || '',
       currentCppLevel: courseSummary.currentCppLevel,
       currentCppLevelTitle: courseSummary.currentCppLevelTitle,
+      currentCppLevelSource: courseSummary.currentCppLevelSource,
+      currentCppLevelUpdatedAt: courseSummary.currentCppLevelUpdatedAt,
       subjectLevels: courseSummary.subjectLevels,
       completedChaptersCount: courseSummary.completedChaptersCount,
       totalChapters: courseSummary.totalChapters,
@@ -2195,6 +2197,7 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
     const teacherId = Number(req.user.id)
     const learnerId = Number(req.params.learnerId)
     const level = Number(req.body?.level)
+    const now = new Date()
 
     if (!Number.isFinite(learnerId)) {
       return res.status(400).json({ error: '学员 ID 不合法' })
@@ -2211,22 +2214,26 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
       }
     }
 
-    let progress = await UserProgress.findOne({ userId: learnerId })
-    if (!progress) {
-      progress = new UserProgress({ userId: learnerId })
-    }
-
-    if (!progress.subjectLevels) progress.subjectLevels = new Map()
-    if (!progress.subjectLevelSources) progress.subjectLevelSources = new Map()
-    if (!progress.subjectLevelUpdatedAt) progress.subjectLevelUpdatedAt = new Map()
-    if (!progress.subjectLevelUpdatedBy) progress.subjectLevelUpdatedBy = new Map()
-
-    progress.subjectLevels.set('C++', level)
-    progress.currentLevel = level
-    progress.subjectLevelSources.set('C++', 'manual')
-    progress.subjectLevelUpdatedAt.set('C++', new Date())
-    progress.subjectLevelUpdatedBy.set('C++', teacherId)
-    await progress.save()
+    await UserProgress.findOneAndUpdate(
+      { userId: learnerId },
+      {
+        $set: {
+          currentLevel: level,
+          'subjectLevels.C++': level,
+          'subjectLevelSources.C++': 'manual',
+          'subjectLevelUpdatedAt.C++': now,
+          'subjectLevelUpdatedBy.C++': teacherId
+        },
+        $setOnInsert: {
+          userId: learnerId
+        }
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true
+      }
+    )
 
     const digest = await buildLearnerCourseDigestPayload(learnerId)
     res.json({
