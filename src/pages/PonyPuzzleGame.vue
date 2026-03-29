@@ -4,12 +4,12 @@
       <header class="game-hud">
         <div class="hud-side left">
           <div class="resource-pill coin-pill">
-            <span class="resource-icon">◎</span>
+            <span class="resource-icon coin">●</span>
             <strong>{{ profile.coins }}</strong>
           </div>
           <div class="resource-stack">
             <div class="resource-pill energy-pill">
-              <span class="resource-icon">⚡</span>
+              <span class="resource-icon energy">♥</span>
               <strong>{{ profile.energy }}</strong>
               <button class="mini-plus" type="button" :disabled="storeLoading" @click="buyEnergyPack">+</button>
             </div>
@@ -24,7 +24,7 @@
           </div>
           <div class="remaining-pill">
             <span class="remaining-icon">🐹</span>
-            <span>剩余: {{ remainingMarmots }}</span>
+            <span>剩余土拨鼠: {{ remainingMarmots }}</span>
           </div>
         </div>
 
@@ -120,7 +120,9 @@
                 :style="{ '--region-color': regionColor(regionId) }"
                 @click="handleCellClick(rowIndex, colIndex)"
               >
-                <span v-if="isPlaced(rowIndex, colIndex)" class="marmot-token">🐹</span>
+                <span v-if="isPlaced(rowIndex, colIndex)" class="marmot-token">
+                  <span class="marmot-token-face">🐹</span>
+                </span>
                 <span v-else-if="isBlocked(rowIndex, colIndex)" class="mark-icon">×</span>
                 <span v-if="tutorialFocusKey === cellKeyAt(rowIndex, colIndex) && currentTutorialStep?.showTap" class="tutorial-hand">👆</span>
               </button>
@@ -165,23 +167,23 @@
       </section>
 
       <footer class="tool-dock">
-        <button class="dock-btn soft" type="button" @click="mode = 'erase'">
+        <button class="dock-btn soft erase" type="button" @click="mode = 'erase'">
           <span class="dock-icon">⌫</span>
           <span>清除</span>
         </button>
-        <button class="dock-btn" :class="{ active: mode === 'pony' }" type="button" @click="mode = 'pony'">
+        <button class="dock-btn pony" :class="{ active: mode === 'pony' }" type="button" @click="mode = 'pony'">
           <span class="dock-icon">🐹</span>
           <span>放土拨鼠</span>
         </button>
-        <button class="dock-btn" :class="{ active: mode === 'mark' }" type="button" @click="mode = 'mark'">
+        <button class="dock-btn mark" :class="{ active: mode === 'mark' }" type="button" @click="mode = 'mark'">
           <span class="dock-icon">×</span>
           <span>打叉</span>
         </button>
-        <button class="dock-btn" type="button" :disabled="!session || session.status !== 'active' || hintLoading" @click="buyHint">
+        <button class="dock-btn hint" type="button" :disabled="!session || session.status !== 'active' || hintLoading" @click="buyHint">
           <span class="dock-icon">💡</span>
           <span>{{ hintLoading ? '提示中' : '提示' }}</span>
         </button>
-        <button class="dock-btn accent" type="button" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">
+        <button class="dock-btn accent start" type="button" :disabled="startLoading" @click="startLevel(currentLevel.levelId)">
           <span class="dock-icon">▶</span>
           <span>{{ session && session.status === 'active' ? '重开' : '开始' }}</span>
         </button>
@@ -821,8 +823,8 @@ export default {
 
 <style scoped>
 .pony-page {
-  --bg-top: #f7fbff;
-  --bg-bottom: #eef5ff;
+  --bg-top: #ffffff;
+  --bg-bottom: #f5f9ff;
   --ink: #1d2b3c;
   --muted: #6e7b8c;
   --line: #c8d9ef;
@@ -831,7 +833,9 @@ export default {
   --pill: rgba(255, 255, 255, 0.92);
   min-height: calc(100vh - 80px);
   padding: 18px 12px 104px;
-  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  background:
+    radial-gradient(circle at top center, rgba(111, 182, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   color: var(--ink);
 }
 
@@ -873,18 +877,18 @@ export default {
 .board-panel,
 .loading-card {
   background: var(--pill);
-  border: 1px solid rgba(140, 174, 215, 0.42);
-  box-shadow: 0 10px 30px rgba(66, 97, 142, 0.08);
+  border: 1px solid rgba(214, 225, 243, 0.95);
+  box-shadow: 0 14px 36px rgba(79, 107, 145, 0.10);
 }
 
 .resource-pill {
-  min-height: 32px;
+  min-height: 38px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  font-size: 15px;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -897,7 +901,23 @@ export default {
 }
 
 .resource-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   font-size: 14px;
+}
+
+.resource-icon.coin {
+  background: radial-gradient(circle at 35% 35%, #ffe88d, #ffb600);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.resource-icon.energy {
+  background: radial-gradient(circle at 35% 35%, #ff8ba0, #ff3157);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .mini-plus,
@@ -911,12 +931,15 @@ export default {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #3b92ff;
+  background: linear-gradient(180deg, #52b2ff 0%, #167ee7 100%);
   color: #fff;
   margin-left: auto;
+  box-shadow: 0 8px 14px rgba(40, 122, 218, 0.24);
 }
 
 .mini-ghost {
+  min-width: 58px;
+  min-height: 38px;
   padding: 7px 12px;
   border-radius: 999px;
   color: #506175;
@@ -936,9 +959,10 @@ export default {
 }
 
 .stage-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
   letter-spacing: 1px;
+  color: #6f7077;
 }
 
 .life-row {
@@ -958,7 +982,7 @@ export default {
 }
 
 .remaining-pill {
-  min-width: 126px;
+  min-width: 152px;
   border-radius: 999px;
   padding: 6px 14px;
   display: inline-flex;
@@ -970,7 +994,7 @@ export default {
 }
 
 .remaining-icon {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 .rules-strip {
@@ -980,8 +1004,9 @@ export default {
   margin-top: 14px;
   overflow: hidden;
   border-radius: 20px;
-  border: 2px solid rgba(90, 145, 212, 0.72);
-  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(223, 231, 244, 0.96);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 34px rgba(83, 102, 130, 0.12);
 }
 
 .rule-chip {
@@ -998,8 +1023,9 @@ export default {
 }
 
 .rule-chip strong {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.35;
+  color: #6a6d75;
 }
 
 .level-strip {
@@ -1071,10 +1097,11 @@ export default {
 
 .message-bar {
   margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  font-size: 13px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  font-size: 15px;
   font-weight: 700;
+  box-shadow: 0 12px 28px rgba(66, 97, 142, 0.10);
 }
 
 .message-bar.info {
@@ -1094,8 +1121,8 @@ export default {
 
 .board-panel {
   margin-top: 14px;
-  border-radius: 28px;
-  padding: 18px 14px 24px;
+  border-radius: 34px;
+  padding: 18px 14px 18px;
 }
 
 .board-meta {
@@ -1105,7 +1132,7 @@ export default {
 }
 
 .meta-card {
-  border-radius: 18px;
+  border-radius: 22px;
   padding: 10px 12px;
   text-align: center;
 }
@@ -1125,13 +1152,17 @@ export default {
 .board-shell {
   position: relative;
   margin-top: 16px;
+  padding: 10px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .board {
   width: 100%;
   aspect-ratio: 1;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .board.guided {
@@ -1141,14 +1172,15 @@ export default {
 .cell {
   position: relative;
   border: 0;
-  border-radius: 14px;
+  border-radius: 18px;
   background: var(--region-color);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 6px 12px rgba(93, 120, 156, 0.08);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  overflow: hidden;
 }
 
 .cell:active {
@@ -1156,7 +1188,7 @@ export default {
 }
 
 .cell.placed {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.88), 0 4px 10px rgba(64, 76, 104, 0.12);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.92), 0 10px 18px rgba(64, 76, 104, 0.14);
 }
 
 .cell.hinted {
@@ -1164,7 +1196,7 @@ export default {
 }
 
 .cell.tutorial-highlight {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.92), 0 0 0 2px rgba(38, 127, 255, 0.38), 0 0 18px rgba(47, 136, 255, 0.42);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.96), 0 0 0 3px rgba(38, 127, 255, 0.42), 0 0 22px rgba(47, 136, 255, 0.50);
 }
 
 .cell.tutorial-focus {
@@ -1181,16 +1213,28 @@ export default {
 }
 
 .marmot-token {
-  font-size: clamp(26px, 7vw, 38px);
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 40% 30%, #fff7dd, #ead4a2 72%, #d9b76a 100%);
+  box-shadow: 0 10px 18px rgba(82, 62, 28, 0.18);
+}
+
+.marmot-token-face {
+  font-size: clamp(26px, 7vw, 40px);
   line-height: 1;
   filter: drop-shadow(0 4px 8px rgba(76, 48, 24, 0.22));
 }
 
 .mark-icon {
-  font-size: clamp(28px, 7vw, 38px);
+  font-size: clamp(34px, 8vw, 46px);
   line-height: 1;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.98);
   font-weight: 900;
+  text-shadow: 0 5px 10px rgba(122, 145, 178, 0.18);
 }
 
 .tutorial-stage {
@@ -1206,7 +1250,7 @@ export default {
   border-radius: 26px;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(200, 217, 239, 0.8);
-  box-shadow: 0 18px 40px rgba(63, 90, 126, 0.16);
+  box-shadow: 0 20px 42px rgba(63, 90, 126, 0.14);
   text-align: center;
 }
 
@@ -1281,7 +1325,7 @@ export default {
   right: 10px;
   bottom: 10px;
   padding: 16px;
-  border-radius: 20px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(8px);
   box-shadow: 0 14px 30px rgba(56, 81, 120, 0.15);
@@ -1340,7 +1384,7 @@ export default {
   width: min(calc(100vw - 16px), 468px);
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   z-index: 12;
 }
 
@@ -1348,18 +1392,19 @@ export default {
 .primary-btn,
 .soft-btn {
   border: 0;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 24px rgba(52, 88, 137, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 24px rgba(52, 88, 137, 0.14);
   cursor: pointer;
-  min-height: 64px;
+  min-height: 74px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   color: #43607e;
   font-weight: 800;
+  border: 1px solid rgba(221, 231, 244, 0.96);
 }
 
 .dock-btn.active,
@@ -1370,12 +1415,41 @@ export default {
 }
 
 .dock-btn.soft {
-  background: rgba(220, 239, 249, 0.94);
+  background: linear-gradient(180deg, #edf3ff 0%, #d7e5ff 100%);
+}
+
+.dock-btn.erase {
+  color: #8a95ad;
+}
+
+.dock-btn.pony.active {
+  background: linear-gradient(180deg, #4cb0ff 0%, #1073d8 100%);
+}
+
+.dock-btn.mark.active {
+  background: linear-gradient(180deg, #59b8ff 0%, #1d7fe4 100%);
+}
+
+.dock-btn.hint {
+  position: relative;
+}
+
+.dock-btn.hint::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 223, 115, 0.32);
+  pointer-events: none;
 }
 
 .dock-icon {
-  font-size: 22px;
+  font-size: 28px;
   line-height: 1;
+}
+
+.dock-btn span:last-child {
+  font-size: 13px;
 }
 
 .loading-shell {
