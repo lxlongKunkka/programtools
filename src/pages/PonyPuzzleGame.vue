@@ -214,6 +214,17 @@ function cellKey(row, col) {
   return `${row},${col}`
 }
 
+const REGION_COLOR_PALETTE = [
+  '#d86a9a',
+  '#94d97b',
+  '#76c5f4',
+  '#f1c84c',
+  '#9f87df',
+  '#ffb86b',
+  '#67d6c1',
+  '#f58e84'
+]
+
 const TUTORIAL_STORAGE_KEY = 'programtools-pony-tutorial-v2'
 
 const LEVEL_ONE_SCRIPT = [
@@ -805,13 +816,18 @@ export default {
     },
     regionColor(regionId) {
       const text = String(regionId || '')
+      const numericMatch = text.match(/(\d+)/)
+      if (numericMatch) {
+        const paletteIndex = (Math.max(Number(numericMatch[1]), 1) - 1) % REGION_COLOR_PALETTE.length
+        return REGION_COLOR_PALETTE[paletteIndex]
+      }
+
       let hash = 0
       for (let index = 0; index < text.length; index += 1) {
         hash = ((hash << 5) - hash) + text.charCodeAt(index)
         hash |= 0
       }
-      const hue = Math.abs(hash) % 360
-      return `hsl(${hue}deg 72% 88%)`
+      return REGION_COLOR_PALETTE[Math.abs(hash) % REGION_COLOR_PALETTE.length]
     }
   }
 }
