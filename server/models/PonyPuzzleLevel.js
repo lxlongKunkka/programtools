@@ -14,6 +14,10 @@ const ponyPuzzleLevelSchema = new mongoose.Schema({
     required: true,
     default: []
   },
+  presetPlacedCells: {
+    type: [{ row: Number, col: Number }],
+    default: []
+  },
   regionCount: { type: Number, required: true },
   rewardCoins: { type: Number, default: 30 },
   difficultyLabel: { type: String, default: 'normal' },

@@ -22,6 +22,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 2, col: 3 },
       { row: 3, col: 1 }
     ],
+    presetPlacedCells: [
+      { row: 0, col: 2 }
+    ],
     regionCount: 4,
     rewardCoins: 20,
     difficultyLabel: '热身',
@@ -49,6 +52,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 1, col: 0 },
       { row: 2, col: 3 },
       { row: 3, col: 1 }
+    ],
+    presetPlacedCells: [
+      { row: 0, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 22,
@@ -78,6 +84,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 2, col: 3 },
       { row: 3, col: 1 }
     ],
+    presetPlacedCells: [
+      { row: 0, col: 2 }
+    ],
     regionCount: 4,
     rewardCoins: 24,
     difficultyLabel: '入门',
@@ -99,6 +108,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 1, col: 3 },
       { row: 2, col: 0 },
       { row: 3, col: 2 }
+    ],
+    presetPlacedCells: [
+      { row: 0, col: 1 }
     ],
     regionCount: 4,
     rewardCoins: 26,
@@ -122,6 +134,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 2, col: 0 },
       { row: 3, col: 2 }
     ],
+    presetPlacedCells: [
+      { row: 0, col: 1 }
+    ],
     regionCount: 4,
     rewardCoins: 28,
     difficultyLabel: '入门',
@@ -143,6 +158,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 1, col: 3 },
       { row: 2, col: 0 },
       { row: 3, col: 2 }
+    ],
+    presetPlacedCells: [
+      { row: 0, col: 1 }
     ],
     regionCount: 4,
     rewardCoins: 30,
@@ -166,6 +184,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 2, col: 0 },
       { row: 3, col: 2 }
     ],
+    presetPlacedCells: [
+      { row: 0, col: 1 }
+    ],
     regionCount: 4,
     rewardCoins: 32,
     difficultyLabel: '轻松',
@@ -187,6 +208,9 @@ export const PRESET_PONY_LEVELS = [
       { row: 1, col: 0 },
       { row: 2, col: 3 },
       { row: 3, col: 1 }
+    ],
+    presetPlacedCells: [
+      { row: 0, col: 2 }
     ],
     regionCount: 4,
     rewardCoins: 34,

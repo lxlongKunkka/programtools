@@ -235,6 +235,7 @@ function sanitizeLevel(level, profile = null) {
     tutorialTips: Array.isArray(level.tutorialTips) ? level.tutorialTips : [],
     size: Number(level.size),
     regionBoard: level.regionBoard,
+    presetPlacedCells: normalizeCellList(level.presetPlacedCells),
     regionCount: Number(level.regionCount || level.size || 0),
     rewardCoins: Number(level.rewardCoins || 0),
     difficultyLabel: level.difficultyLabel || '普通',

@@ -219,37 +219,36 @@ const TUTORIAL_STORAGE_KEY = 'programtools-pony-tutorial-v2'
 const LEVEL_ONE_SCRIPT = [
   {
     kind: 'modal',
-    badge: '教学 1/6',
+    badge: '教学 1/5',
     title: '先看规则',
     text: '开局先送你一只已经找到的土拨鼠。第一关不该靠猜，先学会围绕它做排除。',
     ctaText: '明白了',
-    highlightKeys: ['3,1']
+    highlightKeys: ['0,2']
   },
   {
     kind: 'tip',
-    badge: '教学 2/6',
+    badge: '教学 2/5',
     text: '先看这只已经找到的土拨鼠。它所在的同一行、同一列，其他格子都不可能再放。',
     autoMode: 'mark',
-    autoMode: 'mark',
-    highlightKeys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'],
-    requirement: { type: 'blockedAll', keys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'] }
+    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
   },
   {
     kind: 'tip',
-    badge: '教学 4/6',
+    badge: '教学 3/5',
     text: '还不够，土拨鼠四周也不能挨着。把高亮的相邻格也打叉。',
     autoMode: 'mark',
-    highlightKeys: ['2,0', '2,2'],
-    requirement: { type: 'blockedAll', keys: ['2,0', '2,2'] }
+    highlightKeys: ['1,1', '1,3'],
+    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
   },
   {
     kind: 'success',
     badge: '做得好',
-    text: '这样一来，右上颜色块就只剩一个合理位置了。现在再把它点亮。',
+    text: '这样一来，左侧粉色区域就只剩一个合理位置了。现在把它点亮。',
     autoMode: 'pony',
-    focusKeys: ['0,2'],
-    highlightKeys: ['0,2'],
-    requirement: { type: 'placedAll', keys: ['0,2'] },
+    focusKeys: ['1,0'],
+    highlightKeys: ['1,0'],
+    requirement: { type: 'placedAll', keys: ['1,0'] },
     showTap: true
   },
   {
@@ -272,37 +271,27 @@ const LEVEL_TWO_SCRIPT = [
   {
     kind: 'tip',
     badge: '教学 2/5',
-    text: '先点这个高亮格子，放下第一只土拨鼠。',
-    autoMode: 'pony',
-    focusKeys: ['0,2'],
-    highlightKeys: ['0,2'],
-    requirement: { type: 'placedAll', keys: ['0,2'] },
-    showTap: true
-  },
-  {
-    kind: 'success',
-    badge: '不错',
-    text: '同一行和同一列不能再有土拨鼠，把高亮位置全部打叉。',
+    text: '先从这只已知土拨鼠开始。把同一行、同一列里不能放的位置先打叉。',
     autoMode: 'mark',
     highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
     requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
   },
   {
-    kind: 'tip',
-    badge: '教学 4/5',
-    text: '四周相邻也不行，再把这两个贴边格打叉。',
+    kind: 'success',
+    badge: '不错',
+    text: '再补上它四周相邻不能放的位置，这样候选会迅速缩小。',
     autoMode: 'mark',
     highlightKeys: ['1,1', '1,3'],
     requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
   },
   {
-    kind: 'success',
-    badge: '继续',
-    text: '现在下方这块颜色只剩一个合理位置了，点亮它。',
+    kind: 'tip',
+    badge: '教学 4/5',
+    text: '现在下方粉色区域只剩一个合理位置了，点亮它。',
     autoMode: 'pony',
-    focusKeys: ['3,1'],
-    highlightKeys: ['3,1'],
-    requirement: { type: 'placedAll', keys: ['3,1'] },
+    focusKeys: ['1,0'],
+    highlightKeys: ['1,0'],
+    requirement: { type: 'placedAll', keys: ['1,0'] },
     showTap: true
   },
   {
@@ -325,37 +314,27 @@ const LEVEL_THREE_SCRIPT = [
   {
     kind: 'tip',
     badge: '教学 2/5',
-    text: '先放这一只土拨鼠，给后面制造排除条件。',
-    autoMode: 'pony',
-    focusKeys: ['1,0'],
-    highlightKeys: ['1,0'],
-    requirement: { type: 'placedAll', keys: ['1,0'] },
-    showTap: true
+    text: '先围绕这只已知土拨鼠做排除，把同一行、同一列里不能放的位置打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'],
+    requirement: { type: 'blockedAll', keys: ['0,0', '0,1', '0,3', '1,2', '2,2', '3,2'] }
   },
   {
     kind: 'success',
     badge: '很好',
-    text: '先把同一行、同一列里不可能的位置全部打叉。',
+    text: '再补上它四周相邻不能放的位置。',
     autoMode: 'mark',
-    highlightKeys: ['0,0', '2,0', '3,0', '1,1', '1,2', '1,3'],
-    requirement: { type: 'blockedAll', keys: ['0,0', '2,0', '3,0', '1,1', '1,2', '1,3'] }
+    highlightKeys: ['1,1', '1,3'],
+    requirement: { type: 'blockedAll', keys: ['1,1', '1,3'] }
   },
   {
     kind: 'tip',
     badge: '教学 4/5',
-    text: '再把它四周挨着的位置打叉，这样右上颜色块就快只剩一个点了。',
-    autoMode: 'mark',
-    highlightKeys: ['0,1', '2,1'],
-    requirement: { type: 'blockedAll', keys: ['0,1', '2,1'] }
-  },
-  {
-    kind: 'success',
-    badge: '就是这样',
-    text: '现在右上颜色块只剩一个安全格，点它落子。',
+    text: '现在左侧大色块已经只剩一个安全格了，点它落子。',
     autoMode: 'pony',
-    focusKeys: ['0,2'],
-    highlightKeys: ['0,2'],
-    requirement: { type: 'placedAll', keys: ['0,2'] },
+    focusKeys: ['1,0'],
+    highlightKeys: ['1,0'],
+    requirement: { type: 'placedAll', keys: ['1,0'] },
     showTap: true
   },
   {
@@ -371,13 +350,6 @@ const TUTORIAL_SCRIPTS = {
   1: LEVEL_ONE_SCRIPT,
   2: LEVEL_TWO_SCRIPT,
   3: LEVEL_THREE_SCRIPT,
-}
-
-const TUTORIAL_PRESET_STATE = {
-  1: {
-    placedKeys: ['3,1'],
-    lockedPlacedKeys: ['3,1']
-  }
 }
 
 export default {
@@ -525,8 +497,11 @@ export default {
     getTutorialScript(levelId) {
       return TUTORIAL_SCRIPTS[Number(levelId)] || []
     },
-    getTutorialPresetState(levelId) {
-      return TUTORIAL_PRESET_STATE[Number(levelId)] || null
+    applyLevelPresetState(level = null) {
+      const presetCells = Array.isArray(level?.presetPlacedCells) ? level.presetPlacedCells : []
+      const presetKeys = presetCells.map((cell) => cellKey(Number(cell.row), Number(cell.col)))
+      this.placedKeys = [...presetKeys]
+      this.lockedPlacedKeys = [...presetKeys]
     },
     loadTutorialProgress() {
       try {
@@ -558,16 +533,8 @@ export default {
     activateTutorial(levelId) {
       const script = this.getTutorialScript(levelId)
       if (!script.length || this.hasSeenTutorial(levelId)) {
-        this.lockedPlacedKeys = []
         this.clearTutorialState()
         return
-      }
-      const presetState = this.getTutorialPresetState(levelId)
-      if (presetState) {
-        this.placedKeys = Array.isArray(presetState.placedKeys) ? [...presetState.placedKeys] : []
-        this.lockedPlacedKeys = Array.isArray(presetState.lockedPlacedKeys) ? [...presetState.lockedPlacedKeys] : []
-      } else {
-        this.lockedPlacedKeys = []
       }
       this.tutorialState = {
         activeLevelId: Number(levelId),
@@ -662,6 +629,7 @@ export default {
         this.lastRewardCoins = 0
         this.lockedPlacedKeys = []
         this.elapsedSeconds = 0
+        this.applyLevelPresetState(data?.level || this.currentLevel)
         this.message = Array.isArray(this.currentLevel?.tutorialTips) && this.currentLevel.tutorialTips.length
           ? '教学关先别急着落子，先切到“打叉”模式做排除。'
           : '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
