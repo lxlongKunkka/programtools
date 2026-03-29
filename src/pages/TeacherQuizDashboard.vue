@@ -474,10 +474,12 @@ export default {
         this.quizDashboardLoading = false
       }
     },
-    async loadCourseDashboard() {
+    async loadCourseDashboard(traceLearnerId = null) {
       this.courseDashboardLoading = true
       try {
-        const data = await request(`/api/course/teacher/follows?t=${Date.now()}`)
+        const query = new URLSearchParams({ t: String(Date.now()) })
+        if (traceLearnerId) query.set('traceLearnerId', String(traceLearnerId))
+        const data = await request(`/api/course/teacher/follows?${query.toString()}`)
         this.courseDashboard = {
           summary: data?.summary || createEmptyCourseDashboard().summary,
           items: Array.isArray(data?.items) ? data.items : []
@@ -672,7 +674,7 @@ export default {
           ))
         }
         this.updateCourseRowDraft(learnerId, learner?.currentCppLevel || level)
-        await this.loadCourseDashboard()
+        await this.loadCourseDashboard(learnerId)
         this.showToastMessage(`已将当前 C++ 等级设置为 L${level}`)
       } catch (e) {
         this.showToastMessage(`设置当前等级失败: ${e.message}`)

@@ -2172,6 +2172,26 @@ router.get('/teacher/follows', authenticateToken, requireRole(['admin', 'teacher
     res.set('Pragma', 'no-cache')
     res.set('Expires', '0')
     const payload = await buildTeacherCourseFollowPayload(Number(req.user.id))
+    const traceLearnerId = Number(req.query?.traceLearnerId)
+    if (Number.isFinite(traceLearnerId) && traceLearnerId > 0) {
+      const tracedItem = Array.isArray(payload?.items)
+        ? payload.items.find((item) => Number(item?.learnerId) === traceLearnerId) || null
+        : null
+      console.log('[CourseDashboardTrace]', {
+        teacherId: Number(req.user.id),
+        traceLearnerId,
+        tracedItem: tracedItem
+          ? {
+            learnerId: tracedItem.learnerId,
+            currentCppLevel: tracedItem.currentCppLevel,
+            currentCppLevelTitle: tracedItem.currentCppLevelTitle,
+            currentCppLevelSource: tracedItem.currentCppLevelSource,
+            currentCppLevelUpdatedAt: tracedItem.currentCppLevelUpdatedAt,
+            subjectLevels: tracedItem.subjectLevels
+          }
+          : null
+      })
+    }
     res.json(payload)
   } catch (e) {
     console.error(e)
@@ -2202,6 +2222,13 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
     const level = Number(req.body?.level)
     const now = new Date()
 
+    console.log('[CourseLevelSave] request', {
+      teacherId,
+      learnerId,
+      requestedLevel: level,
+      role: req.user.role
+    })
+
     if (!Number.isFinite(learnerId)) {
       return res.status(400).json({ error: '学员 ID 不合法' })
     }
@@ -2218,6 +2245,14 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
     }
 
     const existingProgress = await UserProgress.findOne({ userId: learnerId }).lean()
+    console.log('[CourseLevelSave] before', {
+      learnerId,
+      currentLevel: Number(existingProgress?.currentLevel || 0),
+      subjectLevels: existingProgress?.subjectLevels || null,
+      subjectLevelSources: existingProgress?.subjectLevelSources || null,
+      subjectLevelUpdatedAt: existingProgress?.subjectLevelUpdatedAt || null
+    })
+
     const subjectLevels = {
       ...(existingProgress?.subjectLevels && typeof existingProgress.subjectLevels === 'object'
         ? existingProgress.subjectLevels
@@ -2264,7 +2299,23 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
       }
     )
 
+    const updatedProgress = await UserProgress.findOne({ userId: learnerId }).lean()
+    console.log('[CourseLevelSave] after', {
+      learnerId,
+      currentLevel: Number(updatedProgress?.currentLevel || 0),
+      subjectLevels: updatedProgress?.subjectLevels || null,
+      subjectLevelSources: updatedProgress?.subjectLevelSources || null,
+      subjectLevelUpdatedAt: updatedProgress?.subjectLevelUpdatedAt || null
+    })
+
     const digest = await buildLearnerCourseDigestPayload(learnerId)
+    console.log('[CourseLevelSave] digest', {
+      learnerId,
+      currentCppLevel: Number(digest?.learner?.currentCppLevel || 0),
+      currentCppLevelTitle: digest?.learner?.currentCppLevelTitle || '',
+      currentCppLevelSource: digest?.learner?.currentCppLevelSource || '',
+      subjectLevels: digest?.learner?.subjectLevels || null
+    })
     res.json({
       ok: true,
       learner: digest.learner
