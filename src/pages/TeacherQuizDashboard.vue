@@ -477,7 +477,7 @@ export default {
     async loadCourseDashboard() {
       this.courseDashboardLoading = true
       try {
-        const data = await request('/api/course/teacher/follows')
+        const data = await request(`/api/course/teacher/follows?t=${Date.now()}`)
         this.courseDashboard = {
           summary: data?.summary || createEmptyCourseDashboard().summary,
           items: Array.isArray(data?.items) ? data.items : []
@@ -653,13 +653,21 @@ export default {
 
       this.courseRowSavingId = learnerId
       try {
+        const levelOption = this.cppLevelOptions.find((option) => Number(option.level) === level) || null
         const data = await request.put(`/api/course/teacher/follows/${learnerId}/current-level`, { level })
         const learner = data?.learner || null
         this.courseDashboard = {
           ...this.courseDashboard,
           items: this.courseDashboard.items.map((entry) => (
             Number(entry?.learnerId) === learnerId
-              ? { ...entry, ...(learner || {}), learnerId }
+              ? {
+                ...entry,
+                currentCppLevel: level,
+                currentCppLevelTitle: levelOption?.title || learner?.currentCppLevelTitle || entry?.currentCppLevelTitle || '',
+                currentCppLevelSource: 'manual',
+                ...(learner || {}),
+                learnerId
+              }
               : entry
           ))
         }
