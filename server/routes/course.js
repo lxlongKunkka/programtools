@@ -84,11 +84,28 @@ function normalizeSubjectLevels(progress) {
   }
 
   const normalizedSubjectLevels = {}
+  const normalizedSubjectPriorities = {}
+  const getSubjectPriority = (rawSubject, normalizedSubject) => {
+    const text = String(rawSubject || '').trim()
+    if (!text) return 0
+    if (text === normalizedSubject) return 3
+    if (normalizedSubject === 'C++' && (text === 'cpp' || text === 'c++')) return 3
+    if (normalizedSubject === 'Python' && text.toLowerCase() === 'python') return 3
+    return 1
+  }
+
   for (const [rawSubject, rawLevel] of Object.entries(subjectLevels)) {
     const subject = normalizeCourseSubjectLabel(rawSubject)
     const level = Number(rawLevel || 0)
     if (!subject || !level) continue
+
+    const priority = getSubjectPriority(rawSubject, subject)
+    const prevPriority = normalizedSubjectPriorities[subject] || 0
+    if (priority < prevPriority) continue
+    if (priority === prevPriority && normalizedSubjectLevels[subject] && normalizedSubjectLevels[subject] !== level) continue
+
     normalizedSubjectLevels[subject] = level
+    normalizedSubjectPriorities[subject] = priority
   }
   subjectLevels = normalizedSubjectLevels
 
