@@ -2217,15 +2217,41 @@ router.put('/teacher/follows/:learnerId/current-level', authenticateToken, requi
       }
     }
 
+    const existingProgress = await UserProgress.findOne({ userId: learnerId }).lean()
+    const subjectLevels = {
+      ...(existingProgress?.subjectLevels && typeof existingProgress.subjectLevels === 'object'
+        ? existingProgress.subjectLevels
+        : {}),
+      'C++': level
+    }
+    const subjectLevelSources = {
+      ...(existingProgress?.subjectLevelSources && typeof existingProgress.subjectLevelSources === 'object'
+        ? existingProgress.subjectLevelSources
+        : {}),
+      'C++': 'manual'
+    }
+    const subjectLevelUpdatedAt = {
+      ...(existingProgress?.subjectLevelUpdatedAt && typeof existingProgress.subjectLevelUpdatedAt === 'object'
+        ? existingProgress.subjectLevelUpdatedAt
+        : {}),
+      'C++': now
+    }
+    const subjectLevelUpdatedBy = {
+      ...(existingProgress?.subjectLevelUpdatedBy && typeof existingProgress.subjectLevelUpdatedBy === 'object'
+        ? existingProgress.subjectLevelUpdatedBy
+        : {}),
+      'C++': teacherId
+    }
+
     await UserProgress.findOneAndUpdate(
       { userId: learnerId },
       {
         $set: {
           currentLevel: level,
-          'subjectLevels.C++': level,
-          'subjectLevelSources.C++': 'manual',
-          'subjectLevelUpdatedAt.C++': now,
-          'subjectLevelUpdatedBy.C++': teacherId
+          subjectLevels,
+          subjectLevelSources,
+          subjectLevelUpdatedAt,
+          subjectLevelUpdatedBy
         },
         $setOnInsert: {
           userId: learnerId
