@@ -167,7 +167,7 @@
               <em>{{ recentPracticeLevelTitle }}</em>
             </article>
             <article class="summary-card"><span>主要练习知识点</span><strong>{{ displayedPracticeTags }}</strong></article>
-            <article class="summary-card"><span>课程当前专题</span><strong>{{ report.course.learner.currentTopicTitle || '暂无' }}</strong></article>
+            <article class="summary-card"><span>近一月进行中课程</span><strong>{{ activeCourseOverviewCount }}</strong></article>
             <article class="summary-card"><span>课程当前章节</span><strong>{{ report.course.learner.currentChapterTitle || '暂无' }}</strong></article>
             <article class="summary-card"><span>本章节做题</span><strong>{{ report.course.learner.currentChapterSolvedProblemCount }} / {{ report.course.learner.currentChapterProblemCount }}</strong></article>
             <article class="summary-card"><span>今日 AC 题目</span><strong>{{ report.course.learner.todayAcceptedProblemCount || 0 }}</strong></article>
@@ -179,8 +179,8 @@
           </div>
 
           <article class="panel">
-            <h3>课程进度总览</h3>
-            <div v-if="!courseOverviewGroups.length" class="empty-inline">暂无课程进度图</div>
+            <h3>近一月进行中课程进度</h3>
+            <div v-if="!courseOverviewGroups.length" class="empty-inline">近一月暂无正在学习的课程进度图</div>
             <div v-else class="report-group-sections">
               <section v-for="group in courseOverviewGroups" :key="group.name" class="report-group-section">
                 <h4 class="report-group-title">{{ group.name }}</h4>
@@ -458,6 +458,9 @@ export default {
 
       return '暂无'
     },
+    activeCourseOverviewCount() {
+      return this.courseOverviewLevels.length
+    },
     courseLevelKeyFactory() {
       return (item) => [
         String(item?.subject || 'C++'),
@@ -572,15 +575,11 @@ export default {
       const levels = Array.isArray(this.report.course?.overviewLevels) && this.report.course.overviewLevels.length > 0
         ? this.report.course.overviewLevels
         : (Array.isArray(this.report.course?.levels) ? this.report.course.levels : [])
-      const recentActivities = Array.isArray(this.report.course?.recentActivities) ? this.report.course.recentActivities : []
-      if (!levels.length || !recentActivities.length) return []
+      const recentLevels = Array.isArray(this.recentCourseLevels) ? this.recentCourseLevels : []
+      if (!levels.length || !recentLevels.length) return []
 
       const makeKey = this.courseLevelKeyFactory
-      const activeLevelKeys = new Set(
-        recentActivities
-          .map((activity) => makeKey(activity))
-          .filter(Boolean)
-      )
+      const activeLevelKeys = new Set(recentLevels.map((level) => makeKey(level)).filter(Boolean))
 
       return levels.filter((level) => {
         const key = makeKey(level)
