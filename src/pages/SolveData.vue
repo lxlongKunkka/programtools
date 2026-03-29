@@ -553,6 +553,34 @@ export default {
       )
     },
 
+    normalizeImportedSourceUrl(url) {
+      const raw = String(url || '').trim()
+      if (!raw) return ''
+
+      try {
+        const parsed = new URL(raw)
+        parsed.hash = ''
+        if (/atcoder\.jp$/i.test(parsed.hostname)) {
+          parsed.search = ''
+        }
+        const pathname = parsed.pathname.replace(/\/+$/, '') || '/'
+        return `${parsed.origin}${pathname}${parsed.search}`
+      } catch {
+        return raw.replace(/#.*$/, '').replace(/\/+$/, '')
+      }
+    },
+
+    findTaskIndexBySourceUrl(url) {
+      const normalizedUrl = this.normalizeImportedSourceUrl(url)
+      if (!normalizedUrl) return -1
+
+      return this.tasks.findIndex((task) => {
+        const sourceUrl = task?.problemMeta?.sourceUrl
+        if (!sourceUrl) return false
+        return this.normalizeImportedSourceUrl(sourceUrl) === normalizedUrl
+      })
+    },
+
     async importTasksFromUrl(url, options = {}) {
       const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null
 
@@ -565,24 +593,34 @@ export default {
         if (problems.length === 0) throw new Error('比赛中没有找到题目')
 
         let added = 0
+        let skipped = 0
         for (const p of problems) {
           onProgress?.(`正在获取题目 ${p.label}. ${p.title} (${added + 1}/${problems.length})...`)
           try {
-            await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label, p.tags || [])
-            added++
+            const result = await this.addProblemAsTask(p.url, p.label + '. ' + p.title, p.label, p.tags || [])
+            if (result?.added) {
+              added++
+            } else {
+              skipped++
+            }
           } catch {
             // 单题失败不阻断整场导入
           }
         }
 
-        if (added === 0) {
+        if (added === 0 && skipped === 0) {
           throw new Error('比赛题目导入失败')
+        }
+
+        if (added === 0 && skipped > 0) {
+          this.showToastMessage('当前比赛题目已在任务列表中，未重复导入')
         }
 
         return {
           kind: 'url',
           mode: 'contest',
           added,
+          skipped,
           total: problems.length,
           contestTitle: contestData.title || '',
           url,
@@ -693,7 +731,21 @@ export default {
         throw new Error('扩展导入数据缺少题面或题目链接')
       }
 
+      const existingIndex = this.findTaskIndexBySourceUrl(payload.url)
+      if (existingIndex >= 0) {
+        if (existingIndex === this.currentTaskIndex) {
+          this.loadTask(existingIndex)
+        } else {
+          this.switchTask(existingIndex)
+        }
+        this.showToastMessage('该题已在任务列表中，未重复导入')
+        return
+      }
+
       const importedTask = createExtensionImportedTask(payload)
+      if (importedTask?.problemMeta?.sourceUrl) {
+        importedTask.problemMeta.sourceUrl = this.normalizeImportedSourceUrl(importedTask.problemMeta.sourceUrl)
+      }
       this.applyImportedTasks([importedTask], { mirrorProblemText: true })
     },
 
@@ -1561,6 +1613,17 @@ export default {
     },
 
     async addProblemAsTask(url, fallbackTitle, contestLabel, prefetchedTags = []) {
+      const existingIndex = this.findTaskIndexBySourceUrl(url)
+      if (existingIndex >= 0) {
+        if (existingIndex === this.currentTaskIndex) {
+          this.loadTask(existingIndex)
+        } else {
+          this.switchTask(existingIndex)
+        }
+        this.showToastMessage('该题已在任务列表中，未重复导入')
+        return { added: false, existingIndex }
+      }
+
       const data = await request(`/api/atcoder/problem?url=${encodeURIComponent(url)}`)
       const { editorial, acCode, additionalFile, task } = createFetchedProblemTask({
         url,
@@ -1569,6 +1632,9 @@ export default {
         contestLabel,
         prefetchedTags,
       })
+      if (task?.problemMeta?.sourceUrl) {
+        task.problemMeta.sourceUrl = this.normalizeImportedSourceUrl(task.problemMeta.sourceUrl)
+      }
       if (acCode) {
         this.showToastMessage('✅ 已自动抓取 AC 代码')
       } else if (editorial) {
@@ -1580,6 +1646,7 @@ export default {
       }
 
       this.applyImportedTasks([task], { mirrorProblemText: true })
+      return { added: true }
     },
 
         async autoTranslate(forcedTargetIndex = null) {
