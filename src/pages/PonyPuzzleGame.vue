@@ -46,7 +46,7 @@
         </article>
       </section>
 
-      <section v-if="currentLevel.tutorialTips?.length" class="tutorial-panel">
+      <section v-if="currentLevel.tutorialTips?.length && !isScriptedTutorialActive" class="tutorial-panel">
         <div class="tutorial-head">
           <strong>{{ currentLevel.tutorialTitle || '教学提示' }}</strong>
           <span>前 3 关建议先学会打叉</span>
@@ -74,6 +74,25 @@
 
       <div v-if="message" class="message-bar" :class="messageTone">{{ message }}</div>
 
+      <section v-if="currentTutorialStep" class="tutorial-stage" :class="`kind-${currentTutorialStep.kind || 'tip'}`">
+        <div class="tutorial-bubble">
+          <span v-if="currentTutorialStep.badge" class="tutorial-badge">{{ currentTutorialStep.badge }}</span>
+          <strong v-if="currentTutorialStep.title" class="tutorial-title">{{ currentTutorialStep.title }}</strong>
+          <p class="tutorial-copy">{{ currentTutorialStep.text }}</p>
+          <div class="tutorial-actions">
+            <button
+              v-if="currentTutorialStep.ctaText"
+              class="tutorial-cta"
+              type="button"
+              @click="advanceTutorialStep"
+            >
+              {{ currentTutorialStep.ctaText }}
+            </button>
+            <button v-else class="tutorial-skip" type="button" @click="skipTutorial">跳过教学</button>
+          </div>
+        </div>
+      </section>
+
       <section class="board-panel">
         <div class="board-meta">
           <div class="meta-card">
@@ -91,7 +110,7 @@
         </div>
 
         <div class="board-shell">
-          <div class="board" :style="boardStyle" @contextmenu.prevent>
+          <div class="board" :class="{ guided: isScriptedTutorialActive }" :style="boardStyle" @contextmenu.prevent>
             <template v-for="(row, rowIndex) in currentLevel.regionBoard" :key="`row-${rowIndex}`">
               <button
                 v-for="(regionId, colIndex) in row"
@@ -103,6 +122,7 @@
               >
                 <span v-if="isPlaced(rowIndex, colIndex)" class="marmot-token">🐹</span>
                 <span v-else-if="isBlocked(rowIndex, colIndex)" class="mark-icon">×</span>
+                <span v-if="tutorialFocusKey === cellKeyAt(rowIndex, colIndex) && currentTutorialStep?.showTap" class="tutorial-hand">👆</span>
               </button>
             </template>
           </div>
@@ -192,6 +212,62 @@ function cellKey(row, col) {
   return `${row},${col}`
 }
 
+const TUTORIAL_STORAGE_KEY = 'programtools-pony-tutorial-v2'
+
+const LEVEL_ONE_SCRIPT = [
+  {
+    kind: 'modal',
+    badge: '教学 1/6',
+    title: '先看规则',
+    text: '一种颜色区域里，只能放 1 只土拨鼠。先记住这个最基础的规则。',
+    ctaText: '明白了',
+    highlightKeys: ['0,2', '0,3', '1,2', '1,3']
+  },
+  {
+    kind: 'tip',
+    badge: '教学 2/6',
+    text: '先从最容易的位置开始，点一下高亮格子，把第一只土拨鼠放进去。',
+    autoMode: 'pony',
+    focusKeys: ['3,1'],
+    highlightKeys: ['3,1'],
+    requirement: { type: 'placedAll', keys: ['3,1'] },
+    showTap: true
+  },
+  {
+    kind: 'success',
+    badge: '不错',
+    text: '土拨鼠不能出现在同一行或同一列。现在切到打叉模式，把这些格子排除掉。',
+    autoMode: 'mark',
+    highlightKeys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'],
+    requirement: { type: 'blockedAll', keys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'] }
+  },
+  {
+    kind: 'tip',
+    badge: '教学 4/6',
+    text: '还不够，土拨鼠四周也不能挨着。把高亮的相邻格也打叉。',
+    autoMode: 'mark',
+    highlightKeys: ['2,0', '2,2'],
+    requirement: { type: 'blockedAll', keys: ['2,0', '2,2'] }
+  },
+  {
+    kind: 'success',
+    badge: '做得好',
+    text: '现在这个颜色块只剩一个位置了，点亮它，继续往前推。',
+    autoMode: 'pony',
+    focusKeys: ['0,2'],
+    highlightKeys: ['0,2'],
+    requirement: { type: 'placedAll', keys: ['0,2'] },
+    showTap: true
+  },
+  {
+    kind: 'modal',
+    badge: '继续挑战',
+    title: '你已经会基础排除了',
+    text: '记住节奏：先排除，再落子。后面几关继续按这个思路推就行。',
+    ctaText: '继续挑战'
+  }
+]
+
 export default {
   name: 'PonyPuzzleGame',
   inject: ['showToastMessage'],
@@ -222,7 +298,12 @@ export default {
       messageTone: 'info',
       flashKey: '',
       hintKey: '',
-      lastRewardCoins: 0
+      lastRewardCoins: 0,
+      tutorialSeenLevelIds: [],
+      tutorialState: {
+        activeLevelId: null,
+        stepIndex: -1
+      }
     }
   },
   computed: {
@@ -253,9 +334,26 @@ export default {
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
         gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`
       }
+    },
+    currentTutorialSteps() {
+      return this.getTutorialScript(this.tutorialState.activeLevelId)
+    },
+    currentTutorialStep() {
+      if (this.tutorialState.stepIndex < 0) return null
+      return this.currentTutorialSteps[this.tutorialState.stepIndex] || null
+    },
+    isScriptedTutorialActive() {
+      return !!this.currentTutorialStep
+    },
+    tutorialHighlightKeys() {
+      return Array.isArray(this.currentTutorialStep?.highlightKeys) ? this.currentTutorialStep.highlightKeys : []
+    },
+    tutorialFocusKey() {
+      return Array.isArray(this.currentTutorialStep?.focusKeys) ? this.currentTutorialStep.focusKeys[0] || '' : ''
     }
   },
   mounted() {
+    this.loadTutorialProgress()
     this.loadGame()
   },
   beforeUnmount() {
@@ -289,6 +387,7 @@ export default {
       this.selectedLevelId = Number(level?.levelId || 1)
       this.activeLevel = null
       this.resetBoardState()
+      this.clearTutorialState()
       this.message = ''
     },
     selectLevelById(levelId) {
@@ -304,6 +403,109 @@ export default {
       this.stopTimer()
       this.elapsedSeconds = 0
       if (clearSession) this.session = null
+      if (clearSession) this.clearTutorialState()
+    },
+    cellKeyAt(row, col) {
+      return cellKey(row, col)
+    },
+    getTutorialScript(levelId) {
+      if (Number(levelId) === 1) return LEVEL_ONE_SCRIPT
+      return []
+    },
+    loadTutorialProgress() {
+      try {
+        const raw = window.localStorage.getItem(TUTORIAL_STORAGE_KEY)
+        const parsed = JSON.parse(raw || '[]')
+        this.tutorialSeenLevelIds = Array.isArray(parsed) ? parsed.map(Number) : []
+      } catch {
+        this.tutorialSeenLevelIds = []
+      }
+    },
+    saveTutorialProgress() {
+      window.localStorage.setItem(TUTORIAL_STORAGE_KEY, JSON.stringify(this.tutorialSeenLevelIds))
+    },
+    hasSeenTutorial(levelId) {
+      return this.tutorialSeenLevelIds.includes(Number(levelId))
+    },
+    markTutorialSeen(levelId) {
+      const safeLevelId = Number(levelId)
+      if (!safeLevelId || this.tutorialSeenLevelIds.includes(safeLevelId)) return
+      this.tutorialSeenLevelIds = [...this.tutorialSeenLevelIds, safeLevelId]
+      this.saveTutorialProgress()
+    },
+    clearTutorialState() {
+      this.tutorialState = {
+        activeLevelId: null,
+        stepIndex: -1
+      }
+    },
+    activateTutorial(levelId) {
+      const script = this.getTutorialScript(levelId)
+      if (!script.length || this.hasSeenTutorial(levelId)) {
+        this.clearTutorialState()
+        return
+      }
+      this.tutorialState = {
+        activeLevelId: Number(levelId),
+        stepIndex: 0
+      }
+      this.applyTutorialStepEffects()
+    },
+    applyTutorialStepEffects() {
+      if (!this.currentTutorialStep) return
+      if (this.currentTutorialStep.autoMode) {
+        this.mode = this.currentTutorialStep.autoMode
+      }
+      if (this.currentTutorialStep.kind !== 'modal') {
+        this.message = this.currentTutorialStep.text
+        this.messageTone = this.currentTutorialStep.kind === 'success' ? 'success' : 'info'
+      }
+    },
+    advanceTutorialStep() {
+      if (!this.currentTutorialStep) return
+      if (this.tutorialState.stepIndex >= this.currentTutorialSteps.length - 1) {
+        this.markTutorialSeen(this.tutorialState.activeLevelId)
+        this.clearTutorialState()
+        this.message = '继续按“先排除，再落子”的节奏完成本关。'
+        this.messageTone = 'info'
+        return
+      }
+      this.tutorialState.stepIndex += 1
+      this.applyTutorialStepEffects()
+      this.syncTutorialProgress()
+    },
+    skipTutorial() {
+      this.markTutorialSeen(this.tutorialState.activeLevelId)
+      this.clearTutorialState()
+      this.message = '已跳过教学提示，你可以自由完成本关。'
+      this.messageTone = 'info'
+    },
+    isTutorialRequirementSatisfied(requirement) {
+      const keys = Array.isArray(requirement?.keys) ? requirement.keys : []
+      if (!keys.length) return false
+      if (requirement.type === 'placedAll') {
+        return keys.every((key) => this.placedKeys.includes(key))
+      }
+      if (requirement.type === 'blockedAll') {
+        return keys.every((key) => this.blockedKeys.includes(key))
+      }
+      return false
+    },
+    syncTutorialProgress() {
+      let nextStep = this.currentTutorialStep
+      while (nextStep?.requirement && this.isTutorialRequirementSatisfied(nextStep.requirement)) {
+        if (this.tutorialState.stepIndex >= this.currentTutorialSteps.length - 1) {
+          break
+        }
+        this.tutorialState.stepIndex += 1
+        nextStep = this.currentTutorialStep
+        this.applyTutorialStepEffects()
+      }
+    },
+    isTutorialActionRestricted(key) {
+      if (!this.currentTutorialStep?.requirement) return false
+      if (!this.tutorialHighlightKeys.length) return false
+      return !this.tutorialHighlightKeys.includes(key)
     },
     startTimer() {
       this.stopTimer()
@@ -337,6 +539,7 @@ export default {
           : '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
         this.messageTone = 'info'
         this.startTimer()
+        this.activateTutorial(levelId)
       } catch (error) {
         this.showToastMessage(`开始游戏失败: ${error.message}`)
       } finally {
@@ -355,7 +558,10 @@ export default {
         placed: this.placedKeys.includes(key),
         blocked: this.blockedKeys.includes(key),
         flash: this.flashKey === key,
-        hinted: this.hintKey === key
+        hinted: this.hintKey === key,
+        'tutorial-highlight': this.tutorialHighlightKeys.includes(key),
+        'tutorial-focus': this.tutorialFocusKey === key,
+        'tutorial-muted': this.isScriptedTutorialActive && this.tutorialHighlightKeys.length > 0 && !this.tutorialHighlightKeys.includes(key)
       }
     },
     async handleCellClick(row, col) {
@@ -365,10 +571,16 @@ export default {
       }
 
       const key = cellKey(row, col)
+      if (this.isTutorialActionRestricted(key)) {
+        this.showToastMessage('先按当前高亮的格子操作')
+        return
+      }
+
       if (this.mode === 'erase') {
         this.placedKeys = this.placedKeys.filter((item) => item !== key)
         this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
         if (this.hintKey === key) this.hintKey = ''
+        this.syncTutorialProgress()
         return
       }
 
@@ -377,11 +589,13 @@ export default {
         this.blockedKeys = this.blockedKeys.includes(key)
           ? this.blockedKeys.filter((item) => item !== key)
           : [...this.blockedKeys, key]
+        this.syncTutorialProgress()
         return
       }
 
       if (this.placedKeys.includes(key)) {
         this.placedKeys = this.placedKeys.filter((item) => item !== key)
+        this.syncTutorialProgress()
         return
       }
 
@@ -394,6 +608,7 @@ export default {
           this.hintKey = ''
           this.message = '这一步放对了。'
           this.messageTone = 'success'
+          this.syncTutorialProgress()
           if (this.placedKeys.length >= Number(this.currentLevel?.regionCount || 0)) {
             await this.completeLevel()
           }
@@ -808,7 +1023,12 @@ export default {
   gap: 6px;
 }
 
+.board.guided {
+  filter: drop-shadow(0 18px 30px rgba(102, 158, 230, 0.16));
+}
+
 .cell {
+  position: relative;
   border: 0;
   border-radius: 14px;
   background: var(--region-color);
@@ -832,6 +1052,19 @@ export default {
   outline: 3px solid rgba(255, 192, 72, 0.84);
 }
 
+.cell.tutorial-highlight {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.92), 0 0 0 2px rgba(38, 127, 255, 0.38), 0 0 18px rgba(47, 136, 255, 0.42);
+}
+
+.cell.tutorial-focus {
+  animation: tutorial-pulse 1.25s ease-in-out infinite;
+}
+
+.cell.tutorial-muted {
+  opacity: 0.42;
+  filter: saturate(0.72);
+}
+
 .cell.flash {
   animation: flash-wrong 0.45s ease;
 }
@@ -847,6 +1080,88 @@ export default {
   line-height: 1;
   color: rgba(255, 255, 255, 0.95);
   font-weight: 900;
+}
+
+.tutorial-stage {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.tutorial-bubble {
+  position: relative;
+  width: min(100%, 360px);
+  padding: 18px 18px 16px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(200, 217, 239, 0.8);
+  box-shadow: 0 18px 40px rgba(63, 90, 126, 0.16);
+  text-align: center;
+}
+
+.tutorial-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe45d 0%, #ffcb14 100%);
+  color: #7e5700;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tutorial-title {
+  display: block;
+  margin-top: 10px;
+  font-size: 20px;
+}
+
+.tutorial-copy {
+  margin: 10px 0 0;
+  color: #44576e;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.tutorial-cta,
+.tutorial-skip {
+  min-width: 118px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tutorial-cta {
+  color: #fff;
+  background: linear-gradient(180deg, #3aa4ff 0%, #0d70d7 100%);
+  box-shadow: 0 12px 24px rgba(43, 118, 211, 0.28);
+}
+
+.tutorial-skip {
+  color: #5b6f84;
+  background: rgba(234, 243, 255, 0.98);
+}
+
+.tutorial-hand {
+  position: absolute;
+  right: 6px;
+  bottom: 2px;
+  font-size: 24px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 10px rgba(18, 95, 186, 0.24));
+  animation: tutorial-hand-float 1s ease-in-out infinite;
 }
 
 .overlay-card {
@@ -968,6 +1283,18 @@ export default {
   0% { transform: scale(1); background: #ffd7df; }
   45% { transform: scale(0.95); background: #ffb8c4; }
   100% { transform: scale(1); }
+}
+
+@keyframes tutorial-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.96); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.92), 0 0 0 3px rgba(38, 127, 255, 0.55), 0 0 26px rgba(47, 136, 255, 0.5); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tutorial-hand-float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
 }
 
 @media (min-width: 860px) {
