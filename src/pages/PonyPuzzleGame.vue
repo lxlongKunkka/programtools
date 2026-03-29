@@ -100,7 +100,7 @@
             <strong>{{ currentLevel.rewardCoins }} 金币</strong>
           </div>
           <div class="meta-card">
-            <span>模式</span>
+            <span>操作</span>
             <strong>{{ modeLabel }}</strong>
           </div>
           <div class="meta-card">
@@ -118,7 +118,10 @@
                 class="cell"
                 :class="cellClass(rowIndex, colIndex)"
                 :style="{ '--region-color': regionColor(regionId) }"
-                @click="handleCellClick(rowIndex, colIndex)"
+                @pointerdown="beginCellPress($event, rowIndex, colIndex)"
+                @pointerup="endCellPress($event, rowIndex, colIndex)"
+                @pointerleave="cancelCellPress"
+                @pointercancel="cancelCellPress"
               >
                 <span v-if="isPlaced(rowIndex, colIndex)" class="marmot-token">
                   <span class="marmot-token-face">🐹</span>
@@ -151,7 +154,7 @@
         </div>
       </section>
 
-      <section class="economy-panel">
+      <section class="economy-panel compact-mobile">
         <div class="economy-row">
           <span>提示价格</span>
           <strong>{{ config.hintCost }} 金币</strong>
@@ -167,17 +170,9 @@
       </section>
 
       <footer class="tool-dock">
-        <button class="dock-btn soft erase" type="button" @click="mode = 'erase'">
+        <button class="dock-btn soft erase" type="button" @click="clearManualMarks">
           <span class="dock-icon">⌫</span>
-          <span>清除</span>
-        </button>
-        <button class="dock-btn pony" :class="{ active: mode === 'pony' }" type="button" @click="mode = 'pony'">
-          <span class="dock-icon">🐹</span>
-          <span>放土拨鼠</span>
-        </button>
-        <button class="dock-btn mark" :class="{ active: mode === 'mark' }" type="button" @click="mode = 'mark'">
-          <span class="dock-icon">×</span>
-          <span>打叉</span>
+          <span>清空标记</span>
         </button>
         <button class="dock-btn hint" type="button" :disabled="!session || session.status !== 'active' || hintLoading" @click="buyHint">
           <span class="dock-icon">💡</span>
@@ -372,6 +367,8 @@ export default {
       startLoading: false,
       hintLoading: false,
       storeLoading: false,
+      pressTimer: null,
+      pressTriggered: false,
       levels: [],
       selectedLevelId: 1,
       activeLevel: null,
@@ -416,9 +413,9 @@ export default {
       return Math.max(Number(this.currentLevel?.regionCount || 0) - this.placedKeys.length, 0)
     },
     modeLabel() {
-      if (this.mode === 'mark') return '打叉排除'
-      if (this.mode === 'erase') return '清除格子'
-      return '放土拨鼠'
+      if (this.isScriptedTutorialActive && this.currentTutorialStep?.autoMode === 'mark') return '轻点打叉'
+      if (this.isScriptedTutorialActive && this.currentTutorialStep?.autoMode === 'pony') return '长按放置'
+      return '轻点打叉 / 长按放置'
     },
     nextUnlockedLevel() {
       const next = this.levels.find((level) => Number(level.levelId) === Number(this.currentLevel?.levelId || 0) + 1)
@@ -453,6 +450,7 @@ export default {
     this.loadGame()
   },
   beforeUnmount() {
+    this.cancelCellPress()
     this.stopTimer()
   },
   methods: {
@@ -501,6 +499,7 @@ export default {
       this.elapsedSeconds = 0
       if (clearSession) this.session = null
       if (clearSession) this.clearTutorialState()
+      this.cancelCellPress()
     },
     cellKeyAt(row, col) {
       return cellKey(row, col)
@@ -609,8 +608,66 @@ export default {
       if (!this.tutorialHighlightKeys.length) return false
       return !this.tutorialHighlightKeys.includes(key)
     },
+    isTutorialActionTypeRestricted(actionType) {
+      const expectedType = this.currentTutorialStep?.autoMode
+      if (!expectedType) return false
+      return expectedType !== actionType
+    },
     isLockedPlacedKey(key) {
       return this.lockedPlacedKeys.includes(key)
+    },
+    beginCellPress(event, row, col) {
+      if (!this.session || this.session.status !== 'active') return
+      this.cancelCellPress()
+      this.pressTriggered = false
+      const pointerId = event?.pointerId
+      if (event?.currentTarget?.setPointerCapture && pointerId !== undefined) {
+        try {
+          event.currentTarget.setPointerCapture(pointerId)
+        } catch {
+          // ignore pointer capture failures
+        }
+      }
+      this.pressTimer = window.setTimeout(() => {
+        this.pressTriggered = true
+        this.handleCellInteraction(row, col, 'pony')
+      }, 320)
+    },
+    endCellPress(event, row, col) {
+      if (!this.session || this.session.status !== 'active') return
+      if (this.pressTimer) {
+        window.clearTimeout(this.pressTimer)
+        this.pressTimer = null
+      }
+      const pointerId = event?.pointerId
+      if (event?.currentTarget?.releasePointerCapture && pointerId !== undefined) {
+        try {
+          event.currentTarget.releasePointerCapture(pointerId)
+        } catch {
+          // ignore pointer capture failures
+        }
+      }
+      if (this.pressTriggered) {
+        this.pressTriggered = false
+        return
+      }
+      this.handleCellInteraction(row, col, 'mark')
+    },
+    cancelCellPress() {
+      if (this.pressTimer) {
+        window.clearTimeout(this.pressTimer)
+        this.pressTimer = null
+      }
+      this.pressTriggered = false
+    },
+    clearManualMarks() {
+      this.blockedKeys = []
+      this.placedKeys = this.placedKeys.filter((key) => !this.isLockedPlacedKey(key))
+      this.hintKey = ''
+      if (this.session?.status === 'active') {
+        this.message = '已清空本局手动标记。'
+        this.messageTone = 'info'
+      }
     },
     startTimer() {
       this.stopTimer()
@@ -642,8 +699,8 @@ export default {
         this.elapsedSeconds = 0
         this.applyLevelPresetState(data?.level || this.currentLevel)
         this.message = Array.isArray(this.currentLevel?.tutorialTips) && this.currentLevel.tutorialTips.length
-          ? '教学关先别急着落子，先切到“打叉”模式做排除。'
-          : '本局已开始，先看颜色块和行列关系，再放土拨鼠。'
+          ? '教学关从已知土拨鼠开始。轻点打叉，长按放置。'
+          : '本局已开始。轻点打叉，长按放土拨鼠。'
         this.messageTone = 'info'
         this.startTimer()
         this.activateTutorial(levelId)
@@ -671,7 +728,7 @@ export default {
         'tutorial-muted': this.isScriptedTutorialActive && this.tutorialHighlightKeys.length > 0 && !this.tutorialHighlightKeys.includes(key)
       }
     },
-    async handleCellClick(row, col) {
+    async handleCellInteraction(row, col, actionType) {
       if (!this.session || this.session.status !== 'active') {
         this.showToastMessage('请先开始本关')
         return
@@ -683,19 +740,12 @@ export default {
         return
       }
 
-      if (this.mode === 'erase') {
-        if (this.isLockedPlacedKey(key)) {
-          this.showToastMessage('教学给出的这只土拨鼠先不要清除')
-          return
-        }
-        this.placedKeys = this.placedKeys.filter((item) => item !== key)
-        this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
-        if (this.hintKey === key) this.hintKey = ''
-        this.syncTutorialProgress()
+      if (this.isTutorialActionTypeRestricted(actionType)) {
+        this.showToastMessage(actionType === 'pony' ? '这一小步先轻点打叉' : '这一小步要长按放土拨鼠')
         return
       }
 
-      if (this.mode === 'mark') {
+      if (actionType === 'mark') {
         if (this.placedKeys.includes(key)) {
           if (this.isLockedPlacedKey(key)) {
             this.showToastMessage('围绕这只已知土拨鼠做排除，不用给它打叉')
@@ -705,6 +755,18 @@ export default {
         this.blockedKeys = this.blockedKeys.includes(key)
           ? this.blockedKeys.filter((item) => item !== key)
           : [...this.blockedKeys, key]
+        this.syncTutorialProgress()
+        return
+      }
+
+      if (actionType === 'erase') {
+        if (this.isLockedPlacedKey(key)) {
+          this.showToastMessage('教学给出的这只土拨鼠先不要清除')
+          return
+        }
+        this.placedKeys = this.placedKeys.filter((item) => item !== key)
+        this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
+        if (this.hintKey === key) this.hintKey = ''
         this.syncTutorialProgress()
         return
       }
@@ -844,7 +906,7 @@ export default {
   --blue-deep: #0f5fb8;
   --pill: rgba(255, 255, 255, 0.92);
   min-height: calc(100vh - 80px);
-  padding: 18px 12px 104px;
+  padding: 8px 10px 84px;
   background:
     radial-gradient(circle at top center, rgba(111, 182, 255, 0.12), transparent 30%),
     linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
@@ -1013,7 +1075,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
-  margin-top: 14px;
+  margin-top: 8px;
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(223, 231, 244, 0.96);
@@ -1022,7 +1084,7 @@ export default {
 }
 
 .rule-chip {
-  min-height: 84px;
+  min-height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1041,7 +1103,7 @@ export default {
 }
 
 .level-strip {
-  margin-top: 14px;
+  margin-top: 8px;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -1049,8 +1111,8 @@ export default {
 }
 
 .tutorial-panel {
-  margin-top: 14px;
-  padding: 14px 16px;
+  margin-top: 8px;
+  padding: 10px 14px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(140, 174, 215, 0.42);
@@ -1108,8 +1170,8 @@ export default {
 }
 
 .message-bar {
-  margin-top: 14px;
-  padding: 14px 16px;
+  margin-top: 8px;
+  padding: 10px 14px;
   border-radius: 20px;
   font-size: 15px;
   font-weight: 700;
@@ -1132,20 +1194,20 @@ export default {
 }
 
 .board-panel {
-  margin-top: 14px;
+  margin-top: 8px;
   border-radius: 34px;
-  padding: 18px 14px 18px;
+  padding: 12px 12px 12px;
 }
 
 .board-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .meta-card {
   border-radius: 22px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   text-align: center;
 }
 
@@ -1157,14 +1219,14 @@ export default {
 
 .meta-card strong {
   display: block;
-  margin-top: 4px;
-  font-size: 14px;
+  margin-top: 2px;
+  font-size: 13px;
 }
 
 .board-shell {
   position: relative;
-  margin-top: 16px;
-  padding: 10px;
+  margin-top: 10px;
+  padding: 8px;
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -1193,6 +1255,8 @@ export default {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 6px 12px rgba(93, 120, 156, 0.08);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .cell:active {
@@ -1369,9 +1433,9 @@ export default {
 }
 
 .economy-panel {
-  margin-top: 14px;
+  margin-top: 8px;
   border-radius: 22px;
-  padding: 14px 16px;
+  padding: 10px 14px;
 }
 
 .economy-row {
@@ -1395,7 +1459,7 @@ export default {
   transform: translateX(-50%);
   width: min(calc(100vw - 16px), 468px);
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   z-index: 12;
 }
@@ -1408,7 +1472,7 @@ export default {
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 14px 24px rgba(52, 88, 137, 0.14);
   cursor: pointer;
-  min-height: 74px;
+  min-height: 66px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1456,7 +1520,7 @@ export default {
 }
 
 .dock-icon {
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
 }
 
@@ -1513,8 +1577,8 @@ export default {
 
 @media (max-width: 420px) {
   .pony-page {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
   .game-hud {
@@ -1526,7 +1590,7 @@ export default {
   }
 
   .rule-chip {
-    min-height: 76px;
+    min-height: 56px;
     padding: 8px;
   }
 
@@ -1541,6 +1605,10 @@ export default {
 
   .economy-row {
     flex-direction: column;
+  }
+
+  .compact-mobile {
+    display: none;
   }
 }
 </style>
