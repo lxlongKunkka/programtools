@@ -221,24 +221,15 @@ const LEVEL_ONE_SCRIPT = [
     kind: 'modal',
     badge: '教学 1/6',
     title: '先看规则',
-    text: '一种颜色区域里，只能放 1 只土拨鼠。先记住这个最基础的规则。',
+    text: '开局先送你一只已经找到的土拨鼠。第一关不该靠猜，先学会围绕它做排除。',
     ctaText: '明白了',
-    highlightKeys: ['0,2', '0,3', '1,2', '1,3']
+    highlightKeys: ['3,1']
   },
   {
     kind: 'tip',
     badge: '教学 2/6',
-    text: '先从最容易的位置开始，点一下高亮格子，把第一只土拨鼠放进去。',
-    autoMode: 'pony',
-    focusKeys: ['3,1'],
-    highlightKeys: ['3,1'],
-    requirement: { type: 'placedAll', keys: ['3,1'] },
-    showTap: true
-  },
-  {
-    kind: 'success',
-    badge: '不错',
-    text: '土拨鼠不能出现在同一行或同一列。现在切到打叉模式，把这些格子排除掉。',
+    text: '先看这只已经找到的土拨鼠。它所在的同一行、同一列，其他格子都不可能再放。',
+    autoMode: 'mark',
     autoMode: 'mark',
     highlightKeys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'],
     requirement: { type: 'blockedAll', keys: ['0,1', '1,1', '2,1', '3,0', '3,2', '3,3'] }
@@ -254,7 +245,7 @@ const LEVEL_ONE_SCRIPT = [
   {
     kind: 'success',
     badge: '做得好',
-    text: '现在这个颜色块只剩一个位置了，点亮它，继续往前推。',
+    text: '这样一来，右上颜色块就只剩一个合理位置了。现在再把它点亮。',
     autoMode: 'pony',
     focusKeys: ['0,2'],
     highlightKeys: ['0,2'],
@@ -382,6 +373,13 @@ const TUTORIAL_SCRIPTS = {
   3: LEVEL_THREE_SCRIPT,
 }
 
+const TUTORIAL_PRESET_STATE = {
+  1: {
+    placedKeys: ['3,1'],
+    lockedPlacedKeys: ['3,1']
+  }
+}
+
 export default {
   name: 'PonyPuzzleGame',
   inject: ['showToastMessage'],
@@ -413,6 +411,7 @@ export default {
       flashKey: '',
       hintKey: '',
       lastRewardCoins: 0,
+      lockedPlacedKeys: [],
       tutorialSeenLevelIds: [],
       tutorialState: {
         activeLevelId: null,
@@ -514,6 +513,7 @@ export default {
       this.hintKey = ''
       this.flashKey = ''
       this.lastRewardCoins = 0
+      this.lockedPlacedKeys = []
       this.stopTimer()
       this.elapsedSeconds = 0
       if (clearSession) this.session = null
@@ -524,6 +524,9 @@ export default {
     },
     getTutorialScript(levelId) {
       return TUTORIAL_SCRIPTS[Number(levelId)] || []
+    },
+    getTutorialPresetState(levelId) {
+      return TUTORIAL_PRESET_STATE[Number(levelId)] || null
     },
     loadTutorialProgress() {
       try {
@@ -555,8 +558,16 @@ export default {
     activateTutorial(levelId) {
       const script = this.getTutorialScript(levelId)
       if (!script.length || this.hasSeenTutorial(levelId)) {
+        this.lockedPlacedKeys = []
         this.clearTutorialState()
         return
+      }
+      const presetState = this.getTutorialPresetState(levelId)
+      if (presetState) {
+        this.placedKeys = Array.isArray(presetState.placedKeys) ? [...presetState.placedKeys] : []
+        this.lockedPlacedKeys = Array.isArray(presetState.lockedPlacedKeys) ? [...presetState.lockedPlacedKeys] : []
+      } else {
+        this.lockedPlacedKeys = []
       }
       this.tutorialState = {
         activeLevelId: Number(levelId),
@@ -620,6 +631,9 @@ export default {
       if (!this.tutorialHighlightKeys.length) return false
       return !this.tutorialHighlightKeys.includes(key)
     },
+    isLockedPlacedKey(key) {
+      return this.lockedPlacedKeys.includes(key)
+    },
     startTimer() {
       this.stopTimer()
       this.timerHandle = window.setInterval(() => {
@@ -646,6 +660,7 @@ export default {
         this.hintKey = ''
         this.flashKey = ''
         this.lastRewardCoins = 0
+        this.lockedPlacedKeys = []
         this.elapsedSeconds = 0
         this.message = Array.isArray(this.currentLevel?.tutorialTips) && this.currentLevel.tutorialTips.length
           ? '教学关先别急着落子，先切到“打叉”模式做排除。'
@@ -690,6 +705,10 @@ export default {
       }
 
       if (this.mode === 'erase') {
+        if (this.isLockedPlacedKey(key)) {
+          this.showToastMessage('教学给出的这只土拨鼠先不要清除')
+          return
+        }
         this.placedKeys = this.placedKeys.filter((item) => item !== key)
         this.blockedKeys = this.blockedKeys.filter((item) => item !== key)
         if (this.hintKey === key) this.hintKey = ''
@@ -698,7 +717,12 @@ export default {
       }
 
       if (this.mode === 'mark') {
-        if (this.placedKeys.includes(key)) return
+        if (this.placedKeys.includes(key)) {
+          if (this.isLockedPlacedKey(key)) {
+            this.showToastMessage('围绕这只已知土拨鼠做排除，不用给它打叉')
+          }
+          return
+        }
         this.blockedKeys = this.blockedKeys.includes(key)
           ? this.blockedKeys.filter((item) => item !== key)
           : [...this.blockedKeys, key]
@@ -707,6 +731,10 @@ export default {
       }
 
       if (this.placedKeys.includes(key)) {
+        if (this.isLockedPlacedKey(key)) {
+          this.showToastMessage('教学给出的这只土拨鼠位置是固定提示')
+          return
+        }
         this.placedKeys = this.placedKeys.filter((item) => item !== key)
         this.syncTutorialProgress()
         return
