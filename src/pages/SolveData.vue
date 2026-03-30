@@ -457,6 +457,8 @@ export default {
       return [
         { id: 'o4-mini', name: 'o4-mini' },
         { id: 'gpt-5.4', name: 'gpt-5.4' },
+        { id: 'gpt-5.4-mini', name: 'gpt-5.4-mini' },
+        { id: 'gpt-5.4-nano', name: 'gpt-5.4-nano' },
         { id: 'o3-mini', name: 'o3-mini' },
         { id: 'o2-mini', name: 'o2-mini' },
         { id: 'o1-mini', name: 'o1-mini' },

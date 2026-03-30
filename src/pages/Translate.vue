@@ -276,6 +276,8 @@ computed: {
         { id: DEFAULT_TRANSLATION_MODEL, name: DEFAULT_TRANSLATION_MODEL },
         { id: 'o4-mini', name: 'o4-mini' },
         { id: 'gpt-5.4', name: 'gpt-5.4' },
+        { id: 'gpt-5.4-mini', name: 'gpt-5.4-mini' },
+        { id: 'gpt-5.4-nano', name: 'gpt-5.4-nano' },
         { id: 'o3-mini', name: 'o3-mini' },
         { id: 'grok-4-fast', name: 'grok-4-fast' }
       ]
