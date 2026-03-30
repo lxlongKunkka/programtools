@@ -26,6 +26,18 @@
           <p>自动翻译、解释代码、独立翻译页共用这个设置。</p>
         </div>
       </div>
+      <div class="translation-model-config">
+        <button type="button" class="btn-secondary btn-sm" @click="showReportModelConfig = !showReportModelConfig">
+          报告模型: {{ reportModelLabel }}
+        </button>
+        <div v-if="showReportModelConfig" class="translation-model-popover">
+          <label>标题/元数据/报告模型</label>
+          <select v-model="reportModel" @change="updateReportModelPreference">
+            <option v-for="m in modelOptions" :key="`report-${m.id}`" :value="m.id">{{ m.name }}</option>
+          </select>
+          <p>总结标题、补元数据、生成解题报告都会使用这个设置。</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -305,7 +317,7 @@
 import { nextTick } from 'vue'
 import request from '../utils/request'
 import { getModels } from '../utils/models'
-import { DEFAULT_TRANSLATION_MODEL, getDefaultTranslationModel, resolvePreferredModel, setDefaultTranslationModel } from '../utils/modelPreferences'
+import { getDefaultReportModel, getDefaultTranslationModel, resolvePreferredModel, setDefaultReportModel, setDefaultTranslationModel } from '../utils/modelPreferences'
 import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
 import { loadJsZip } from '../utils/loadJsZip'
 import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
@@ -330,7 +342,9 @@ export default {
       dataOutput: '',
       selectedModel: 'o4-mini',
       translationModel: getDefaultTranslationModel(),
+      reportModel: getDefaultReportModel(),
       showTranslationModelConfig: false,
+      showReportModelConfig: false,
       models: [],
       language: 'C++',
       isGenerating: false,
@@ -463,11 +477,14 @@ export default {
         { id: 'o2-mini', name: 'o2-mini' },
         { id: 'o1-mini', name: 'o1-mini' },
         { id: 'grok-4-fast', name: 'grok-4-fast' },
-        { id: DEFAULT_TRANSLATION_MODEL, name: DEFAULT_TRANSLATION_MODEL }
+        { id: 'gemini-3-flash-preview', name: 'gemini-3-flash-preview' }
       ]
     },
     translationModelLabel() {
       return this.modelOptions.find(item => item.id === this.translationModel)?.name || this.translationModel
+    },
+    reportModelLabel() {
+      return this.modelOptions.find(item => item.id === this.reportModel)?.name || this.reportModel
     },
     displayCode() {
       if (this.codeOutput && this.codeOutput.trim()) {
@@ -817,7 +834,7 @@ export default {
     },
 
     getMetaReportModel() {
-      return 'gemini-3-flash-preview'
+      return this.reportModel
     },
 
     updateTranslationModelPreference() {
@@ -825,6 +842,13 @@ export default {
       this.translationModel = setDefaultTranslationModel(resolved)
       this.showTranslationModelConfig = false
       this.showToastMessage(`默认翻译模型已切换为 ${resolved}`)
+    },
+
+    updateReportModelPreference() {
+      const resolved = resolvePreferredModel(this.modelOptions, this.reportModel)
+      this.reportModel = setDefaultReportModel(resolved)
+      this.showReportModelConfig = false
+      this.showToastMessage(`默认报告模型已切换为 ${resolved}`)
     },
 
     extractCodeFromProblem() {
@@ -1612,7 +1636,9 @@ export default {
             this.selectedModel = list[0].id
           }
           this.translationModel = resolvePreferredModel(list, this.translationModel)
+          this.reportModel = resolvePreferredModel(list, this.reportModel)
           setDefaultTranslationModel(this.translationModel)
+          setDefaultReportModel(this.reportModel)
         }
       } catch (e) {
         // 加载失败时保持内置备选项
