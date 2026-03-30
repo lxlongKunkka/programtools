@@ -5,15 +5,24 @@
 <div class="toolbar-container">
 <div class="toolbar">
 <div class="toolbar-left">
-<span class="label">模型: gemini-3-flash-preview</span>
+<span class="label">默认翻译模型: {{ translationModelLabel }}</span>
 </div>
 <div class="toolbar-right">
+<button @click="showModelConfig = !showModelConfig" class="btn-secondary">⚙️ 翻译模型</button>
 <button @click="translate()" :disabled="loading || !prompt.trim()" class="btn-primary">
 {{ loading ? '⏳ 翻译中...' : '🌐 开始翻译' }}
 </button>
 <button @click="showHistory = !showHistory" class="btn-secondary">📋 历史{{ history.length ? ` (${history.length})` : '' }}</button>
 <button @click="clear" class="btn-secondary">🧹 清空</button>
 </div>
+</div>
+
+<div v-if="showModelConfig" class="model-config-panel">
+  <span class="label">默认翻译/解释模型</span>
+  <select v-model="translationModel" @change="updateTranslationModelPreference">
+    <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+  </select>
+  <span class="model-config-tip">这个设置会同步影响 SolveData 的自动翻译和解释代码。</span>
 </div>
 
 <!-- 历史记录面板 -->
@@ -222,6 +231,8 @@
 
 <script>
 import request from '../utils/request'
+import { getModels } from '../utils/models'
+import { DEFAULT_TRANSLATION_MODEL, getDefaultTranslationModel, resolvePreferredModel, setDefaultTranslationModel } from '../utils/modelPreferences'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import { marked } from 'marked'
 import { loadJsZip } from '../utils/loadJsZip'
@@ -241,6 +252,9 @@ result: '',
 englishResult: '',
 loading: false,
 streamCharsCount: 0,
+models: [],
+translationModel: getDefaultTranslationModel(),
+showModelConfig: false,
 urlInput: '',
 urlLoading: false,
 showHistory: false,
@@ -256,6 +270,19 @@ tasks: [
 }
 },
 computed: {
+    modelOptions() {
+      if (Array.isArray(this.models) && this.models.length > 0) return this.models
+      return [
+        { id: DEFAULT_TRANSLATION_MODEL, name: DEFAULT_TRANSLATION_MODEL },
+        { id: 'o4-mini', name: 'o4-mini' },
+        { id: 'gpt-5.4', name: 'gpt-5.4' },
+        { id: 'o3-mini', name: 'o3-mini' },
+        { id: 'grok-4-fast', name: 'grok-4-fast' }
+      ]
+    },
+    translationModelLabel() {
+      return this.modelOptions.find(item => item.id === this.translationModel)?.name || this.translationModel
+    },
     hasCompletedTasks() {
       return this.tasks.some(t => t.status === 'completed')
     }
@@ -298,8 +325,27 @@ try {
 } catch (e) {
 console.warn('failed to initialize translate page', e)
 }
+this.loadModels()
 },
 methods: {
+    async loadModels() {
+      try {
+        const list = await getModels()
+        if (Array.isArray(list) && list.length > 0) {
+          this.models = list
+          this.translationModel = resolvePreferredModel(list, this.translationModel)
+          setDefaultTranslationModel(this.translationModel)
+        }
+      } catch (e) {
+        // Ignore model loading errors and keep fallbacks.
+      }
+    },
+    updateTranslationModelPreference() {
+      const resolved = resolvePreferredModel(this.modelOptions, this.translationModel)
+      this.translationModel = setDefaultTranslationModel(resolved)
+      this.showModelConfig = false
+      this.showToastMessage(`默认翻译模型已切换为 ${resolved}`)
+    },
     saveState() {
         localStorage.setItem('translate_storage', JSON.stringify({
             prompt: this.prompt,
@@ -347,7 +393,7 @@ try {
   if (token) headers['Authorization'] = `Bearer ${token}`
   const response = await fetch('/api/translate/stream', {
     method: 'POST', headers,
-    body: JSON.stringify({ text: this.prompt, model: 'gemini-3-flash-preview' })
+    body: JSON.stringify({ text: this.prompt, model: this.translationModel })
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   const reader = response.body.getReader()
@@ -908,6 +954,23 @@ select:focus {
 .toolbar-right {
   display: flex;
   gap: 10px;
+}
+
+.model-config-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  background: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.07);
+  border: 1px solid #ede9fe;
+}
+
+.model-config-tip {
+  color: #6b7280;
+  font-size: 12px;
 }
 
 button {

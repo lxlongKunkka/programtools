@@ -7,21 +7,25 @@
     <div class="top-controls">
       <label>模型:</label>
       <select v-model="selectedModel">
-        <option v-for="m in (models && models.length ? models : [
-          { id: 'o4-mini', name: 'o4-mini' },
-          { id: 'gpt-5.4', name: 'gpt-5.4' },
-          { id: 'o3-mini', name: 'o3-mini' },
-          { id: 'o2-mini', name: 'o2-mini' },
-          { id: 'o1-mini', name: 'o1-mini' },
-          { id: 'grok-4-fast', name: 'grok-4-fast' },
-          { id: 'gemini-3-flash-preview', name: 'gemini-3-flash-preview' }
-        ])" :key="m.id" :value="m.id">{{ m.name }}</option>
+        <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
       </select>
       <label style="margin-left:12px;">语言:</label>
       <select v-model="language">
         <option value="C++">C++</option>
         <option value="Python">Python</option>
       </select>
+      <div class="translation-model-config">
+        <button type="button" class="btn-secondary btn-sm" @click="showTranslationModelConfig = !showTranslationModelConfig">
+          翻译模型: {{ translationModelLabel }}
+        </button>
+        <div v-if="showTranslationModelConfig" class="translation-model-popover">
+          <label>默认翻译/解释模型</label>
+          <select v-model="translationModel" @change="updateTranslationModelPreference">
+            <option v-for="m in modelOptions" :key="`translation-${m.id}`" :value="m.id">{{ m.name }}</option>
+          </select>
+          <p>自动翻译、解释代码、独立翻译页共用这个设置。</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -301,6 +305,7 @@
 import { nextTick } from 'vue'
 import request from '../utils/request'
 import { getModels } from '../utils/models'
+import { DEFAULT_TRANSLATION_MODEL, getDefaultTranslationModel, resolvePreferredModel, setDefaultTranslationModel } from '../utils/modelPreferences'
 import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
 import { loadJsZip } from '../utils/loadJsZip'
 import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
@@ -324,6 +329,8 @@ export default {
       codeOutput: '',
       dataOutput: '',
       selectedModel: 'o4-mini',
+      translationModel: getDefaultTranslationModel(),
+      showTranslationModelConfig: false,
       models: [],
       language: 'C++',
       isGenerating: false,
@@ -445,6 +452,21 @@ export default {
     }
   },
   computed: {
+    modelOptions() {
+      if (Array.isArray(this.models) && this.models.length > 0) return this.models
+      return [
+        { id: 'o4-mini', name: 'o4-mini' },
+        { id: 'gpt-5.4', name: 'gpt-5.4' },
+        { id: 'o3-mini', name: 'o3-mini' },
+        { id: 'o2-mini', name: 'o2-mini' },
+        { id: 'o1-mini', name: 'o1-mini' },
+        { id: 'grok-4-fast', name: 'grok-4-fast' },
+        { id: DEFAULT_TRANSLATION_MODEL, name: DEFAULT_TRANSLATION_MODEL }
+      ]
+    },
+    translationModelLabel() {
+      return this.modelOptions.find(item => item.id === this.translationModel)?.name || this.translationModel
+    },
     displayCode() {
       if (this.codeOutput && this.codeOutput.trim()) {
         // 移除 <!-- AC_CODE --> 标记，避免在界面上显示
@@ -789,11 +811,18 @@ export default {
     },
 
     getSolveDataModel(taskIndex = this.currentTaskIndex) {
-      return this.isExplainCodeMode(taskIndex) ? 'gemini-3-flash-preview' : this.selectedModel
+      return this.isExplainCodeMode(taskIndex) ? this.translationModel : this.selectedModel
     },
 
     getMetaReportModel() {
       return 'gemini-3-flash-preview'
+    },
+
+    updateTranslationModelPreference() {
+      const resolved = resolvePreferredModel(this.modelOptions, this.translationModel)
+      this.translationModel = setDefaultTranslationModel(resolved)
+      this.showTranslationModelConfig = false
+      this.showToastMessage(`默认翻译模型已切换为 ${resolved}`)
     },
 
     extractCodeFromProblem() {
@@ -1580,6 +1609,8 @@ export default {
           if (!ids.includes(this.selectedModel)) {
             this.selectedModel = list[0].id
           }
+          this.translationModel = resolvePreferredModel(list, this.translationModel)
+          setDefaultTranslationModel(this.translationModel)
         }
       } catch (e) {
         // 加载失败时保持内置备选项
@@ -1666,7 +1697,7 @@ export default {
             if (token) headers['Authorization'] = `Bearer ${token}`
             const response = await fetch('/api/translate/stream', {
               method: 'POST', headers,
-              body: JSON.stringify({ text: problemText, model: 'gemini-3-flash-preview' })
+              body: JSON.stringify({ text: problemText, model: this.translationModel })
             })
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
             const reader = response.body.getReader()
@@ -3111,7 +3142,7 @@ python data_generator.py
   flex-shrink: 0;
 }
 .top-bar h2 { margin: 0; font-size: 18px; font-weight: 700; color: #1a1a2e; }
-.top-controls { display: flex; align-items: center; gap: 8px; }
+.top-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .top-controls label { font-size: 13px; color: #6b7280; font-weight: 500; }
 .top-controls select {
   padding: 4px 8px;
@@ -3124,6 +3155,35 @@ python data_generator.py
   cursor: pointer;
 }
 .top-controls select:focus { border-color: #4f46e5; }
+.translation-model-config {
+  position: relative;
+}
+.translation-model-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 260px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.translation-model-popover label {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+.translation-model-popover p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
 
 /*  URL bar  */
 .url-bar {
