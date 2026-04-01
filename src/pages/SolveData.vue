@@ -198,12 +198,23 @@
         <template v-else-if="activeTab === 'reference'">
           <div class="reference-pane">
             <div class="ref-section-label">
-              💡 参考思路 / 官方题解（可选）
+              🧾 官方题解 Markdown
+              <button @click="copyEditorial" :disabled="!editorialText" class="btn-ghost btn-sm" style="margin-left:8px;">复制</button>
+              <button @click="downloadEditorial" :disabled="!editorialText" class="btn-ghost btn-sm" style="margin-left:8px;">下载 MD</button>
+              <button @click="editorialText = ''" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
+            </div>
+            <textarea
+              v-model="editorialText"
+              placeholder="比赛批量导入抓到的官方题解会显示在这里，并可单独下载为 markdown..."
+              class="content-textarea ref-textarea"
+            ></textarea>
+            <div class="ref-section-label">
+              💡 参考思路 / 补充备注（可选）
               <button @click="referenceText = ''" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
             </div>
             <textarea
               v-model="referenceText"
-              placeholder="在此输入题解、思路或官方解析。比赛批量导入抓到的题解也会显示在这里..."
+              placeholder="这里保留给你手工填写的思路、备注或教案提示，不再默认承载导入题解..."
               class="content-textarea ref-textarea"
             ></textarea>
             <div class="ref-section-label">
@@ -362,6 +373,7 @@ export default {
       isGeneratingTitle: false,
       isGeneratingReport: false,
       activeTab: 'problem',
+      editorialText: '',
       manualCode: '',
       referenceText: '',
       isTranslating: false,
@@ -413,6 +425,17 @@ export default {
       const savedTasks = localStorage.getItem('solve_data_tasks')
       if (savedTasks) {
         this.tasks = JSON.parse(savedTasks)
+        this.tasks = this.tasks.map((task) => {
+          if (!task) return task
+          if (task.editorialText || !task.referenceText) return task
+          const importedVia = task.problemMeta?.importedVia
+          if (importedVia !== 'edge-extension') return task
+          return {
+            ...task,
+            editorialText: task.referenceText,
+            referenceText: '',
+          }
+        })
         // 重置上次未完成的 processing 任务（页面刷新导致流中断）
         this.tasks.forEach(t => { if (t.status === 'processing') t.status = 'pending' })
         if (this.tasks.length > 0) {
@@ -443,6 +466,7 @@ export default {
         this.isTranslationStale = true
       }
     },
+    editorialText(val) { this.updateCurrentTask('editorialText', val) },
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
     referenceText(val) { this.updateCurrentTask('referenceText', val) },
     fetchUrl(val) { localStorage.setItem('solve_fetch_url', val) },
@@ -1314,6 +1338,7 @@ export default {
       // 但由于 Vue 2/3 响应式机制，直接赋值会触发 watcher
       // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
       this.problemText = task.problemText || ''
+      this.editorialText = task.editorialText || ''
       this.manualCode = stripFreopenStatements(task.manualCode || '')
       this.referenceText = task.referenceText || ''
       this.codeOutput = task.codeOutput || ''
@@ -1913,6 +1938,18 @@ export default {
           a.click();
           URL.revokeObjectURL(url);
         },
+
+        downloadEditorial() {
+          if (!this.editorialText) return;
+          const blob = new Blob([this.editorialText], { type: 'text/markdown' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const name = (this.problemMeta?.title || this.problemMeta?.rawTitle || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          a.download = `${name}_editorial.md`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
         
         copyTranslation() {
           if (!this.translationText) return;
@@ -1925,6 +1962,13 @@ export default {
           if (!this.translationEnglish) return;
           navigator.clipboard.writeText(this.translationEnglish).then(() => {
             this.showToastMessage('✅ 已复制英文版到剪贴板');
+          });
+        },
+
+        copyEditorial() {
+          if (!this.editorialText) return;
+          navigator.clipboard.writeText(this.editorialText).then(() => {
+            this.showToastMessage('✅ 已复制题解 Markdown 到剪贴板');
           });
         },
     
@@ -2449,6 +2493,7 @@ export default {
       this.codeOutput = ''
       this.serverPureCode = ''
       this.dataOutput = ''
+      this.editorialText = ''
       this.manualCode = ''
       this.referenceText = ''
       this.problemMeta = null

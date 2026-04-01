@@ -131,6 +131,7 @@ export function hasTaskRawMaterials(task) {
   if (!task) return false
   return Boolean(
     String(task.problemText || '').trim() ||
+    String(task.editorialText || '').trim() ||
     String(task.manualCode || '').trim() ||
     task.additionalFile
   )
@@ -178,6 +179,10 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
     const sampleSuffix = createSampleSuffix(task)
     folder.file('problem.md', limitPrefix + task.problemText, zipOptions)
     folder.file('problem_zh_TW.md', limitPrefix + task.problemText + sampleSuffix, zipOptions)
+
+    if (task.editorialText && task.editorialText.trim()) {
+      folder.file('editorial.md', task.editorialText.trim(), zipOptions)
+    }
 
     if (task.translationText) {
       folder.file(
@@ -244,6 +249,10 @@ export async function createRawMaterialsExportBundle({ JSZip, tasks, helperApi }
 
     if (task.problemText && task.problemText.trim()) {
       folder.file('problem.md', task.problemText.trim(), zipOptions)
+    }
+
+    if (task.editorialText && task.editorialText.trim()) {
+      folder.file('editorial.md', task.editorialText.trim(), zipOptions)
     }
 
     if (task.manualCode && task.manualCode.trim()) {

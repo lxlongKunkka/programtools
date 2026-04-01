@@ -14,6 +14,7 @@ export function createEmptyTask(overrides = {}) {
     id: createTaskId(),
     status: 'pending',
     problemText: '',
+    editorialText: '',
     manualCode: '',
     referenceText: '',
     codeOutput: '',

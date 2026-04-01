@@ -82,8 +82,9 @@ export function createExtensionImportedTask(payload) {
       ? { ...payload.additionalFile, provider: 'edge-extension' }
       : null,
     problemText: payload?.content || '',
+    editorialText: payload?.editorial || '',
     manualCode: stripFreopenStatements(payload?.acCode || ''),
-    referenceText: payload?.editorial || payload?.referenceText || '',
+    referenceText: payload?.referenceText || '',
     problemMeta: {
       title,
       rawTitle: title,
@@ -130,8 +131,9 @@ export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabe
   return {
     task: createEmptyTask({
       problemText: data.content || '',
+      editorialText: editorial,
       manualCode: stripFreopenStatements(acCode),
-      referenceText: editorial,
+      referenceText: data.referenceText || '',
       additionalFile,
       problemMeta: {
         title,
@@ -269,6 +271,7 @@ export async function readFolderImportedTasks(files) {
     const derivedTitle = heading.replace(/^#\s*/, '').trim() || folderName.replace(/^\d+[-_]?/, '')
     importedTasks.push(createEmptyTask({
       problemText,
+      editorialText: group.files['editorial.md'] ? await group.files['editorial.md'].text() : '',
       manualCode,
       additionalFile,
       problemMeta: {
