@@ -1,3 +1,4 @@
+import { stripFreopenStatements } from './codeCleaning'
 import { createEmptyTask, isTaskInputEmpty } from './taskState'
 
 function extractFileNameFromUrl(url) {
@@ -77,9 +78,12 @@ export function getExtensionImportSuccessMessage(result) {
 export function createExtensionImportedTask(payload) {
   const title = (payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题').trim()
   return createEmptyTask({
-    additionalFile: payload?.additionalFile || null,
+    additionalFile: payload?.additionalFile
+      ? { ...payload.additionalFile, provider: 'edge-extension' }
+      : null,
     problemText: payload?.content || '',
-    manualCode: payload?.acCode || '',
+    manualCode: stripFreopenStatements(payload?.acCode || ''),
+    referenceText: payload?.editorial || payload?.referenceText || '',
     problemMeta: {
       title,
       rawTitle: title,
@@ -94,7 +98,12 @@ export function createExtensionImportedTask(payload) {
 export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabel, prefetchedTags = [] }) {
   const editorial = data.editorial || ''
   const acCode = data.acCode || ''
-  const additionalFile = data.additionalFile || null
+  const additionalFile = data.additionalFile
+    ? {
+        ...data.additionalFile,
+        ...(data.additionalFile.provider ? {} : { provider: 'edge-extension' }),
+      }
+    : null
   const finalTags = prefetchedTags.length ? prefetchedTags : (data.tags || [])
   const timeLimit = data.timeLimit || null
   const memoryLimit = data.memoryLimit || null
@@ -121,7 +130,7 @@ export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabe
   return {
     task: createEmptyTask({
       problemText: data.content || '',
-      manualCode: acCode,
+      manualCode: stripFreopenStatements(acCode),
       referenceText: editorial,
       additionalFile,
       problemMeta: {
@@ -233,7 +242,7 @@ export async function readFolderImportedTasks(files) {
     const folderName = folderKey.split('/').pop() || folderKey
     const problemText = await group.files['problem.md'].text()
     const codeFile = pickImportedCodeFile(group.files)
-    const manualCode = codeFile ? await codeFile.text() : ''
+    const manualCode = codeFile ? stripFreopenStatements(await codeFile.text()) : ''
     const sourceUrlFile = group.files['source_url.txt']
     const sourceUrl = sourceUrlFile ? (await sourceUrlFile.text()).trim() : ''
     const { sourceUrlFile: additionalSourceUrlFile, binaryFile } = pickImportedAttachment(group.additionalFiles)

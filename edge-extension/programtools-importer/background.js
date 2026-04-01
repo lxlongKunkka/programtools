@@ -4,6 +4,79 @@ async function getActiveTab() {
 }
 
 const DEFAULT_TARGET_ORIGIN = 'https://ai.acjudge.com'
+const ATTACHMENT_CACHE_TTL = 30 * 60 * 1000
+const attachmentCache = new Map()
+
+function cleanupAttachmentCache() {
+  const now = Date.now()
+  for (const [cacheKey, entry] of attachmentCache.entries()) {
+    if (!entry || now - entry.cachedAt > ATTACHMENT_CACHE_TTL) {
+      attachmentCache.delete(cacheKey)
+    }
+  }
+}
+
+function parseResponseFilename(contentDisposition, fallback = 'attachment') {
+  if (!contentDisposition) return fallback
+  const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+  const raw = match?.[1] || match?.[2]
+  if (!raw) return fallback
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
+function encodeBytesToBase64(bytes) {
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+  return btoa(binary)
+}
+
+async function fetchAttachmentBinary({ sourceUrl, filename }) {
+  const normalizedUrl = String(sourceUrl || '').trim()
+  if (!normalizedUrl) throw new Error('缺少附件链接')
+
+  cleanupAttachmentCache()
+  const cached = attachmentCache.get(normalizedUrl)
+  if (cached) {
+    return {
+      ...cached,
+      cachedAt: undefined,
+    }
+  }
+
+  const response = await fetch(normalizedUrl, { credentials: 'include' })
+  if (!response.ok) {
+    throw new Error(`附件下载失败: HTTP ${response.status}`)
+  }
+
+  const contentType = (response.headers.get('content-type') || 'application/octet-stream').toLowerCase()
+  if (contentType.includes('text/html')) {
+    throw new Error('附件请求返回了 HTML 页面，请确认当前账号仍有附件访问权限')
+  }
+
+  const buffer = await response.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  const payload = {
+    filename: parseResponseFilename(response.headers.get('content-disposition') || '', filename || normalizedUrl.split('/').pop() || 'attachment'),
+    size: bytes.length,
+    base64: encodeBytesToBase64(bytes),
+    sourceUrl: normalizedUrl,
+    contentType,
+  }
+
+  attachmentCache.set(normalizedUrl, {
+    ...payload,
+    cachedAt: Date.now(),
+  })
+
+  return payload
+}
 
 function isAtcoderProblemUrl(url) {
   return /https:\/\/atcoder\.jp\/contests\/[^/]+\/tasks\/[^/?#]+/i.test(url || '')
@@ -142,6 +215,8 @@ async function runScriptInTab(tabId, func, args = []) {
 }
 
 async function collectCurrentMnaProblem() {
+  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+
   function parseFilename(contentDisposition, fallback) {
     if (!contentDisposition) return fallback
     const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
@@ -319,8 +394,24 @@ async function collectCurrentMnaProblem() {
     if (contentType.includes('text/html')) {
       throw new Error('附件下载返回了 HTML 页面，而不是二进制文件')
     }
+    const contentDisposition = response.headers.get('content-disposition') || ''
+    const contentLength = Number(response.headers.get('content-length') || 0)
+    if (contentLength > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        headers: { contentDisposition, contentType },
+        size: contentLength,
+        skippedBinary: true,
+      }
+    }
     const buffer = await response.arrayBuffer()
     const bytes = new Uint8Array(buffer)
+    if (bytes.length > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        headers: { contentDisposition, contentType },
+        size: bytes.length,
+        skippedBinary: true,
+      }
+    }
     let binary = ''
     const chunkSize = 0x8000
     for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -328,7 +419,7 @@ async function collectCurrentMnaProblem() {
     }
     return {
       headers: {
-        contentDisposition: response.headers.get('content-disposition') || '',
+        contentDisposition,
         contentType,
       },
       base64: btoa(binary),
@@ -411,9 +502,10 @@ async function collectCurrentMnaProblem() {
       const binary = await fetchBinary(sourceUrl)
       additionalFile = {
         filename: parseFilename(binary.headers.contentDisposition, `additional_file_${groupId}_${problemNumber}.zip`),
-        base64: binary.base64,
         size: binary.size,
         sourceUrl,
+        ...(binary.base64 ? { base64: binary.base64 } : {}),
+        ...(binary.skippedBinary ? { skippedBinary: true } : {}),
       }
     } catch {
       additionalFile = {
@@ -448,6 +540,8 @@ async function collectCurrentMnaProblem() {
 }
 
 async function collectCurrentNflsoiProblem() {
+  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+
   function normalizeUrl(urlOrPath, baseUrl = location.href) {
     try {
       return new URL(urlOrPath, baseUrl).href
@@ -671,9 +765,25 @@ async function collectCurrentNflsoiProblem() {
     if (!response.ok) throw new Error(`下载失败: ${response.status}`)
     const contentType = (response.headers.get('content-type') || '').toLowerCase()
     if (contentType.includes('text/html')) throw new Error('附件下载返回了 HTML 页面')
+    const contentDisposition = response.headers.get('content-disposition') || ''
+    const contentLength = Number(response.headers.get('content-length') || 0)
+    if (contentLength > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        contentDisposition,
+        size: contentLength,
+        skippedBinary: true,
+      }
+    }
     const buffer = await response.arrayBuffer()
+    if (buffer.byteLength > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        contentDisposition,
+        size: buffer.byteLength,
+        skippedBinary: true,
+      }
+    }
     return {
-      contentDisposition: response.headers.get('content-disposition') || '',
+      contentDisposition,
       base64: encodeArrayBufferToBase64(buffer),
       size: buffer.byteLength,
     }
@@ -756,10 +866,11 @@ async function collectCurrentNflsoiProblem() {
     try {
       const binary = await fetchBinary(sourceUrl)
       additionalFile = {
-        filename: parseFilename(binary.contentDisposition, sourceUrl.split('/').pop() || `${ids.pid}.zip`),
-        base64: binary.base64,
+        filename: parseFilename(binary.headers.contentDisposition, sourceUrl.split('/').pop() || `${ids.pid}.zip`),
         size: binary.size,
         sourceUrl,
+        ...(binary.base64 ? { base64: binary.base64 } : {}),
+        ...(binary.skippedBinary ? { skippedBinary: true } : {}),
       }
     } catch {
       additionalFile = {
@@ -792,6 +903,8 @@ async function collectCurrentNflsoiProblem() {
 }
 
 async function collectCurrentYbtOjProblem() {
+  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+
   function normalizeUrl(urlOrPath, baseUrl = location.href) {
     try {
       return new URL(urlOrPath, baseUrl).href
@@ -946,7 +1059,7 @@ async function collectCurrentYbtOjProblem() {
     return decodeMmlChildren(el)
   }
 
-  function decodeSvgFormula(svg) {
+  function decodeSvgFormula(svg, ownerDocument = document) {
     const ariaLabel = svg?.getAttribute?.('aria-label')?.trim?.() || ''
     if (ariaLabel) return ariaLabel
 
@@ -954,7 +1067,7 @@ async function collectCurrentYbtOjProblem() {
     if (labelledBy) {
       const labels = labelledBy.split(/\s+/).map((item) => item.trim()).filter(Boolean)
       for (const labelId of labels) {
-        const titleNode = document.getElementById(labelId)
+        const titleNode = ownerDocument.getElementById(labelId)
         const titleText = titleNode?.textContent?.trim() || ''
         if (titleText) return titleText
       }
@@ -994,11 +1107,11 @@ async function collectCurrentYbtOjProblem() {
       .trim()
   }
 
-  function processChildren(node) {
-    return [...(node?.childNodes || [])].map((child) => processNode(child)).join('')
+  function processChildren(node, pageUrl = location.href, ownerDocument = document) {
+    return [...(node?.childNodes || [])].map((child) => processNode(child, pageUrl, ownerDocument)).join('')
   }
 
-  function processNode(node) {
+  function processNode(node, pageUrl = location.href, ownerDocument = document) {
     if (!node) return ''
     if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
     if (!(node instanceof Element)) return ''
@@ -1010,31 +1123,31 @@ async function collectCurrentYbtOjProblem() {
     if (hasClass(node, 'monaco-editor') || hasClass(node, 'editor') || node.id === 'editor') return ''
     if (hasClass(node, 'ui') && hasClass(node, 'buttons')) return ''
     if (tag === 'svg' && (node.getAttribute('role') === 'img' || node.querySelector('g[data-mml-node]'))) {
-      const latex = decodeSvgFormula(node)
+      const latex = decodeSvgFormula(node, ownerDocument)
       return latex ? `$${latex}$` : ''
     }
     if (tag === 'p') {
-      const text = processChildren(node).trim()
+      const text = processChildren(node, pageUrl, ownerDocument).trim()
       return text ? `${text}\n\n` : ''
     }
-    if (tag === 'h1') return `# ${processChildren(node).trim()}\n\n`
-    if (tag === 'h2') return `## ${processChildren(node).trim()}\n\n`
-    if (tag === 'h3') return `### ${processChildren(node).trim()}\n\n`
-    if (tag === 'h4') return `#### ${processChildren(node).trim()}\n\n`
+    if (tag === 'h1') return `# ${processChildren(node, pageUrl, ownerDocument).trim()}\n\n`
+    if (tag === 'h2') return `## ${processChildren(node, pageUrl, ownerDocument).trim()}\n\n`
+    if (tag === 'h3') return `### ${processChildren(node, pageUrl, ownerDocument).trim()}\n\n`
+    if (tag === 'h4') return `#### ${processChildren(node, pageUrl, ownerDocument).trim()}\n\n`
     if (tag === 'pre') return `\`\`\`\n${node.textContent?.trimEnd() || ''}\n\`\`\`\n\n`
     if (tag === 'code' && node.parentElement?.tagName?.toLowerCase() !== 'pre') return `\`${node.textContent || ''}\``
-    if (tag === 'strong' || tag === 'b') return `**${processChildren(node)}**`
-    if (tag === 'em' || tag === 'i') return `*${processChildren(node)}*`
+    if (tag === 'strong' || tag === 'b') return `**${processChildren(node, pageUrl, ownerDocument)}**`
+    if (tag === 'em' || tag === 'i') return `*${processChildren(node, pageUrl, ownerDocument)}*`
     if (tag === 'ul') {
-      const lines = [...node.querySelectorAll(':scope > li')].map((item) => `- ${processChildren(item).trim()}`)
+      const lines = [...node.querySelectorAll(':scope > li')].map((item) => `- ${processChildren(item, pageUrl, ownerDocument).trim()}`)
       return lines.length ? `${lines.join('\n')}\n\n` : ''
     }
     if (tag === 'ol') {
-      const lines = [...node.querySelectorAll(':scope > li')].map((item, index) => `${index + 1}. ${processChildren(item).trim()}`)
+      const lines = [...node.querySelectorAll(':scope > li')].map((item, index) => `${index + 1}. ${processChildren(item, pageUrl, ownerDocument).trim()}`)
       return lines.length ? `${lines.join('\n')}\n\n` : ''
     }
     if (tag === 'table') {
-      const rows = [...node.querySelectorAll('tr')].map((tr) => [...tr.querySelectorAll('th,td')].map((cell) => processChildren(cell).trim().replace(/\n/g, ' '))).filter((row) => row.some(Boolean))
+      const rows = [...node.querySelectorAll('tr')].map((tr) => [...tr.querySelectorAll('th,td')].map((cell) => processChildren(cell, pageUrl, ownerDocument).trim().replace(/\n/g, ' '))).filter((row) => row.some(Boolean))
       if (!rows.length) return ''
       const head = `| ${rows[0].join(' | ')} |`
       const divider = `| ${rows[0].map(() => '---').join(' | ')} |`
@@ -1047,20 +1160,20 @@ async function collectCurrentYbtOjProblem() {
       const src = node.getAttribute('src') || ''
       if (!src) return ''
       const alt = node.getAttribute('alt') || ''
-      return `![${alt}](${normalizeUrl(src)})`
+      return `![${alt}](${normalizeUrl(src, pageUrl)})`
     }
     if (tag === 'a') {
       const href = node.getAttribute('href') || ''
-      const text = processChildren(node).replace(/\s+/g, ' ').trim()
+      const text = processChildren(node, pageUrl, ownerDocument).replace(/\s+/g, ' ').trim()
       if (!href) return text
-      return text ? `[${text}](${normalizeUrl(href)})` : normalizeUrl(href)
+      return text ? `[${text}](${normalizeUrl(href, pageUrl)})` : normalizeUrl(href, pageUrl)
     }
 
-    return processChildren(node)
+    return processChildren(node, pageUrl, ownerDocument)
   }
 
-  function parseProblemContent(title) {
-    const segments = [...document.querySelectorAll('h4.ui.top.attached.block.header')]
+  function parseProblemContent(title, sourceDoc = document, pageUrl = location.href) {
+    const segments = [...sourceDoc.querySelectorAll('h4.ui.top.attached.block.header')]
       .map((header) => ({
         header,
         contentRoot: header.nextElementSibling && hasClass(header.nextElementSibling, 'ui') && hasClass(header.nextElementSibling, 'bottom')
@@ -1076,17 +1189,148 @@ async function collectCurrentYbtOjProblem() {
         const sectionTitle = segment.header?.textContent?.trim() || ''
         const contentRoot = segment.contentRoot
         if (sectionTitle) markdown += `## ${sectionTitle}\n\n`
-        markdown += `${processChildren(contentRoot)}\n\n`
+        markdown += `${processChildren(contentRoot, pageUrl, sourceDoc)}\n\n`
       }
       return cleanupMarkdown(markdown)
     }
 
-    const contentRoot = document.querySelector('.font-content') || getDirectChildByClass(document.querySelector('.ui.main.container'), 'font-content') || getDirectChildTag(document.querySelector('.ui.main.container'), 'main') || null
+    const contentRoot = sourceDoc.querySelector('.font-content') || getDirectChildByClass(sourceDoc.querySelector('.ui.main.container'), 'font-content') || getDirectChildTag(sourceDoc.querySelector('.ui.main.container'), 'main') || null
     if (!contentRoot) {
       throw new Error('未找到可解析的 YbtOJ 题面内容区域')
     }
-    markdown += processChildren(contentRoot)
+    markdown += processChildren(contentRoot, pageUrl, sourceDoc)
     return cleanupMarkdown(markdown)
+  }
+
+  function isEditorialKeyword(text) {
+    return /(题解|解析|讲解|solution|editorial|analysis)/i.test(String(text || ''))
+  }
+
+  function readPossibleUrl(rawValue, baseUrl = location.href) {
+    const value = String(rawValue || '').trim()
+    if (!value) return ''
+    const matched = value.match(/(https?:\/\/[^'"\s)]+|\/[^'"\s)]+)/i)
+    if (!matched?.[1]) return ''
+    return normalizeUrl(matched[1], baseUrl)
+  }
+
+  function appendCandidateUrl(candidateSet, rawValue, baseUrl = location.href) {
+    const resolved = readPossibleUrl(rawValue, baseUrl)
+    if (!resolved) return
+    if (!/^https?:\/\//i.test(resolved)) return
+    candidateSet.add(resolved)
+  }
+
+  function extractEditorialMarkdown(sourceDoc, fallbackTitle, pageUrl = location.href) {
+    const blocks = []
+    const headers = [...sourceDoc.querySelectorAll('h1,h2,h3,h4,.ui.header,.header')]
+
+    for (const header of headers) {
+      const headerText = (header.textContent || '').replace(/\s+/g, ' ').trim()
+      if (!isEditorialKeyword(headerText)) continue
+      const sibling = header.nextElementSibling
+      const contentRoot =
+        getDirectChildByClass(sibling, 'font-content') ||
+        sibling?.querySelector?.('.font-content') ||
+        sibling?.querySelector?.('.content') ||
+        sibling
+      const markdown = cleanupMarkdown(processChildren(contentRoot, pageUrl, sourceDoc))
+      if (markdown.length >= 20) {
+        blocks.push({ title: headerText, markdown })
+      }
+    }
+
+    if (blocks.length > 0) {
+      let output = `# 题解：${fallbackTitle}\n\n`
+      for (const block of blocks) {
+        output += `## ${block.title}\n\n${block.markdown}\n\n`
+      }
+      return cleanupMarkdown(output)
+    }
+
+    const pageTitle = (sourceDoc.querySelector('h1.ui.header, h1')?.textContent || sourceDoc.title || '').replace(/\s+/g, ' ').trim()
+    const contentRoot =
+      sourceDoc.querySelector('.font-content') ||
+      sourceDoc.querySelector('.ui.bottom.attached.segment .font-content') ||
+      sourceDoc.querySelector('.ui.attached.segment .font-content') ||
+      sourceDoc.querySelector('article') ||
+      sourceDoc.querySelector('main') ||
+      sourceDoc.querySelector('.padding') ||
+      null
+    if (!contentRoot) return ''
+
+    const body = cleanupMarkdown(processChildren(contentRoot, pageUrl, sourceDoc))
+    if (body.length < 40) return ''
+    const heading = isEditorialKeyword(pageTitle) ? pageTitle : `题解：${fallbackTitle}`
+    return cleanupMarkdown(`# ${heading}\n\n${body}`)
+  }
+
+  function findEditorialCandidateUrls(ids) {
+    const candidates = new Set()
+    const pageHtml = document.documentElement?.outerHTML || ''
+
+    const interactiveNodes = [...document.querySelectorAll('a[href], button[onclick], [data-href], [data-url], .item, .button')]
+    for (const node of interactiveNodes) {
+      const text = (node.textContent || '').replace(/\s+/g, ' ').trim()
+      const href = node.getAttribute?.('href') || ''
+      const dataHref = node.getAttribute?.('data-href') || ''
+      const dataUrl = node.getAttribute?.('data-url') || ''
+      const onclick = node.getAttribute?.('onclick') || ''
+      const rawCombined = `${href} ${dataHref} ${dataUrl} ${onclick}`
+      if (!isEditorialKeyword(text) && !isEditorialKeyword(rawCombined)) continue
+      appendCandidateUrl(candidates, href)
+      appendCandidateUrl(candidates, dataHref)
+      appendCandidateUrl(candidates, dataUrl)
+      appendCandidateUrl(candidates, onclick)
+    }
+
+    const rawMatches = [...pageHtml.matchAll(/(["'`])(\/[^"'`]*(?:solution|editorial|analysis|answer|discuss|discussion)[^"'`]*)\1/ig)]
+    for (const match of rawMatches) {
+      appendCandidateUrl(candidates, match[2])
+    }
+
+    const problemBase = ids?.contestId
+      ? `/contest/${ids.contestId}/problem/${ids.problemNumber}`
+      : `/problem/${ids.problemNumber}`
+    const suffixes = [
+      '/solution',
+      '/editorial',
+      '/analysis',
+      '/answer',
+      '/discuss',
+      '/discussion',
+      '?tab=solution',
+      '?tab=editorial',
+      '?show=solution',
+      '?show=editorial',
+    ]
+    suffixes.forEach((suffix) => appendCandidateUrl(candidates, `${problemBase}${suffix}`))
+
+    return [...candidates]
+  }
+
+  async function fetchEditorial(ids, fallbackTitle, problemContent) {
+    const currentMarkdown = extractEditorialMarkdown(document, fallbackTitle, location.href)
+    if (currentMarkdown && cleanupMarkdown(currentMarkdown) !== cleanupMarkdown(problemContent)) {
+      return currentMarkdown
+    }
+
+    const candidates = findEditorialCandidateUrls(ids)
+    for (const url of candidates.slice(0, 12)) {
+      try {
+        const html = await fetchText(url)
+        if (!html || /<title>\s*(登录|Login)/i.test(html)) continue
+        const doc = new DOMParser().parseFromString(html, 'text/html')
+        const markdown = extractEditorialMarkdown(doc, fallbackTitle, normalizeUrl(url))
+        if (!markdown) continue
+        if (cleanupMarkdown(markdown) === cleanupMarkdown(problemContent)) continue
+        return markdown
+      } catch {
+        // continue
+      }
+    }
+
+    return ''
   }
 
   function extractLimits() {
@@ -1110,7 +1354,23 @@ async function collectCurrentYbtOjProblem() {
     if (!response.ok) throw new Error(`下载失败: ${response.status}`)
     const contentType = (response.headers.get('content-type') || '').toLowerCase()
     if (contentType.includes('text/html')) throw new Error('附件下载返回了 HTML 页面')
+    const contentDisposition = response.headers.get('content-disposition') || ''
+    const contentLength = Number(response.headers.get('content-length') || 0)
+    if (contentLength > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        contentDisposition,
+        size: contentLength,
+        skippedBinary: true,
+      }
+    }
     const buffer = await response.arrayBuffer()
+    if (buffer.byteLength > MAX_INLINE_ATTACHMENT_BYTES) {
+      return {
+        contentDisposition,
+        size: buffer.byteLength,
+        skippedBinary: true,
+      }
+    }
     const bytes = new Uint8Array(buffer)
     let binary = ''
     const chunkSize = 0x8000
@@ -1118,7 +1378,7 @@ async function collectCurrentYbtOjProblem() {
       binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
     }
     return {
-      contentDisposition: response.headers.get('content-disposition') || '',
+      contentDisposition,
       base64: btoa(binary),
       size: buffer.byteLength,
     }
@@ -1203,10 +1463,11 @@ async function collectCurrentYbtOjProblem() {
     try {
       const binary = await fetchBinary(sourceUrl)
       additionalFile = {
-        filename: parseFilename(binary.contentDisposition, sourceUrl.split('/').pop() || `${ids.problemNumber}.zip`),
-        base64: binary.base64,
+        filename: parseFilename(binary.headers.contentDisposition, sourceUrl.split('/').pop() || `${ids.problemNumber}.zip`),
         size: binary.size,
         sourceUrl,
+        ...(binary.base64 ? { base64: binary.base64 } : {}),
+        ...(binary.skippedBinary ? { skippedBinary: true } : {}),
       }
     } catch {
       additionalFile = {
@@ -1227,10 +1488,21 @@ async function collectCurrentYbtOjProblem() {
     acCode = ''
   }
 
+  let editorial = ''
+  try {
+    editorial = await Promise.race([
+      fetchEditorial(ids, title, content),
+      new Promise((resolve) => setTimeout(() => resolve(''), 12000)),
+    ])
+  } catch {
+    editorial = ''
+  }
+
   return {
     url: location.href,
     title,
     content,
+    editorial,
     acCode,
     additionalFile,
     timeLimit,
@@ -1562,6 +1834,19 @@ async function flashActionBadge(tabId, text, color) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'PROGRAMTOOLS_FETCH_ATTACHMENT') {
+    ;(async () => {
+      try {
+        const payload = await fetchAttachmentBinary(message.payload || {})
+        sendResponse({ ok: true, payload })
+      } catch (error) {
+        sendResponse({ ok: false, error: error.message || '附件下载失败' })
+      }
+    })()
+
+    return true
+  }
+
   if (!['PROGRAMTOOLS_IMPORT_CURRENT_PAGE', 'PROGRAMTOOLS_IMPORT_CURRENT_MNA_PAGE'].includes(message?.type)) return false
 
   ;(async () => {

@@ -1,3 +1,5 @@
+import { stripFreopenStatements } from './codeCleaning'
+
 export function createInitialGenerationSteps() {
   return {
     translate: 'pending',
@@ -18,13 +20,14 @@ export function hasMarkdownSolution(codeContent) {
 }
 
 export function buildSolutionRequestConfig({ problemText, manualCode, model, language }) {
-  const isExplainMode = !!String(manualCode || '').trim()
+  const cleanedManualCode = stripFreopenStatements(manualCode || '')
+  const isExplainMode = !!String(cleanedManualCode || '').trim()
   return isExplainMode
     ? {
         endpoint: '/api/solve',
         payload: {
           text: problemText,
-          acCode: manualCode,
+          acCode: cleanedManualCode,
           model,
           language,
         },
@@ -65,14 +68,14 @@ export function resolveDataGenerationInput({ taskSnapshot, extractPureCode }) {
     : (taskSnapshot?.problemText || '')
 
   const rawCode = hasManualCode
-    ? taskSnapshot?.manualCode
-    : (taskSnapshot?.serverPureCode || taskSnapshot?.codeOutput || '')
+    ? stripFreopenStatements(taskSnapshot?.manualCode || '')
+    : stripFreopenStatements(taskSnapshot?.serverPureCode || taskSnapshot?.codeOutput || '')
 
   return {
     hasManualCode,
     text,
     rawCode,
-    code: extractPureCode(rawCode || '') || rawCode || '',
+    code: stripFreopenStatements(extractPureCode(rawCode || '') || rawCode || ''),
   }
 }
 
@@ -95,6 +98,8 @@ export function buildSolutionReportPayload({
 
   if (!pureCode) {
     pureCode = codeFallbackMessage
+  } else {
+    pureCode = stripFreopenStatements(pureCode)
   }
 
   return {
