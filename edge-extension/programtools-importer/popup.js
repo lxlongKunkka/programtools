@@ -1,4 +1,5 @@
 const button = document.getElementById('importButton')
+const downloadEditorialButton = document.getElementById('downloadEditorialButton')
 const statusNode = document.getElementById('status')
 const targetOriginNode = document.getElementById('targetOrigin')
 
@@ -25,11 +26,13 @@ async function updatePopupByActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   const context = getPageContext(tab?.url || '')
   if (context?.mode === 'problem') {
+    downloadEditorialButton.style.display = 'none'
     button.textContent = '导入当前题目'
     setStatus(`当前是 ${context.site} 单题页，可直接导入。`)
     return
   }
   if (context?.mode === 'contest') {
+    downloadEditorialButton.style.display = context.strategy === 'scrape' ? 'block' : 'none'
     const collectionLabel = context.collectionLabel || '比赛'
     button.textContent = collectionLabel === '课程' ? '导入整门课程' : (collectionLabel === '题单' ? '导入整份题单' : '导入整场比赛')
     if (context.strategy === 'scrape') {
@@ -40,6 +43,7 @@ async function updatePopupByActiveTab() {
     }
     return
   }
+  downloadEditorialButton.style.display = 'none'
   button.textContent = '导入当前页面'
   setStatus('请先打开支持的网站页面。目前支持 MNA、AtCoder、核桃 OJ、NFLSOI、YbtOJ。')
 }
@@ -79,6 +83,29 @@ button.addEventListener('click', async () => {
   } catch (error) {
     setStatus(`失败：${error.message}`)
   } finally {
+    button.disabled = false
+  }
+})
+
+downloadEditorialButton.addEventListener('click', async () => {
+  downloadEditorialButton.disabled = true
+  button.disabled = true
+  setStatus('正在抓取比赛题解并生成 Markdown...')
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'PROGRAMTOOLS_DOWNLOAD_CONTEST_EDITORIALS',
+    })
+
+    if (!response?.ok) {
+      throw new Error(response?.error || '题解下载失败')
+    }
+
+    setStatus(`下载成功。\n${response.collectionLabel || '比赛'}：${response.contestTitle || '未命名'}\n已导出 ${response.exportedCount || 0} 题题解，缺失 ${response.missingCount || 0} 题。`)
+  } catch (error) {
+    setStatus(`失败：${error.message}`)
+  } finally {
+    downloadEditorialButton.disabled = false
     button.disabled = false
   }
 })

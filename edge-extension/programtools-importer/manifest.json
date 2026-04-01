@@ -5,6 +5,7 @@
   "description": "从 MNA、AtCoder、核桃 OJ、NFLSOI、YbtOJ 页面导入题目到 SolveData。",
   "permissions": [
     "activeTab",
+    "downloads",
     "tabs",
     "scripting"
   ],

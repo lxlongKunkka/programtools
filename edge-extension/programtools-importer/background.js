@@ -7,6 +7,14 @@ const DEFAULT_TARGET_ORIGIN = 'https://ai.acjudge.com'
 const ATTACHMENT_CACHE_TTL = 30 * 60 * 1000
 const attachmentCache = new Map()
 
+function sanitizeDownloadFileName(value, fallback = 'editorials') {
+  const text = String(value || '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text || fallback
+}
+
 function cleanupAttachmentCache() {
   const now = Date.now()
   for (const [cacheKey, entry] of attachmentCache.entries()) {
@@ -1791,6 +1799,117 @@ async function importCollection(activeTab, targetOrigin, context) {
   }
 }
 
+function buildContestEditorialMarkdown(contestInfo, collectedProblems) {
+  const collectionLabel = contestInfo?.collectionLabel || '比赛'
+  const title = String(contestInfo?.title || '未命名比赛').trim()
+  const items = Array.isArray(collectedProblems) ? collectedProblems : []
+  let markdown = `# ${title}${collectionLabel === '题单' ? ' 题解汇总' : ' 比赛题解汇总'}\n\n`
+
+  const withEditorial = items.filter((item) => String(item?.editorial || '').trim())
+  const withoutEditorial = items.filter((item) => !String(item?.editorial || '').trim())
+
+  markdown += `- 共 ${items.length} 题\n`
+  markdown += `- 已抓到题解 ${withEditorial.length} 题\n`
+  markdown += `- 未抓到题解 ${withoutEditorial.length} 题\n\n`
+
+  withEditorial.forEach((item, index) => {
+    const problemTitle = String(item?.title || item?.label || item?.url || `题目 ${index + 1}`).trim()
+    markdown += `## ${index + 1}. ${problemTitle}\n\n`
+    if (item?.url) {
+      markdown += `原题链接：${item.url}\n\n`
+    }
+    markdown += `${String(item.editorial).trim()}\n\n`
+  })
+
+  if (withoutEditorial.length > 0) {
+    markdown += '## 未抓到题解的题目\n\n'
+    withoutEditorial.forEach((item, index) => {
+      const problemTitle = String(item?.title || item?.label || item?.url || `题目 ${index + 1}`).trim()
+      markdown += `- ${problemTitle}${item?.url ? ` (${item.url})` : ''}\n`
+    })
+    markdown += '\n'
+  }
+
+  return markdown.trim() + '\n'
+}
+
+async function downloadContestEditorials(activeTab, context) {
+  if (!activeTab?.id || !context?.site || context.mode !== 'contest' || context.strategy !== 'scrape') {
+    throw new Error('当前页面不支持直接下载比赛题解')
+  }
+
+  let contestInfo = null
+  if (context.site === 'MNA') {
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentMnaCollection)
+  } else if (context.site === 'NFLSOI') {
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentNflsoiCollection)
+  } else if (context.site === 'YbtOJ') {
+    contestInfo = await runScriptInTab(activeTab.id, collectCurrentYbtOjCollection)
+  } else {
+    throw new Error(`暂不支持 ${context.site} 比赛题解下载`)
+  }
+
+  if (!contestInfo?.problems?.length) {
+    throw new Error(`未能在当前${contestInfo?.collectionLabel || '页面'}找到题目列表`)
+  }
+
+  const collectorTabId = await createHiddenCollectorTab(contestInfo.problems[0].url)
+  const collectedProblems = []
+
+  try {
+    for (const problem of contestInfo.problems) {
+      try {
+        const payload = await collectProblemPayloadFromUrl(collectorTabId, problem.url, context.site)
+        collectedProblems.push({
+          ...problem,
+          title: payload?.title || problem.label || problem.url,
+          url: payload?.url || problem.url,
+          editorial: payload?.editorial || '',
+        })
+      } catch {
+        collectedProblems.push({
+          ...problem,
+          title: problem.label || problem.url,
+          url: problem.url,
+          editorial: '',
+        })
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+  } finally {
+    await chrome.tabs.remove(collectorTabId)
+  }
+
+  const exportedCount = collectedProblems.filter((item) => String(item.editorial || '').trim()).length
+  if (exportedCount === 0) {
+    throw new Error('没有抓到任何可导出的题解')
+  }
+
+  const markdown = buildContestEditorialMarkdown(contestInfo, collectedProblems)
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  try {
+    await chrome.downloads.download({
+      url,
+      filename: `${sanitizeDownloadFileName(contestInfo.title, 'contest')}_editorials.md`,
+      saveAs: true,
+      conflictAction: 'uniquify',
+    })
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60 * 1000)
+  }
+
+  return {
+    ok: true,
+    mode: 'contest',
+    site: context.site,
+    collectionLabel: contestInfo.collectionLabel || '比赛',
+    contestTitle: contestInfo.title,
+    exportedCount,
+    missingCount: collectedProblems.length - exportedCount,
+  }
+}
+
 async function importSupportedUrl(activeTab, targetOrigin, context) {
   if (!activeTab?.url) {
     throw new Error('当前标签页没有可导入的链接')
@@ -1841,6 +1960,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: true, payload })
       } catch (error) {
         sendResponse({ ok: false, error: error.message || '附件下载失败' })
+      }
+    })()
+
+    return true
+  }
+
+  if (message?.type === 'PROGRAMTOOLS_DOWNLOAD_CONTEST_EDITORIALS') {
+    ;(async () => {
+      try {
+        const activeTab = await getActiveTab()
+        const context = getImportContext(activeTab?.url)
+        const result = await downloadContestEditorials(activeTab, context)
+        sendResponse(result)
+      } catch (error) {
+        sendResponse({ ok: false, error: error.message || '题解下载失败' })
       }
     })()
 

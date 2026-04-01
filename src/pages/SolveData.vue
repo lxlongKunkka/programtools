@@ -1483,8 +1483,6 @@ export default {
           return
         }
 
-        await this.ensureTaskListAdditionalFilesLoaded(completedTasks, '正在通过扩展下载附件...')
-        
         const { blob, zipName } = await createBatchExportBundle({
           JSZip,
           completedTasks,
@@ -1518,7 +1516,6 @@ export default {
 
       try {
         const JSZip = await loadJsZip()
-        await this.ensureTaskListAdditionalFilesLoaded(pendingTasks, '正在通过扩展补全附件...')
         const { blob, zipName } = await createRawMaterialsExportBundle({
           JSZip,
           tasks: pendingTasks,
@@ -1547,7 +1544,6 @@ export default {
 
       try {
         const JSZip = await loadJsZip()
-        await this.ensureTaskAdditionalFileLoaded(this.currentTaskIndex, { silent: true })
         const { blob, zipName } = await createRawMaterialsExportBundle({
           JSZip,
           tasks: [currentTask],
@@ -2603,8 +2599,7 @@ export default {
     getAdditionalFileTitle(additionalFile) {
       if (!additionalFile) return ''
       if (additionalFile.base64) return '点击下载 ' + additionalFile.filename
-      if (this.canFetchAdditionalFileFromExtension(additionalFile)) return '点击通过 Edge 扩展下载附件'
-      if (additionalFile.skippedBinary && additionalFile.sourceUrl) return '附件过大，未缓存二进制；点击打开原始附件链接'
+      if (additionalFile.skippedBinary && additionalFile.sourceUrl) return '附件较大，点击从原站直接下载'
       if (additionalFile.sourceUrl) return '当前未缓存二进制，点击打开原始附件链接'
       return '附件（本次会话后需重新获取）'
     },
@@ -2616,22 +2611,13 @@ export default {
         await this.downloadSampleZip()
         return
       }
-      if (this.canFetchAdditionalFileFromExtension(af)) {
-        try {
-          await this.downloadSampleZip()
-        } catch (error) {
-          console.error('Download additional file from extension failed:', error)
-          this.showToastMessage('附件下载失败: ' + error.message)
-        }
-        return
-      }
       if (af.sourceUrl) {
         window.open(af.sourceUrl, '_blank', 'noopener')
       }
     },
     
     async downloadSampleZip(taskIndex = this.currentTaskIndex) {
-      const af = await this.ensureTaskAdditionalFileLoaded(taskIndex, { silent: true })
+      const af = this.tasks[taskIndex]?.additionalFile
       if (!af?.base64) return
       const binaryStr = atob(af.base64)
       const bytes = new Uint8Array(binaryStr.length)
@@ -2684,7 +2670,6 @@ export default {
         
         const JSZip = await loadJsZip()
         const zip = new JSZip()
-        await this.ensureTaskAdditionalFileLoaded(this.currentTaskIndex, { silent: true })
         // 修正 ZIP 文件时间戳为东八区 (UTC+8)
         const now = new Date()
         const beijingString = now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' })
