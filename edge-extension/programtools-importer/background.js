@@ -4,8 +4,6 @@ async function getActiveTab() {
 }
 
 const DEFAULT_TARGET_ORIGIN = 'https://ai.acjudge.com'
-const ATTACHMENT_CACHE_TTL = 30 * 60 * 1000
-const attachmentCache = new Map()
 
 function sanitizeDownloadFileName(value, fallback = 'editorials') {
   const text = String(value || '')
@@ -13,77 +11,6 @@ function sanitizeDownloadFileName(value, fallback = 'editorials') {
     .replace(/\s+/g, ' ')
     .trim()
   return text || fallback
-}
-
-function cleanupAttachmentCache() {
-  const now = Date.now()
-  for (const [cacheKey, entry] of attachmentCache.entries()) {
-    if (!entry || now - entry.cachedAt > ATTACHMENT_CACHE_TTL) {
-      attachmentCache.delete(cacheKey)
-    }
-  }
-}
-
-function parseResponseFilename(contentDisposition, fallback = 'attachment') {
-  if (!contentDisposition) return fallback
-  const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
-  const raw = match?.[1] || match?.[2]
-  if (!raw) return fallback
-  try {
-    return decodeURIComponent(raw)
-  } catch {
-    return raw
-  }
-}
-
-function encodeBytesToBase64(bytes) {
-  let binary = ''
-  const chunkSize = 0x8000
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
-  }
-  return btoa(binary)
-}
-
-async function fetchAttachmentBinary({ sourceUrl, filename }) {
-  const normalizedUrl = String(sourceUrl || '').trim()
-  if (!normalizedUrl) throw new Error('缺少附件链接')
-
-  cleanupAttachmentCache()
-  const cached = attachmentCache.get(normalizedUrl)
-  if (cached) {
-    return {
-      ...cached,
-      cachedAt: undefined,
-    }
-  }
-
-  const response = await fetch(normalizedUrl, { credentials: 'include' })
-  if (!response.ok) {
-    throw new Error(`附件下载失败: HTTP ${response.status}`)
-  }
-
-  const contentType = (response.headers.get('content-type') || 'application/octet-stream').toLowerCase()
-  if (contentType.includes('text/html')) {
-    throw new Error('附件请求返回了 HTML 页面，请确认当前账号仍有附件访问权限')
-  }
-
-  const buffer = await response.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
-  const payload = {
-    filename: parseResponseFilename(response.headers.get('content-disposition') || '', filename || normalizedUrl.split('/').pop() || 'attachment'),
-    size: bytes.length,
-    base64: encodeBytesToBase64(bytes),
-    sourceUrl: normalizedUrl,
-    contentType,
-  }
-
-  attachmentCache.set(normalizedUrl, {
-    ...payload,
-    cachedAt: Date.now(),
-  })
-
-  return payload
 }
 
 function isAtcoderProblemUrl(url) {
@@ -1953,19 +1880,6 @@ async function flashActionBadge(tabId, text, color) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === 'PROGRAMTOOLS_FETCH_ATTACHMENT') {
-    ;(async () => {
-      try {
-        const payload = await fetchAttachmentBinary(message.payload || {})
-        sendResponse({ ok: true, payload })
-      } catch (error) {
-        sendResponse({ ok: false, error: error.message || '附件下载失败' })
-      }
-    })()
-
-    return true
-  }
-
   if (message?.type === 'PROGRAMTOOLS_DOWNLOAD_CONTEST_EDITORIALS') {
     ;(async () => {
       try {

@@ -64,31 +64,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true
 })
 
-window.addEventListener('message', (event) => {
-  const data = event?.data
-  if (event.source !== window) return
-  if (!data || data.source !== 'programtools-solvedata-page') return
-  if (data.type !== 'programtools-fetch-extension-attachment') return
-
-  chrome.runtime.sendMessage({
-    type: 'PROGRAMTOOLS_FETCH_ATTACHMENT',
-    payload: data.payload || {},
-  }).then((response) => {
-    window.postMessage({
-      source: 'programtools-edge-extension',
-      type: 'programtools-fetch-extension-attachment-result',
-      requestId: data.requestId,
-      ok: !!response?.ok,
-      payload: response?.payload || null,
-      error: response?.error || '',
-    }, window.location.origin)
-  }).catch((error) => {
-    window.postMessage({
-      source: 'programtools-edge-extension',
-      type: 'programtools-fetch-extension-attachment-result',
-      requestId: data.requestId,
-      ok: false,
-      error: error?.message || '扩展附件下载失败',
-    }, window.location.origin)
-  })
-})

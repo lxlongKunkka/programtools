@@ -127,7 +127,7 @@
           </div>
           <span
             v-if="tasks[currentTaskIndex]?.additionalFile"
-            :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 || canFetchAdditionalFileFromExtension(tasks[currentTaskIndex].additionalFile) }]"
+            :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 }]"
             :title="getAdditionalFileTitle(tasks[currentTaskIndex].additionalFile)"
             @click="openAdditionalFile()"
           >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ Math.round(tasks[currentTaskIndex].additionalFile.size / 1024) }} KB)</span>
@@ -1596,95 +1596,6 @@ export default {
           .catch(e => console.error('邮件请求错误:', e))
       } catch (error) {
         console.error('邮件准备失败:', error)
-      }
-    },
-
-    canFetchAdditionalFileFromExtension(additionalFile) {
-      return !!(additionalFile?.sourceUrl && additionalFile?.provider === 'edge-extension')
-    },
-
-    createExtensionAttachmentRequestId() {
-      return `attachment_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    },
-
-    async requestAdditionalFileFromExtension(additionalFile) {
-      if (!this.canFetchAdditionalFileFromExtension(additionalFile)) {
-        throw new Error('当前附件不支持通过扩展重新下载')
-      }
-
-      const requestId = this.createExtensionAttachmentRequestId()
-      return await new Promise((resolve, reject) => {
-        const timeoutId = window.setTimeout(() => {
-          window.removeEventListener('message', handleMessage)
-          reject(new Error('扩展附件下载超时，请确认 Edge 扩展仍处于启用状态'))
-        }, 60000)
-
-        const handleMessage = (event) => {
-          const data = event?.data
-          if (event.source !== window) return
-          if (!data || data.source !== 'programtools-edge-extension') return
-          if (data.type !== 'programtools-fetch-extension-attachment-result') return
-          if (data.requestId !== requestId) return
-
-          window.clearTimeout(timeoutId)
-          window.removeEventListener('message', handleMessage)
-          if (!data.ok || !data.payload?.base64) {
-            reject(new Error(data.error || '扩展未能返回附件内容'))
-            return
-          }
-          resolve(data.payload)
-        }
-
-        window.addEventListener('message', handleMessage)
-        window.postMessage({
-          source: 'programtools-solvedata-page',
-          type: 'programtools-fetch-extension-attachment',
-          requestId,
-          payload: {
-            sourceUrl: additionalFile.sourceUrl,
-            filename: additionalFile.filename,
-          },
-        }, window.location.origin)
-      })
-    },
-
-    async ensureTaskAdditionalFileLoaded(taskIndex = this.currentTaskIndex, options = {}) {
-      const task = this.tasks[taskIndex]
-      const additionalFile = task?.additionalFile
-      if (!additionalFile) return null
-      if (additionalFile.base64) return additionalFile
-      if (!this.canFetchAdditionalFileFromExtension(additionalFile)) return additionalFile
-
-      const silent = !!options.silent
-      if (!silent) {
-        this.showToastMessage(`正在通过扩展下载附件 ${additionalFile.filename}...`)
-      }
-
-      const fetched = await this.requestAdditionalFileFromExtension(additionalFile)
-      const nextAdditionalFile = {
-        ...additionalFile,
-        ...fetched,
-        provider: 'edge-extension',
-        skippedBinary: false,
-      }
-      this.tasks[taskIndex] = {
-        ...task,
-        additionalFile: nextAdditionalFile,
-      }
-      return nextAdditionalFile
-    },
-
-    async ensureTaskListAdditionalFilesLoaded(taskList, progressMessage = '') {
-      const list = Array.isArray(taskList) ? taskList : []
-      const indices = list
-        .map(task => this.tasks.indexOf(task))
-        .filter(index => index >= 0)
-
-      if (indices.length === 0) return
-      if (progressMessage) this.showToastMessage(progressMessage)
-
-      for (const index of indices) {
-        await this.ensureTaskAdditionalFileLoaded(index, { silent: true })
       }
     },
 
