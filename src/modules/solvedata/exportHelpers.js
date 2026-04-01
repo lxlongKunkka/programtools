@@ -158,6 +158,7 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
   const masterZip = new JSZip()
   const exportTime = getBeijingExportTime()
   const zipOptions = createZipOptions(exportTime)
+  const attachmentLinkLines = []
 
   for (let index = 0; index < completedTasks.length; index++) {
     const task = completedTasks[index]
@@ -217,7 +218,18 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
       } catch (error) {
         console.warn('Failed to add sample.zip to zip:', error)
       }
+    } else if (task.additionalFile?.sourceUrl) {
+      folder.file('additional_file/source_url.txt', String(task.additionalFile.sourceUrl).trim(), zipOptions)
+      attachmentLinkLines.push([
+        `${prefix}_${title}`,
+        task.additionalFile.filename ? `附件名: ${task.additionalFile.filename}` : '',
+        String(task.additionalFile.sourceUrl).trim(),
+      ].filter(Boolean).join('\n'))
     }
+  }
+
+  if (attachmentLinkLines.length) {
+    masterZip.file('attachment_links.txt', attachmentLinkLines.join('\n\n'), zipOptions)
   }
 
   masterZip.file('run_all_tasks.bat', buildBatchRunAllBat(), zipOptions)
