@@ -1,7 +1,31 @@
+const DEFAULT_MAIN_MODEL = 'o4-mini'
+const MAIN_MODEL_STORAGE_KEY = 'programtools_default_main_model'
 const DEFAULT_TRANSLATION_MODEL = 'gemini-3-flash-preview'
 const TRANSLATION_MODEL_STORAGE_KEY = 'programtools_default_translation_model'
 const DEFAULT_REPORT_MODEL = 'gemini-3-flash-preview'
 const REPORT_MODEL_STORAGE_KEY = 'programtools_default_report_model'
+
+export function getDefaultMainModel() {
+  if (typeof window === 'undefined') return DEFAULT_MAIN_MODEL
+  try {
+    const saved = window.localStorage.getItem(MAIN_MODEL_STORAGE_KEY)
+    return String(saved || '').trim() || DEFAULT_MAIN_MODEL
+  } catch (_) {
+    return DEFAULT_MAIN_MODEL
+  }
+}
+
+export function setDefaultMainModel(modelId) {
+  const normalized = String(modelId || '').trim() || DEFAULT_MAIN_MODEL
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(MAIN_MODEL_STORAGE_KEY, normalized)
+    } catch (_) {
+      // Ignore storage failures and keep the in-memory choice.
+    }
+  }
+  return normalized
+}
 
 export function getDefaultTranslationModel() {
   if (typeof window === 'undefined') return DEFAULT_TRANSLATION_MODEL
@@ -60,4 +84,4 @@ export function resolvePreferredModel(models, preferredModel, fallbackModel = DE
   return preferred || fallback || DEFAULT_TRANSLATION_MODEL
 }
 
-export { DEFAULT_REPORT_MODEL, DEFAULT_TRANSLATION_MODEL }
+export { DEFAULT_MAIN_MODEL, DEFAULT_REPORT_MODEL, DEFAULT_TRANSLATION_MODEL }

@@ -6,7 +6,7 @@
     <h2>Solve + Data 生成器</h2>
     <div class="top-controls">
       <label>模型:</label>
-      <select v-model="selectedModel">
+      <select v-model="selectedModel" @change="updateMainModelPreference">
         <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
       </select>
       <label style="margin-left:12px;">语言:</label>
@@ -317,7 +317,7 @@
 import { nextTick } from 'vue'
 import request from '../utils/request'
 import { getModels } from '../utils/models'
-import { getDefaultReportModel, getDefaultTranslationModel, resolvePreferredModel, setDefaultReportModel, setDefaultTranslationModel } from '../utils/modelPreferences'
+import { getDefaultMainModel, getDefaultReportModel, getDefaultTranslationModel, resolvePreferredModel, setDefaultMainModel, setDefaultReportModel, setDefaultTranslationModel } from '../utils/modelPreferences'
 import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
 import { loadJsZip } from '../utils/loadJsZip'
 import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
@@ -341,7 +341,7 @@ export default {
       problemText: '',
       codeOutput: '',
       dataOutput: '',
-      selectedModel: 'o4-mini',
+      selectedModel: getDefaultMainModel(),
       translationModel: getDefaultTranslationModel(),
       reportModel: getDefaultReportModel(),
       showTranslationModelConfig: false,
@@ -849,6 +849,12 @@ export default {
 
     getMetaReportModel() {
       return this.reportModel
+    },
+
+    updateMainModelPreference() {
+      const resolved = resolvePreferredModel(this.modelOptions, this.selectedModel, getDefaultMainModel())
+      this.selectedModel = setDefaultMainModel(resolved)
+      this.showToastMessage(`默认主模型已切换为 ${resolved}`)
     },
 
     updateTranslationModelPreference() {
@@ -1649,13 +1655,10 @@ export default {
         const list = await getModels()
         if (Array.isArray(list) && list.length > 0) {
           this.models = list
-          // 如果当前选中的模型不在列表中，则默认选第一个
-          const ids = list.map(m => m.id)
-          if (!ids.includes(this.selectedModel)) {
-            this.selectedModel = list[0].id
-          }
+          this.selectedModel = resolvePreferredModel(list, this.selectedModel, getDefaultMainModel())
           this.translationModel = resolvePreferredModel(list, this.translationModel)
           this.reportModel = resolvePreferredModel(list, this.reportModel)
+          setDefaultMainModel(this.selectedModel)
           setDefaultTranslationModel(this.translationModel)
           setDefaultReportModel(this.reportModel)
         }
