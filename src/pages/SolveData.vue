@@ -322,6 +322,7 @@ import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
 import { loadJsZip } from '../utils/loadJsZip'
 import { createEmptyTask, createTaskId, hasValidTaskMeta } from '../modules/solvedata/taskState'
 import { buildBatchReportRequest, getPendingBatchTaskEntries, runBatchTasks } from '../modules/solvedata/batchHelpers'
+import { hydrateTaskAttachmentCache, syncTaskAttachmentCache } from '../modules/solvedata/attachmentCache'
 import { stripFreopenStatements } from '../modules/solvedata/codeCleaning'
 import { blobToBase64, createBatchExportBundle, createRawMaterialsExportBundle, hasTaskPendingRawMaterials, hasTaskRawMaterials } from '../modules/solvedata/exportHelpers'
 import { buildMetaRequestPayload, buildSolutionReportPayload, buildSolutionRequestConfig, createInitialGenerationSteps, mergeGeneratedMeta, resolveDataGenerationInput } from '../modules/solvedata/generationHelpers'
@@ -426,6 +427,8 @@ export default {
       }
     } catch (e) { console.error('Failed to load tasks', e) }
 
+    this.restoreTaskAttachmentCache()
+
     // 恢复上次输入的 URL
     const savedUrl = localStorage.getItem('solve_fetch_url')
     if (savedUrl) this.fetchUrl = savedUrl
@@ -435,6 +438,10 @@ export default {
   beforeUnmount() {
     window.removeEventListener('message', this.handleExtensionImportMessage)
     window.removeEventListener('storage', this.handleExtensionStorageChange)
+    if (this._taskAttachmentCacheSyncTimer) {
+      window.clearTimeout(this._taskAttachmentCacheSyncTimer)
+      this._taskAttachmentCacheSyncTimer = null
+    }
   },
   watch: {
     // 监听当前任务数据的变化，同步到 tasks 数组
@@ -465,6 +472,7 @@ export default {
     tasks: {
       handler(val) {
         this.persistTasksSnapshot(val)
+        this.queueTaskAttachmentCacheSync(val)
       },
       deep: true
     }
@@ -536,6 +544,27 @@ export default {
   methods: {
     createTaskId() {
       return createTaskId()
+    },
+
+    async restoreTaskAttachmentCache() {
+      const hydratedTasks = await hydrateTaskAttachmentCache(this.tasks)
+      if (!Array.isArray(hydratedTasks) || !hydratedTasks.length) return
+      this.tasks = hydratedTasks
+      if (this.tasks[this.currentTaskIndex]) {
+        this.loadTask(this.currentTaskIndex)
+      }
+    },
+
+    queueTaskAttachmentCacheSync(taskList = this.tasks) {
+      if (this._taskAttachmentCacheSyncTimer) {
+        window.clearTimeout(this._taskAttachmentCacheSyncTimer)
+      }
+      const snapshot = Array.isArray(taskList) ? taskList.slice() : []
+      this._taskAttachmentCacheSyncTimer = window.setTimeout(() => {
+        syncTaskAttachmentCache(snapshot).catch((error) => {
+          console.warn('Failed to sync attachment cache:', error)
+        })
+      }, 120)
     },
 
     ensureExtensionImportRequestState() {
