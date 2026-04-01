@@ -445,7 +445,6 @@ async function collectCurrentMnaProblem() {
     } catch {
       additionalFile = {
         filename: `additional_file_${groupId}_${problemNumber}.zip`,
-        size: 0,
         sourceUrl,
       }
     }
@@ -810,7 +809,6 @@ async function collectCurrentNflsoiProblem() {
     } catch {
       additionalFile = {
         filename: sourceUrl.split('/').pop() || `${ids.pid}.zip`,
-        size: 0,
         sourceUrl,
       }
     }
@@ -1407,7 +1405,6 @@ async function collectCurrentYbtOjProblem() {
     } catch {
       additionalFile = {
         filename: sourceUrl.split('/').pop() || `${ids.problemNumber}.zip`,
-        size: 0,
         sourceUrl,
       }
     }

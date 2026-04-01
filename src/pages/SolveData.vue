@@ -130,7 +130,7 @@
             :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 }]"
             :title="getAdditionalFileTitle(tasks[currentTaskIndex].additionalFile)"
             @click="openAdditionalFile()"
-          >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ Math.round(tasks[currentTaskIndex].additionalFile.size / 1024) }} KB)</span>
+          >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ formatAdditionalFileSize(tasks[currentTaskIndex].additionalFile) }})</span>
           <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱ {{ problemMeta.timeLimit }}ms</span>
           <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
         </div>
@@ -2550,8 +2550,16 @@ export default {
       if (!additionalFile) return ''
       if (additionalFile.base64) return '点击下载 ' + additionalFile.filename
       if (additionalFile.skippedBinary && additionalFile.sourceUrl) return '附件较大，点击从原站直接下载'
+      if (!(Number(additionalFile.size) > 0) && additionalFile.sourceUrl) return '未获取到附件大小，点击打开原始附件链接'
       if (additionalFile.sourceUrl) return '当前未缓存二进制，点击打开原始附件链接'
       return '附件（本次会话后需重新获取）'
+    },
+
+    formatAdditionalFileSize(additionalFile) {
+      const size = Number(additionalFile?.size || 0)
+      if (size > 0) return `${Math.round(size / 1024)} KB`
+      if (additionalFile?.base64) return '已缓存'
+      return '大小未知'
     },
 
     async openAdditionalFile() {
