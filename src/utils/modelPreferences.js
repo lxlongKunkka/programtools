@@ -5,70 +5,74 @@ const TRANSLATION_MODEL_STORAGE_KEY = 'programtools_default_translation_model'
 const DEFAULT_REPORT_MODEL = 'gemini-3-flash-preview'
 const REPORT_MODEL_STORAGE_KEY = 'programtools_default_report_model'
 
-export function getDefaultMainModel() {
-  if (typeof window === 'undefined') return DEFAULT_MAIN_MODEL
+function readStoredPreference(key) {
+  if (typeof window === 'undefined') return ''
   try {
-    const saved = window.localStorage.getItem(MAIN_MODEL_STORAGE_KEY)
-    return String(saved || '').trim() || DEFAULT_MAIN_MODEL
+    const sessionValue = window.sessionStorage.getItem(key)
+    if (String(sessionValue || '').trim()) return String(sessionValue).trim()
   } catch (_) {
-    return DEFAULT_MAIN_MODEL
+    // Ignore sessionStorage failures.
   }
+  try {
+    return String(window.localStorage.getItem(key) || '').trim()
+  } catch (_) {
+    return ''
+  }
+}
+
+function writeStoredPreference(key, value) {
+  if (typeof window === 'undefined') return value
+  try {
+    window.localStorage.setItem(key, value)
+    try {
+      window.sessionStorage.removeItem(key)
+    } catch (_) {
+      // Ignore session cleanup failures.
+    }
+    return value
+  } catch (_) {
+    try {
+      window.localStorage.removeItem(key)
+    } catch (_) {
+      // Ignore cleanup failures.
+    }
+    try {
+      window.sessionStorage.setItem(key, value)
+    } catch (_) {
+      // Ignore storage failures and keep the in-memory choice.
+    }
+    return value
+  }
+}
+
+export function getDefaultMainModel() {
+  const saved = readStoredPreference(MAIN_MODEL_STORAGE_KEY)
+  return saved || DEFAULT_MAIN_MODEL
 }
 
 export function setDefaultMainModel(modelId) {
   const normalized = String(modelId || '').trim() || DEFAULT_MAIN_MODEL
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem(MAIN_MODEL_STORAGE_KEY, normalized)
-    } catch (_) {
-      // Ignore storage failures and keep the in-memory choice.
-    }
-  }
-  return normalized
+  return writeStoredPreference(MAIN_MODEL_STORAGE_KEY, normalized)
 }
 
 export function getDefaultTranslationModel() {
-  if (typeof window === 'undefined') return DEFAULT_TRANSLATION_MODEL
-  try {
-    const saved = window.localStorage.getItem(TRANSLATION_MODEL_STORAGE_KEY)
-    return String(saved || '').trim() || DEFAULT_TRANSLATION_MODEL
-  } catch (_) {
-    return DEFAULT_TRANSLATION_MODEL
-  }
+  const saved = readStoredPreference(TRANSLATION_MODEL_STORAGE_KEY)
+  return saved || DEFAULT_TRANSLATION_MODEL
 }
 
 export function setDefaultTranslationModel(modelId) {
   const normalized = String(modelId || '').trim() || DEFAULT_TRANSLATION_MODEL
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem(TRANSLATION_MODEL_STORAGE_KEY, normalized)
-    } catch (_) {
-      // Ignore storage failures and keep the in-memory choice.
-    }
-  }
-  return normalized
+  return writeStoredPreference(TRANSLATION_MODEL_STORAGE_KEY, normalized)
 }
 
 export function getDefaultReportModel() {
-  if (typeof window === 'undefined') return DEFAULT_REPORT_MODEL
-  try {
-    const saved = window.localStorage.getItem(REPORT_MODEL_STORAGE_KEY)
-    return String(saved || '').trim() || DEFAULT_REPORT_MODEL
-  } catch (_) {
-    return DEFAULT_REPORT_MODEL
-  }
+  const saved = readStoredPreference(REPORT_MODEL_STORAGE_KEY)
+  return saved || DEFAULT_REPORT_MODEL
 }
 
 export function setDefaultReportModel(modelId) {
   const normalized = String(modelId || '').trim() || DEFAULT_REPORT_MODEL
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem(REPORT_MODEL_STORAGE_KEY, normalized)
-    } catch (_) {
-      // Ignore storage failures and keep the in-memory choice.
-    }
-  }
-  return normalized
+  return writeStoredPreference(REPORT_MODEL_STORAGE_KEY, normalized)
 }
 
 export function resolvePreferredModel(models, preferredModel, fallbackModel = DEFAULT_TRANSLATION_MODEL) {

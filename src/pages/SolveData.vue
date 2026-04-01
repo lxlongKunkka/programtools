@@ -328,6 +328,8 @@ import { buildMetaRequestPayload, buildSolutionReportPayload, buildSolutionReque
 import { createExtensionImportedTask, createFetchedProblemTask, getExtensionImportSuccessMessage, mergeImportedTasks, normalizeExtensionImportRequest, readFolderImportedTasks } from '../modules/solvedata/importHelpers'
 import { buildReportAutoSolutionPrompt, extractStreamingFieldPreview, hasResolvedMetaTitle, mergeTranslationMeta } from '../modules/solvedata/translationReportHelpers'
 
+const SOLVE_DATA_TASKS_STORAGE_KEY = 'solve_data_tasks'
+
 export default {
   name: 'SolveData',
   inject: ['showToastMessage'],
@@ -402,7 +404,7 @@ export default {
     
     // 尝试从 localStorage 恢复任务列表
     try {
-      const savedTasks = localStorage.getItem('solve_data_tasks')
+      const savedTasks = this.loadStoredTasksSnapshot()
       if (savedTasks) {
         this.tasks = JSON.parse(savedTasks)
         this.tasks = this.tasks.map((task) => {
@@ -462,19 +464,7 @@ export default {
     },
     tasks: {
       handler(val) {
-        try {
-          // 存储前去掉 additionalFile.base64（二进制大文件），避免超出 localStorage 5MB 限制
-          // 保留 filename/size 用于界面提示，base64 仅在内存中保存
-          const toSave = val.map(t => {
-            if (!t.additionalFile) return t
-            const { base64, ...rest } = t.additionalFile
-            return { ...t, additionalFile: rest }
-          })
-          localStorage.setItem('solve_data_tasks', JSON.stringify(toSave))
-        } catch (e) {
-          // 仍然超额时（如 reportHtml 太大）静默忽略，不影响功能
-          console.warn('localStorage quota exceeded, skipping save:', e.message)
-        }
+        this.persistTasksSnapshot(val)
       },
       deep: true
     }
@@ -1347,6 +1337,52 @@ export default {
           this.tasks[this.currentTaskIndex].status = 'pending'
         }
         this.tasks[this.currentTaskIndex][field] = normalizedValue
+      }
+    },
+
+    createTasksSnapshot(taskList) {
+      return (Array.isArray(taskList) ? taskList : []).map(t => {
+        if (!t?.additionalFile) return t
+        const { base64, ...rest } = t.additionalFile
+        return { ...t, additionalFile: rest }
+      })
+    },
+
+    loadStoredTasksSnapshot() {
+      try {
+        const sessionValue = sessionStorage.getItem(SOLVE_DATA_TASKS_STORAGE_KEY)
+        if (sessionValue) return sessionValue
+      } catch (_) {
+        // Ignore sessionStorage failures.
+      }
+      try {
+        return localStorage.getItem(SOLVE_DATA_TASKS_STORAGE_KEY)
+      } catch (_) {
+        return null
+      }
+    },
+
+    persistTasksSnapshot(taskList) {
+      try {
+        const payload = JSON.stringify(this.createTasksSnapshot(taskList))
+        localStorage.setItem(SOLVE_DATA_TASKS_STORAGE_KEY, payload)
+        try {
+          sessionStorage.removeItem(SOLVE_DATA_TASKS_STORAGE_KEY)
+        } catch (_) {
+          // Ignore session cleanup failures.
+        }
+      } catch (e) {
+        try {
+          localStorage.removeItem(SOLVE_DATA_TASKS_STORAGE_KEY)
+        } catch (_) {
+          // Ignore cleanup failures.
+        }
+        try {
+          const payload = JSON.stringify(this.createTasksSnapshot(taskList))
+          sessionStorage.setItem(SOLVE_DATA_TASKS_STORAGE_KEY, payload)
+        } catch (_) {
+          console.warn('Browser storage quota exceeded, skipping SolveData task save:', e.message)
+        }
       }
     },
 
