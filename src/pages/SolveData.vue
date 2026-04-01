@@ -198,6 +198,15 @@
         <template v-else-if="activeTab === 'reference'">
           <div class="reference-pane">
             <div class="ref-section-label">
+              💡 参考思路 / 官方题解（可选）
+              <button @click="referenceText = ''" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
+            </div>
+            <textarea
+              v-model="referenceText"
+              placeholder="在此输入题解、思路或官方解析。比赛批量导入抓到的题解也会显示在这里..."
+              class="content-textarea ref-textarea"
+            ></textarea>
+            <div class="ref-section-label">
               🔧 手动 AC 代码（可选）
               <button @click="clearManualCode" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
             </div>
@@ -493,7 +502,7 @@ export default {
         return this.codeOutput.replace(/<!--\s*AC_CODE\s*-->/g, '')
       }
       if (this.manualCode && this.manualCode.trim()) {
-        return '```\n' + this.manualCode + '\n```'
+        return '```\n' + stripFreopenStatements(this.manualCode) + '\n```'
       }
       return ''
     },
@@ -870,7 +879,7 @@ export default {
         }
         
         if (maxLen > 20) {
-           this.manualCode = bestMatch[1].trim()
+            this.manualCode = stripFreopenStatements(bestMatch[1].trim())
            this.showToastMessage('已提取代码到下方输入框')
            return
         }
@@ -1305,7 +1314,7 @@ export default {
       // 但由于 Vue 2/3 响应式机制，直接赋值会触发 watcher
       // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
       this.problemText = task.problemText || ''
-      this.manualCode = task.manualCode || ''
+      this.manualCode = stripFreopenStatements(task.manualCode || '')
       this.referenceText = task.referenceText || ''
       this.codeOutput = task.codeOutput || ''
       this.dataOutput = task.dataOutput || ''
@@ -1318,24 +1327,28 @@ export default {
     
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
+        const normalizedValue = field === 'manualCode' ? stripFreopenStatements(value) : value
         // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
         if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
             this.tasks[this.currentTaskIndex].status === 'completed' && 
             !this.isBatchRunning &&
-            value !== this.tasks[this.currentTaskIndex][field]) {
+            normalizedValue !== this.tasks[this.currentTaskIndex][field]) {
           this.tasks[this.currentTaskIndex].status = 'pending'
         }
-        this.tasks[this.currentTaskIndex][field] = value
+        this.tasks[this.currentTaskIndex][field] = normalizedValue
       }
     },
 
     // 将某个字段值写入指定任务。若该任务正是当前正在查看的任务，
     // 则写入响应式属性（触发 watcher → UI 刷新）；否则直接写 tasks[] 避免污染当前视图。
     saveToTask(taskIndex, field, value) {
+      const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
+        ? stripFreopenStatements(value)
+        : value
       if (taskIndex === this.currentTaskIndex) {
-        this[field] = value
+        this[field] = normalizedValue
       } else if (this.tasks[taskIndex]) {
-        this.tasks[taskIndex][field] = value
+        this.tasks[taskIndex][field] = normalizedValue
       }
     },
 
@@ -2411,8 +2424,7 @@ export default {
     
     saveCode() {
       const extension = this.language === 'C++' ? 'cpp' : this.language === 'Python' ? 'py' : 'java'
-      // 优先使用 codeOutput (AI 生成的优化代码)，其次使用 manualCode
-      const contentToSave = (this.codeOutput && this.codeOutput.trim()) ? this.codeOutput : this.manualCode
+      const contentToSave = this.getBestCodeContent(this.codeOutput, this.manualCode)
       const blob = new Blob([contentToSave], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')

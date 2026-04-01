@@ -40,6 +40,29 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
+function stripFreopenStatements(content) {
+  if (!content) return ''
+  const lines = String(content).split(/\r?\n/)
+  const keptLines = []
+  let skippingFreopen = false
+
+  for (const line of lines) {
+    if (!skippingFreopen && /\bfreopen\s*\(/.test(line)) {
+      skippingFreopen = !/;/.test(line)
+      continue
+    }
+
+    if (skippingFreopen) {
+      if (/;/.test(line)) skippingFreopen = false
+      continue
+    }
+
+    keptLines.push(line)
+  }
+
+  return keptLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 async function uploadToCos(key, content) {
   if (!isCosConfigured()) {
         throw new Error('COS not configured')
@@ -1160,8 +1183,9 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const lang = language || 'C++'
+    const cleanedAcCode = stripFreopenStatements(acCode || '')
     // 若提供了 AC 代码，切换到讲解/注释模式；否则使用独立解题（CoT）模式
-    const hasAcCode = acCode && acCode.trim()
+    const hasAcCode = cleanedAcCode && cleanedAcCode.trim()
     const prompt = hasAcCode ? getSolveWithCodePrompt(lang) : getSolvePrompt(lang)
 
     const apiUrl = YUN_API_URL
@@ -1171,7 +1195,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     let userContent = text
     if (hasAcCode) {
       // AC 代码讲解模式：将代码附在题目后
-      userContent = `${text}\n\n---\n## 参考 AC 代码\n\n\`\`\`${lang.toLowerCase()}\n${acCode.trim()}\n\`\`\``
+      userContent = `${text}\n\n---\n## 参考 AC 代码\n\n\`\`\`${lang.toLowerCase()}\n${cleanedAcCode.trim()}\n\`\`\``
     } else if (referenceText && referenceText.trim()) {
       // 向后兼容：保留旧的 referenceText 拼接
       userContent = `${text}\n\n---\n## 参考思路（官方题解）\n\n${referenceText.trim()}`
