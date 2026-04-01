@@ -150,7 +150,7 @@ async function runScriptInTab(tabId, func, args = []) {
 }
 
 async function collectCurrentMnaProblem() {
-  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+  const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
   function parseFilename(contentDisposition, fallback) {
     if (!contentDisposition) return fallback
@@ -475,7 +475,7 @@ async function collectCurrentMnaProblem() {
 }
 
 async function collectCurrentNflsoiProblem() {
-  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+  const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
   function normalizeUrl(urlOrPath, baseUrl = location.href) {
     try {
@@ -838,7 +838,7 @@ async function collectCurrentNflsoiProblem() {
 }
 
 async function collectCurrentYbtOjProblem() {
-  const MAX_INLINE_ATTACHMENT_BYTES = 2 * 1024 * 1024
+  const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
   function normalizeUrl(urlOrPath, baseUrl = location.href) {
     try {
