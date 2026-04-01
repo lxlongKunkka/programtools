@@ -194,29 +194,9 @@
           ></textarea>
         </template>
 
-        <!-- 参考思路 + 手动代码 -->
+        <!-- 手动代码 -->
         <template v-else-if="activeTab === 'reference'">
           <div class="reference-pane">
-            <div class="ref-section-label">
-              🧾 官方题解 Markdown
-              <button @click="copyEditorial" :disabled="!editorialText" class="btn-ghost btn-sm" style="margin-left:8px;">复制</button>
-              <button @click="downloadEditorial" :disabled="!editorialText" class="btn-ghost btn-sm" style="margin-left:8px;">下载 MD</button>
-              <button @click="editorialText = ''" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
-            </div>
-            <textarea
-              v-model="editorialText"
-              placeholder="比赛批量导入抓到的官方题解会显示在这里，并可单独下载为 markdown..."
-              class="content-textarea ref-textarea"
-            ></textarea>
-            <div class="ref-section-label">
-              💡 参考思路 / 补充备注（可选）
-              <button @click="referenceText = ''" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
-            </div>
-            <textarea
-              v-model="referenceText"
-              placeholder="这里保留给你手工填写的思路、备注或教案提示，不再默认承载导入题解..."
-              class="content-textarea ref-textarea"
-            ></textarea>
             <div class="ref-section-label">
               🔧 手动 AC 代码（可选）
               <button @click="clearManualCode" class="btn-ghost btn-sm" style="margin-left:8px;">清空</button>
