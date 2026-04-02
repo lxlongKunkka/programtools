@@ -15,12 +15,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     ? { kind: 'url', payload: message.payload }
     : { kind: 'task', payload: message.payload }
 
-  localStorage.setItem(payloadKey, JSON.stringify(requestPayload))
-  localStorage.setItem(pointerKey, requestId)
+  let storagePayloadSaved = false
+  try {
+    localStorage.setItem(payloadKey, JSON.stringify(requestPayload))
+    localStorage.setItem(pointerKey, requestId)
+    storagePayloadSaved = true
+  } catch (error) {
+    console.warn('ProgramTools importer payload too large for localStorage, fallback to direct page message only:', error)
+    try {
+      localStorage.removeItem(payloadKey)
+    } catch (_) {
+      // Ignore cleanup failures.
+    }
+  }
 
   const timeoutId = window.setTimeout(() => {
     window.removeEventListener('message', handlePageResult)
-    const rawResult = localStorage.getItem(resultKey)
+    const rawResult = storagePayloadSaved ? localStorage.getItem(resultKey) : null
     if (rawResult) {
       cleanup()
       localStorage.removeItem(resultKey)
@@ -48,7 +59,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (data.requestId !== requestId) return
 
     cleanup()
-    localStorage.removeItem(resultKey)
+    if (storagePayloadSaved) {
+      localStorage.removeItem(resultKey)
+      localStorage.removeItem(payloadKey)
+      localStorage.removeItem(pointerKey)
+    }
     sendResponse?.({ ok: !!data.ok, error: data.error || '' })
   }
 

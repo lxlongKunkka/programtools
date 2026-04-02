@@ -1,4 +1,5 @@
 import { stripFreopenStatements } from './codeCleaning'
+import { normalizeProblemMetaTitle } from './titleNormalization'
 
 export function createInitialGenerationSteps() {
   return {
@@ -52,13 +53,14 @@ export function buildMetaRequestPayload({ task, fallbackText, model, solution = 
 
 export function mergeGeneratedMeta(existingMeta, meta) {
   if (!meta) return existingMeta || {}
-  const safeExistingMeta = existingMeta || {}
+  const safeExistingMeta = normalizeProblemMetaTitle(existingMeta || {})
+  const safeMeta = normalizeProblemMetaTitle(meta)
   if (!safeExistingMeta.title || safeExistingMeta.title === '题目标题') {
-    return { ...safeExistingMeta, ...meta }
+    return normalizeProblemMetaTitle({ ...safeExistingMeta, ...safeMeta })
   }
 
-  const { title, ...rest } = meta
-  return { ...safeExistingMeta, ...rest }
+  const { title, ...rest } = safeMeta
+  return normalizeProblemMetaTitle({ ...safeExistingMeta, ...rest })
 }
 
 export function resolveDataGenerationInput({ taskSnapshot, extractPureCode }) {

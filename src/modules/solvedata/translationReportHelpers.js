@@ -1,3 +1,5 @@
+import { normalizeProblemMetaTitle, normalizeProblemTitle } from './titleNormalization'
+
 export function extractStreamingFieldPreview(rawBuffer, fieldName, startOffset = -1) {
   let nextStartOffset = startOffset
 
@@ -41,8 +43,9 @@ export function extractStreamingFieldPreview(rawBuffer, fieldName, startOffset =
 }
 
 export function mergeTranslationMeta(existingMeta, incomingMeta) {
-  const safeExistingMeta = existingMeta || {}
+  const safeExistingMeta = normalizeProblemMetaTitle(existingMeta || {})
   if (!incomingMeta) return safeExistingMeta
+  const safeIncomingMeta = normalizeProblemMetaTitle(incomingMeta)
 
   const existingTitle = safeExistingMeta.title
   const rawTitle = safeExistingMeta.rawTitle
@@ -51,13 +54,13 @@ export function mergeTranslationMeta(existingMeta, incomingMeta) {
     !existingTitle || existingTitle === '题目标题' || (existingTitle === rawTitle && !hasChinese)
   )
 
-  return {
+  return normalizeProblemMetaTitle({
     ...safeExistingMeta,
     tags: safeExistingMeta.titleFixed
       ? (safeExistingMeta.tags || [])
-      : (incomingMeta.tags && incomingMeta.tags.length ? incomingMeta.tags : (safeExistingMeta.tags || [])),
-    title: isPlaceholder ? (incomingMeta.title || existingTitle || '') : existingTitle,
-  }
+      : (safeIncomingMeta.tags && safeIncomingMeta.tags.length ? safeIncomingMeta.tags : (safeExistingMeta.tags || [])),
+    title: isPlaceholder ? normalizeProblemTitle(safeIncomingMeta.title || existingTitle || '', '题目标题') : existingTitle,
+  })
 }
 
 export function hasResolvedMetaTitle(meta) {

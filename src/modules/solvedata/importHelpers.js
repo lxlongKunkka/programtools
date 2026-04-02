@@ -1,5 +1,6 @@
 import { stripFreopenStatements } from './codeCleaning'
 import { createEmptyTask, isTaskInputEmpty } from './taskState'
+import { normalizeProblemTitle } from './titleNormalization'
 
 function extractFileNameFromUrl(url) {
   const value = String(url || '').trim()
@@ -76,7 +77,7 @@ export function getExtensionImportSuccessMessage(result) {
 }
 
 export function createExtensionImportedTask(payload) {
-  const title = (payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题').trim()
+  const title = normalizeProblemTitle(payload?.title || payload?.problemMeta?.title || payload?.url || '题目标题', '题目标题')
   return createEmptyTask({
     additionalFile: payload?.additionalFile
       ? { ...payload.additionalFile, provider: 'edge-extension' }
@@ -113,12 +114,13 @@ export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabe
   title = title.replace(/^\d+\s+/, '')
   title = title.replace(/^#?[A-Za-z]*\d+\.\s*/, '')
   title = title.replace(/^([A-Za-z])\. /, '$1 ')
+  title = normalizeProblemTitle(title, fallbackTitle || url || '题目标题')
 
   const atcoderMatch = url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/[^/]+_([a-z0-9]+)/i)
   if (atcoderMatch) {
     const contestId = atcoderMatch[1].toUpperCase()
     const label = atcoderMatch[2].toUpperCase()
-    const cleanTitle = title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim()
+    const cleanTitle = normalizeProblemTitle(title.replace(/^[A-Z0-9]+\s*[-\.]\s*/i, '').trim(), title)
     title = `[${contestId}${label}] ${cleanTitle}`
   }
 

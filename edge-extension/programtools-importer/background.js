@@ -4,6 +4,93 @@ async function getActiveTab() {
 }
 
 const DEFAULT_TARGET_ORIGIN = 'https://ai.acjudge.com'
+const MAX_IMPORTED_ATTACHMENT_BYTES = 5 * 1024 * 1024
+
+function parseAttachmentFilename(contentDisposition, fallback = 'attachment.zip') {
+  if (!contentDisposition) return fallback
+  const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+  const raw = match?.[1] || match?.[2]
+  if (!raw) return fallback
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
+function encodeBufferToBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+  return btoa(binary)
+}
+
+async function fetchAttachmentBinaryForImport(sourceUrl, fallbackFilename = 'attachment.zip') {
+  const normalizedUrl = String(sourceUrl || '').trim()
+  if (!normalizedUrl) throw new Error('缺少附件链接')
+
+  const response = await fetch(normalizedUrl, {
+    credentials: 'include',
+  })
+  if (!response.ok) throw new Error(`附件下载失败: ${response.status}`)
+
+  const contentType = (response.headers.get('content-type') || '').toLowerCase()
+  if (contentType.includes('text/html')) {
+    throw new Error('附件请求返回了 HTML 页面')
+  }
+
+  const contentDisposition = response.headers.get('content-disposition') || ''
+  const contentLength = Number(response.headers.get('content-length') || 0)
+  if (contentLength > MAX_IMPORTED_ATTACHMENT_BYTES) {
+    return {
+      filename: parseAttachmentFilename(contentDisposition, fallbackFilename),
+      size: contentLength,
+      sourceUrl: normalizedUrl,
+      skippedBinary: true,
+    }
+  }
+
+  const buffer = await response.arrayBuffer()
+  if (buffer.byteLength > MAX_IMPORTED_ATTACHMENT_BYTES) {
+    return {
+      filename: parseAttachmentFilename(contentDisposition, fallbackFilename),
+      size: buffer.byteLength,
+      sourceUrl: normalizedUrl,
+      skippedBinary: true,
+    }
+  }
+
+  return {
+    filename: parseAttachmentFilename(contentDisposition, fallbackFilename),
+    size: buffer.byteLength,
+    sourceUrl: normalizedUrl,
+    base64: encodeBufferToBase64(buffer),
+  }
+}
+
+async function enrichPayloadAttachmentBinary(payload) {
+  const additionalFile = payload?.additionalFile
+  if (!additionalFile?.sourceUrl || additionalFile?.base64) return payload
+
+  try {
+    const hydratedAttachment = await fetchAttachmentBinaryForImport(
+      additionalFile.sourceUrl,
+      additionalFile.filename || 'attachment.zip'
+    )
+    return {
+      ...payload,
+      additionalFile: {
+        ...additionalFile,
+        ...hydratedAttachment,
+      },
+    }
+  } catch {
+    return payload
+  }
+}
 
 function sanitizeDownloadFileName(value, fallback = 'editorials') {
   const text = String(value || '')
@@ -1648,6 +1735,8 @@ async function importSingleProblem(activeTab, targetOrigin, context) {
 
   if (!payload) throw new Error('未能抓取到题面数据')
 
+  payload = await enrichPayloadAttachmentBinary(payload)
+
   const solveDataTabId = await ensureSolveDataTab(targetOrigin)
   await sendTaskToSolveData(solveDataTabId, payload)
   return { ok: true, mode: 'problem', site: context.site, strategy: 'scrape' }
@@ -1691,7 +1780,8 @@ async function importCollection(activeTab, targetOrigin, context) {
   try {
     for (const problem of contestInfo.problems) {
       try {
-        const payload = await collectProblemPayloadFromUrl(collectorTabId, problem.url, context.site)
+        let payload = await collectProblemPayloadFromUrl(collectorTabId, problem.url, context.site)
+        payload = await enrichPayloadAttachmentBinary(payload)
         await sendTaskToSolveData(solveDataTabId, payload)
         importedCount += 1
       } catch (error) {

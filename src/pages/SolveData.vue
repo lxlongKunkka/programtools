@@ -327,6 +327,7 @@ import { stripFreopenStatements } from '../modules/solvedata/codeCleaning'
 import { blobToBase64, createBatchExportBundle, createRawMaterialsExportBundle, hasTaskPendingRawMaterials, hasTaskRawMaterials } from '../modules/solvedata/exportHelpers'
 import { buildMetaRequestPayload, buildSolutionReportPayload, buildSolutionRequestConfig, createInitialGenerationSteps, mergeGeneratedMeta, resolveDataGenerationInput } from '../modules/solvedata/generationHelpers'
 import { createExtensionImportedTask, createFetchedProblemTask, getExtensionImportSuccessMessage, mergeImportedTasks, normalizeExtensionImportRequest, readFolderImportedTasks } from '../modules/solvedata/importHelpers'
+import { normalizeProblemMetaTitle, normalizeProblemTitle } from '../modules/solvedata/titleNormalization'
 import { buildReportAutoSolutionPrompt, extractStreamingFieldPreview, hasResolvedMetaTitle, mergeTranslationMeta } from '../modules/solvedata/translationReportHelpers'
 
 const SOLVE_DATA_TASKS_STORAGE_KEY = 'solve_data_tasks'
@@ -466,7 +467,14 @@ export default {
     serverPureCode(val) { this.updateCurrentTask('serverPureCode', val) },
     reportHtml(val) { this.updateCurrentTask('reportHtml', val) },
     problemMeta: {
-      handler(val) { this.updateCurrentTask('problemMeta', val) },
+      handler(val) {
+        const normalizedMeta = normalizeProblemMetaTitle(val)
+        if (val?.title !== normalizedMeta?.title || val?.rawTitle !== normalizedMeta?.rawTitle) {
+          this.problemMeta = normalizedMeta
+          return
+        }
+        this.updateCurrentTask('problemMeta', normalizedMeta)
+      },
       deep: true
     },
     tasks: {
@@ -1107,7 +1115,7 @@ export default {
             }
         }
       }
-      return title.replace(/[\\/:*?"<>|]/g, '_').trim() || `task_${id}`
+      return normalizeProblemTitle(title.replace(/[\\/:*?"<>|]/g, '_').trim(), `task_${id}`)
     },
 
     // 获取最佳代码内容 (整合了 manualCode 的启发式检测)
@@ -1888,7 +1896,7 @@ export default {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          const name = (this.problemMeta?.rawTitle || this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          const name = normalizeProblemTitle((this.problemMeta?.rawTitle || this.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_'), 'problem')
           a.download = `${name}_en.md`;
           a.click();
           URL.revokeObjectURL(url);
@@ -1900,7 +1908,7 @@ export default {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          const name = (this.problemMeta?.title || this.problemMeta?.rawTitle || 'problem').replace(/[\\/:*?"<>|]/g, '_')
+          const name = normalizeProblemTitle((this.problemMeta?.title || this.problemMeta?.rawTitle || 'problem').replace(/[\\/:*?"<>|]/g, '_'), 'problem')
           a.download = `${name}_editorial.md`;
           a.click();
           URL.revokeObjectURL(url);
@@ -3244,10 +3252,11 @@ python data_generator.py
         yamlRawTitle = prefix ? `${prefix} ${titlePart}` : titlePart
       } else if (htojLabel) {
         // HTOJ 比赛题目：加 A/B/C/D 前缀
-        yamlRawTitle = `${htojLabel}. ${finalTitle}`
+        yamlRawTitle = `${htojLabel} ${finalTitle}`
       } else {
         yamlRawTitle = finalTitle
       }
+      yamlRawTitle = normalizeProblemTitle(yamlRawTitle, finalTitle)
       // YAML 中 [ 是特殊字符，含方括号的标题需加引号
       const yamlTitle = /[\[\]:{}&*!|>'"%@`]/.test(yamlRawTitle) ? `"${yamlRawTitle.replace(/"/g, '\\"')}"` : yamlRawTitle
       let yaml = `title: ${yamlTitle}\n`
