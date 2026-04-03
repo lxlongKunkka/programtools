@@ -165,6 +165,7 @@ const resolvedTagTargets = ref({})
 
 const GESP_CPP_GROUP_NAME = 'GESP C++ 认证课程'
 const TAG_ALIASES = {
+  组合数学: ['排列组合', '组合数', '组合'],
   树形结构: ['树与二叉树', '二叉树', '树']
 }
 
