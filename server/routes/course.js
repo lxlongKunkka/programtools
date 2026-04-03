@@ -3601,22 +3601,36 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     
     if (!targetChapter) return res.status(404).json({ error: 'Chapter not found' })
     
-    // Store problemIds directly as strings
-    const storedProblemIds = (problemIds || []).map(String)
-    const storedOptionalProblemIds = (optionalProblemIds || []).map(String)
-    const storedHomeworkIds = (homeworkIds || []).map(String)
-    const storedExamIds = (examIds || []).map(String)
-
-    targetChapter.title = title
-    targetChapter.content = content
-    targetChapter.contentType = contentType || 'markdown'
-    targetChapter.resourceUrl = resourceUrl || ''
-    targetChapter.videoUrl = videoUrl || ''
-    targetChapter.problemIds = storedProblemIds
-    targetChapter.optionalProblemIds = storedOptionalProblemIds
-    targetChapter.homeworkIds = storedHomeworkIds
-    targetChapter.examIds = storedExamIds
-    targetChapter.optional = !!optional
+    if (Object.prototype.hasOwnProperty.call(req.body, 'title')) {
+      targetChapter.title = title
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'content')) {
+      targetChapter.content = content
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'contentType')) {
+      targetChapter.contentType = contentType || 'markdown'
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'resourceUrl')) {
+      targetChapter.resourceUrl = resourceUrl || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'videoUrl')) {
+      targetChapter.videoUrl = videoUrl || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'problemIds')) {
+      targetChapter.problemIds = Array.isArray(problemIds) ? problemIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'optionalProblemIds')) {
+      targetChapter.optionalProblemIds = Array.isArray(optionalProblemIds) ? optionalProblemIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'homeworkIds')) {
+      targetChapter.homeworkIds = Array.isArray(homeworkIds) ? homeworkIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'examIds')) {
+      targetChapter.examIds = Array.isArray(examIds) ? examIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'optional')) {
+      targetChapter.optional = !!optional
+    }
     
     await level.save()
     res.json(level)
@@ -3834,20 +3848,33 @@ router.put('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(['a
     const chapter = level.chapters.find(c => c.id === req.params.chapterId)
     if (!chapter) return res.status(404).json({ error: 'Chapter not found' })
     
-    const resolvedIds = (problemIds || []).map(String)
-    const resolvedOptionalIds = (optionalProblemIds || []).map(String)
-    const resolvedHomeworkIds = (homeworkIds || []).map(String)
-    const resolvedExamIds = (examIds || []).map(String)
-
-    chapter.title = title
-    chapter.content = content
-    chapter.contentType = contentType || 'markdown'
-    chapter.resourceUrl = resourceUrl || ''
-    chapter.problemIds = resolvedIds
-    chapter.optionalProblemIds = resolvedOptionalIds
-    chapter.homeworkIds = resolvedHomeworkIds
-    chapter.examIds = resolvedExamIds
-    chapter.optional = !!optional
+    if (Object.prototype.hasOwnProperty.call(req.body, 'title')) {
+      chapter.title = title
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'content')) {
+      chapter.content = content
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'contentType')) {
+      chapter.contentType = contentType || 'markdown'
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'resourceUrl')) {
+      chapter.resourceUrl = resourceUrl || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'problemIds')) {
+      chapter.problemIds = Array.isArray(problemIds) ? problemIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'optionalProblemIds')) {
+      chapter.optionalProblemIds = Array.isArray(optionalProblemIds) ? optionalProblemIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'homeworkIds')) {
+      chapter.homeworkIds = Array.isArray(homeworkIds) ? homeworkIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'examIds')) {
+      chapter.examIds = Array.isArray(examIds) ? examIds.map(String) : []
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'optional')) {
+      chapter.optional = !!optional
+    }
     
     // No renumbering needed for update unless we support moving chapters (not yet)
     

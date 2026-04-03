@@ -1785,6 +1785,10 @@ export default {
           contentType: 'markdown', // We are setting this
           resourceUrl: this.editingChapter.resourceUrl,
           problemIdsStr: this.editingChapter.problemIdsStr,
+          optionalProblemIdsStr: this.editingChapter.optionalProblemIdsStr,
+          homeworkIdsStr: this.editingChapter.homeworkIdsStr,
+          examIdsStr: this.editingChapter.examIdsStr,
+          videoUrl: this.editingChapter.videoUrl,
           optional: this.editingChapter.optional
       }
       
@@ -1824,6 +1828,12 @@ export default {
             // Update server using captured IDs and state
             const problemIds = (targetChapterState.problemIdsStr || '')
                 .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const optionalProblemIds = (targetChapterState.optionalProblemIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const homeworkIds = (targetChapterState.homeworkIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const examIds = (targetChapterState.examIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
             await request(`/api/course/levels/${targetLevelId}/topics/${targetTopicId}/chapters/${targetChapterId}`, {
                 method: 'PUT',
@@ -1832,7 +1842,11 @@ export default {
                     content: targetChapterState.content,
                     contentType: targetChapterState.contentType,
                     resourceUrl: targetChapterState.resourceUrl,
+                videoUrl: targetChapterState.videoUrl || '',
                     problemIds: problemIds,
+                optionalProblemIds: optionalProblemIds,
+                homeworkIds: homeworkIds,
+                examIds: examIds,
                     optional: targetChapterState.optional
                 })
             })
@@ -1910,6 +1924,10 @@ export default {
           contentType: 'html', // We are setting this
           resourceUrl: this.editingChapter.resourceUrl,
           problemIdsStr: this.editingChapter.problemIdsStr,
+          optionalProblemIdsStr: this.editingChapter.optionalProblemIdsStr,
+          homeworkIdsStr: this.editingChapter.homeworkIdsStr,
+          examIdsStr: this.editingChapter.examIdsStr,
+          videoUrl: this.editingChapter.videoUrl,
           optional: this.editingChapter.optional
       }
 
@@ -1948,6 +1966,12 @@ export default {
             // Update server using captured IDs and state
             const problemIds = (targetChapterState.problemIdsStr || '')
                 .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const optionalProblemIds = (targetChapterState.optionalProblemIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const homeworkIds = (targetChapterState.homeworkIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
+            const examIds = (targetChapterState.examIdsStr || '')
+              .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
             await request(`/api/course/levels/${targetLevelId}/topics/${targetTopicId}/chapters/${targetChapterId}`, {
                 method: 'PUT',
@@ -1956,7 +1980,11 @@ export default {
                     content: targetChapterState.content,
                     contentType: targetChapterState.contentType,
                     resourceUrl: targetChapterState.resourceUrl,
+                videoUrl: targetChapterState.videoUrl || '',
                     problemIds: problemIds,
+                optionalProblemIds: optionalProblemIds,
+                homeworkIds: homeworkIds,
+                examIds: examIds,
                     optional: targetChapterState.optional
                 })
             })
