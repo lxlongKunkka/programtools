@@ -47,6 +47,21 @@ function buildTopicChapterIdRemap(levelDoc) {
   return remap
 }
 
+function buildChapterUidIdMap(levelDoc) {
+  const chapterUidIdMap = new Map()
+
+  for (const topic of levelDoc?.topics || []) {
+    const chapters = Array.isArray(topic?.chapters) ? topic.chapters : []
+    for (const chapter of chapters) {
+      if (chapter?._id && chapter?.id) {
+        chapterUidIdMap.set(String(chapter._id), String(chapter.id))
+      }
+    }
+  }
+
+  return chapterUidIdMap
+}
+
 function remapChapterIdList(values, remap) {
   const result = []
   const seen = new Set()
@@ -87,7 +102,7 @@ function remapChapterProgress(progressMap, remap) {
 async function migrateReferences(remap, apply) {
   const remapEntries = [...remap.entries()].filter(([prevId, nextId]) => prevId && nextId && prevId !== nextId)
   if (!remapEntries.length) {
-    return { progressUpdated: 0, activitiesUpdated: 0 }
+    return { progressUpdated: 0 }
   }
 
   let progressUpdated = 0
@@ -119,16 +134,61 @@ async function migrateReferences(remap, apply) {
     }
   }
 
+  return { progressUpdated }
+}
+
+async function reconcileActivities(chapterUidIdMap, apply) {
+  const chapterUids = [...chapterUidIdMap.keys()].filter(Boolean)
+  if (!chapterUids.length) {
+    return { activitiesUpdated: 0 }
+  }
+
+  const activities = await CourseActivity.find({
+    chapterUid: { $in: chapterUids }
+  }).sort({ lastActiveAt: -1, _id: 1 })
+
+  const grouped = new Map()
+
+  for (const activity of activities) {
+    const chapterUid = activity?.chapterUid ? String(activity.chapterUid) : ''
+    const targetChapterId = chapterUidIdMap.get(chapterUid)
+    if (!targetChapterId) continue
+
+    const key = [activity.userId, targetChapterId, activity.action, activity.sessionDate].join('::')
+    if (!grouped.has(key)) {
+      grouped.set(key, { targetChapterId, docs: [] })
+    }
+    grouped.get(key).docs.push(activity)
+  }
+
   let activitiesUpdated = 0
-  for (const [prevId, nextId] of remapEntries) {
-    const count = await CourseActivity.countDocuments({ chapterId: prevId })
-    activitiesUpdated += count
-    if (apply && count > 0) {
-      await CourseActivity.updateMany({ chapterId: prevId }, { $set: { chapterId: nextId } })
+
+  for (const { targetChapterId, docs } of grouped.values()) {
+    if (!docs.length) continue
+
+    const primary = docs.find(doc => String(doc.chapterId) === targetChapterId) || docs[0]
+    const duplicates = docs.filter(doc => String(doc._id) !== String(primary._id))
+    const needsIdUpdate = String(primary.chapterId) !== targetChapterId
+
+    if (!duplicates.length && !needsIdUpdate) continue
+
+    activitiesUpdated += duplicates.length + (needsIdUpdate ? 1 : 0)
+
+    if (!apply) continue
+
+    if (duplicates.length) {
+      await CourseActivity.deleteMany({
+        _id: { $in: duplicates.map(doc => doc._id) }
+      })
+    }
+
+    if (needsIdUpdate) {
+      primary.chapterId = targetChapterId
+      await primary.save()
     }
   }
 
-  return { progressUpdated, activitiesUpdated }
+  return { activitiesUpdated }
 }
 
 async function main() {
@@ -146,25 +206,28 @@ async function main() {
 
   for (const levelDoc of levels) {
     const remap = buildTopicChapterIdRemap(levelDoc)
+    const chapterUidIdMap = buildChapterUidIdMap(levelDoc)
     const remapEntries = [...remap.entries()].filter(([prevId, nextId]) => prevId !== nextId)
-    if (!remapEntries.length) continue
 
-    touchedLevels += 1
-    totalRemappedIds += remapEntries.length
+    if (remapEntries.length) {
+      touchedLevels += 1
+      totalRemappedIds += remapEntries.length
 
-    console.log(`LEVEL ${levelDoc.level} | ${levelDoc.title} | ${levelDoc.group || ''} | ${levelDoc.subject || ''}`)
-    for (const [prevId, nextId] of remapEntries) {
-      console.log(`  ${prevId} -> ${nextId}`)
+      console.log(`LEVEL ${levelDoc.level} | ${levelDoc.title} | ${levelDoc.group || ''} | ${levelDoc.subject || ''}`)
+      for (const [prevId, nextId] of remapEntries) {
+        console.log(`  ${prevId} -> ${nextId}`)
+      }
     }
 
-    if (apply) {
+    if (apply && remapEntries.length) {
       levelDoc.markModified('topics')
       await levelDoc.save()
     }
 
     const migrated = await migrateReferences(remap, apply)
+    const reconciled = await reconcileActivities(chapterUidIdMap, apply)
     totalProgressUpdated += migrated.progressUpdated
-    totalActivitiesUpdated += migrated.activitiesUpdated
+    totalActivitiesUpdated += reconciled.activitiesUpdated
   }
 
   console.log(`Touched levels: ${touchedLevels}`)

@@ -91,6 +91,20 @@ function buildTopicChapterIdRemap(level) {
   return chapterIdRemap
 }
 
+function buildChapterUidIdMap(level) {
+  const chapterUidIdMap = new Map()
+
+  for (const topic of level?.topics || []) {
+    for (const chapter of topic?.chapters || []) {
+      if (chapter?._id && chapter?.id) {
+        chapterUidIdMap.set(String(chapter._id), String(chapter.id))
+      }
+    }
+  }
+
+  return chapterUidIdMap
+}
+
 function remapChapterIdList(values, chapterIdRemap) {
   const result = []
   const seen = new Set()
@@ -158,15 +172,46 @@ async function migrateChapterIdReferences(chapterIdRemap) {
     await progress.save()
   }
 
-  const activityOps = remapEntries.map(([prevId, nextId]) => ({
-    updateMany: {
-      filter: { chapterId: prevId },
-      update: { $set: { chapterId: nextId } }
-    }
-  }))
+}
 
-  if (activityOps.length) {
-    await CourseActivity.bulkWrite(activityOps, { ordered: false })
+async function reconcileCourseActivityChapterIds(chapterUidIdMap) {
+  const chapterUids = [...chapterUidIdMap.keys()].filter(Boolean)
+  if (!chapterUids.length) return
+
+  const activities = await CourseActivity.find({
+    chapterUid: { $in: chapterUids }
+  }).sort({ lastActiveAt: -1, _id: 1 })
+
+  const groupedActivities = new Map()
+
+  for (const activity of activities) {
+    const chapterUid = activity?.chapterUid ? String(activity.chapterUid) : ''
+    const targetChapterId = chapterUidIdMap.get(chapterUid)
+    if (!targetChapterId) continue
+
+    const groupKey = [activity.userId, targetChapterId, activity.action, activity.sessionDate].join('::')
+    if (!groupedActivities.has(groupKey)) {
+      groupedActivities.set(groupKey, { targetChapterId, docs: [] })
+    }
+    groupedActivities.get(groupKey).docs.push(activity)
+  }
+
+  for (const { targetChapterId, docs } of groupedActivities.values()) {
+    if (!docs.length) continue
+
+    const primary = docs.find(doc => String(doc.chapterId) === targetChapterId) || docs[0]
+    const duplicates = docs.filter(doc => String(doc._id) !== String(primary._id))
+
+    if (duplicates.length) {
+      await CourseActivity.deleteMany({
+        _id: { $in: duplicates.map(doc => doc._id) }
+      })
+    }
+
+    if (String(primary.chapterId) !== targetChapterId) {
+      primary.chapterId = targetChapterId
+      await primary.save()
+    }
   }
 }
 
@@ -3350,9 +3395,11 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
     }
 
     const chapterIdRemap = buildTopicChapterIdRemap(level)
+    const chapterUidIdMap = buildChapterUidIdMap(level)
     level.markModified('topics')
     await level.save()
     await migrateChapterIdReferences(chapterIdRemap)
+    await reconcileCourseActivityChapterIds(chapterUidIdMap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -3451,9 +3498,11 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
     }
     
     const chapterIdRemap = buildTopicChapterIdRemap(level)
+    const chapterUidIdMap = buildChapterUidIdMap(level)
     level.markModified('topics')
     await level.save()
     await migrateChapterIdReferences(chapterIdRemap)
+    await reconcileCourseActivityChapterIds(chapterUidIdMap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
