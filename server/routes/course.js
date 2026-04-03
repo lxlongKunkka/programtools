@@ -72,6 +72,104 @@ async function resolveProblemIds(problemIdStrings) {
     return resolvedIds
 }
 
+function buildTopicChapterIdRemap(level) {
+  const chapterIdRemap = new Map()
+
+  for (let topicIndex = 0; topicIndex < (level?.topics || []).length; topicIndex++) {
+    const topic = level.topics[topicIndex]
+    for (let chapterIndex = 0; chapterIndex < (topic?.chapters || []).length; chapterIndex++) {
+      const chapter = topic.chapters[chapterIndex]
+      const nextId = `${level.level}-${topicIndex + 1}-${chapterIndex + 1}`
+      const prevId = String(chapter?.id || '')
+      if (prevId && prevId !== nextId) {
+        chapterIdRemap.set(prevId, nextId)
+      }
+      chapter.id = nextId
+    }
+  }
+
+  return chapterIdRemap
+}
+
+function remapChapterIdList(values, chapterIdRemap) {
+  const result = []
+  const seen = new Set()
+
+  for (const value of Array.isArray(values) ? values : []) {
+    const nextValue = chapterIdRemap.get(String(value)) || String(value)
+    if (!nextValue || seen.has(nextValue)) continue
+    seen.add(nextValue)
+    result.push(nextValue)
+  }
+
+  return result
+}
+
+function remapChapterProgressMap(chapterProgress, chapterIdRemap) {
+  const entries = chapterProgress instanceof Map
+    ? [...chapterProgress.entries()]
+    : Object.entries(chapterProgress || {})
+
+  const nextEntries = new Map()
+
+  for (const [chapterId, chapterData] of entries) {
+    const nextChapterId = chapterIdRemap.get(String(chapterId)) || String(chapterId)
+    const solvedProblems = Array.isArray(chapterData?.solvedProblems)
+      ? chapterData.solvedProblems.filter(Boolean).map(item => String(item))
+      : []
+
+    if (!nextEntries.has(nextChapterId)) {
+      nextEntries.set(nextChapterId, { solvedProblems: [] })
+    }
+
+    const current = nextEntries.get(nextChapterId)
+    current.solvedProblems = [...new Set([...(current.solvedProblems || []), ...solvedProblems])]
+  }
+
+  return nextEntries
+}
+
+async function migrateChapterIdReferences(chapterIdRemap) {
+  const remapEntries = [...chapterIdRemap.entries()].filter(([prevId, nextId]) => prevId && nextId && prevId !== nextId)
+  if (!remapEntries.length) return
+
+  const remapMap = new Map(remapEntries)
+  const progressDocs = await UserProgress.find({}).select('unlockedChapters completedChapters chapterProgress')
+
+  for (const progress of progressDocs) {
+    const nextUnlocked = remapChapterIdList(progress.unlockedChapters || [], remapMap)
+    const nextCompleted = remapChapterIdList(progress.completedChapters || [], remapMap)
+    const nextChapterProgress = remapChapterProgressMap(progress.chapterProgress, remapMap)
+
+    const prevProgressEntries = progress.chapterProgress instanceof Map
+      ? [...progress.chapterProgress.entries()]
+      : Object.entries(progress.chapterProgress || {})
+    const nextProgressEntries = [...nextChapterProgress.entries()]
+
+    const hasUnlockedChanged = JSON.stringify(progress.unlockedChapters || []) !== JSON.stringify(nextUnlocked)
+    const hasCompletedChanged = JSON.stringify(progress.completedChapters || []) !== JSON.stringify(nextCompleted)
+    const hasChapterProgressChanged = JSON.stringify(prevProgressEntries) !== JSON.stringify(nextProgressEntries)
+
+    if (!hasUnlockedChanged && !hasCompletedChanged && !hasChapterProgressChanged) continue
+
+    progress.unlockedChapters = nextUnlocked
+    progress.completedChapters = nextCompleted
+    progress.chapterProgress = nextChapterProgress
+    await progress.save()
+  }
+
+  const activityOps = remapEntries.map(([prevId, nextId]) => ({
+    updateMany: {
+      filter: { chapterId: prevId },
+      update: { $set: { chapterId: nextId } }
+    }
+  }))
+
+  if (activityOps.length) {
+    await CourseActivity.bulkWrite(activityOps, { ordered: false })
+  }
+}
+
 function normalizeSubjectLevels(progress) {
   let subjectLevels = progress?.subjectLevels
 
@@ -3251,7 +3349,10 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
       level.topics.push(newTopic)
     }
 
+    const chapterIdRemap = buildTopicChapterIdRemap(level)
+    level.markModified('topics')
     await level.save()
+    await migrateChapterIdReferences(chapterIdRemap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -3349,7 +3450,10 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
       }
     }
     
+    const chapterIdRemap = buildTopicChapterIdRemap(level)
+    level.markModified('topics')
     await level.save()
+    await migrateChapterIdReferences(chapterIdRemap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
