@@ -13,6 +13,9 @@ function readGespTagMap() {
 }
 
 const GESP_CPP_GROUP_NAME = 'GESP C++ 认证课程'
+const TAG_ALIASES = {
+  树形结构: ['树与二叉树', '二叉树', '树']
+}
 
 function normalizeCourseText(value) {
   return String(value || '')
@@ -50,20 +53,29 @@ function resolveTagTarget(tag, legacyChapterId, chapterTargetById, chapterEntrie
     return chapterTargetById.get(legacyId)
   }
 
-  const normalizedTag = normalizeCourseText(tag)
-  if (!normalizedTag) return null
+  const preferredLevel = Number.parseInt(legacyId.split('-')[0], 10)
+  const scopedEntries = Number.isFinite(preferredLevel)
+    ? chapterEntries.filter(entry => entry.levelNum === preferredLevel)
+    : chapterEntries
 
-  const exactTopic = chapterEntries.find(entry => entry.topicNorm === normalizedTag)
-  if (exactTopic) return exactTopic.topicTarget
+  const normalizedCandidates = [tag, ...(TAG_ALIASES[tag] || [])]
+    .map(item => normalizeCourseText(item))
+    .filter(Boolean)
+  if (!normalizedCandidates.length) return null
 
-  const exactChapter = chapterEntries.find(entry => entry.chapterNorm === normalizedTag)
-  if (exactChapter) return exactChapter.chapterTarget
+  for (const normalizedTag of normalizedCandidates) {
+    const exactTopic = scopedEntries.find(entry => entry.topicNorm === normalizedTag)
+    if (exactTopic) return exactTopic.topicTarget
 
-  const partialTopic = chapterEntries.find(entry => entry.topicNorm && (entry.topicNorm.includes(normalizedTag) || normalizedTag.includes(entry.topicNorm)))
-  if (partialTopic) return partialTopic.topicTarget
+    const exactChapter = scopedEntries.find(entry => entry.chapterNorm === normalizedTag)
+    if (exactChapter) return exactChapter.chapterTarget
 
-  const partialChapter = chapterEntries.find(entry => entry.chapterNorm && (entry.chapterNorm.includes(normalizedTag) || normalizedTag.includes(entry.chapterNorm)))
-  if (partialChapter) return partialChapter.chapterTarget
+    const partialTopic = scopedEntries.find(entry => entry.topicNorm && (entry.topicNorm.includes(normalizedTag) || normalizedTag.includes(entry.topicNorm)))
+    if (partialTopic) return partialTopic.topicTarget
+
+    const partialChapter = scopedEntries.find(entry => entry.chapterNorm && (entry.chapterNorm.includes(normalizedTag) || normalizedTag.includes(entry.chapterNorm)))
+    if (partialChapter) return partialChapter.chapterTarget
+  }
 
   return null
 }
@@ -89,6 +101,7 @@ function buildResolvedTagTargets(levels, tagMap) {
           chapterTargetById.set(chapterId, chapterTarget)
         }
         chapterEntries.push({
+          levelNum: Number(level.level || 0),
           topicNorm,
           chapterNorm: normalizeCourseText(chapter?.title || ''),
           topicTarget,
