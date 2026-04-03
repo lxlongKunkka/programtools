@@ -79,14 +79,17 @@
         <!-- Video Content Mode -->
         <div v-if="viewMode === 'video' && currentVideo">
           <!-- 多视频选择器 -->
-          <div v-if="videoList.length > 1" class="video-selector-bar">
+          <div v-if="videoEntries.length > 1" class="video-selector-bar">
             <button
-              v-for="(url, idx) in videoList"
-              :key="idx"
+              v-for="(entry, idx) in videoEntries"
+              :key="entry.raw + '-' + idx"
               :class="['btn-video-tab', { active: currentVideoIndex === idx }]"
               @click="currentVideoIndex = idx">
-              {{ getVideoTypeIcon(url) }} 视频{{ idx + 1 }}
+              {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, idx) }}
             </button>
+          </div>
+          <div v-if="currentVideoEntry && videoEntries.length > 1" class="lesson-video-current-title">
+            {{ getVideoTypeIcon(currentVideoEntry.raw) }} {{ getVideoDisplayTitle(currentVideoEntry, currentVideoIndex) }}
           </div>
           <!-- Bilibili 嵌入（带保护层） -->
           <template v-if="isBilibiliVideo(currentVideo)">
@@ -344,14 +347,20 @@ export default {
       const tabs = []
       if (this.chapter.resourceUrl) tabs.push('ppt')
       if (this.chapter.content) tabs.push('md')
-      if (this.videoList.length > 0) tabs.push('video')
+      if (this.videoEntries.length > 0) tabs.push('video')
       return tabs
     },
+    videoEntries() {
+      return (this.chapter?.videoUrl || '').split('\n').map(s => this.parseVideoEntry(s)).filter(entry => entry.raw)
+    },
     videoList() {
-      return (this.chapter?.videoUrl || '').split('\n').map(s => s.trim()).filter(Boolean)
+      return this.videoEntries.map(entry => entry.raw)
+    },
+    currentVideoEntry() {
+      return this.videoEntries[this.currentVideoIndex] || this.videoEntries[0] || null
     },
     currentVideo() {
-      return this.videoList[this.currentVideoIndex] || ''
+      return this.currentVideoEntry?.raw || ''
     },
     parsedSteps() {
       if (!this.chapter || !this.chapter.content) return []
@@ -485,6 +494,22 @@ export default {
     this.renderMath()
   },
   methods: {
+    parseVideoEntry(entry) {
+      const rawLine = (entry || '').trim()
+      if (!rawLine) return { title: '', raw: '' }
+      const separatorIndex = rawLine.indexOf(' | ')
+      if (separatorIndex > 0) {
+        return {
+          title: rawLine.slice(0, separatorIndex).trim(),
+          raw: rawLine.slice(separatorIndex + 3).trim()
+        }
+      }
+      return { title: '', raw: rawLine }
+    },
+    getVideoDisplayTitle(entry, index) {
+      if (!entry) return `视频${index + 1}`
+      return entry.title || `视频${index + 1}`
+    },
     extractIframeSrc(entry) {
       if (!entry) return ''
       const raw = entry.trim()
@@ -1581,6 +1606,12 @@ export default {
   background: #000;
   border-radius: 8px 8px 0 0;
   overflow: hidden;
+}
+.lesson-video-current-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
 }
 .lesson-video-iframe {
   position: absolute;

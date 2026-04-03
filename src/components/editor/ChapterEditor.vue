@@ -40,9 +40,16 @@
       <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
         placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
         style="resize: vertical; font-family: monospace;"></textarea>
+      <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
+        <div><strong>可选格式：</strong></div>
+        <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
+        <div>2. 直接粘 iframe：&lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
+        <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
+        <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
+      </div>
       <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
-        <div v-for="(line, i) in chapter.videoUrl.split('\n').map(s => s.trim()).filter(Boolean)" :key="i">
-          {{ getVideoTypeIcon(line) }} 视频{{ i + 1 }}：{{ getVideoPreviewText(line) }}
+        <div v-for="(entry, i) in videoEntriesPreview" :key="entry.raw + '-' + i">
+          {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, i) }}：{{ getVideoPreviewText(entry.raw) }}
         </div>
       </div>
     </div>
@@ -178,6 +185,9 @@ export default {
     localAiRequirements: {
       get() { return this.aiRequirements },
       set(v) { this.$emit('update:aiRequirements', v) }
+    },
+    videoEntriesPreview() {
+      return (this.chapter?.videoUrl || '').split('\n').map(s => this.parseVideoEntry(s)).filter(entry => entry.raw)
     }
   },
   watch: {
@@ -186,6 +196,22 @@ export default {
     'chapter._id'() { this.showPreview = false }
   },
   methods: {
+    parseVideoEntry(url) {
+      const rawLine = (url || '').trim()
+      if (!rawLine) return { title: '', raw: '' }
+      const separatorIndex = rawLine.indexOf(' | ')
+      if (separatorIndex > 0) {
+        return {
+          title: rawLine.slice(0, separatorIndex).trim(),
+          raw: rawLine.slice(separatorIndex + 3).trim()
+        }
+      }
+      return { title: '', raw: rawLine }
+    },
+    getVideoDisplayTitle(entry, index) {
+      if (!entry) return `视频${index + 1}`
+      return entry.title || `视频${index + 1}`
+    },
     extractIframeSrc(url) {
       if (!url) return ''
       const raw = url.trim()
