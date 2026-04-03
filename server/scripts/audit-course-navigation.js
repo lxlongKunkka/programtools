@@ -12,6 +12,107 @@ function readGespTagMap() {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'))
 }
 
+const GESP_CPP_GROUP_NAME = 'GESP C++ 认证课程'
+
+function normalizeCourseText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\s()（）\[\]【】{}<>《》'"`~!@#$%^&*=+|\\/:;,.?，。；：、·_-]+/g, '')
+}
+
+function isGespCppLevel(level) {
+  const group = String(level?.group || '')
+  const title = String(level?.title || '')
+  const subject = String(level?.subject || '')
+  if (group === GESP_CPP_GROUP_NAME) return true
+  if (!title.includes('GESP')) return false
+  if (title.includes('Python') || group.includes('Python') || subject.includes('Python')) return false
+  return true
+}
+
+function createChapterTarget(level, topic, chapter) {
+  const chapterUid = chapter?._id ? String(chapter._id) : String(chapter?.id || '')
+  const levelId = level?._id ? String(level._id) : ''
+  if (!chapterUid || !levelId) return null
+  return {
+    chapterUid,
+    chapterId: String(chapter?.id || ''),
+    levelId,
+    levelTitle: String(level?.title || ''),
+    topicTitle: String(topic?.title || ''),
+    chapterTitle: String(chapter?.title || '')
+  }
+}
+
+function resolveTagTarget(tag, legacyChapterId, chapterTargetById, chapterEntries) {
+  const legacyId = String(legacyChapterId || '').trim()
+  if (legacyId && chapterTargetById.has(legacyId)) {
+    return chapterTargetById.get(legacyId)
+  }
+
+  const normalizedTag = normalizeCourseText(tag)
+  if (!normalizedTag) return null
+
+  const exactTopic = chapterEntries.find(entry => entry.topicNorm === normalizedTag)
+  if (exactTopic) return exactTopic.topicTarget
+
+  const exactChapter = chapterEntries.find(entry => entry.chapterNorm === normalizedTag)
+  if (exactChapter) return exactChapter.chapterTarget
+
+  const partialTopic = chapterEntries.find(entry => entry.topicNorm && (entry.topicNorm.includes(normalizedTag) || normalizedTag.includes(entry.topicNorm)))
+  if (partialTopic) return partialTopic.topicTarget
+
+  const partialChapter = chapterEntries.find(entry => entry.chapterNorm && (entry.chapterNorm.includes(normalizedTag) || normalizedTag.includes(entry.chapterNorm)))
+  if (partialChapter) return partialChapter.chapterTarget
+
+  return null
+}
+
+function buildResolvedTagTargets(levels, tagMap) {
+  const chapterTargetById = new Map()
+  const chapterEntries = []
+
+  for (const level of Array.isArray(levels) ? levels : []) {
+    if (!isGespCppLevel(level)) continue
+
+    for (const topic of Array.isArray(level.topics) ? level.topics : []) {
+      const chapters = Array.isArray(topic.chapters) ? topic.chapters : []
+      if (!chapters.length) continue
+
+      const topicTarget = createChapterTarget(level, topic, chapters[0])
+      const topicNorm = normalizeCourseText(topic.title)
+
+      for (const chapter of chapters) {
+        const chapterId = String(chapter?.id || '')
+        const chapterTarget = createChapterTarget(level, topic, chapter)
+        if (chapterId && chapterTarget) {
+          chapterTargetById.set(chapterId, chapterTarget)
+        }
+        chapterEntries.push({
+          topicNorm,
+          chapterNorm: normalizeCourseText(chapter?.title || ''),
+          topicTarget,
+          chapterTarget
+        })
+      }
+    }
+  }
+
+  const resolvedTargets = {}
+  const missingTargets = []
+
+  for (const [tag, legacyChapterId] of Object.entries(tagMap || {})) {
+    const resolved = resolveTagTarget(tag, legacyChapterId, chapterTargetById, chapterEntries)
+    if (resolved) {
+      resolvedTargets[tag] = resolved
+    } else {
+      missingTargets.push({ tag, legacyChapterId })
+    }
+  }
+
+  return { resolvedTargets, missingTargets }
+}
+
 async function main() {
   await Promise.all([appConn.asPromise(), hydroConn.asPromise()])
 
@@ -77,6 +178,13 @@ async function main() {
   console.log(`GESP_TAG_AMBIGUOUS ${ambiguousMappings.length}`)
   for (const item of ambiguousMappings) {
     console.log(`AMBIGUOUS ${item.tag} -> ${item.chapterId} ${JSON.stringify(item.refs)}`)
+  }
+
+  const { resolvedTargets, missingTargets } = buildResolvedTagTargets(levels, tagMap)
+  console.log(`GESP_CPP_RUNTIME_RESOLVED ${Object.keys(resolvedTargets).length}`)
+  console.log(`GESP_CPP_RUNTIME_MISSING ${missingTargets.length}`)
+  for (const item of missingTargets) {
+    console.log(`RUNTIME_MISSING ${item.tag} -> ${item.legacyChapterId}`)
   }
 }
 
