@@ -351,7 +351,7 @@ export default {
       return tabs
     },
     videoEntries() {
-      return (this.chapter?.videoUrl || '').split('\n').map(s => this.parseVideoEntry(s)).filter(entry => entry.raw)
+      return this.parseVideoEntries(this.chapter?.videoUrl || '')
     },
     videoList() {
       return this.videoEntries.map(entry => entry.raw)
@@ -494,6 +494,42 @@ export default {
     this.renderMath()
   },
   methods: {
+    parseVideoEntries(text) {
+      const lines = (text || '').split('\n')
+      const entries = []
+      let iframeBuffer = []
+      let inIframeBlock = false
+
+      lines.forEach(line => {
+        const trimmed = line.trim()
+
+        if (!inIframeBlock) {
+          if (!trimmed) return
+
+          if (trimmed.includes('<iframe') && !trimmed.includes('</iframe>')) {
+            iframeBuffer = [line]
+            inIframeBlock = true
+            return
+          }
+
+          entries.push(this.parseVideoEntry(trimmed))
+          return
+        }
+
+        iframeBuffer.push(line)
+        if (trimmed.includes('</iframe>')) {
+          entries.push(this.parseVideoEntry(iframeBuffer.join('\n')))
+          iframeBuffer = []
+          inIframeBlock = false
+        }
+      })
+
+      if (iframeBuffer.length > 0) {
+        entries.push(this.parseVideoEntry(iframeBuffer.join('\n')))
+      }
+
+      return entries.filter(entry => entry.raw)
+    },
     parseVideoEntry(entry) {
       const rawLine = (entry || '').trim()
       if (!rawLine) return { title: '', raw: '' }

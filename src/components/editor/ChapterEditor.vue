@@ -43,7 +43,7 @@
       <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
         <div><strong>可选格式：</strong></div>
         <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
-        <div>2. 直接粘 iframe：&lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
+        <div>2. 直接粘 iframe：支持整段多行 iframe，不必压成一行</div>
         <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
         <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
       </div>
@@ -187,7 +187,7 @@ export default {
       set(v) { this.$emit('update:aiRequirements', v) }
     },
     videoEntriesPreview() {
-      return (this.chapter?.videoUrl || '').split('\n').map(s => this.parseVideoEntry(s)).filter(entry => entry.raw)
+      return this.parseVideoEntries(this.chapter?.videoUrl || '')
     }
   },
   watch: {
@@ -196,6 +196,42 @@ export default {
     'chapter._id'() { this.showPreview = false }
   },
   methods: {
+    parseVideoEntries(text) {
+      const lines = (text || '').split('\n')
+      const entries = []
+      let iframeBuffer = []
+      let inIframeBlock = false
+
+      lines.forEach(line => {
+        const trimmed = line.trim()
+
+        if (!inIframeBlock) {
+          if (!trimmed) return
+
+          if (trimmed.includes('<iframe') && !trimmed.includes('</iframe>')) {
+            iframeBuffer = [line]
+            inIframeBlock = true
+            return
+          }
+
+          entries.push(this.parseVideoEntry(trimmed))
+          return
+        }
+
+        iframeBuffer.push(line)
+        if (trimmed.includes('</iframe>')) {
+          entries.push(this.parseVideoEntry(iframeBuffer.join('\n')))
+          iframeBuffer = []
+          inIframeBlock = false
+        }
+      })
+
+      if (iframeBuffer.length > 0) {
+        entries.push(this.parseVideoEntry(iframeBuffer.join('\n')))
+      }
+
+      return entries.filter(entry => entry.raw)
+    },
     parseVideoEntry(url) {
       const rawLine = (url || '').trim()
       if (!rawLine) return { title: '', raw: '' }
