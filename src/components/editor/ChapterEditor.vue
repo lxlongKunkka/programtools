@@ -38,11 +38,11 @@
     <div class="form-group">
       <label>视频链接 (可选，每行一个):</label>
       <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
-        placeholder="每行一个视频链接，支持 Bilibili 链接 / 纯 BV 号（如 BV1teP4zUEzN）/ COS 视频直链（.mp4）"
+        placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
         style="resize: vertical; font-family: monospace;"></textarea>
       <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
         <div v-for="(line, i) in chapter.videoUrl.split('\n').map(s => s.trim()).filter(Boolean)" :key="i">
-          {{ isBilibili(line) ? '🎬' : '🎥' }} 视频{{ i + 1 }}：{{ line.length > 60 ? line.slice(0, 60) + '…' : line }}
+          {{ getVideoTypeIcon(line) }} 视频{{ i + 1 }}：{{ getVideoPreviewText(line) }}
         </div>
       </div>
     </div>
@@ -186,11 +186,37 @@ export default {
     'chapter._id'() { this.showPreview = false }
   },
   methods: {
+    extractIframeSrc(url) {
+      if (!url) return ''
+      const raw = url.trim()
+      const match = raw.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i)
+      return match ? match[1].trim() : ''
+    },
     isBilibili(url) {
       if (!url) return false
-      const s = url.trim()
+      const s = (this.extractIframeSrc(url) || url).trim()
       if (/^BV[a-zA-Z0-9]+$/.test(s)) return true
       return s.includes('bilibili.com') || s.includes('b23.tv')
+    },
+    isDirectVideo(url) {
+      if (!url) return false
+      const src = (this.extractIframeSrc(url) || url).trim()
+      return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(src)
+    },
+    isIframeVideo(url) {
+      if (!url) return false
+      if (this.isBilibili(url)) return false
+      if (this.extractIframeSrc(url)) return true
+      return !this.isDirectVideo(url) && /^https?:\/\//i.test(url.trim())
+    },
+    getVideoTypeIcon(url) {
+      if (this.isBilibili(url)) return '🎬'
+      if (this.isIframeVideo(url)) return '🖼'
+      return '🎥'
+    },
+    getVideoPreviewText(url) {
+      const raw = (this.extractIframeSrc(url) || url || '').trim()
+      return raw.length > 60 ? raw.slice(0, 60) + '…' : raw
     },
     getPreviewUrl(url) {
       if (!url) return ''

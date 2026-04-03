@@ -85,7 +85,7 @@
               :key="idx"
               :class="['btn-video-tab', { active: currentVideoIndex === idx }]"
               @click="currentVideoIndex = idx">
-              {{ isBilibiliVideo(url) ? '🎬' : '🎥' }} 视频{{ idx + 1 }}
+              {{ getVideoTypeIcon(url) }} 视频{{ idx + 1 }}
             </button>
           </div>
           <!-- Bilibili 嵌入（带保护层） -->
@@ -108,6 +108,23 @@
             </div>
             <div class="lesson-video-toolbar">
               <button class="lesson-video-fs-btn" @click="requestBilibiliFullscreen">⛶ 全屏播放</button>
+            </div>
+          </template>
+          <template v-else-if="isIframeVideo(currentVideo)">
+            <div class="lesson-video-iframe-wrap">
+              <iframe
+                ref="genericVideoIframeRef"
+                :src="getIframeVideoUrl(currentVideo)"
+                class="lesson-video-iframe"
+                frameborder="0"
+                allowfullscreen
+                scrolling="no"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                sandbox="allow-scripts allow-same-origin allow-presentation allow-modals allow-fullscreen allow-forms">
+              </iframe>
+            </div>
+            <div class="lesson-video-toolbar">
+              <button class="lesson-video-fs-btn" @click="requestGenericIframeFullscreen">⛶ 全屏播放</button>
             </div>
           </template>
           <!-- 直链视频 -->
@@ -468,16 +485,46 @@ export default {
     this.renderMath()
   },
   methods: {
+    extractIframeSrc(entry) {
+      if (!entry) return ''
+      const raw = entry.trim()
+      const match = raw.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i)
+      return match ? match[1].trim() : ''
+    },
+    isDirectVideoUrl(url) {
+      if (!url) return false
+      const src = this.extractIframeSrc(url) || url.trim()
+      return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(src)
+    },
     isBilibiliVideo(url) {
       if (!url) return false
-      const s = url.trim()
+      const s = (this.extractIframeSrc(url) || url).trim()
       // 纯 BV 号，如 BV1teP4zUEzN
       if (/^BV[a-zA-Z0-9]+$/.test(s)) return true
       return s.includes('bilibili.com') || s.includes('b23.tv')
     },
+    isIframeVideo(url) {
+      if (!url) return false
+      if (this.isBilibiliVideo(url)) return false
+      if (this.extractIframeSrc(url)) return true
+      const src = url.trim()
+      if (this.isDirectVideoUrl(src)) return false
+      return /^https?:\/\//i.test(src)
+    },
+    getIframeVideoUrl(url) {
+      if (!url) return ''
+      const src = (this.extractIframeSrc(url) || url).trim()
+      if (src.startsWith('//')) return `https:${src}`
+      return src
+    },
+    getVideoTypeIcon(url) {
+      if (this.isBilibiliVideo(url)) return '🎬'
+      if (this.isIframeVideo(url)) return '🖼'
+      return '🎥'
+    },
     getBilibiliEmbedUrl(url) {
       if (!url) return ''
-      const s = url.trim()
+      const s = (this.extractIframeSrc(url) || url).trim()
       // 纯 BV 号
       if (/^BV[a-zA-Z0-9]+$/.test(s)) {
         return `//player.bilibili.com/player.html?bvid=${s}&high_quality=1&danmaku=0`
@@ -514,6 +561,16 @@ export default {
     },
     requestBilibiliFullscreen() {
       const el = this.$refs.bilibiliIframeRef
+      if (!el) return
+      try {
+        if (el.requestFullscreen) el.requestFullscreen()
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+        else if (el.mozRequestFullScreen) el.mozRequestFullScreen()
+        else if (el.msRequestFullscreen) el.msRequestFullscreen()
+      } catch (e) {}
+    },
+    requestGenericIframeFullscreen() {
+      const el = this.$refs.genericVideoIframeRef
       if (!el) return
       try {
         if (el.requestFullscreen) el.requestFullscreen()
