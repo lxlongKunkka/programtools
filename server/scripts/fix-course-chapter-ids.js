@@ -198,7 +198,7 @@ async function main() {
   const query = {}
   if (level !== null) query.level = level
 
-  const levels = await CourseLevel.find(query).select('level title group subject topics.title topics.chapters.id topics.chapters.title')
+  const levels = await CourseLevel.find(query)
   let touchedLevels = 0
   let totalRemappedIds = 0
   let totalProgressUpdated = 0
