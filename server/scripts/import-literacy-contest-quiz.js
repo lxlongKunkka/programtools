@@ -19,6 +19,7 @@ const apply = args.includes('--apply')
 async function main() {
   const files = fs.readdirSync(inputDir)
     .filter((name) => name.toLowerCase().endsWith('.md'))
+    .filter((name) => !name.includes('待补题目清单'))
     .sort((a, b) => a.localeCompare(b, 'zh-CN'))
 
   const papers = []
