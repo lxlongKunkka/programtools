@@ -15,8 +15,16 @@ export function buildQuizCollectionFilter(userId, input = {}) {
     input.knowledgeTag
   ])[0]
 
-  if (selectedTag) {
-    filter.tags = selectedTag
+  const sourceTag = typeof input.sourceTag === 'string'
+    ? input.sourceTag.trim()
+    : ''
+
+  const requiredTags = [selectedTag, sourceTag].filter(Boolean)
+
+  if (requiredTags.length === 1) {
+    filter.tags = requiredTags[0]
+  } else if (requiredTags.length > 1) {
+    filter.tags = { $all: requiredTags }
   }
 
   return filter

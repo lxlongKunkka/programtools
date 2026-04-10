@@ -61,10 +61,23 @@ function buildQuestionFilter(input = {}) {
     input.tag,
     input.knowledgeTag
   ])[0]
-  if (selectedTag) {
-    filter.tags = selectedTag
+
+  const sourceTag = typeof input.sourceTag === 'string'
+    ? input.sourceTag.trim()
+    : ''
+
+  const requiredTags = [selectedTag, sourceTag].filter(Boolean)
+  if (requiredTags.length === 1) {
+    filter.tags = requiredTags[0]
+  } else if (requiredTags.length > 1) {
+    filter.tags = { $all: requiredTags }
   }
   return filter
+}
+
+function formatSourceTagLabel(tag) {
+  const text = String(tag || '').trim()
+  return text.startsWith('专题:') ? text.slice(3) : text
 }
 
 function sanitizeQuestion(question) {
@@ -1133,6 +1146,13 @@ router.get('/daily/options', optionalAuthenticateToken, async (req, res) => {
       { $match: { tags: { $in: KNOWLEDGE_TAGS } } },
       { $group: { _id: '$tags', count: { $sum: 1 } } }
     ])
+    const sourceTagCounts = await QuizQuestion.aggregate([
+      { $match: { ...baseMatch, tags: { $exists: true, $ne: [] } } },
+      { $unwind: '$tags' },
+      { $match: { tags: /^专题:/ } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ])
     const knowledgeCountMap = new Map(knowledgeCounts.map((item) => [item._id, item.count]))
 
     res.json({
@@ -1147,7 +1167,12 @@ router.get('/daily/options', optionalAuthenticateToken, async (req, res) => {
           value: tag,
           label: tag,
           count: knowledgeCountMap.get(tag)
-        }))
+        })),
+      sourceTags: sourceTagCounts.map((item) => ({
+        value: item._id,
+        label: formatSourceTagLabel(item._id),
+        count: item.count
+      }))
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -1228,7 +1253,7 @@ router.get('/daily/current', optionalAuthenticateToken, async (req, res) => {
 
 router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
   try {
-    const { questionUid, subject, levelTag, tag, type } = req.body || {}
+    const { questionUid, subject, levelTag, tag, sourceTag, type } = req.body || {}
     if (!questionUid) {
       return res.status(400).json({ error: 'questionUid 为必填项' })
     }
@@ -1257,7 +1282,7 @@ router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
       const skippedQuestionUids = [...new Set([...guestProgress.skippedQuestionUids, questionUid])]
       const nextSelection = await getDailyQuestionSelection(
         null,
-        { subject, levelTag, tag, type },
+        { subject, levelTag, tag, sourceTag, type },
         today,
         [...guestProgress.questionUids, ...skippedQuestionUids]
       )
@@ -1277,7 +1302,7 @@ router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
       ...(existingProgress?.questionUids || []),
       ...(existingProgress?.skippedQuestionUids || [])
     ]
-    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, type }, today, excludedQuestionUids)
+    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, sourceTag, type }, today, excludedQuestionUids)
 
     if (!assignedQuestion) {
       return res.status(400).json({ error: '当前筛选下已经没有可跳过的题目了' })
@@ -1305,7 +1330,7 @@ router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
 
     const nextSelection = await getDailyQuestionSelection(
       req.user.id,
-      { subject, levelTag, tag, type },
+      { subject, levelTag, tag, sourceTag, type },
       today,
       [
         ...(updatedProgress?.questionUids || []),
@@ -1327,7 +1352,7 @@ router.post('/daily/skip', optionalAuthenticateToken, async (req, res) => {
 
 router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
   try {
-    const { questionUid, selectedAnswer, costMs = null, subject, levelTag, tag, type } = req.body || {}
+    const { questionUid, selectedAnswer, costMs = null, subject, levelTag, tag, sourceTag, type } = req.body || {}
 
     if (!questionUid || typeof selectedAnswer !== 'string' || !selectedAnswer.trim()) {
       return res.status(400).json({ error: 'questionUid 和 selectedAnswer 为必填项' })
@@ -1407,7 +1432,7 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
       ...(existingProgress?.skippedQuestionUids || [])
     ]
 
-    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, type }, today, excludedQuestionUids)
+    const assignedQuestion = await pickDailyQuestion(req.user.id, { subject, levelTag, tag, sourceTag, type }, today, excludedQuestionUids)
     if (!assignedQuestion && excludedQuestionUids.length === 0) {
       return res.status(404).json({ error: '题库中暂无可用客观题，请先导入题目' })
     }

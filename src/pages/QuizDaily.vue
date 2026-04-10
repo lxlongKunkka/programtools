@@ -64,6 +64,15 @@
                 </option>
               </select>
             </label>
+            <label class="filter-field">
+              <span>专题</span>
+              <select v-model="selectedSourceTag" :disabled="loading || submitting" @change="handleLevelChange">
+                <option value="">全部专题</option>
+                <option v-for="item in sourceTagOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}（{{ item.count }}）
+                </option>
+              </select>
+            </label>
             <button class="btn-refresh" :disabled="loading || submitting" @click="refreshAll">
               {{ loading ? '加载中...' : '刷新题目' }}
             </button>
@@ -344,6 +353,7 @@ import request from '../utils/request'
 const showToastMessage = inject('showToastMessage', () => {})
 const QUIZ_LEVEL_STORAGE_KEY = 'quiz_daily_level_tag'
 const QUIZ_KNOWLEDGE_STORAGE_KEY = 'quiz_daily_knowledge_tag'
+const QUIZ_SOURCE_STORAGE_KEY = 'quiz_daily_source_tag'
 const GUEST_DAILY_LIMIT = 5
 const GUEST_PROGRESS_STORAGE_KEY = 'quiz_daily_guest_progress'
 const router = useRouter()
@@ -428,8 +438,10 @@ const question = ref(null)
 const selectedAnswer = ref('')
 const selectedLevelTag = ref(localStorage.getItem(QUIZ_LEVEL_STORAGE_KEY) || '')
 const selectedKnowledgeTag = ref(localStorage.getItem(QUIZ_KNOWLEDGE_STORAGE_KEY) || '')
+const selectedSourceTag = ref(localStorage.getItem(QUIZ_SOURCE_STORAGE_KEY) || '')
 const levelOptions = ref([])
 const knowledgeTagOptions = ref([])
+const sourceTagOptions = ref([])
 const result = ref(null)
 const today = ref('')
 const activeWrongbookQuestionUid = ref('')
@@ -703,6 +715,7 @@ async function fetchCurrentQuestion() {
     const params = new URLSearchParams()
     if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
     if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
+    if (selectedSourceTag.value) params.set('sourceTag', selectedSourceTag.value)
     if (guestProgress) {
       params.set('answeredCount', String(guestProgress.answeredCount))
       params.set('correctCount', String(guestProgress.correctCount))
@@ -751,6 +764,7 @@ async function fetchLevelOptions() {
     const data = await request('/api/quiz/daily/options')
     levelOptions.value = Array.isArray(data?.levels) ? data.levels : []
     knowledgeTagOptions.value = Array.isArray(data?.knowledgeTags) ? data.knowledgeTags : []
+    sourceTagOptions.value = Array.isArray(data?.sourceTags) ? data.sourceTags : []
     const validLevelTags = new Set(levelOptions.value.map((item) => item.value))
     if (selectedLevelTag.value && !validLevelTags.has(selectedLevelTag.value)) {
       selectedLevelTag.value = ''
@@ -761,17 +775,26 @@ async function fetchLevelOptions() {
       selectedKnowledgeTag.value = ''
       localStorage.removeItem(QUIZ_KNOWLEDGE_STORAGE_KEY)
     }
+    const validSourceTags = new Set(sourceTagOptions.value.map((item) => item.value))
+    if (selectedSourceTag.value && !validSourceTags.has(selectedSourceTag.value)) {
+      selectedSourceTag.value = ''
+      localStorage.removeItem(QUIZ_SOURCE_STORAGE_KEY)
+    }
   } catch {
     levelOptions.value = []
     knowledgeTagOptions.value = []
+    sourceTagOptions.value = []
     selectedKnowledgeTag.value = ''
+    selectedSourceTag.value = ''
     localStorage.removeItem(QUIZ_KNOWLEDGE_STORAGE_KEY)
+    localStorage.removeItem(QUIZ_SOURCE_STORAGE_KEY)
   }
 }
 
 function handleLevelChange() {
   localStorage.setItem(QUIZ_LEVEL_STORAGE_KEY, selectedLevelTag.value)
   localStorage.setItem(QUIZ_KNOWLEDGE_STORAGE_KEY, selectedKnowledgeTag.value)
+  localStorage.setItem(QUIZ_SOURCE_STORAGE_KEY, selectedSourceTag.value)
   activeWrongbookQuestionUid.value = ''
   activeFavoriteQuestionUid.value = ''
   refreshAll()
@@ -859,7 +882,8 @@ async function submitAnswer() {
       questionUid: question.value.questionUid,
       selectedAnswer: selectedAnswer.value,
       levelTag: selectedLevelTag.value,
-      tag: selectedKnowledgeTag.value
+      tag: selectedKnowledgeTag.value,
+      sourceTag: selectedSourceTag.value
     }
     if (!isLoggedIn.value) {
       payload.answeredCount = progress.value.answeredCount || 0
@@ -964,6 +988,7 @@ async function fetchWrongbook() {
     const params = new URLSearchParams({ limit: '10' })
     if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
     if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
+    if (selectedSourceTag.value) params.set('sourceTag', selectedSourceTag.value)
     const data = await request(`/api/quiz/daily/wrongbook?${params.toString()}`)
     wrongbook.value = Array.isArray(data?.items) ? data.items : []
     if (activeMode.value === 'wrongbook') {
@@ -995,6 +1020,7 @@ async function fetchFavorites() {
     const params = new URLSearchParams({ limit: '10' })
     if (selectedLevelTag.value) params.set('levelTag', selectedLevelTag.value)
     if (selectedKnowledgeTag.value) params.set('tag', selectedKnowledgeTag.value)
+    if (selectedSourceTag.value) params.set('sourceTag', selectedSourceTag.value)
     const data = await request(`/api/quiz/daily/favorites?${params.toString()}`)
     favorites.value = Array.isArray(data?.items) ? data.items : []
     if (activeMode.value === 'favorite') {
@@ -1086,7 +1112,8 @@ async function skipCurrentQuestion() {
     const payload = {
       questionUid: question.value.questionUid,
       levelTag: selectedLevelTag.value,
-      tag: selectedKnowledgeTag.value
+      tag: selectedKnowledgeTag.value,
+      sourceTag: selectedSourceTag.value
     }
     if (!isLoggedIn.value) {
       payload.answeredCount = progress.value.answeredCount || 0
