@@ -217,10 +217,85 @@ function chapterProcLimit(chapterId) {
   }[chapterId] || 0
 }
 
+const DRAFT_DIRECTION_VECTORS = [
+  { dir: 'forward', dx: 1, dy: 0 },
+  { dir: 'right', dx: 0, dy: 1 },
+  { dir: 'backward', dx: -1, dy: 0 },
+  { dir: 'left', dx: 0, dy: -1 }
+]
+
+function draftTileKey(x, y) {
+  return `${x},${y}`
+}
+
+function inferDraftStartDirection(tiles, startTile) {
+  const tileLookup = new Map(tiles.map((tile) => [draftTileKey(tile.x, tile.y), tile]))
+  const targetTiles = tiles.filter((tile) => tile.tile === 'L')
+
+  const scoredDirections = DRAFT_DIRECTION_VECTORS
+    .map(({ dir, dx, dy }) => {
+      const nextTile = tileLookup.get(draftTileKey(startTile.x + dx, startTile.y + dy))
+
+      if (!nextTile) {
+        return { dir, score: Number.NEGATIVE_INFINITY }
+      }
+
+      const heightDiff = nextTile.z - startTile.z
+
+      if (heightDiff > 1) {
+        return { dir, score: Number.NEGATIVE_INFINITY }
+      }
+
+      const nearestTargetDistance = targetTiles.length
+        ? Math.min(...targetTiles.map((tile) => Math.abs(tile.x - nextTile.x) + Math.abs(tile.y - nextTile.y) + Math.abs(tile.z - nextTile.z)))
+        : 0
+
+      let score = 0
+      score += nextTile.tile === 'L' ? 120 : 0
+      score += heightDiff === 0 ? 30 : 0
+      score += heightDiff === 1 ? 18 : 0
+      score += heightDiff < 0 ? 12 : 0
+      score -= nearestTargetDistance * 6
+
+      const straightReach = DRAFT_DIRECTION_VECTORS.reduce((best, candidate) => {
+        if (candidate.dir !== dir) {
+          return best
+        }
+
+        let steps = 0
+        let currentX = startTile.x
+        let currentY = startTile.y
+        let currentZ = startTile.z
+
+        while (true) {
+          currentX += candidate.dx
+          currentY += candidate.dy
+          const chainTile = tileLookup.get(draftTileKey(currentX, currentY))
+          if (!chainTile || chainTile.z - currentZ > 1) {
+            break
+          }
+
+          steps += 1
+          currentZ = chainTile.z
+        }
+
+        return Math.max(best, steps)
+      }, 0)
+
+      score += straightReach * 4
+
+      return { dir, score }
+    })
+    .sort((left, right) => right.score - left.score)
+
+  return scoredDirections[0]?.score > Number.NEGATIVE_INFINITY ? scoredDirections[0].dir : 'forward'
+}
+
 function buildDraftLevel(chapter, level, index) {
   const startTile = level.tiles.find((tile) => tile.tile === 'S') || level.tiles[0]
   const targetCount = level.tiles.filter((tile) => tile.tile === 'L').length
   const procLimit = chapterProcLimit(chapter.id)
+  const startDir = inferDraftStartDirection(level.tiles, startTile)
 
   return {
     id: level.id,
@@ -232,10 +307,10 @@ function buildDraftLevel(chapter, level, index) {
     procLimits: procLimit ? { p1: procLimit } : {},
     tips: [
       { title: 'Draft Import', copy: '该关卡由章节草案坐标自动生成，可继续在关卡编辑器中微调。' },
-      { title: 'Playtest', copy: '起始朝向未在草案中提供，当前统一默认朝向为 east。' }
+      { title: 'Playtest', copy: '起始朝向未在草案中提供，当前会根据起点邻接平台自动推断。' }
     ],
     board: buildBoardFromTiles(level.tiles),
-    start: { x: startTile.x, y: startTile.y, dir: 'forward' },
+    start: { x: startTile.x, y: startTile.y, dir: startDir },
     demo: { main: [], p1: [] }
   }
 }
