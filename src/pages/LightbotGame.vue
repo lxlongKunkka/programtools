@@ -1,21 +1,14 @@
 <template>
   <div class="lightbot-page">
-    <div class="lightbot-layout">
+    <div class="lightbot-shell">
       <section class="board-panel">
-        <div class="board-header">
-          <div class="board-copy-block">
-            <p class="board-kicker">Robot Puzzle</p>
+        <header class="board-header">
+          <div>
+            <p class="eyebrow">Robot Puzzle</p>
             <h1>{{ currentLevel.title }}</h1>
-            <p class="board-copy">{{ currentLevel.description }}</p>
-            <div class="board-meta">
-              <span class="meta-chip">关卡 {{ selectedLevelIndex + 1 }}/{{ levels.length }}</span>
-              <span class="meta-chip">{{ currentLevel.skill }}</span>
-              <span class="meta-chip">地块 {{ currentLevelStats.tiles }}</span>
-              <span class="meta-chip">最高 {{ currentLevelStats.maxHeight }} 层</span>
-            </div>
+            <p class="subtitle">{{ currentLevel.description }}</p>
           </div>
-
-          <div class="level-switcher">
+          <div class="level-strip">
             <button
               v-for="(level, index) in levels"
               :key="level.id"
@@ -26,10 +19,25 @@
               {{ index + 1 }}
             </button>
           </div>
-        </div>
+        </header>
 
         <div class="board-stage">
-          <div class="scene-backdrop"></div>
+          <div class="board-grid"></div>
+
+          <div class="status-cluster">
+            <div class="status-card">
+              <span>方向</span>
+              <strong>{{ directionLabel }}</strong>
+            </div>
+            <div class="status-card">
+              <span>点亮</span>
+              <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
+            </div>
+            <div class="status-card" :class="statusTone">
+              <span>状态</span>
+              <strong>{{ statusText }}</strong>
+            </div>
+          </div>
 
           <div class="scene-shell">
             <div class="scene-viewport" :style="sceneViewportStyle">
@@ -37,187 +45,126 @@
                 <div
                   v-for="cell in sceneCells"
                   :key="cell.key"
-                  class="iso-tile"
-                  :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart, flat: cell.isFlat }]"
+                  class="platform"
+                  :class="{ target: cell.isTarget, lit: cell.isLit }"
                   :style="cell.style"
                 >
-                  <div class="tile-shadow"></div>
-                  <div class="iso-top">
-                    <span v-if="cell.height > 1" class="height-badge">{{ cell.height }}</span>
-                    <span v-if="cell.isTarget && !cell.isLit" class="lamp lamp-off"></span>
-                    <span v-else-if="cell.isLit" class="lamp lamp-on"></span>
+                  <div class="platform-shadow"></div>
+                  <div class="platform-top">
+                    <span v-if="cell.isTarget" class="target-ring"></span>
                     <span v-if="cell.isStart" class="start-badge">S</span>
-                    <span v-if="cell.hasRobot" class="robot-sprite" :style="robotStyle">🤖</span>
+                    <div v-if="cell.hasRobot" class="bot" :class="robotDirClass">
+                      <span class="bot-eye left"></span>
+                      <span class="bot-eye right"></span>
+                      <span class="bot-mark"></span>
+                    </div>
                   </div>
-                  <div class="iso-left"></div>
-                  <div class="iso-right"></div>
+                  <div class="platform-left"></div>
+                  <div class="platform-right"></div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="board-overlay right">
-            <div class="board-status compact">
-              <div class="status-box mini">
-                <span>方向</span>
-                <strong>{{ directionLabel }}</strong>
-              </div>
-              <div class="status-box mini">
-                <span>点亮</span>
-                <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
-              </div>
-              <div class="status-box mini" :class="statusTone">
-                <span>状态</span>
-                <strong>{{ statusText }}</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="control-bar">
-          <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="undoLastCommand">↶</button>
-          <button class="control-btn" :disabled="isRunning" @click="resetLevelState">⟲</button>
-          <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="clearActiveSequence">🗑</button>
-          <button class="control-btn play icon-only" :disabled="isRunning || mainProgram.length === 0" @click="runProgram">
-            <img class="ui-sprite" src="/lightbot/run.png" alt="Run">
+        <footer class="control-bar">
+          <button class="control-btn icon" :disabled="isRunning || mainProcedure.length === 0" @click="runCode">
+            <img class="control-sprite" src="/lightbot/run.png" alt="Run">
           </button>
+          <button class="control-btn icon" :disabled="isRunning" @click="resetCode">
+            <img class="control-sprite" src="/lightbot/stop.png" alt="Reset">
+          </button>
+          <button class="control-btn" :disabled="isRunning || activeProcedure.length === 0" @click="undoLastOperation">↶</button>
+          <button class="control-btn" :disabled="isRunning || activeProcedure.length === 0" @click="clearActiveProcedure">🗑</button>
 
           <div class="speed-box">
             <span>Speed</span>
             <input v-model="speedValue" class="speed-slider" type="range" min="1" max="5" step="1">
           </div>
 
-          <div class="progress-box">
-            <span>完成度</span>
-            <div class="progress-track">
-              <div class="progress-fill" :style="{ width: `${progressPercent}%` }"></div>
-            </div>
-          </div>
-
           <button v-if="canGoNextLevel" class="next-btn" @click="goToNextLevel">下一关</button>
-        </div>
+        </footer>
       </section>
 
       <aside class="sidebar-panel">
-        <section class="side-card map-card">
-          <div class="side-title">Map Brief</div>
-          <p class="map-copy">{{ currentLevel.goal }}</p>
-          <div class="mission-row">
-            <span>起点方向</span>
-            <strong>{{ DIRECTION_LABELS[currentLevel.start.dir] }}</strong>
-          </div>
-          <div class="mission-row">
+        <section class="panel-card brief-card">
+          <div class="panel-title">Map Brief</div>
+          <p class="brief-copy">{{ currentLevel.goal }}</p>
+          <div class="brief-row">
             <span>Main</span>
             <strong>{{ currentLevel.mainLimit }} 格</strong>
           </div>
-          <div class="mission-row" v-if="currentLevel.allowProcedure">
-            <span>P1</span>
-            <strong>{{ currentLevel.procLimit }} 格</strong>
-          </div>
-          <div class="mission-row" v-else>
-            <span>P1</span>
-            <strong>未启用</strong>
-          </div>
-
-          <div class="legend-grid">
-            <div class="legend-item">
-              <span class="legend-swatch route"></span>
-              <span>主路地块</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-swatch decor"></span>
-              <span>装饰平台</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-swatch lamp"></span>
-              <span>目标灯格</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-swatch start">S</span>
-              <span>起点</span>
-            </div>
+          <div
+            v-for="procKey in availableProcedureKeys"
+            :key="procKey"
+            class="brief-row"
+          >
+            <span>{{ procKey.toUpperCase() }}</span>
+            <strong>{{ currentLevel.procLimits[procKey] }} 格</strong>
           </div>
         </section>
 
-        <section class="side-card">
-          <div class="side-title">Instructions</div>
+        <section class="panel-card">
+          <div class="panel-title">Instructions</div>
           <div class="instruction-grid">
             <button
-              v-for="command in commandPalette"
-              :key="command.id"
+              v-for="operation in operationPalette"
+              :key="operation.id"
               class="instruction-btn"
-              :class="command.id"
-              :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
-              @click="appendCommand(command.id)"
+              :disabled="operation.id.startsWith('proc') && !availableProcedureKeys.includes(operation.id)"
+              @click="appendOperation(operation.id)"
             >
               <span class="instruction-icon">
-                <img class="instruction-sprite" :src="commandSprite(command.id)" :alt="command.label">
+                <img class="instruction-sprite" :src="operationSprite(operation.id)" :alt="operation.label">
               </span>
-              <span class="instruction-label">{{ command.label }}</span>
-              <small>{{ command.id === 'repeat2' ? '把紧随其后的动作执行两次' : command.tip }}</small>
+              <span class="instruction-label">{{ operation.label }}</span>
+              <small>{{ operation.tip }}</small>
             </button>
           </div>
         </section>
 
-        <section class="side-card program-card">
+        <section class="panel-card program-card">
           <div class="program-head">
-            <div class="side-title">Program</div>
-            <div class="editor-tabs">
-              <button :class="{ active: activeEditor === 'main' }" @click="activeEditor = 'main'">Main</button>
-              <button :class="{ active: activeEditor === 'proc1' }" :disabled="!currentLevel.allowProcedure" @click="activeEditor = 'proc1'">P1</button>
+            <div class="panel-title">Program</div>
+            <div class="proc-tabs">
+              <button
+                v-for="procKey in procedureTabs"
+                :key="procKey"
+                :class="{ active: activeProcedureKey === procKey }"
+                :disabled="procKey !== 'main' && !availableProcedureKeys.includes(procKey)"
+                @click="activeProcedureKey = procKey"
+              >
+                {{ procKey.toUpperCase() }}
+              </button>
             </div>
           </div>
 
-          <div class="program-section">
-            <div class="sequence-label">Main</div>
+          <div class="program-block">
+            <div class="program-label">{{ activeProcedureKey.toUpperCase() }}</div>
             <div class="program-grid">
               <button
-                v-for="(command, index) in mainProgram"
-                :key="`main-${index}`"
+                v-for="(operation, index) in activeProcedure"
+                :key="`${activeProcedureKey}-${index}`"
                 class="program-slot filled"
-                :class="[command, { active: runningProgram === 'main' && runningIndex === index }]"
-                @click="removeCommand('main', index)"
+                :class="{ active: runningProcedureKey === activeProcedureKey && runningOperationIndex === index }"
+                @click="removeOperation(activeProcedureKey, index)"
               >
-                <span class="program-glyph icon">
-                  <img class="program-sprite" :src="commandSprite(command)" :alt="commandLabel(command)">
+                <span class="slot-icon">
+                  <img class="program-sprite" :src="operationSprite(operation)" :alt="operationLabel(operation)">
                 </span>
-                <span class="program-name">{{ commandLabel(command) }}</span>
+                <span class="slot-label">{{ operationLabel(operation) }}</span>
               </button>
               <div
-                v-for="slot in emptySlots(currentLevel.mainLimit, mainProgram.length)"
-                :key="`main-empty-${slot}`"
-                class="program-slot"
-              ></div>
-            </div>
-          </div>
-
-          <div class="program-section" :class="{ disabled: !currentLevel.allowProcedure }">
-            <div class="sequence-label">P1</div>
-            <div class="program-grid">
-              <button
-                v-for="(command, index) in proc1Program"
-                :key="`proc1-${index}`"
-                class="program-slot filled"
-                :class="[command, { active: runningProgram === 'proc1' && runningIndex === index }]"
-                :disabled="!currentLevel.allowProcedure"
-                @click="removeCommand('proc1', index)"
-              >
-                <span class="program-glyph icon">
-                  <img class="program-sprite" :src="commandSprite(command)" :alt="commandLabel(command)">
-                </span>
-                <span class="program-name">{{ commandLabel(command) }}</span>
-              </button>
-              <div
-                v-for="slot in emptySlots(currentLevel.procLimit, proc1Program.length)"
-                :key="`proc1-empty-${slot}`"
+                v-for="slot in emptySlots(activeLimit, activeProcedure.length)"
+                :key="`${activeProcedureKey}-empty-${slot}`"
                 class="program-slot"
               ></div>
             </div>
           </div>
 
           <div class="program-actions">
-            <button class="ghost-btn" :disabled="isRunning" @click="loadDemoSolution">示例</button>
-            <button class="ghost-btn" :disabled="isRunning" @click="resetEditorAndLevel">重置全部</button>
+            <button class="ghost-btn" :disabled="isRunning" @click="loadDemoProgram">示例</button>
+            <button class="ghost-btn" :disabled="isRunning" @click="clearAllPrograms">清空程序</button>
           </div>
         </section>
       </aside>
@@ -228,124 +175,119 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'programtools-lightbot-progress-v3'
-const TILE_WIDTH = 92
-const TILE_HEIGHT = 46
-const TILE_DEPTH = 24
-const DIRECTIONS = ['north', 'east', 'south', 'west']
-const DIRECTION_LABELS = { north: '向上', east: '向右', south: '向下', west: '向左' }
-const DIRECTION_VECTORS = { north: [-1, 0], east: [0, 1], south: [1, 0], west: [0, -1] }
-const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 220, 5: 140 }
-const COMMANDS = [
-  { id: 'walk', label: 'Walk forward', tip: '同高度向前移动一格' },
-  { id: 'right', label: 'Turn right', tip: '顺时针转 90 度' },
+const STORAGE_KEY = 'programtools-lightbot-progress-v4'
+const TILE_WIDTH = 96
+const TILE_HEIGHT = 48
+const TILE_DEPTH = 22
+const PROCEDURE_TABS = ['main', 'p1']
+const DIRECTION_ORDER = ['forward', 'right', 'backward', 'left']
+const DIRECTION_LABELS = {
+  forward: '向右',
+  right: '向下',
+  backward: '向左',
+  left: '向上'
+}
+const DIRECTION_VECTORS = {
+  forward: { x: 1, y: 0 },
+  right: { x: 0, y: 1 },
+  backward: { x: -1, y: 0 },
+  left: { x: 0, y: -1 }
+}
+const SPEED_MAP = { 1: 540, 2: 420, 3: 300, 4: 210, 5: 140 }
+const OPERATION_PALETTE = [
+  { id: 'walk', label: 'Walk forward', tip: '前进到同高度相邻平台' },
+  { id: 'light', label: 'Light', tip: '切换当前目标灯状态' },
   { id: 'left', label: 'Turn left', tip: '逆时针转 90 度' },
-  { id: 'jump', label: 'Jump', tip: '向前跳上一层或向下跳落' },
-  { id: 'light', label: 'Light', tip: '点亮当前蓝灯格' },
-  { id: 'repeat2', label: 'Repeat 2', tip: '重复下一条动作两次' },
-  { id: 'call1', label: 'Call P1', tip: '调用子程序 P1' }
+  { id: 'right', label: 'Turn right', tip: '顺时针转 90 度' },
+  { id: 'jump', label: 'Jump', tip: '向前跳上一层或跳下任意层' },
+  { id: 'p1', label: 'Call P1', tip: '调用子程序 P1' }
 ]
 
-function tile(height = 1, extras = {}) {
-  return { h: height, theme: 'stone', ...extras }
-}
-
-function lightTile(height = 1, extras = {}) {
-  return tile(height, { target: true, ...extras })
+function makeTile(height = 1, target = false) {
+  return { h: height, target }
 }
 
 const levels = [
   {
-    id: 'intro-garden',
-    title: 'Level 1: Garden Walk',
-    description: '第一关先回到最清楚的教学地图，主路线集中，避免一上来就看花。',
-    goal: '沿着中间主桥前进，依次点亮两盏蓝灯。',
-    skill: 'Walk + Light',
+    id: 'level-1',
+    title: 'Level 1: First Light',
+    description: '按 Another-LightBot 的方式，从最基础的平面开灯开始。',
+    goal: '沿平台向前，点亮两个目标格。',
     mainLimit: 8,
-    procLimit: 0,
-    allowProcedure: false,
+    procLimits: {},
     board: [
-      [tile(1), tile(1), lightTile(1), tile(1), lightTile(1)]
+      [makeTile(), makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)]
     ],
-    start: { row: 0, col: 0, dir: 'east' },
-    demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
+    start: { x: 0, y: 0, dir: 'forward' },
+    demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], p1: [] }
   },
   {
-    id: 'jump-spire',
-    title: 'Level 2: Jump Spire',
-    description: '第二关保留跳跃教学，但把路线收紧成一条清楚的阶梯。',
-    goal: '先点亮低处灯，再跳上高台前进，点亮第二盏灯。',
-    skill: 'Jump + Turn',
+    id: 'level-2',
+    title: 'Level 2: Jump',
+    description: '第二关加入一级高差，逻辑按照参考仓库的 jump 规则执行。',
+    goal: '先点亮低处灯，再跳上一级高台点亮第二个灯。',
+    mainLimit: 8,
+    procLimits: {},
+    board: [
+      [null, null, makeTile(2), makeTile(2, true)],
+      [makeTile(), makeTile(1, true), makeTile(), makeTile(2)]
+    ],
+    start: { x: 0, y: 1, dir: 'forward' },
+    demo: { main: ['walk', 'light', 'walk', 'jump', 'walk', 'light'], p1: [] }
+  },
+  {
+    id: 'level-3',
+    title: 'Level 3: Turns',
+    description: '第三关需要转向，方向系统与参考仓库的四向枚举一致。',
+    goal: '通过左右转在 L 形平台上点亮两盏灯。',
     mainLimit: 10,
-    procLimit: 0,
-    allowProcedure: false,
+    procLimits: {},
     board: [
-      [null, null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'slate' })],
-      [tile(1), lightTile(1), tile(1), tile(2)]
+      [makeTile(), makeTile(), makeTile(1, true)],
+      [null, null, makeTile()],
+      [null, null, makeTile(1, true)]
     ],
-    start: { row: 1, col: 0, dir: 'east' },
-    demo: { main: ['walk', 'light', 'walk', 'jump', 'walk', 'light'], proc1: [] }
+    start: { x: 0, y: 0, dir: 'forward' },
+    demo: { main: ['walk', 'walk', 'light', 'right', 'walk', 'walk', 'light'], p1: [] }
   },
   {
-    id: 'repeat-promenade',
-    title: 'Level 3: Repeat Promenade',
-    description: '长廊地图更完整了，周围加了辅路和高台，适合练习 Repeat。',
-    goal: '把三盏连续蓝灯全部点亮，用 Repeat 缩短开局移动。',
-    skill: 'Repeat 2',
-    mainLimit: 8,
-    procLimit: 0,
-    allowProcedure: false,
-    board: [
-      [null, null, tile(2, { theme: 'slate' }), null, tile(2, { theme: 'slate' }), null, null],
-      [tile(1, { theme: 'moss' }), tile(1), tile(1), lightTile(1), lightTile(1), lightTile(1), tile(1, { theme: 'moss' })],
-      [null, tile(1, { theme: 'copper' }), null, null, null, tile(1, { theme: 'copper' }), null]
-    ],
-    start: { row: 1, col: 1, dir: 'east' },
-    demo: { main: ['repeat2', 'walk', 'light', 'walk', 'light', 'walk', 'light'], proc1: [] }
-  },
-  {
-    id: 'procedure-court',
-    title: 'Level 4: Procedure Court',
-    description: '把地图做成了一座中庭，适合用 P1 把循环路线折叠起来。',
-    goal: '起点就在目标格上，先点亮起点，再用 P1 绕中庭一圈。',
-    skill: 'P1 Function',
+    id: 'level-4',
+    title: 'Level 4: Procedure',
+    description: '从这一关开始启用子程序 P1，流程接近参考仓库的 SubProcedure。',
+    goal: '利用 P1 复用重复动作，点亮四个目标格。',
     mainLimit: 6,
-    procLimit: 4,
-    allowProcedure: true,
+    procLimits: { p1: 4 },
     board: [
-      [null, tile(1, { theme: 'moss' }), tile(1, { theme: 'moss' }), null],
-      [tile(1, { theme: 'copper' }), null, null, tile(1, { theme: 'copper' })],
-      [null, lightTile(1), lightTile(1), null],
-      [null, lightTile(1), lightTile(1), null]
+      [null, makeTile(1, true), makeTile(1, true)],
+      [makeTile(), makeTile(), makeTile()],
+      [null, makeTile(1, true), makeTile(1, true)]
     ],
-    start: { row: 2, col: 1, dir: 'east' },
-    demo: { main: ['light', 'call1', 'call1', 'call1'], proc1: ['walk', 'light', 'right'] }
+    start: { x: 0, y: 1, dir: 'forward' },
+    demo: { main: ['p1', 'right', 'p1'], p1: ['walk', 'light'] }
   },
   {
-    id: 'signal-bridge',
-    title: 'Level 5: Signal Bridge',
-    description: '最后一关补成了完整桥面，主桥负责过关，两侧塔楼只做视觉地标。',
-    goal: '使用短小的 P1 沿主桥推进，依次点亮三盏灯。',
-    skill: 'Procedure Route',
-    mainLimit: 5,
-    procLimit: 2,
-    allowProcedure: true,
+    id: 'level-5',
+    title: 'Level 5: Bridge',
+    description: '最后一关综合 walk、jump 和 P1。',
+    goal: '跨过桥面并使用 P1 完成连续开灯。',
+    mainLimit: 8,
+    procLimits: { p1: 3 },
     board: [
-      [null, tile(2, { theme: 'slate' }), null, tile(2, { theme: 'slate' }), null],
-      [tile(1), lightTile(1), lightTile(1), lightTile(1), tile(1)],
-      [null, tile(2, { theme: 'copper' }), null, tile(2, { theme: 'copper' }), null]
+      [null, makeTile(2), null, makeTile(2)],
+      [makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)],
+      [null, makeTile(2), null, makeTile(2, true)]
     ],
-    start: { row: 1, col: 0, dir: 'east' },
-    demo: { main: ['call1', 'call1', 'call1'], proc1: ['walk', 'light'] }
+    start: { x: 0, y: 1, dir: 'forward' },
+    demo: { main: ['p1', 'jump', 'light'], p1: ['walk', 'light', 'walk'] }
   }
 ]
 
-function keyOf(row, col) {
-  return `${row},${col}`
+function platformKey(x, y) {
+  return `${x},${y}`
 }
 
-function cloneRobot(start) {
-  return { row: start.row, col: start.col, dir: start.dir }
+function cloneBot(start) {
+  return { x: start.x, y: start.y, dir: start.dir }
 }
 
 function loadProgress() {
@@ -358,173 +300,253 @@ function loadProgress() {
 }
 
 const selectedLevelIndex = ref(0)
-const activeEditor = ref('main')
-const mainProgram = ref([])
-const proc1Program = ref([])
+const activeProcedureKey = ref('main')
+const mainProcedure = ref([])
+const procedures = ref({ p1: [] })
 const completedLevelIds = ref(loadProgress())
 const litKeys = ref([])
-const robot = ref(cloneRobot(levels[0].start))
+const bot = ref(cloneBot(levels[0].start))
 const statusText = ref('Program is empty')
 const statusTone = ref('neutral')
 const isRunning = ref(false)
-const runningProgram = ref('')
-const runningIndex = ref(-1)
-const executionNonce = ref(0)
+const runningProcedureKey = ref('')
+const runningOperationIndex = ref(-1)
+const runNonce = ref(0)
 const speedValue = ref(3)
 
 const currentLevel = computed(() => levels[selectedLevelIndex.value])
-const targetKeys = computed(() => {
-  const keys = []
-  currentLevel.value.board.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
-      if (cell?.target) keys.push(keyOf(rowIndex, colIndex))
-    })
-  })
-  return keys
-})
-const directionLabel = computed(() => DIRECTION_LABELS[robot.value.dir] || '')
-const activeSequence = computed(() => activeEditor.value === 'proc1' ? proc1Program.value : mainProgram.value)
-const commandPalette = computed(() => COMMANDS.filter((command) => command.id !== 'call1' || currentLevel.value.allowProcedure))
-const isLevelComplete = computed(() => targetKeys.value.length > 0 && targetKeys.value.every((key) => litKeys.value.includes(key)))
-const progressPercent = computed(() => {
-  if (!targetKeys.value.length) return 0
-  return Math.round((litKeys.value.length / targetKeys.value.length) * 100)
-})
-const canGoNextLevel = computed(() => isLevelComplete.value && selectedLevelIndex.value < levels.length - 1)
-const robotStyle = computed(() => {
-  const rotation = { north: '-90deg', east: '0deg', south: '90deg', west: '180deg' }[robot.value.dir] || '0deg'
-  return { transform: `translate(-50%, -74%) rotate(${rotation})` }
-})
-const sceneMetrics = computed(() => {
-  const existingCells = []
-  currentLevel.value.board.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
+const procedureTabs = computed(() => PROCEDURE_TABS)
+const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
+const activeProcedure = computed(() => activeProcedureKey.value === 'main' ? mainProcedure.value : (procedures.value[activeProcedureKey.value] || []))
+const activeLimit = computed(() => activeProcedureKey.value === 'main' ? currentLevel.value.mainLimit : (currentLevel.value.procLimits[activeProcedureKey.value] || 0))
+const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
+const robotDirClass = computed(() => `dir-${bot.value.dir}`)
+
+const boardPlatforms = computed(() => {
+  const platforms = []
+  currentLevel.value.board.forEach((row, y) => {
+    row.forEach((cell, x) => {
       if (!cell) return
-      const height = Number(cell.h || 1)
-      const elevationDepth = Math.max(height - 1, 0) * TILE_DEPTH
-      const x = (colIndex - rowIndex) * TILE_WIDTH / 2
-      const y = (colIndex + rowIndex) * TILE_HEIGHT / 2 - elevationDepth
-      existingCells.push({ row: rowIndex, col: colIndex, cell, x, y, height, elevationDepth })
+      platforms.push({ x, y, cell, key: platformKey(x, y) })
     })
   })
-  const minX = Math.min(...existingCells.map((item) => item.x))
-  const minY = Math.min(...existingCells.map((item) => item.y))
-  const maxX = Math.max(...existingCells.map((item) => item.x + TILE_WIDTH))
-  const maxY = Math.max(...existingCells.map((item) => item.y + TILE_HEIGHT + item.elevationDepth))
+  return platforms
+})
+
+const boardLookup = computed(() => {
+  const lookup = new Map()
+  boardPlatforms.value.forEach((item) => {
+    lookup.set(item.key, item.cell)
+  })
+  return lookup
+})
+
+const targetKeys = computed(() => boardPlatforms.value.filter((item) => item.cell.target).map((item) => item.key))
+
+const sceneMetrics = computed(() => {
+  const cells = boardPlatforms.value.map((item) => {
+    const x = (item.x - item.y) * TILE_WIDTH / 2
+    const y = (item.x + item.y) * TILE_HEIGHT / 2 - item.cell.h * TILE_DEPTH
+    return { ...item, sceneX: x, sceneY: y }
+  })
+  const minX = Math.min(...cells.map((cell) => cell.sceneX))
+  const minY = Math.min(...cells.map((cell) => cell.sceneY))
+  const maxX = Math.max(...cells.map((cell) => cell.sceneX + TILE_WIDTH))
+  const maxY = Math.max(...cells.map((cell) => cell.sceneY + TILE_HEIGHT + cell.cell.h * TILE_DEPTH))
   return {
-    cells: existingCells,
+    cells,
     minX,
     minY,
-    width: Math.ceil(maxX - minX + 88),
+    width: Math.ceil(maxX - minX + 96),
     height: Math.ceil(maxY - minY + 96)
   }
 })
-const currentLevelStats = computed(() => ({
-  tiles: sceneMetrics.value.cells.length,
-  maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => item.height))
-}))
+
 const sceneScale = computed(() => {
-  const widthScale = 980 / sceneMetrics.value.width
-  const heightScale = 540 / sceneMetrics.value.height
-  return Math.max(1.55, Math.min(3.4, widthScale, heightScale))
+  const widthScale = 920 / sceneMetrics.value.width
+  const heightScale = 520 / sceneMetrics.value.height
+  return Math.max(1.2, Math.min(2.6, widthScale, heightScale))
 })
+
 const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
 const sceneViewportStyle = computed(() => ({
   width: `${sceneMetrics.value.width}px`,
   height: `${sceneMetrics.value.height}px`,
   transform: `scale(${sceneScale.value})`
 }))
+
 const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
-  key: keyOf(item.row, item.col),
-  themeClass: `theme-${item.cell.theme || 'stone'}`,
+  key: item.key,
   isTarget: Boolean(item.cell.target),
-  isLit: litKeys.value.includes(keyOf(item.row, item.col)),
-  hasRobot: robot.value.row === item.row && robot.value.col === item.col,
-  isStart: currentLevel.value.start.row === item.row && currentLevel.value.start.col === item.col,
-  isFlat: item.elevationDepth === 0,
-  height: item.height,
+  isLit: litKeys.value.includes(item.key),
+  isStart: currentLevel.value.start.x === item.x && currentLevel.value.start.y === item.y,
+  hasRobot: bot.value.x === item.x && bot.value.y === item.y,
   style: {
-    left: `${item.x - sceneMetrics.value.minX + 32}px`,
-    top: `${item.y - sceneMetrics.value.minY + 34}px`,
-    '--tile-depth': `${item.elevationDepth}px`
+    left: `${item.sceneX - sceneMetrics.value.minX + 48}px`,
+    top: `${item.sceneY - sceneMetrics.value.minY + 48}px`,
+    '--stack-height': `${item.cell.h * TILE_DEPTH}px`
   }
 })))
 
-watch(selectedLevelIndex, () => resetEditorAndLevel())
+const canGoNextLevel = computed(() => targetKeys.value.length > 0 && targetKeys.value.every((key) => litKeys.value.includes(key)) && selectedLevelIndex.value < levels.length - 1)
+
+watch(selectedLevelIndex, () => initializeLevelState())
 watch(completedLevelIds, (value) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
 }, { deep: true })
+
+function initializeLevelState() {
+  activeProcedureKey.value = 'main'
+  mainProcedure.value = []
+  procedures.value = { p1: [] }
+  resetCode()
+}
 
 function setStatus(text, tone = 'neutral') {
   statusText.value = text
   statusTone.value = tone
 }
 
+function selectLevel(index) {
+  selectedLevelIndex.value = index
+}
+
+function resetCode() {
+  runNonce.value += 1
+  isRunning.value = false
+  runningProcedureKey.value = ''
+  runningOperationIndex.value = -1
+  litKeys.value = []
+  bot.value = cloneBot(currentLevel.value.start)
+  setStatus(mainProcedure.value.length ? 'Code reset' : 'Program is empty')
+}
+
+function clearAllPrograms() {
+  mainProcedure.value = []
+  procedures.value = { p1: [] }
+  activeProcedureKey.value = 'main'
+  resetCode()
+}
+
 function emptySlots(limit, used) {
   return Array.from({ length: Math.max(limit - used, 0) }, (_, index) => index)
 }
 
-function commandLabel(command) {
+function appendOperation(operationId) {
+  const limit = activeLimit.value
+  if (activeProcedure.value.length >= limit) {
+    setStatus('No empty slot left', 'danger')
+    return
+  }
+
+  if (activeProcedureKey.value === 'main') {
+    mainProcedure.value = [...mainProcedure.value, operationId]
+  } else {
+    procedures.value = {
+      ...procedures.value,
+      [activeProcedureKey.value]: [...(procedures.value[activeProcedureKey.value] || []), operationId]
+    }
+  }
+
+  setStatus(`${operationLabel(operationId)} added`)
+}
+
+function removeOperation(procKey, index) {
+  if (procKey === 'main') {
+    mainProcedure.value = mainProcedure.value.filter((_, itemIndex) => itemIndex !== index)
+  } else {
+    procedures.value = {
+      ...procedures.value,
+      [procKey]: (procedures.value[procKey] || []).filter((_, itemIndex) => itemIndex !== index)
+    }
+  }
+  setStatus('Operation removed')
+}
+
+function undoLastOperation() {
+  if (activeProcedureKey.value === 'main') {
+    mainProcedure.value = mainProcedure.value.slice(0, -1)
+  } else {
+    procedures.value = {
+      ...procedures.value,
+      [activeProcedureKey.value]: (procedures.value[activeProcedureKey.value] || []).slice(0, -1)
+    }
+  }
+  setStatus('Last operation removed')
+}
+
+function clearActiveProcedure() {
+  if (activeProcedureKey.value === 'main') {
+    mainProcedure.value = []
+  } else {
+    procedures.value = {
+      ...procedures.value,
+      [activeProcedureKey.value]: []
+    }
+  }
+  setStatus('Procedure cleared')
+}
+
+function loadDemoProgram() {
+  mainProcedure.value = [...currentLevel.value.demo.main]
+  procedures.value = { p1: [...(currentLevel.value.demo.p1 || [])] }
+  setStatus('Demo loaded')
+}
+
+function operationLabel(operationId) {
   return {
     walk: 'Walk',
-    right: 'Turn R',
-    left: 'Turn L',
-    jump: 'Jump',
     light: 'Light',
-    repeat2: 'R2',
-    call1: 'P1'
-  }[command] || command
+    left: 'Turn L',
+    right: 'Turn R',
+    jump: 'Jump',
+    p1: 'P1'
+  }[operationId] || operationId
 }
 
-function commandGlyph(command) {
-  return {
-    walk: '↑',
-    right: '↱',
-    left: '↰',
-    jump: '⤴',
-    light: '✦',
-    repeat2: '×2',
-    call1: 'P1'
-  }[command] || '?'
-}
-
-function commandSprite(command) {
+function operationSprite(operationId) {
   return {
     walk: '/lightbot/operation-move.png',
-    right: '/lightbot/operation-turn-right.png',
-    left: '/lightbot/operation-turn-left.png',
-    jump: '/lightbot/operation-jump.png',
     light: '/lightbot/operation-lamp.png',
-    repeat2: '/lightbot/operation-jump.png',
-    call1: '/lightbot/operation-proc.png'
-  }[command] || '/lightbot/operation-move.png'
+    left: '/lightbot/operation-turn-left.png',
+    right: '/lightbot/operation-turn-right.png',
+    jump: '/lightbot/operation-jump.png',
+    p1: '/lightbot/operation-proc.png'
+  }[operationId] || '/lightbot/operation-move.png'
 }
 
-function delayForSpeed() {
-  return SPEED_MAP[String(speedValue.value)] || SPEED_MAP[3]
-}
-
-function tileAt(row, col) {
-  return currentLevel.value.board[row]?.[col] || null
-}
-
-function rotateLeft(dir) {
-  const index = DIRECTIONS.indexOf(dir)
-  return DIRECTIONS[(index + DIRECTIONS.length - 1) % DIRECTIONS.length]
-}
-
-function rotateRight(dir) {
-  const index = DIRECTIONS.indexOf(dir)
-  return DIRECTIONS[(index + 1) % DIRECTIONS.length]
+function platformAt(x, y) {
+  return boardLookup.value.get(platformKey(x, y)) || null
 }
 
 function nextPosition() {
-  const [rowOffset, colOffset] = DIRECTION_VECTORS[robot.value.dir]
-  return { row: robot.value.row + rowOffset, col: robot.value.col + colOffset }
+  const vector = DIRECTION_VECTORS[bot.value.dir]
+  return { x: bot.value.x + vector.x, y: bot.value.y + vector.y }
 }
 
-function markCompleteIfNeeded() {
-  if (!targetKeys.value.every((key) => litKeys.value.includes(key))) return false
+function rotateRight() {
+  const index = DIRECTION_ORDER.indexOf(bot.value.dir)
+  bot.value = { ...bot.value, dir: DIRECTION_ORDER[(index + 1) % DIRECTION_ORDER.length] }
+}
+
+function rotateLeft() {
+  const index = DIRECTION_ORDER.indexOf(bot.value.dir)
+  bot.value = { ...bot.value, dir: DIRECTION_ORDER[(index + 3) % DIRECTION_ORDER.length] }
+}
+
+function toggleCurrentTarget() {
+  const key = platformKey(bot.value.x, bot.value.y)
+  if (!targetKeys.value.includes(key)) return false
+  if (litKeys.value.includes(key)) {
+    litKeys.value = litKeys.value.filter((item) => item !== key)
+  } else {
+    litKeys.value = [...litKeys.value, key]
+  }
+  return true
+}
+
+function markFinished() {
+  if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) return false
   if (!completedLevelIds.value.includes(currentLevel.value.id)) {
     completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
   }
@@ -532,25 +554,100 @@ function markCompleteIfNeeded() {
   return true
 }
 
-function resetLevelState() {
-  executionNonce.value += 1
-  isRunning.value = false
-  runningProgram.value = ''
-  runningIndex.value = -1
-  litKeys.value = []
-  robot.value = cloneRobot(currentLevel.value.start)
-  setStatus('Level reset')
+function waitStep() {
+  return new Promise((resolve) => window.setTimeout(resolve, SPEED_MAP[String(speedValue.value)] || SPEED_MAP[3]))
 }
 
-function resetEditorAndLevel() {
-  activeEditor.value = 'main'
-  mainProgram.value = []
-  proc1Program.value = []
-  resetLevelState()
+async function executeOperation(operationId, nonce) {
+  if (nonce !== runNonce.value) return
+
+  if (operationId === 'right') {
+    rotateRight()
+    await waitStep()
+    return
+  }
+
+  if (operationId === 'left') {
+    rotateLeft()
+    await waitStep()
+    return
+  }
+
+  if (operationId === 'light') {
+    const switched = toggleCurrentTarget()
+    if (!switched) {
+      setStatus('Switch ignored: no target on this platform', 'danger')
+    }
+    await waitStep()
+    markFinished()
+    return
+  }
+
+  if (operationId === 'p1') {
+    await runProcedure('p1', procedures.value.p1 || [], nonce)
+    return
+  }
+
+  const next = nextPosition()
+  const currentPlatform = platformAt(bot.value.x, bot.value.y)
+  const nextPlatform = platformAt(next.x, next.y)
+
+  if (!currentPlatform || !nextPlatform) {
+    setStatus(`${operationLabel(operationId)} ignored`, 'danger')
+    await waitStep()
+    return
+  }
+
+  if (operationId === 'walk') {
+    if (currentPlatform.h === nextPlatform.h) {
+      bot.value = { ...bot.value, x: next.x, y: next.y }
+    } else {
+      setStatus('Walk ignored: different height', 'danger')
+    }
+    await waitStep()
+    return
+  }
+
+  if (operationId === 'jump') {
+    const heightDiff = nextPlatform.h - currentPlatform.h
+    if (heightDiff === 1 || heightDiff < 0) {
+      bot.value = { ...bot.value, x: next.x, y: next.y }
+    } else {
+      setStatus('Jump ignored', 'danger')
+    }
+    await waitStep()
+  }
 }
 
-function selectLevel(index) {
-  selectedLevelIndex.value = index
+async function runProcedure(procKey, operations, nonce, depth = 0) {
+  if (depth > 6 || nonce !== runNonce.value) return
+  for (let index = 0; index < operations.length; index += 1) {
+    if (nonce !== runNonce.value) return
+    runningProcedureKey.value = procKey
+    runningOperationIndex.value = index
+    await executeOperation(operations[index], nonce)
+    if (markFinished()) return
+  }
+}
+
+async function runCode() {
+  if (!mainProcedure.value.length || isRunning.value) return
+  resetCode()
+  const nonce = runNonce.value
+  isRunning.value = true
+  setStatus('Program running')
+  try {
+    await runProcedure('main', mainProcedure.value, nonce)
+    if (nonce === runNonce.value && !markFinished()) {
+      setStatus('Program finished', 'neutral')
+    }
+  } finally {
+    if (nonce === runNonce.value) {
+      isRunning.value = false
+      runningProcedureKey.value = ''
+      runningOperationIndex.value = -1
+    }
+  }
 }
 
 function goToNextLevel() {
@@ -558,204 +655,35 @@ function goToNextLevel() {
   selectedLevelIndex.value += 1
 }
 
-function appendCommand(command) {
-  const target = activeEditor.value === 'proc1' ? proc1Program : mainProgram
-  const limit = activeEditor.value === 'proc1' ? currentLevel.value.procLimit : currentLevel.value.mainLimit
-  if (target.value.length >= limit) {
-    setStatus('No more slots available', 'danger')
-    return
-  }
-  target.value = [...target.value, command]
-  setStatus(`${commandLabel(command)} added`)
-}
-
-function removeCommand(sequenceName, index) {
-  const target = sequenceName === 'proc1' ? proc1Program : mainProgram
-  target.value = target.value.filter((_, itemIndex) => itemIndex !== index)
-  setStatus('Instruction removed')
-}
-
-function undoLastCommand() {
-  if (activeEditor.value === 'proc1') {
-    proc1Program.value = proc1Program.value.slice(0, -1)
-  } else {
-    mainProgram.value = mainProgram.value.slice(0, -1)
-  }
-  setStatus('Last instruction removed')
-}
-
-function clearActiveSequence() {
-  if (activeEditor.value === 'proc1') {
-    proc1Program.value = []
-  } else {
-    mainProgram.value = []
-  }
-  setStatus('Sequence cleared')
-}
-
-function loadDemoSolution() {
-  mainProgram.value = [...currentLevel.value.demo.main]
-  proc1Program.value = [...currentLevel.value.demo.proc1]
-  setStatus('Demo loaded')
-}
-
-function failRun(message) {
-  setStatus(message, 'danger')
-  throw new Error(message)
-}
-
-async function waitStep() {
-  await new Promise((resolve) => window.setTimeout(resolve, delayForSpeed()))
-}
-
-async function executeAction(command, nonce) {
-  if (nonce !== executionNonce.value) return
-
-  if (command === 'left') {
-    robot.value = { ...robot.value, dir: rotateLeft(robot.value.dir) }
-    await waitStep()
-    return
-  }
-
-  if (command === 'right') {
-    robot.value = { ...robot.value, dir: rotateRight(robot.value.dir) }
-    await waitStep()
-    return
-  }
-
-  if (command === 'light') {
-    const tileData = tileAt(robot.value.row, robot.value.col)
-    const currentKey = keyOf(robot.value.row, robot.value.col)
-    if (!tileData?.target) failRun('No light tile here')
-    if (!litKeys.value.includes(currentKey)) {
-      litKeys.value = [...litKeys.value, currentKey]
-    }
-    await waitStep()
-    markCompleteIfNeeded()
-    return
-  }
-
-  const currentTile = tileAt(robot.value.row, robot.value.col)
-  const next = nextPosition()
-  const nextTile = tileAt(next.row, next.col)
-
-  if (!currentTile || !nextTile) failRun('Robot would fall off the board')
-
-  const currentHeight = Number(currentTile.h || 0)
-  const nextHeight = Number(nextTile.h || 0)
-
-  if (command === 'walk') {
-    if (nextHeight !== currentHeight) failRun('Walk only works on the same height')
-    robot.value = { ...robot.value, row: next.row, col: next.col }
-    await waitStep()
-    return
-  }
-
-  if (command === 'jump') {
-    const canJumpUp = nextHeight === currentHeight + 1
-    const canDropDown = nextHeight < currentHeight
-    if (!canJumpUp && !canDropDown) failRun('Jump must go up by 1 or down any number of levels')
-    robot.value = { ...robot.value, row: next.row, col: next.col }
-    await waitStep()
-  }
-}
-
-async function runSequence(sequenceName, sequence, nonce, depth = 0, budget = { steps: 0 }) {
-  if (depth > 6) failRun('Procedure nesting is too deep')
-
-  for (let index = 0; index < sequence.length; index += 1) {
-    if (nonce !== executionNonce.value) return
-    if (budget.steps > 100) failRun('Program is too long')
-
-    const command = sequence[index]
-    runningProgram.value = sequenceName
-    runningIndex.value = index
-
-    if (command === 'repeat2') {
-      const nextCommand = sequence[index + 1]
-      if (!nextCommand) failRun('Repeat needs a following instruction')
-
-      for (let repeatIndex = 0; repeatIndex < 2; repeatIndex += 1) {
-        budget.steps += 1
-        if (nextCommand === 'call1') {
-          if (!currentLevel.value.allowProcedure || proc1Program.value.length === 0) failRun('P1 is empty')
-          await runSequence('proc1', proc1Program.value, nonce, depth + 1, budget)
-        } else {
-          await executeAction(nextCommand, nonce)
-        }
-
-        if (markCompleteIfNeeded()) return
-      }
-
-      index += 1
-      continue
-    }
-
-    budget.steps += 1
-    if (command === 'call1') {
-      if (!currentLevel.value.allowProcedure || proc1Program.value.length === 0) failRun('P1 is empty')
-      await runSequence('proc1', proc1Program.value, nonce, depth + 1, budget)
-    } else {
-      await executeAction(command, nonce)
-    }
-
-    if (markCompleteIfNeeded()) return
-  }
-}
-
-async function runProgram() {
-  if (isRunning.value || mainProgram.value.length === 0) return
-
-  resetLevelState()
-  isRunning.value = true
-  const nonce = executionNonce.value
-  setStatus('Program running')
-
-  try {
-    await runSequence('main', mainProgram.value, nonce)
-    if (nonce === executionNonce.value && !targetKeys.value.every((key) => litKeys.value.includes(key))) {
-      setStatus('Program finished, but some lights are still off', 'danger')
-    }
-  } catch {
-    // failRun already updated the status.
-  } finally {
-    if (nonce === executionNonce.value) {
-      isRunning.value = false
-      runningProgram.value = ''
-      runningIndex.value = -1
-    }
-  }
-}
+initializeLevelState()
 </script>
 
 <style scoped>
 .lightbot-page {
   min-height: calc(100vh - 80px);
   padding: 8px;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.35), transparent 32%),
-    linear-gradient(180deg, #dbd9d4 0%, #cfcbc5 100%);
+  background: #d5dde4;
   color: #fff;
 }
 
-.lightbot-layout {
-  min-height: calc(100vh - 96px);
+.lightbot-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 286px;
+  grid-template-columns: minmax(0, 1fr) 290px;
   gap: 10px;
+  min-height: calc(100vh - 96px);
 }
 
 .board-panel,
-.side-card {
-  background: linear-gradient(180deg, #6f6966 0%, #625d5a 100%);
+.panel-card {
   border-radius: 14px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 20px 40px rgba(58, 49, 44, 0.12);
+  background: #6a6462;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .board-panel {
   display: flex;
   flex-direction: column;
-  padding: 16px 16px 10px;
+  padding: 14px;
 }
 
 .board-header {
@@ -766,501 +694,320 @@ async function runProgram() {
   margin-bottom: 12px;
 }
 
-.board-copy-block {
-  max-width: 620px;
-}
-
-.board-kicker {
+.eyebrow {
   margin: 0 0 4px;
-  color: #e2dbd4;
   font-size: 11px;
-  letter-spacing: .16em;
+  letter-spacing: .14em;
   text-transform: uppercase;
+  color: #e6ddd5;
 }
 
 .board-header h1 {
   margin: 0;
-  font-size: 30px;
-  line-height: 1.1;
-  color: #fff;
+  font-size: 28px;
 }
 
-.board-copy {
-  margin: 8px 0 0;
-  color: #efe7df;
-  line-height: 1.5;
+.subtitle {
+  margin: 6px 0 0;
+  color: #efe6de;
 }
 
-.board-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-
-.meta-chip {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.11);
-  color: #fff;
-  font-size: 12px;
-}
-
-.level-switcher {
+.level-strip {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: 220px;
 }
 
 .level-pill {
   width: 36px;
   height: 36px;
   border: 0;
-  border-radius: 11px;
-  background: #807977;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  transition: transform .16s ease, background-color .16s ease;
-}
-
-.level-pill:hover {
-  transform: translateY(-1px);
 }
 
 .level-pill.active {
-  background: #a6d7ce;
-  color: #314541;
+  background: #9fd3cb;
+  color: #354542;
 }
 
 .level-pill.done:not(.active) {
-  background: #8eb08a;
+  background: #85b48d;
 }
 
 .board-stage {
   position: relative;
   flex: 1;
   overflow: hidden;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #edf1f4 0%, #e3e8ed 100%);
+  border-radius: 14px;
+  background: #dce3ea;
 }
 
-.board-stage::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 16%, transparent 84%, rgba(52, 67, 86, 0.08));
-}
-
-.scene-backdrop {
+.board-grid {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.82), transparent 36%),
-    radial-gradient(circle at 50% 78%, rgba(137, 179, 217, 0.18), transparent 30%),
-    linear-gradient(30deg, rgba(213, 219, 225, 0.8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, 0.8) 87.5%, rgba(213, 219, 225, 0.8)),
-    linear-gradient(150deg, rgba(213, 219, 225, 0.8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, 0.8) 87.5%, rgba(213, 219, 225, 0.8));
-  background-size: auto, auto, 58px 102px, 58px 102px;
+    linear-gradient(30deg, rgba(153, 168, 183, 0.18) 12%, transparent 12.5%, transparent 87%, rgba(153, 168, 183, 0.18) 87.5%, rgba(153, 168, 183, 0.18)),
+    linear-gradient(150deg, rgba(153, 168, 183, 0.18) 12%, transparent 12.5%, transparent 87%, rgba(153, 168, 183, 0.18) 87.5%, rgba(153, 168, 183, 0.18));
+  background-size: 58px 102px;
+}
+
+.status-cluster {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-card {
+  min-width: 92px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(93, 87, 84, 0.9);
+}
+
+.status-card span {
+  display: block;
+  font-size: 11px;
+  color: #ddd0c6;
+  text-transform: uppercase;
+}
+
+.status-card.success {
+  background: rgba(86, 132, 88, 0.92);
+}
+
+.status-card.danger {
+  background: rgba(135, 83, 75, 0.92);
 }
 
 .scene-shell {
   position: absolute;
   inset: 0;
-  overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 72px 28px 36px;
+  padding: 48px 20px 20px;
 }
 
 .scene-viewport {
   position: relative;
   transform-origin: center center;
-  flex: 0 0 auto;
 }
 
 .iso-scene {
   position: relative;
 }
 
-.iso-tile {
+.platform {
   position: absolute;
-  width: 92px;
-  height: 74px;
+  width: 96px;
+  height: 96px;
 }
 
-.iso-tile.flat {
-  height: 46px;
-}
-
-.tile-shadow {
+.platform-shadow {
   position: absolute;
-  left: 12px;
-  top: calc(34px + var(--tile-depth));
-  width: 68px;
-  height: 22px;
+  left: 18px;
+  top: calc(38px + var(--stack-height));
+  width: 64px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(33, 43, 58, 0.12);
-  filter: blur(6px);
+  background: rgba(45, 56, 69, 0.15);
+  filter: blur(8px);
 }
 
-.iso-top,
-.iso-left,
-.iso-right {
+.platform-top,
+.platform-left,
+.platform-right {
   position: absolute;
 }
 
-.iso-top {
+.platform-top {
   left: 0;
   top: 0;
-  width: 92px;
-  height: 46px;
+  width: 96px;
+  height: 48px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  border: 1px solid var(--tile-top-edge, rgba(255, 255, 255, 0.28));
-  box-shadow: inset 0 0 0 1px var(--tile-top-inner, rgba(255, 255, 255, 0.12));
+  background: #565e68;
+  border: 2px solid #2e3438;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.iso-left {
+.platform-left {
   left: 0;
-  top: 22px;
-  width: 46px;
-  height: var(--tile-depth);
+  top: 24px;
+  width: 48px;
+  height: var(--stack-height);
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
-  border-left: 1px solid var(--tile-side-edge, rgba(255, 255, 255, 0.12));
+  background: #c0cad7;
+  border-left: 2px solid #2e3438;
 }
 
-.iso-right {
+.platform-right {
   right: 0;
-  top: 22px;
-  width: 46px;
-  height: var(--tile-depth);
+  top: 24px;
+  width: 48px;
+  height: var(--stack-height);
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
-  border-right: 1px solid var(--tile-side-edge, rgba(0, 0, 0, 0.14));
+  background: #aab3bf;
+  border-right: 2px solid #2e3438;
 }
 
-.iso-tile.flat .tile-shadow,
-.iso-tile.flat .iso-left,
-.iso-tile.flat .iso-right {
-  display: none;
-}
-
-.theme-stone {
-  --tile-top-edge: #2e3438;
-  --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(46, 52, 56, 0.72);
-}
-
-.theme-stone .iso-top { background: #565e68; }
-.theme-stone .iso-left { background: #c0cad7; }
-.theme-stone .iso-right { background: #aab3bf; }
-
-.theme-moss {
-  --tile-top-edge: #2e3438;
-  --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(46, 52, 56, 0.72);
-}
-
-.theme-moss .iso-top { background: #565e68; }
-.theme-moss .iso-left { background: #c0cad7; }
-.theme-moss .iso-right { background: #aab3bf; }
-
-.theme-slate {
-  --tile-top-edge: #2e3438;
-  --tile-top-inner: rgba(255, 255, 255, 0.1);
-  --tile-side-edge: rgba(46, 52, 56, 0.72);
-}
-
-.theme-slate .iso-top { background: #565e68; }
-.theme-slate .iso-left { background: #c0cad7; }
-.theme-slate .iso-right { background: #aab3bf; }
-
-.theme-copper {
-  --tile-top-edge: #2e3438;
-  --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(46, 52, 56, 0.72);
-}
-
-.theme-copper .iso-top { background: #565e68; }
-.theme-copper .iso-left { background: #c0cad7; }
-.theme-copper .iso-right { background: #aab3bf; }
-
-.theme-stone .tile-shadow,
-.theme-moss .tile-shadow {
-  background: rgba(33, 43, 58, 0.12);
-}
-
-.theme-slate .tile-shadow,
-.theme-copper .tile-shadow {
-  background: rgba(24, 32, 42, 0.19);
-}
-
-.iso-tile.target .iso-top {
+.platform.target .platform-top {
   background: #1e4d6f;
-  box-shadow: inset 0 0 0 2px rgba(111, 176, 255, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-.iso-tile.lit .iso-top {
-  background: #fffd00;
-  box-shadow: inset 0 0 0 2px rgba(255, 243, 121, 0.34), 0 0 16px rgba(255, 226, 77, 0.18);
+.platform.lit .platform-top {
+  background: #ffef00;
 }
 
-.iso-tile.start .iso-top::after {
-  content: '';
+.target-ring {
   position: absolute;
-  inset: 8px 18px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.lamp,
-.start-badge,
-.height-badge,
-.robot-sprite {
-  position: absolute;
-}
-
-.lamp {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
   width: 34px;
   height: 20px;
-  border-radius: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  border: 4px solid rgba(75, 144, 255, 0.8);
+  background: transparent;
 }
 
-.lamp-off {
-  background: #1e74ea;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
-}
-
-.lamp-on {
-  background: #ffe66a;
-  box-shadow: 0 0 18px rgba(255, 226, 77, 0.78);
+.platform.lit .target-ring {
+  border-color: rgba(255, 247, 107, 0.92);
 }
 
 .start-badge {
-  left: 12px;
-  top: 12px;
-  width: 18px;
-  height: 18px;
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.88);
-  color: #546161;
-  font-size: 10px;
+  color: #4a5961;
   font-weight: 800;
 }
 
-.height-badge {
-  right: 12px;
-  top: 10px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  background: rgba(38, 44, 49, 0.44);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.robot-sprite {
+.bot {
+  position: absolute;
   left: 50%;
   top: 50%;
-  font-size: 36px;
-  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.18));
+  width: 48px;
+  height: 48px;
+  border-radius: 50% 50% 46% 46%;
+  background: linear-gradient(180deg, #fefefe 0%, #d5d9dd 100%);
+  border: 4px solid #20262c;
+  transform: translate(-50%, -74%);
+  box-shadow: 10px 0 0 rgba(255, 255, 255, 0.12);
 }
 
-.board-overlay {
+.bot-eye,
+.bot-mark {
   position: absolute;
-  z-index: 2;
 }
 
-.board-overlay.left {
-  left: 14px;
-  top: 14px;
+.bot-eye {
+  top: 16px;
+  width: 8px;
+  height: 14px;
+  border-radius: 999px;
+  background: #19d5ff;
 }
 
-.board-overlay.right {
-  right: 14px;
-  top: 14px;
+.bot-eye.left { left: 12px; }
+.bot-eye.right { right: 12px; }
+
+.bot-mark {
+  left: 50%;
+  top: -7px;
+  width: 8px;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #ff552f;
 }
 
-.board-status.compact {
-  max-width: 260px;
-}
-
-.status-box.mini {
-  min-width: 78px;
-  padding: 8px 9px;
-}
-
-.mission-card {
-  width: 220px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(84, 76, 72, 0.82);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 24px rgba(39, 29, 24, 0.12);
-}
-
-.mission-title {
-  margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #efe7df;
-}
-
-.mission-card p {
-  margin: 0 0 12px;
-  line-height: 1.5;
-  color: #f5eee7;
-}
-
-.mission-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 8px;
-  margin-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.mission-row span {
-  color: #d7cac1;
-}
-
-.board-status {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  max-width: 340px;
-  justify-content: flex-end;
-}
-
-.status-box {
-  min-width: 104px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(74, 68, 66, 0.86);
-  backdrop-filter: blur(8px);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.status-box span {
-  font-size: 11px;
-  color: #d4cbc5;
-  text-transform: uppercase;
-}
-
-.status-box.success {
-  background: rgba(92, 128, 89, 0.9);
-}
-
-.status-box.danger {
-  background: rgba(139, 88, 78, 0.92);
-}
+.bot.dir-right { transform: translate(-50%, -74%) rotate(90deg); }
+.bot.dir-backward { transform: translate(-50%, -74%) rotate(180deg); }
+.bot.dir-left { transform: translate(-50%, -74%) rotate(-90deg); }
 
 .control-bar {
   margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: #6b6562;
+  border-radius: 12px;
+  background: #6a6462;
 }
 
 .control-btn,
+.next-btn,
 .ghost-btn,
-.editor-tabs button,
+.proc-tabs button,
 .instruction-btn,
-.program-slot.filled,
-.next-btn {
+.program-slot.filled {
   border: 0;
   cursor: pointer;
 }
 
 .control-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #575351;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #56514f;
   color: #fff;
 }
 
-.control-btn.play,
-.next-btn {
-  background: #a6d7ce;
-  color: #314541;
-  font-weight: 800;
-}
-
-.control-btn.icon-only {
+.control-btn.icon {
   display: grid;
   place-items: center;
-  padding: 0;
 }
 
-.ui-sprite {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  image-rendering: auto;
+.control-sprite {
+  width: 24px;
+  height: 24px;
 }
 
 .control-btn:disabled,
-.ghost-btn:disabled,
-.editor-tabs button:disabled,
 .instruction-btn:disabled,
-.program-slot.filled:disabled,
-.next-btn:disabled {
+.ghost-btn:disabled,
+.proc-tabs button:disabled,
+.program-slot.filled:disabled {
   opacity: 0.42;
   cursor: not-allowed;
 }
 
-.speed-box,
-.progress-box {
+.speed-box {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: 6px;
   color: #fff;
-  font-weight: 700;
 }
 
 .speed-slider {
-  width: 92px;
-  accent-color: #9fd3cb;
-}
-
-.progress-track {
-  width: 120px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #f7da6c 0%, #9fd3cb 100%);
+  width: 90px;
+  accent-color: #e7df9c;
 }
 
 .next-btn {
+  margin-left: auto;
   padding: 9px 14px;
   border-radius: 10px;
+  background: #e7df9c;
+  color: #3c434b;
+  font-weight: 800;
 }
 
 .sidebar-panel {
@@ -1269,69 +1016,29 @@ async function runProgram() {
   gap: 10px;
 }
 
-.side-card {
+.panel-card {
   padding: 12px;
 }
 
-.map-card {
-  background: linear-gradient(180deg, #6d6662 0%, #595350 100%);
-}
-
-.map-copy {
-  margin: 0 0 12px;
-  line-height: 1.55;
-  color: #f3ece4;
-}
-
-.legend-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: #efe7df;
-  font-size: 12px;
-}
-
-.legend-swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.legend-swatch.route {
-  background: linear-gradient(180deg, #8b8b86, #666663);
-}
-
-.legend-swatch.decor {
-  background: linear-gradient(180deg, #73849b, #506075);
-}
-
-.legend-swatch.lamp {
-  background: #1e74ea;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12) inset;
-}
-
-.legend-swatch.start {
-  background: rgba(255, 255, 255, 0.9);
-  color: #4e5d5c;
-}
-
-.side-title {
+.panel-title {
   margin-bottom: 8px;
   font-size: 16px;
   font-weight: 700;
+}
+
+.brief-copy {
+  margin: 0 0 12px;
+  color: #f1e7de;
+  line-height: 1.5;
+}
+
+.brief-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .instruction-grid {
@@ -1341,62 +1048,38 @@ async function runProgram() {
 }
 
 .instruction-btn {
-  width: 100%;
   min-height: 92px;
-  padding: 12px 10px;
+  padding: 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
   gap: 6px;
-  text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
-}
-
-.instruction-btn:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .instruction-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e7df9c;
+  box-shadow: inset 0 0 0 2px #56606b;
   display: grid;
   place-items: center;
-  background: rgba(231, 224, 156, 0.9);
-  font-size: 18px;
-  font-weight: 800;
 }
 
 .instruction-sprite {
   width: 24px;
   height: 24px;
-  object-fit: contain;
 }
 
 .instruction-label {
   font-weight: 700;
-  line-height: 1.15;
-}
-
-.instruction-btn.walk .instruction-icon,
-.instruction-btn.right .instruction-icon,
-.instruction-btn.left .instruction-icon,
-.instruction-btn.jump .instruction-icon,
-.instruction-btn.light .instruction-icon,
-.instruction-btn.repeat2 .instruction-icon,
-.instruction-btn.call1 .instruction-icon {
-  box-shadow: inset 0 0 0 2px #56606b;
 }
 
 .instruction-btn small {
-  color: #d7cdca;
+  color: #ddd3cb;
   line-height: 1.35;
 }
 
@@ -1408,41 +1091,37 @@ async function runProgram() {
 
 .program-head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
 }
 
-.editor-tabs {
+.proc-tabs {
   display: flex;
   gap: 6px;
 }
 
-.editor-tabs button,
+.proc-tabs button,
 .ghost-btn {
   padding: 8px 10px;
   border-radius: 8px;
-  background: #595654;
+  background: #5a5552;
   color: #fff;
 }
 
-.editor-tabs button.active {
-  background: #9fd3cb;
-  color: #334b47;
+.proc-tabs button.active {
+  background: #e7df9c;
+  color: #374147;
 }
 
-.program-section {
+.program-block {
   margin-top: 14px;
 }
 
-.program-section.disabled {
-  opacity: 0.45;
-}
-
-.sequence-label {
+.program-label {
   margin-bottom: 8px;
-  color: #d6ceca;
   font-weight: 700;
+  color: #ece1d7;
 }
 
 .program-grid {
@@ -1452,82 +1131,57 @@ async function runProgram() {
 }
 
 .program-slot {
-  min-height: 46px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  min-height: 64px;
+  border-radius: 10px;
   border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .program-slot.filled {
-  border-style: solid;
-  background: #7a7471;
-  color: #fff;
-  font-weight: 700;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 6px 2px;
+  gap: 4px;
+  border-style: solid;
+  background: #5f6975;
+  color: #fff;
 }
 
 .program-slot.filled.active {
-  outline: 2px solid #9fd3cb;
-  outline-offset: 1px;
+  outline: 2px solid #e7df9c;
 }
 
-.program-slot.walk { background: #6c7d92; }
-.program-slot.right,
-.program-slot.left { background: #7d6c92; }
-.program-slot.jump { background: #92786c; }
-.program-slot.light { background: #8e8959; }
-.program-slot.repeat2 { background: #6e8a66; }
-.program-slot.call1 { background: #4f7f78; }
-
-.program-slot {
-  overflow: hidden;
-}
-
-.program-glyph {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.program-glyph.icon {
-  display: grid;
-  place-items: center;
+.slot-icon {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
-  background: rgba(244, 239, 187, 0.94);
+  border-radius: 7px;
+  background: #e7df9c;
   box-shadow: inset 0 0 0 2px #56606b;
+  display: grid;
+  place-items: center;
 }
 
 .program-sprite {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
+  width: 18px;
+  height: 18px;
 }
 
-.program-name {
+.slot-label {
   font-size: 10px;
-  line-height: 1;
+  font-weight: 700;
 }
 
 .program-actions {
   margin-top: auto;
+  padding-top: 16px;
   display: flex;
   gap: 8px;
-  padding-top: 16px;
 }
 
 @media (max-width: 1080px) {
-  .lightbot-layout {
+  .lightbot-shell {
     grid-template-columns: 1fr;
-  }
-
-  .sidebar-panel {
-    order: -1;
   }
 }
 
@@ -1538,44 +1192,19 @@ async function runProgram() {
     align-items: flex-start;
   }
 
-  .level-switcher {
-    max-width: none;
-    justify-content: flex-start;
-  }
-
-  .board-overlay.left,
-  .board-overlay.right {
-    position: static;
-  }
-
-  .board-stage {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .scene-shell {
-    position: relative;
-    min-height: 360px;
-    align-items: flex-start;
-    padding-top: 24px;
-  }
-
-  .board-status {
-    width: auto;
-    max-width: none;
-    margin: 12px;
-  }
-
-  .board-status {
-    justify-content: flex-start;
-  }
-
-  .instruction-grid {
+  .instruction-grid,
+  .program-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .program-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .status-cluster {
+    position: static;
+    padding: 12px 12px 0;
+    justify-content: flex-start;
+  }
+
+  .scene-shell {
+    padding-top: 18px;
   }
 }
 </style>
