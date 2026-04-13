@@ -356,95 +356,99 @@ const levels = [
     title: 'Level 1: First Light',
     skill: 'Sequencing',
     description: '最基础的关卡。先学会沿着平地前进并打开灯。',
-    goal: '沿着平台向前，点亮两盏灯。',
-    mainLimit: 8,
+    goal: '沿着竖直平台前进，点亮尽头的一盏灯。',
+    mainLimit: 4,
     procLimits: {},
     tips: [
       { title: 'Walk', copy: '只有前方存在同高度平台时，Walk 才会生效。' },
       { title: 'Light', copy: '机器人站在目标格上时，Light 才会切换灯的状态。' }
     ],
-    board: [[makeTile(), makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)]],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], p1: [] }
+    board: [
+      [makeTile(1, true)],
+      [makeTile()],
+      [makeTile()]
+    ],
+    start: { x: 0, y: 2, dir: 'left' },
+    demo: { main: ['walk', 'walk', 'light'], p1: [] }
   },
   {
     id: 'level-2',
     title: 'Level 2: Step Up',
     skill: 'Jump',
     description: '这一关引入一级高差，用 Jump 上台阶。',
-    goal: '点亮低处和高处的两盏灯。',
-    mainLimit: 8,
+    goal: '沿着折线路径走到尽头，点亮唯一的目标格。',
+    mainLimit: 10,
     procLimits: {},
     tips: [
-      { title: 'Jump up', copy: 'Jump 允许上升一层。' },
-      { title: 'Drop down', copy: 'Jump 也允许向下跳到更低的平台。' }
+      { title: 'Bend path', copy: '这一关的地图不再是直线，而是参考项目里的折线小岛。' },
+      { title: 'Turn', copy: '在拐角处先转向，再继续前进。' }
     ],
     board: [
-      [null, null, makeTile(2), makeTile(2, true)],
-      [makeTile(), makeTile(1, true), makeTile(), makeTile(2)]
+      [makeTile(), makeTile(), makeTile(1, true)],
+      [makeTile(), null, null],
+      [makeTile(), makeTile(), makeTile()]
     ],
-    start: { x: 0, y: 1, dir: 'forward' },
-    demo: { main: ['walk', 'light', 'walk', 'jump', 'walk', 'light'], p1: [] }
+    start: { x: 2, y: 2, dir: 'backward' },
+    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'right', 'walk', 'walk', 'light'], p1: [] }
   },
   {
     id: 'level-3',
     title: 'Level 3: Corner Path',
     skill: 'Turns',
     description: '转向系统开始生效，路径变成拐角。',
-    goal: '转弯后点亮 L 形路径两端的灯。',
+    goal: '顺着台阶一路跳上去，点亮高处目标格。',
     mainLimit: 10,
     procLimits: {},
     tips: [
-      { title: 'Turn', copy: 'Left 和 Right 只改变朝向，不会移动机器人。' },
-      { title: 'Plan ahead', copy: '先想好面朝方向，再安排移动。' }
+      { title: 'Jump up', copy: '这张图来自参考项目的三级关卡，是连续上升的阶梯。' },
+      { title: 'Plan ahead', copy: '每次上升一层都要用 Jump，而不是 Walk。' }
     ],
     board: [
-      [makeTile(), makeTile(), makeTile(1, true)],
-      [null, null, makeTile()],
-      [null, null, makeTile(1, true)]
+      [makeTile(), makeTile(4, true)],
+      [makeTile(2), makeTile(3)]
     ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'light', 'right', 'walk', 'walk', 'light'], p1: [] }
+    start: { x: 0, y: 0, dir: 'right' },
+    demo: { main: ['jump', 'left', 'jump', 'left', 'jump', 'light'], p1: [] }
   },
   {
     id: 'level-4',
     title: 'Level 4: Procedure',
     skill: 'Procedures',
     description: 'MAIN 空间不够了，需要把重复动作塞进 PROC1。',
-    goal: '利用 PROC1 复用两次相同动作，点亮四盏灯。',
-    mainLimit: 6,
+    goal: '沿着参考项目的阶梯平台前进到高处，只点亮终点。',
+    mainLimit: 10,
     procLimits: { p1: 4 },
     tips: [
-      { title: 'PROC1', copy: 'PROC1 像一个可复用的函数。' },
-      { title: 'Reuse', copy: '把重复的 walk + light 放进去，MAIN 只负责调用和转向。' }
+      { title: 'Real map shape', copy: '这一关的地图骨架已经按开源项目的坐标改成阶梯状。' },
+      { title: 'Procedure', copy: '现在仍然保留 PROC1，让后续流程能继续对齐参考项目。' }
     ],
     board: [
-      [null, makeTile(1, true), makeTile(1, true)],
-      [makeTile(), makeTile(), makeTile()],
-      [null, makeTile(1, true), makeTile(1, true)]
+      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3, true)],
+      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)],
+      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)]
     ],
-    start: { x: 0, y: 1, dir: 'forward' },
-    demo: { main: ['p1', 'right', 'p1'], p1: ['walk', 'light'] }
+    start: { x: 0, y: 2, dir: 'forward' },
+    demo: { main: ['p1', 'p1', 'left', 'walk', 'walk', 'light'], p1: ['jump', 'jump'] }
   },
   {
     id: 'level-5',
     title: 'Level 5: Bridge Loop',
     skill: 'Procedures + Jump',
     description: '综合关卡，带跳跃和过程调用。',
-    goal: '跨过桥面并通过 PROC1 连续点亮目标格。',
+    goal: '对齐参考项目的三目标地图，依次点亮所有目标格。',
     mainLimit: 8,
     procLimits: { p1: 3 },
     tips: [
-      { title: 'Chain actions', copy: 'PROC1 适合装入一个小动作链。' },
-      { title: 'Timing', copy: '最后一步要在目标格上执行 Light。' }
+      { title: 'Three targets', copy: '这张图改成了参考项目第五关的三目标布局。' },
+      { title: 'Timing', copy: '跨层移动时先确认高度，再决定用 Walk 还是 Jump。' }
     ],
     board: [
-      [null, makeTile(2), null, makeTile(2)],
-      [makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)],
-      [null, makeTile(2), null, makeTile(2, true)]
+      [makeTile(1, true), makeTile(), makeTile(3, true)],
+      [makeTile(), makeTile(), makeTile(2)],
+      [makeTile(), makeTile(2, true), makeTile(2)]
     ],
-    start: { x: 0, y: 1, dir: 'forward' },
-    demo: { main: ['p1', 'jump', 'light'], p1: ['walk', 'light', 'walk'] }
+    start: { x: 0, y: 2, dir: 'right' },
+    demo: { main: ['walk', 'p1', 'left', 'light', 'right', 'p1'], p1: ['jump', 'light', 'jump'] }
   }
 ]
 
