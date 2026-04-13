@@ -108,7 +108,7 @@
 
           <div class="hero-actions">
             <button class="hero-btn primary" @click="startLevel">Enter Puzzle</button>
-            <button class="hero-btn" @click="loadDemoAndStart">Load Demo</button>
+            <button class="hero-btn" :disabled="!hasCurrentDemo" @click="loadDemoAndStart">Load Demo</button>
           </div>
         </div>
 
@@ -342,7 +342,7 @@
           <section class="program-tools">
             <button class="tool-btn" :disabled="isRunning" @click="undoLastOperation">Undo</button>
             <button class="tool-btn" :disabled="isRunning" @click="clearActiveProcedure">Clear Active</button>
-            <button class="tool-btn" :disabled="isRunning" @click="loadDemoProgram">Load Demo</button>
+            <button class="tool-btn" :disabled="isRunning || !hasCurrentDemo" @click="loadDemoProgram">Load Demo</button>
             <button class="tool-btn" :disabled="isRunning" @click="resetLevel(true)">Clear All</button>
           </section>
         </aside>
@@ -511,6 +511,10 @@ let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels[selectedLevelIndex.value])
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
+const hasCurrentDemo = computed(() => {
+  const demo = currentLevel.value.demo || { main: [], p1: [] }
+  return (demo.main?.length || 0) + (demo.p1?.length || 0) > 0
+})
 const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
@@ -768,6 +772,10 @@ function startLevel() {
 }
 
 function loadDemoProgram() {
+  if (!hasCurrentDemo.value) {
+    setStatus('No demo for this level', 'danger')
+    return
+  }
   mainProcedure.value = [...currentLevel.value.demo.main]
   procedures.value = { p1: [...(currentLevel.value.demo.p1 || [])] }
   setStatus('Demo loaded')
