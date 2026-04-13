@@ -47,6 +47,7 @@
         </div>
         <div class="select-actions">
           <button class="pill-btn" @click="screen = 'tutorial'">Tutorial</button>
+          <button class="pill-btn" @click="openEditor">Level Editor</button>
           <div class="progress-chip">{{ completedLevelIds.length }}/{{ levels.length }} complete</div>
         </div>
       </header>
@@ -122,12 +123,108 @@
       </div>
     </section>
 
+    <section v-else-if="screen === 'editor'" class="editor-screen">
+      <div class="editor-shell">
+        <aside class="editor-sidebar">
+          <div class="editor-card">
+            <div class="program-header">
+              <span>Level Editor</span>
+              <button class="pill-btn" @click="goToLevelSelect">Back</button>
+            </div>
+
+            <div class="editor-form-grid">
+              <label>
+                <span>Title</span>
+                <input v-model="editorDraft.title" type="text" maxlength="40">
+              </label>
+              <label>
+                <span>Skill</span>
+                <input v-model="editorDraft.skill" type="text" maxlength="24">
+              </label>
+              <label class="full-span">
+                <span>Description</span>
+                <input v-model="editorDraft.description" type="text" maxlength="120">
+              </label>
+              <label class="full-span">
+                <span>Goal</span>
+                <input v-model="editorDraft.goal" type="text" maxlength="120">
+              </label>
+              <label>
+                <span>Main Slots</span>
+                <input v-model.number="editorDraft.mainLimit" type="number" min="1" max="20">
+              </label>
+              <label>
+                <span>P1 Slots</span>
+                <input v-model.number="editorDraft.p1Limit" type="number" min="0" max="12">
+              </label>
+              <label>
+                <span>Facing</span>
+                <select v-model="editorDraft.start.dir">
+                  <option value="forward">East</option>
+                  <option value="right">South</option>
+                  <option value="backward">West</option>
+                  <option value="left">North</option>
+                </select>
+              </label>
+              <label>
+                <span>Height</span>
+                <input v-model.number="editorHeight" type="number" min="1" max="5">
+              </label>
+            </div>
+          </div>
+
+          <div class="editor-card">
+            <p class="screen-kicker">Tools</p>
+            <div class="editor-tool-row">
+              <button class="tool-btn" :class="{ selected: editorTool === 'platform' }" @click="editorTool = 'platform'">Platform</button>
+              <button class="tool-btn" :class="{ selected: editorTool === 'target' }" @click="editorTool = 'target'">Target</button>
+              <button class="tool-btn" :class="{ selected: editorTool === 'start' }" @click="editorTool = 'start'">Start</button>
+              <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
+            </div>
+
+            <div class="editor-grid-board">
+              <div v-for="(row, y) in editorDraft.board" :key="`editor-row-${y}`" class="editor-grid-row">
+                <button
+                  v-for="(_, x) in row"
+                  :key="`editor-cell-${x}-${y}`"
+                  class="editor-grid-cell"
+                  :class="editorCellClass(x, y)"
+                  @click="applyEditorCell(x, y)"
+                >
+                  <span v-if="editorCellAt(x, y)" class="cell-height">{{ editorCellAt(x, y).h }}</span>
+                  <span v-if="editorDraft.start.x === x && editorDraft.start.y === y" class="cell-start">S</span>
+                  <span v-else-if="editorCellAt(x, y)?.target" class="cell-target">T</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="editor-action-row">
+              <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
+              <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
+            </div>
+          </div>
+        </aside>
+
+        <div class="editor-preview-pane">
+          <div class="editor-card grow">
+            <div class="program-header">
+              <span>Preview</span>
+              <span class="editor-preview-hint">Click cells to build a puzzle.</span>
+            </div>
+            <div class="scene-frame editor-frame">
+              <div ref="editorSceneHost" class="three-scene-host editor-scene-host"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section v-else class="play-screen">
       <div class="play-shell">
         <aside class="hud-rail">
-          <button class="rail-btn" @click="screen = 'select'">←</button>
+          <button class="rail-btn" @click="leavePlayScreen">←</button>
           <button class="rail-btn" @click="resetLevel(false)">↺</button>
-          <button class="rail-btn muted" @click="screen = 'brief'">?</button>
+          <button class="rail-btn muted" @click="openPlayContext">?</button>
         </aside>
 
         <main class="board-stage">
@@ -179,9 +276,9 @@
               <h2>{{ currentLevel.title }}</h2>
               <p>所有目标格已经点亮。现在可以继续下一关或返回选关。</p>
               <div class="finish-actions">
-                <button class="hero-btn primary" @click="goToNextLevel">Next Level</button>
+                <button class="hero-btn primary" @click="goToNextLevel">{{ isCustomPlaytest ? 'Back To Editor' : 'Next Level' }}</button>
                 <button class="hero-btn" @click="resetLevel(false)">Replay</button>
-                <button class="hero-btn" @click="screen = 'select'">Level Select</button>
+                <button class="hero-btn" @click="leavePlayScreen">{{ isCustomPlaytest ? 'Leave Test' : 'Level Select' }}</button>
               </div>
             </div>
           </div>
@@ -255,10 +352,12 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as THREE from 'three'
+import { LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
+const EDITOR_GRID_SIZE = 6
 const TILE_WIDTH = 96
 const TILE_HEIGHT = 48
 const TILE_DEPTH = 22
@@ -307,190 +406,61 @@ const tutorialCards = [
 
 const learningPoints = ['Sequencing', 'Decomposition', 'Procedures', 'Recursive loops', 'Spatial reasoning']
 
-function makeTile(height = 1, target = false) {
-  return { h: height, target }
+const levels = LIGHTBOT_LEVELS
+
+function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
+  return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
 }
 
-const levels = [
-  {
-    id: 'level-1',
-    title: 'Level 1: First Light',
-    skill: 'Sequencing',
-    description: '最基础的关卡。先学会沿着平地前进并打开灯。',
-    goal: '从起始蓝色方块出发，走到右上角点亮目标格。',
-    mainLimit: 6,
-    procLimits: {},
-    tips: [
-      { title: 'Walk', copy: '只有前方存在同高度平台时，Walk 才会生效。' },
-      { title: 'Light', copy: '机器人站在目标格上时，Light 才会切换灯的状态。' }
-    ],
-    board: [
-      [makeTile(2), makeTile(2), makeTile(2, true)],
-      [makeTile(), makeTile(), makeTile()],
-      [makeTile(), makeTile(), null]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['right', 'walk', 'left', 'jump', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-2',
-    title: 'Level 2: Step Up',
-    skill: 'Jump',
-    description: '这一关引入一级高差，用 Jump 上台阶。',
-    goal: '沿着折线路径走到尽头，点亮唯一的目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Bend path', copy: '这一关的地图不再是直线，而是参考项目里的折线小岛。' },
-      { title: 'Turn', copy: '在拐角处先转向，再继续前进。' }
-    ],
-    board: [
-      [makeTile(), makeTile(), makeTile(1, true)],
-      [makeTile(), null, null],
-      [makeTile(), makeTile(), makeTile()]
-    ],
-    start: { x: 2, y: 2, dir: 'backward' },
-    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'right', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-3',
-    title: 'Level 3: Corner Path',
-    skill: 'Turns',
-    description: '转向系统开始生效，路径变成拐角。',
-    goal: '顺着台阶一路跳上去，点亮高处目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Jump up', copy: '这张图来自参考项目的三级关卡，是连续上升的阶梯。' },
-      { title: 'Plan ahead', copy: '每次上升一层都要用 Jump，而不是 Walk。' }
-    ],
-    board: [
-      [makeTile(), makeTile(4, true)],
-      [makeTile(2), makeTile(3)]
-    ],
-    start: { x: 0, y: 0, dir: 'right' },
-    demo: { main: ['jump', 'left', 'jump', 'left', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-4',
-    title: 'Level 4: Procedure',
-    skill: 'Procedures',
-    description: 'MAIN 空间不够了，需要把重复动作塞进 PROC1。',
-    goal: '沿着参考项目的阶梯平台前进到高处，只点亮终点。',
-    mainLimit: 10,
-    procLimits: { p1: 4 },
-    tips: [
-      { title: 'Real map shape', copy: '这一关的地图骨架已经按开源项目的坐标改成阶梯状。' },
-      { title: 'Procedure', copy: '现在仍然保留 PROC1，让后续流程能继续对齐参考项目。' }
-    ],
-    board: [
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3, true)],
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)],
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['p1', 'p1', 'left', 'walk', 'walk', 'light'], p1: ['jump', 'jump'] }
-  },
-  {
-    id: 'level-5',
-    title: 'Level 5: Bridge Loop',
-    skill: 'Procedures + Jump',
-    description: '综合关卡，带跳跃和过程调用。',
-    goal: '对齐参考项目的三目标地图，依次点亮所有目标格。',
-    mainLimit: 8,
-    procLimits: { p1: 3 },
-    tips: [
-      { title: 'Three targets', copy: '这张图改成了参考项目第五关的三目标布局。' },
-      { title: 'Timing', copy: '跨层移动时先确认高度，再决定用 Walk 还是 Jump。' }
-    ],
-    board: [
-      [makeTile(1, true), makeTile(), makeTile(3, true)],
-      [makeTile(), makeTile(), makeTile(2)],
-      [makeTile(), makeTile(2, true), makeTile(2)]
-    ],
-    start: { x: 0, y: 2, dir: 'right' },
-    demo: { main: ['walk', 'p1', 'left', 'light', 'right', 'p1'], p1: ['jump', 'light', 'jump'] }
-  },
-  {
-    id: 'level-6',
-    title: 'Level 6: Twin Lamps',
-    skill: 'Multi-target pathing',
-    description: '开始要求一次路线中依次点亮多个目标格。',
-    goal: '沿着外圈平台前进，点亮顶部左右两端的目标格。',
-    mainLimit: 12,
-    procLimits: {},
-    tips: [
-      { title: 'Route order', copy: '先走到一端点灯，再沿着同一条边回到另一端。' },
-      { title: 'Stay flat', copy: '这一关没有高度变化，重点是路径规划和转向。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2, true)],
-      [makeTile(2), null, makeTile(2)],
-      [makeTile(2), makeTile(2), makeTile(2)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'light', 'left', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-7',
-    title: 'Level 7: Double Height',
-    skill: 'Jump chain',
-    description: '把平地转向和连续 Jump 放在同一关里。',
-    goal: '先点亮起点灯，再转向爬上高台，点亮最顶端的目标格。',
-    mainLimit: 8,
-    procLimits: {},
-    tips: [
-      { title: 'Light first', copy: '起点本身就是目标格，别忘了先点亮。' },
-      { title: 'Jump chain', copy: '连续升高的平台只能用 Jump，Walk 无法上台阶。' }
-    ],
-    board: [
-      [makeTile(1), makeTile(2), makeTile(3), makeTile(4, true)],
-      [makeTile(1, true), null, null, null]
-    ],
-    start: { x: 0, y: 1, dir: 'left' },
-    demo: { main: ['light', 'walk', 'right', 'jump', 'jump', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-8',
-    title: 'Level 8: Procedure Rail',
-    skill: 'Procedure reuse',
-    description: '把重复的“前进一步并点灯”抽成过程调用。',
-    goal: '沿着一条直线连续点亮三个目标格。',
-    mainLimit: 4,
-    procLimits: { p1: 2 },
-    tips: [
-      { title: 'Repeatable chunk', copy: '这关适合把重复动作抽到 PROC1，避免 MAIN 过长。' },
-      { title: 'Final lamp', copy: '最后一个目标格上不需要再移动，只需要补一次 Light。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2, true), makeTile(2), makeTile(2, true)]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['light', 'p1', 'p1'], p1: ['walk', 'light'] }
-  },
-  {
-    id: 'level-9',
-    title: 'Level 9: Corner Tower',
-    skill: 'Turns + height mix',
-    description: '路径先在平地上横向展开，再在拐角跳上高台。',
-    goal: '先点亮右下角灯，再转向跳上高台，点亮顶部目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Two phases', copy: '先完成平地部分，再处理拐角后的上台阶动作。' },
-      { title: 'Jump at corner', copy: '拐角后的第一步是升高一层，所以这里必须用 Jump。' }
-    ],
-    board: [
-      [makeTile(1), makeTile(1), makeTile(2), makeTile(2, true)],
-      [makeTile(1), null, null, makeTile(2)],
-      [makeTile(1), makeTile(1), makeTile(1), makeTile(1, true)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'walk', 'light', 'left', 'jump', 'walk', 'light'], p1: [] }
-  }
-]
+function cloneBoard(board) {
+  return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
+}
 
-const VALID_LEVEL_IDS = new Set(levels.map((level) => level.id))
+function findFirstPlatform(board) {
+  for (let y = 0; y < board.length; y += 1) {
+    for (let x = 0; x < board[y].length; x += 1) {
+      if (board[y][x]) {
+        return { x, y }
+      }
+    }
+  }
+  return null
+}
+
+function createDefaultEditorDraft() {
+  const board = createEmptyEditorBoard()
+  board[0][0] = makeTile(1)
+  board[0][1] = makeTile(1, true)
+  return {
+    title: 'My Level',
+    skill: 'Custom',
+    description: '学员自制关卡。',
+    goal: '点亮所有目标格。',
+    mainLimit: 8,
+    p1Limit: 0,
+    start: { x: 0, y: 0, dir: 'forward' },
+    board
+  }
+}
+
+function buildCustomLevel(draft) {
+  return {
+    id: 'custom-level',
+    title: draft.title.trim() || 'My Level',
+    skill: draft.skill.trim() || 'Custom',
+    description: draft.description.trim() || '学员自制关卡。',
+    goal: draft.goal.trim() || '点亮所有目标格。',
+    mainLimit: Number(draft.mainLimit) || 8,
+    procLimits: Number(draft.p1Limit) > 0 ? { p1: Number(draft.p1Limit) } : {},
+    tips: [
+      { title: 'Editor', copy: '这是当前编辑器生成的预览关卡。' },
+      { title: 'Playtest', copy: '可以直接进入试玩，验证是否能被正常完成。' }
+    ],
+    board: cloneBoard(draft.board),
+    start: { ...draft.start },
+    demo: { main: [], p1: [] }
+  }
+}
 
 function platformKey(x, y) {
   return `${x},${y}`
@@ -529,14 +499,23 @@ const statusTone = ref('neutral')
 const showFinishPanel = ref(false)
 const briefSceneHost = ref(null)
 const playSceneHost = ref(null)
+const editorSceneHost = ref(null)
+const activeCustomLevel = ref(null)
+const editorTool = ref('platform')
+const editorHeight = ref(1)
+const editorDraft = reactive(createDefaultEditorDraft())
 
 let briefSceneController = null
 let playSceneController = null
+let editorSceneController = null
 
-const currentLevel = computed(() => levels[selectedLevelIndex.value])
+const currentLevel = computed(() => activeCustomLevel.value || levels[selectedLevelIndex.value])
+const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
 const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
+const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
+const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 
 const boardPlatforms = computed(() => {
   const platforms = []
@@ -647,6 +626,88 @@ function setStatus(text, tone = 'neutral') {
   statusTone.value = tone
 }
 
+function editorCellAt(x, y) {
+  return editorDraft.board[y]?.[x] || null
+}
+
+function editorCellClass(x, y) {
+  const cell = editorCellAt(x, y)
+  return {
+    filled: Boolean(cell),
+    target: Boolean(cell?.target),
+    start: editorDraft.start.x === x && editorDraft.start.y === y,
+    empty: !cell
+  }
+}
+
+function resetEditorDraft() {
+  const nextDraft = createDefaultEditorDraft()
+  Object.assign(editorDraft, {
+    ...nextDraft,
+    start: { ...nextDraft.start },
+    board: cloneBoard(nextDraft.board)
+  })
+  editorTool.value = 'platform'
+  editorHeight.value = 1
+  setStatus('Editor reset')
+}
+
+function openEditor() {
+  activeCustomLevel.value = null
+  screen.value = 'editor'
+}
+
+function applyEditorCell(x, y) {
+  const board = cloneBoard(editorDraft.board)
+  const currentCell = board[y][x]
+
+  if (editorTool.value === 'erase') {
+    board[y][x] = null
+    if (editorDraft.start.x === x && editorDraft.start.y === y) {
+      const nextStart = findFirstPlatform(board)
+      if (nextStart) {
+        editorDraft.start = { ...editorDraft.start, ...nextStart }
+      }
+    }
+  } else if (editorTool.value === 'start') {
+    if (!currentCell) {
+      board[y][x] = makeTile(editorHeight.value)
+    }
+    editorDraft.start = { ...editorDraft.start, x, y }
+  } else {
+    board[y][x] = makeTile(editorHeight.value, editorTool.value === 'target')
+  }
+
+  editorDraft.board = board
+}
+
+function validateEditorLevel() {
+  const level = editorLevelPreview.value
+  const cells = level.board.flat().filter(Boolean)
+  if (!cells.length) {
+    return { ok: false, message: 'Place at least one platform' }
+  }
+  if (!level.board[level.start.y]?.[level.start.x]) {
+    return { ok: false, message: 'Start must be on a platform' }
+  }
+  if (!cells.some((cell) => cell.target)) {
+    return { ok: false, message: 'Add at least one target tile' }
+  }
+  return { ok: true }
+}
+
+function startCustomPlaytest() {
+  const validation = validateEditorLevel()
+  if (!validation.ok) {
+    setStatus(validation.message, 'danger')
+    return
+  }
+  activeCustomLevel.value = editorLevelPreview.value
+  resetLevel(true)
+  screen.value = 'play'
+  setStatus('Custom level ready')
+}
+
 function operationLabel(operationId) {
   return {
     walk: 'Walk',
@@ -690,10 +751,12 @@ function resetLevel(clearPrograms = false) {
 }
 
 function goToLevelSelect() {
+  activeCustomLevel.value = null
   screen.value = 'select'
 }
 
 function openLevelBrief(index) {
+  activeCustomLevel.value = null
   selectedLevelIndex.value = index
   resetLevel(true)
   screen.value = 'brief'
@@ -804,7 +867,7 @@ function markFinished() {
   if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) {
     return false
   }
-  if (!completedLevelIds.value.includes(currentLevel.value.id)) {
+  if (!isCustomPlaytest.value && !completedLevelIds.value.includes(currentLevel.value.id)) {
     completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
   }
   showFinishPanel.value = true
@@ -909,11 +972,34 @@ async function runCode() {
 }
 
 function goToNextLevel() {
+  if (isCustomPlaytest.value) {
+    activeCustomLevel.value = null
+    screen.value = 'editor'
+    return
+  }
   if (selectedLevelIndex.value < levels.length - 1) {
     openLevelBrief(selectedLevelIndex.value + 1)
   } else {
     screen.value = 'select'
   }
+}
+
+function leavePlayScreen() {
+  if (isCustomPlaytest.value) {
+    activeCustomLevel.value = null
+    screen.value = 'editor'
+    return
+  }
+  goToLevelSelect()
+}
+
+function openPlayContext() {
+  if (isCustomPlaytest.value) {
+    activeCustomLevel.value = null
+    screen.value = 'editor'
+    return
+  }
+  screen.value = 'brief'
 }
 
 function createSceneController(host) {
@@ -1190,10 +1276,20 @@ function syncSceneControllers() {
     playSceneController.dispose()
     playSceneController = null
   }
+
+  if (screen.value === 'editor' && editorSceneHost.value) {
+    if (!editorSceneController) {
+      editorSceneController = createSceneController(editorSceneHost.value)
+    }
+    editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
+  } else if (editorSceneController) {
+    editorSceneController.dispose()
+    editorSceneController = null
+  }
 }
 
 watch(
-  () => [screen.value, currentLevel.value.id],
+  () => [screen.value, currentLevel.value.id, editorSignature.value],
   async () => {
     await nextTick()
     syncSceneControllers()
@@ -1209,6 +1305,10 @@ watch(
   }
 )
 
+watch(editorSignature, () => {
+  editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
+})
+
 onMounted(async () => {
   await nextTick()
   syncSceneControllers()
@@ -1217,8 +1317,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   briefSceneController?.dispose()
   playSceneController?.dispose()
+  editorSceneController?.dispose()
   briefSceneController = null
   playSceneController = null
+  editorSceneController = null
 })
 
 resetLevel(true)
@@ -1555,6 +1657,135 @@ resetLevel(true)
 .brief-preview {
   display: grid;
   place-items: center;
+}
+
+.editor-screen {
+  min-height: calc(100vh - 104px);
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) 1fr;
+  gap: 20px;
+}
+
+.editor-sidebar,
+.editor-preview-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.editor-card {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 24px 60px rgba(103, 126, 157, 0.18);
+}
+
+.editor-card.grow {
+  flex: 1;
+}
+
+.editor-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.editor-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #556675;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.editor-form-grid label.full-span {
+  grid-column: 1 / -1;
+}
+
+.editor-form-grid input,
+.editor-form-grid select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(94, 117, 137, 0.2);
+  border-radius: 12px;
+  background: #f8fbfd;
+  color: #334350;
+}
+
+.editor-tool-row,
+.editor-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.editor-grid-board {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-grid-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.editor-grid-cell {
+  position: relative;
+  min-height: 52px;
+  border-radius: 14px;
+  border: 2px dashed rgba(84, 101, 119, 0.22);
+  background: rgba(226, 234, 241, 0.45);
+  color: #2d3f4d;
+  font-weight: 800;
+}
+
+.editor-grid-cell.filled {
+  border-style: solid;
+  border-color: rgba(67, 77, 88, 0.54);
+  background: linear-gradient(180deg, #666f79, #59616a);
+  color: #fff;
+}
+
+.editor-grid-cell.target {
+  background: linear-gradient(180deg, #246591, #1e4d6f);
+}
+
+.editor-grid-cell.start {
+  box-shadow: inset 0 0 0 3px #5ccf7a;
+}
+
+.editor-grid-cell .cell-height {
+  font-size: 18px;
+}
+
+.editor-grid-cell .cell-start,
+.editor-grid-cell .cell-target {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 12px;
+}
+
+.editor-preview-hint {
+  color: #6f8190;
+  font-size: 13px;
+}
+
+.editor-frame {
+  min-height: 640px;
+}
+
+.tool-btn.selected {
+  background: linear-gradient(180deg, #68d16f, #43b653);
+  color: #fff;
 }
 
 .brief-preview-board {
@@ -2097,7 +2328,8 @@ resetLevel(true)
 @media (max-width: 1180px) {
   .tutorial-hero,
   .brief-shell,
-  .play-shell {
+  .play-shell,
+  .editor-shell {
     grid-template-columns: 1fr;
   }
 
@@ -2129,15 +2361,22 @@ resetLevel(true)
   .hero-gallery,
   .level-grid,
   .program-grid,
-  .program-grid.big {
+  .program-grid.big,
+  .editor-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editor-form-grid label.full-span {
+    grid-column: auto;
   }
 
   .select-header,
   .board-topbar,
   .status-float,
   .brief-meta,
-  .program-tools {
+  .program-tools,
+  .editor-tool-row,
+  .editor-action-row {
     flex-direction: column;
     align-items: flex-start;
   }
