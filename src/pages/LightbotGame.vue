@@ -32,24 +32,26 @@
           <div class="scene-backdrop"></div>
 
           <div class="scene-shell">
-            <div class="iso-scene" :style="sceneStyle">
-              <div
-                v-for="cell in sceneCells"
-                :key="cell.key"
-                class="iso-tile"
-                :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart }]"
-                :style="cell.style"
-              >
-                <div class="tile-shadow"></div>
-                <div class="iso-top">
-                  <span v-if="cell.height > 1" class="height-badge">{{ cell.height }}</span>
-                  <span v-if="cell.isTarget && !cell.isLit" class="lamp lamp-off"></span>
-                  <span v-else-if="cell.isLit" class="lamp lamp-on"></span>
-                  <span v-if="cell.isStart" class="start-badge">S</span>
-                  <span v-if="cell.hasRobot" class="robot-sprite" :style="robotStyle">🤖</span>
+            <div class="scene-viewport" :style="sceneViewportStyle">
+              <div class="iso-scene" :style="sceneStyle">
+                <div
+                  v-for="cell in sceneCells"
+                  :key="cell.key"
+                  class="iso-tile"
+                  :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart }]"
+                  :style="cell.style"
+                >
+                  <div class="tile-shadow"></div>
+                  <div class="iso-top">
+                    <span v-if="cell.height > 1" class="height-badge">{{ cell.height }}</span>
+                    <span v-if="cell.isTarget && !cell.isLit" class="lamp lamp-off"></span>
+                    <span v-else-if="cell.isLit" class="lamp lamp-on"></span>
+                    <span v-if="cell.isStart" class="start-badge">S</span>
+                    <span v-if="cell.hasRobot" class="robot-sprite" :style="robotStyle">🤖</span>
+                  </div>
+                  <div class="iso-left"></div>
+                  <div class="iso-right"></div>
                 </div>
-                <div class="iso-left"></div>
-                <div class="iso-right"></div>
               </div>
             </div>
           </div>
@@ -417,7 +419,17 @@ const currentLevelStats = computed(() => ({
   tiles: sceneMetrics.value.cells.length,
   maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => Number(item.cell.h || 1)))
 }))
+const sceneScale = computed(() => {
+  const widthScale = 760 / sceneMetrics.value.width
+  const heightScale = 420 / sceneMetrics.value.height
+  return Math.max(1.05, Math.min(2.35, widthScale, heightScale))
+})
 const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
+const sceneViewportStyle = computed(() => ({
+  width: `${sceneMetrics.value.width}px`,
+  height: `${sceneMetrics.value.height}px`,
+  transform: `scale(${sceneScale.value})`
+}))
 const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
   key: keyOf(item.row, item.col),
   themeClass: `theme-${item.cell.theme || 'stone'}`,
@@ -841,12 +853,20 @@ async function runProgram() {
   position: absolute;
   inset: 0;
   overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 72px 28px 36px;
+}
+
+.scene-viewport {
+  position: relative;
+  transform-origin: center center;
+  flex: 0 0 auto;
 }
 
 .iso-scene {
   position: relative;
-  margin: 0 auto;
 }
 
 .iso-tile {
@@ -1439,7 +1459,8 @@ async function runProgram() {
   .scene-shell {
     position: relative;
     min-height: 360px;
-    padding-top: 20px;
+    align-items: flex-start;
+    padding-top: 24px;
   }
 
   .board-status {
