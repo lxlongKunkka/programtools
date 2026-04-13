@@ -53,27 +53,41 @@
         </div>
       </header>
 
-      <div class="level-grid">
-        <button
-          v-for="(level, index) in levels"
-          :key="level.id"
-          class="level-card"
-          :class="{ done: completedLevelIds.includes(level.id), current: index === selectedLevelIndex }"
-          @click="quickStartLevel(index)"
-        >
-          <div class="level-card-head">
-            <span class="level-card-index">{{ index + 1 }}</span>
-            <span class="level-card-tag">{{ level.skill }}</span>
+      <div class="chapter-groups">
+        <section v-for="group in levelGroups" :key="group.id" class="chapter-group">
+          <header class="chapter-group-header">
+            <div>
+              <p class="screen-kicker">Chapter {{ group.order + 1 }}</p>
+              <h2>{{ group.title }}</h2>
+            </div>
+            <div class="chapter-progress">
+              {{ completedCountForGroup(group) }}/{{ group.levels.length }} complete
+            </div>
+          </header>
+
+          <div class="level-grid">
+            <button
+              v-for="(level, index) in group.levels"
+              :key="level.id"
+              class="level-card"
+              :class="{ done: completedLevelIds.includes(level.id), current: levelGlobalIndex(group, index) === selectedLevelIndex }"
+              @click="quickStartLevel(levelGlobalIndex(group, index))"
+            >
+              <div class="level-card-head">
+                <span class="level-card-index">{{ index + 1 }}</span>
+                <span class="level-card-tag">{{ level.skill }}</span>
+              </div>
+              <strong>{{ level.title }}</strong>
+              <p>{{ level.goal }}</p>
+              <div class="level-card-foot">
+                <span>Main {{ level.mainLimit }}</span>
+                <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
+                <span v-else>No proc</span>
+                <button class="level-brief-btn" @click.stop="openLevelBrief(levelGlobalIndex(group, index))">简介</button>
+              </div>
+            </button>
           </div>
-          <strong>{{ level.title }}</strong>
-          <p>{{ level.goal }}</p>
-          <div class="level-card-foot">
-            <span>Main {{ level.mainLimit }}</span>
-            <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
-            <span v-else>No proc</span>
-            <button class="level-brief-btn" @click.stop="openLevelBrief(index)">简介</button>
-          </div>
-        </button>
+        </section>
       </div>
     </section>
 
@@ -356,7 +370,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as THREE from 'three'
-import { LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
+import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const EDITOR_GRID_SIZE = 6
@@ -409,6 +423,11 @@ const tutorialCards = [
 const learningPoints = ['Sequencing', 'Decomposition', 'Procedures', 'Recursive loops', 'Spatial reasoning']
 
 const levels = LIGHTBOT_LEVELS
+const levelGroups = LIGHTBOT_LEVEL_GROUPS.map((group, order) => ({
+  ...group,
+  order,
+  startIndex: levels.findIndex((level) => level.id === group.levels[0]?.id)
+}))
 
 function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
@@ -487,6 +506,14 @@ function findRecommendedLevelIndex() {
   const completedIds = loadProgress()
   const nextIndex = levels.findIndex((level) => !completedIds.includes(level.id))
   return nextIndex >= 0 ? nextIndex : 0
+}
+
+function levelGlobalIndex(group, index) {
+  return group.startIndex + index
+}
+
+function completedCountForGroup(group) {
+  return group.levels.filter((level) => completedLevelIds.value.includes(level.id)).length
 }
 
 const screen = ref('select')
@@ -1569,6 +1596,43 @@ resetLevel(true)
   padding: 0 18px;
   border-radius: 999px;
   background: #edf5cf;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.chapter-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.chapter-group {
+  padding: 22px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 20px 40px rgba(103, 126, 157, 0.12);
+}
+
+.chapter-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.chapter-group-header h2 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.chapter-progress {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #456176;
   display: grid;
   place-items: center;
   font-weight: 700;

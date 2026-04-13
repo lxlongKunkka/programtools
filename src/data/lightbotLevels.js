@@ -299,6 +299,9 @@ function buildDraftLevel(chapter, level, index) {
 
   return {
     id: level.id,
+    chapterId: chapter.id,
+    chapterTitle: chapter.title,
+    chapterOrder: index,
     title: `${chapter.title} ${index + 1}`,
     skill: chapter.title,
     description: `${level.summary} 由你提供的坐标草案自动生成。`,
@@ -408,6 +411,19 @@ export const RECONSTRUCTED_LIGHTBOT_LEVELS = RECONSTRUCTED_LIGHTBOT_CHAPTERS.fla
   chapter.levels.map((level, index) => buildDraftLevel(chapter, level, index))
 )
 
-export const LIGHTBOT_LEVELS = [...BASE_LIGHTBOT_LEVELS, ...RECONSTRUCTED_LIGHTBOT_LEVELS]
+export const LIGHTBOT_LEVEL_GROUPS = RECONSTRUCTED_LIGHTBOT_CHAPTERS.reduce((groups, chapter, chapterIndex) => {
+  const levels = chapter.levels.map((level, levelIndex) => buildDraftLevel(chapter, level, levelIndex))
+
+  groups.push({
+    id: chapter.id,
+    title: chapter.title,
+    order: chapterIndex,
+    levels
+  })
+
+  return groups
+}, [])
+
+export const LIGHTBOT_LEVELS = LIGHTBOT_LEVEL_GROUPS.flatMap((group) => group.levels)
 
 export const VALID_LEVEL_IDS = new Set(LIGHTBOT_LEVELS.map((level) => level.id))
