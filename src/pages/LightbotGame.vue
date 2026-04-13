@@ -250,39 +250,36 @@ const levels = [
   {
     id: 'intro-garden',
     title: 'Level 1: Garden Walk',
-    description: '第一张地图补成了更完整的漂浮花园，先熟悉走路与点灯。',
-    goal: '沿主路点亮两盏蓝灯，不要被旁边的装饰平台干扰。',
+    description: '第一关先回到最清楚的教学地图，主路线集中，避免一上来就看花。',
+    goal: '沿着中间主桥前进，依次点亮两盏蓝灯。',
     skill: 'Walk + Light',
     mainLimit: 8,
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, tile(1, { theme: 'moss' }), null, tile(2, { theme: 'slate' }), null, null],
-      [tile(1, { theme: 'moss' }), tile(1), lightTile(1), tile(1), lightTile(1), tile(1, { theme: 'copper' })],
-      [null, null, tile(1, { theme: 'copper' }), null, tile(2, { theme: 'slate' }), null],
-      [null, null, null, null, null, null]
+      [null, tile(1, { theme: 'moss' }), tile(1, { theme: 'moss' }), null, null],
+      [tile(1), tile(1), lightTile(1), tile(1), lightTile(1)],
+      [null, tile(1, { theme: 'copper' }), null, tile(1, { theme: 'copper' }), null]
     ],
-    start: { row: 1, col: 1, dir: 'east' },
-    demo: { main: ['walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
+    start: { row: 1, col: 0, dir: 'east' },
+    demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
   },
   {
     id: 'jump-spire',
     title: 'Level 2: Jump Spire',
-    description: '地图加入了阶梯和高塔，必须准确使用 jump 才能上台。',
-    goal: '先点亮低处灯，再跳上高台，转向后点亮第二盏灯。',
+    description: '第二关保留跳跃教学，但把路线收紧成一条清楚的阶梯。',
+    goal: '先点亮低处灯，再跳上高台前进，点亮第二盏灯。',
     skill: 'Jump + Turn',
     mainLimit: 10,
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, null, tile(3, { theme: 'slate' }), null, null],
-      [null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'copper' }), tile(2, { theme: 'slate' }), null],
-      [null, tile(1), lightTile(2), null, null],
-      [tile(1, { theme: 'copper' }), lightTile(1), tile(2), tile(1, { theme: 'copper' }), null],
-      [null, null, null, null, null]
+      [null, null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'slate' }), null],
+      [null, tile(1), tile(1), tile(2), null],
+      [tile(1, { theme: 'copper' }), lightTile(1), tile(1, { theme: 'copper' }), null, null]
     ],
     start: { row: 3, col: 0, dir: 'east' },
-    demo: { main: ['walk', 'light', 'jump', 'left', 'walk', 'light'], proc1: [] }
+    demo: { main: ['walk', 'light', 'walk', 'jump', 'walk', 'light'], proc1: [] }
   },
   {
     id: 'repeat-promenade',
@@ -420,9 +417,9 @@ const currentLevelStats = computed(() => ({
   maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => Number(item.cell.h || 1)))
 }))
 const sceneScale = computed(() => {
-  const widthScale = 760 / sceneMetrics.value.width
-  const heightScale = 420 / sceneMetrics.value.height
-  return Math.max(1.05, Math.min(2.35, widthScale, heightScale))
+  const widthScale = 980 / sceneMetrics.value.width
+  const heightScale = 540 / sceneMetrics.value.height
+  return Math.max(1.55, Math.min(3.4, widthScale, heightScale))
 })
 const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
 const sceneViewportStyle = computed(() => ({
