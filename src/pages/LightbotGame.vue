@@ -860,6 +860,9 @@ function createSceneController(host) {
   fillLight.position.set(-6, 9, -8)
   scene.add(ambientLight, keyLight, fillLight)
 
+  let currentViewSize = 4.1
+  let currentMaxHeight = 1
+
   const shadowPlane = new THREE.Mesh(
     new THREE.CircleGeometry(4.8, 40),
     new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.shadow, transparent: true, opacity: 0.2 })
@@ -888,11 +891,10 @@ function createSceneController(host) {
     const width = Math.max(host.clientWidth, 1)
     const height = Math.max(host.clientHeight, 1)
     const aspect = width / height
-    const viewSize = 4.8
-    camera.left = -viewSize * aspect
-    camera.right = viewSize * aspect
-    camera.top = viewSize
-    camera.bottom = -viewSize
+    camera.left = -currentViewSize * aspect
+    camera.right = currentViewSize * aspect
+    camera.top = currentViewSize
+    camera.bottom = -currentViewSize
     camera.updateProjectionMatrix()
     renderer.setSize(width, height, false)
     render()
@@ -929,11 +931,17 @@ function createSceneController(host) {
 
     const xs = tiles.map((item) => item.x * (BLOCK_SIZE + BOARD_GAP))
     const zs = tiles.map((item) => item.y * (BLOCK_SIZE + BOARD_GAP))
+    const heights = tiles.map((item) => item.cell.h)
     const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
     const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2
+    const spanX = Math.max(...xs) - Math.min(...xs) + BLOCK_SIZE
+    const spanZ = Math.max(...zs) - Math.min(...zs) + BLOCK_SIZE
+    currentMaxHeight = Math.max(...heights, 1)
+    currentViewSize = Math.max(2.6, Math.min(4.2, Math.max(spanX, spanZ) * 0.68 + currentMaxHeight * 0.24))
     boardGroup.position.set(-centerX, 0, -centerZ)
     shadowPlane.position.x = -centerX
     shadowPlane.position.z = -centerZ
+    shadowPlane.scale.setScalar(Math.max(spanX, spanZ) / 2.8)
 
     tiles.forEach((item) => {
       const tileGroup = new THREE.Group()
@@ -1004,6 +1012,15 @@ function createSceneController(host) {
     eyeRight.position.set(0.08, 0.98, 0.16)
     robotBase.add(eyeLeft, eyeRight)
 
+    const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.11, 0.03), sharedMaterials.eye)
+    facePlate.position.set(0, 0.84, 0.235)
+    robotBase.add(facePlate)
+
+    const frontMarker = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12), sharedMaterials.antenna)
+    frontMarker.rotation.x = Math.PI / 2
+    frontMarker.position.set(0, 0.63, 0.34)
+    robotBase.add(frontMarker)
+
     const footLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
     const footRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
     footLeft.position.set(-0.1, 0.14, 0)
@@ -1011,10 +1028,10 @@ function createSceneController(host) {
     robotBase.add(footLeft, footRight)
 
     const dirRotation = {
-      forward: 0,
-      right: Math.PI / 2,
-      backward: Math.PI,
-      left: -Math.PI / 2
+      forward: Math.PI / 2,
+      right: 0,
+      backward: -Math.PI / 2,
+      left: Math.PI
     }
 
     robotBase.rotation.y = dirRotation[robotState.dir] || 0
@@ -1030,10 +1047,10 @@ function createSceneController(host) {
   function update(level, robotState, litKeyList) {
     buildBoard(level, litKeyList)
     updateRobot(level, robotState)
+    resize()
 
-    const maxHeight = Math.max(...boardPlatforms.value.map((item) => item.cell.h), 1)
-    camera.position.set(6.8, 7.4 + maxHeight * 0.45, 6.8)
-    camera.lookAt(0, maxHeight * BLOCK_HEIGHT * 0.55, 0)
+    camera.position.set(6.25, 7 + currentMaxHeight * 0.48, 6.25)
+    camera.lookAt(0, currentMaxHeight * BLOCK_HEIGHT * 0.58, 0)
     render()
   }
 
