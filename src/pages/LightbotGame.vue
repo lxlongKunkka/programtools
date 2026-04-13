@@ -118,17 +118,24 @@
               <div class="scene-viewport preview-viewport" :style="sceneViewportStyle">
                 <div class="iso-scene" :style="sceneStyle">
                   <div
-                    v-for="cell in sceneCells"
-                    :key="`brief-${cell.key}`"
-                    class="platform"
-                    :class="{ target: cell.isTarget, lit: cell.isLit }"
-                    :style="cell.style"
+                    v-for="stack in sceneStacks"
+                    :key="`brief-${stack.key}`"
+                    class="platform-stack"
+                    :style="stack.shadowStyle"
                   >
-                    <div class="platform-shadow"></div>
-                    <div class="platform-left"></div>
-                    <div class="platform-right"></div>
-                    <div class="platform-top">
-                      <span v-if="cell.isTarget" class="target-ring"></span>
+                    <div class="stack-shadow"></div>
+                    <div
+                      v-for="block in stack.blocks"
+                      :key="block.blockKey"
+                      class="platform-block"
+                      :style="block.style"
+                    >
+                      <div class="block-left"></div>
+                      <div class="block-right"></div>
+                      <div class="block-top" :class="{ target: block.isTarget, lit: block.isLit }">
+                        <span v-if="block.isTarget" class="target-ring"></span>
+                        <span v-if="block.isLit" class="target-core"></span>
+                      </div>
                     </div>
                   </div>
                   <div class="robot-layer preview-robot" :class="robotDirClass" :style="robotStyle">
@@ -181,18 +188,24 @@
             <div class="scene-viewport play-viewport" :style="sceneViewportStyle">
               <div class="iso-scene" :style="sceneStyle">
                 <div
-                  v-for="cell in sceneCells"
-                  :key="cell.key"
-                  class="platform"
-                  :class="{ target: cell.isTarget, lit: cell.isLit }"
-                  :style="cell.style"
+                  v-for="stack in sceneStacks"
+                  :key="stack.key"
+                  class="platform-stack"
+                  :style="stack.shadowStyle"
                 >
-                  <div class="platform-shadow"></div>
-                  <div class="platform-left"></div>
-                  <div class="platform-right"></div>
-                  <div class="platform-top">
-                    <span v-if="cell.isTarget" class="target-ring"></span>
-                    <span v-if="cell.isLit" class="target-core"></span>
+                  <div class="stack-shadow"></div>
+                  <div
+                    v-for="block in stack.blocks"
+                    :key="block.blockKey"
+                    class="platform-block"
+                    :style="block.style"
+                  >
+                    <div class="block-left"></div>
+                    <div class="block-right"></div>
+                    <div class="block-top" :class="{ target: block.isTarget, lit: block.isLit }">
+                      <span v-if="block.isTarget" class="target-ring"></span>
+                      <span v-if="block.isLit" class="target-core"></span>
+                    </div>
                   </div>
                 </div>
 
@@ -550,16 +563,32 @@ const sceneViewportStyle = computed(() => ({
   transform: `scale(${sceneScale.value})`
 }))
 
-const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
-  key: item.key,
-  isTarget: Boolean(item.cell.target),
-  isLit: litKeys.value.includes(item.key),
-  style: {
-    left: `${item.sceneX - sceneMetrics.value.minX + 58}px`,
-    top: `${item.sceneY - sceneMetrics.value.minY + 56}px`,
-    '--stack-height': `${item.cell.h * TILE_DEPTH}px`
+const sceneStacks = computed(() => sceneMetrics.value.cells.map((item) => {
+  const left = item.sceneX - sceneMetrics.value.minX + 58
+  const baseTop = item.sceneY - sceneMetrics.value.minY + 56
+  const isTarget = Boolean(item.cell.target)
+  const isLit = litKeys.value.includes(item.key)
+
+  return {
+    key: item.key,
+    shadowStyle: {
+      left: `${left}px`,
+      top: `${baseTop + item.cell.h * TILE_DEPTH}px`
+    },
+    blocks: Array.from({ length: item.cell.h }, (_, layerIndex) => {
+      const isTopBlock = layerIndex === item.cell.h - 1
+      return {
+        blockKey: `${item.key}-${layerIndex}`,
+        isTarget: isTopBlock && isTarget,
+        isLit: isTopBlock && isLit,
+        style: {
+          left: `${left}px`,
+          top: `${baseTop + (item.cell.h - layerIndex - 1) * TILE_DEPTH}px`
+        }
+      }
+    })
   }
-})))
+}))
 
 const robotStyle = computed(() => {
   const cell = sceneMetrics.value.cells.find((item) => item.x === bot.value.x && item.y === bot.value.y)
@@ -1340,30 +1369,36 @@ resetLevel(true)
   transform: translate(-50%, -50%);
 }
 
-.platform {
+.platform-stack,
+.platform-block,
+.block-top,
+.block-left,
+.block-right {
   position: absolute;
+}
+
+.platform-stack {
   width: 96px;
   height: 96px;
 }
 
-.platform-shadow {
+.stack-shadow {
   position: absolute;
   left: 18px;
-  top: calc(38px + var(--stack-height));
+  top: 28px;
   width: 64px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(45, 56, 69, 0.14);
+  background: rgba(45, 56, 69, 0.16);
   filter: blur(8px);
 }
 
-.platform-top,
-.platform-left,
-.platform-right {
-  position: absolute;
+.platform-block {
+  width: 96px;
+  height: 96px;
 }
 
-.platform-top {
+.block-top {
   left: 0;
   top: 0;
   width: 96px;
@@ -1376,7 +1411,7 @@ resetLevel(true)
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.52), 0 6px 12px rgba(88, 102, 116, 0.12);
 }
 
-.platform-top::after {
+.block-top::after {
   content: '';
   position: absolute;
   inset: 7px 9px 11px;
@@ -1384,35 +1419,35 @@ resetLevel(true)
   border: 1px solid rgba(80, 90, 102, 0.18);
 }
 
-.platform-left {
+.block-left {
   left: 0;
   top: 24px;
   width: 48px;
-  height: var(--stack-height);
+  height: 22px;
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
   background: linear-gradient(180deg, #cfd5dd, #a9b3c2);
   border-left: 3px solid #535e69;
   border-bottom: 3px solid #535e69;
 }
 
-.platform-right {
+.block-right {
   right: 0;
   top: 24px;
   width: 48px;
-  height: var(--stack-height);
+  height: 22px;
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
   background: linear-gradient(180deg, #bcc7d2, #96a2b2);
   border-right: 3px solid #535e69;
   border-bottom: 3px solid #535e69;
 }
 
-.platform.target .platform-top {
+.block-top.target {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 38%),
     linear-gradient(180deg, #85b9ee, #5d94d6);
 }
 
-.platform.lit .platform-top {
+.block-top.lit {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 38%),
     linear-gradient(180deg, #fff79e, #f0cf33);
