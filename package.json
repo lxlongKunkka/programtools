@@ -41,6 +41,7 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "sudoku-gen": "^1.0.2",
+    "three": "^0.183.2",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"
   },

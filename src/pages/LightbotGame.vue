@@ -115,39 +115,7 @@
           <div class="brief-preview-board">
             <div class="preview-badge">Preview</div>
             <div class="scene-frame preview-frame">
-              <div class="scene-viewport preview-viewport" :style="sceneViewportStyle">
-                <div class="iso-scene" :style="sceneStyle">
-                  <div
-                    v-for="stack in sceneStacks"
-                    :key="`brief-${stack.key}`"
-                    class="platform-stack"
-                    :style="stack.stackStyle"
-                  >
-                    <div class="stack-shadow"></div>
-                    <div
-                      v-for="block in stack.blocks"
-                      :key="block.blockKey"
-                      class="platform-block"
-                      :style="block.style"
-                    >
-                      <div class="block-left"></div>
-                      <div class="block-right"></div>
-                      <div class="block-top" :class="{ start: block.isStart, target: block.isTarget, lit: block.isLit }">
-                        <span v-if="block.isTarget" class="target-ring"></span>
-                        <span v-if="block.isLit" class="target-core"></span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="robot-layer preview-robot" :class="robotDirClass" :style="robotStyle">
-                    <div class="robot-body">
-                      <span class="robot-eye left"></span>
-                      <span class="robot-eye right"></span>
-                      <span class="robot-antenna"></span>
-                      <span class="robot-shadow"></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div ref="briefSceneHost" class="three-scene-host preview-scene-host"></div>
             </div>
           </div>
         </div>
@@ -185,42 +153,7 @@
               <em :class="statusTone">{{ statusText }}</em>
             </div>
 
-            <div class="scene-viewport play-viewport" :style="sceneViewportStyle">
-              <div class="iso-scene" :style="sceneStyle">
-                <div
-                  v-for="stack in sceneStacks"
-                  :key="stack.key"
-                  class="platform-stack"
-                  :style="stack.stackStyle"
-                >
-                  <div class="stack-shadow"></div>
-                  <div
-                    v-for="block in stack.blocks"
-                    :key="block.blockKey"
-                    class="platform-block"
-                    :style="block.style"
-                  >
-                    <div class="block-left"></div>
-                    <div class="block-right"></div>
-                    <div class="block-top" :class="{ start: block.isStart, target: block.isTarget, lit: block.isLit }">
-                      <span v-if="block.isTarget" class="target-ring"></span>
-                      <span v-if="block.isLit" class="target-core"></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="robot-layer play-robot" :class="robotDirClass" :style="robotStyle">
-                  <div class="robot-body">
-                    <span class="robot-eye left"></span>
-                    <span class="robot-eye right"></span>
-                    <span class="robot-antenna"></span>
-                    <span class="robot-shadow"></span>
-                    <span class="robot-foot left"></span>
-                    <span class="robot-foot right"></span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <div ref="playSceneHost" class="three-scene-host play-scene-host"></div>
           </div>
 
           <footer class="command-bar">
@@ -322,7 +255,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import * as THREE from 'three'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const TILE_WIDTH = 96
@@ -342,6 +276,20 @@ const DIRECTION_VECTORS = {
   left: { x: 0, y: -1 }
 }
 const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 200, 5: 130 }
+const BLOCK_SIZE = 1
+const BLOCK_HEIGHT = 0.5
+const BOARD_GAP = 0.04
+const MATERIAL_COLORS = {
+  topNormal: '#565e68',
+  topTarget: '#1e4d6f',
+  topLit: '#fffd00',
+  side: '#646a71',
+  line: '#2e3438',
+  player: '#38ff00',
+  antenna: '#d8a8ff',
+  eye: '#171c22',
+  shadow: '#465666'
+}
 const operationPalette = [
   { id: 'walk', label: 'Walk' },
   { id: 'light', label: 'Light' },
@@ -498,6 +446,11 @@ const speedValue = ref(3)
 const statusText = ref('Ready')
 const statusTone = ref('neutral')
 const showFinishPanel = ref(false)
+const briefSceneHost = ref(null)
+const playSceneHost = ref(null)
+
+let briefSceneController = null
+let playSceneController = null
 
 const currentLevel = computed(() => levels[selectedLevelIndex.value])
 const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
@@ -881,6 +834,287 @@ function goToNextLevel() {
     screen.value = 'select'
   }
 }
+
+function createSceneController(host) {
+  if (!host) return null
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.shadowMap.enabled = false
+  host.innerHTML = ''
+  host.appendChild(renderer.domElement)
+
+  const scene = new THREE.Scene()
+  const camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.1, 100)
+  const boardGroup = new THREE.Group()
+  const robotGroup = new THREE.Group()
+
+  scene.add(boardGroup)
+  scene.add(robotGroup)
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.9)
+  const keyLight = new THREE.DirectionalLight(0xf7fbff, 1.35)
+  const fillLight = new THREE.DirectionalLight(0xd8f0ff, 0.55)
+  keyLight.position.set(8, 14, 10)
+  fillLight.position.set(-6, 9, -8)
+  scene.add(ambientLight, keyLight, fillLight)
+
+  const shadowPlane = new THREE.Mesh(
+    new THREE.CircleGeometry(4.8, 40),
+    new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.shadow, transparent: true, opacity: 0.2 })
+  )
+  shadowPlane.rotation.x = -Math.PI / 2
+  shadowPlane.position.y = -0.6
+  scene.add(shadowPlane)
+
+  const sharedMaterials = {
+    topNormal: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topNormal }),
+    topTarget: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topTarget }),
+    topLit: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topLit }),
+    side: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.side }),
+    line: new THREE.LineBasicMaterial({ color: MATERIAL_COLORS.line }),
+    player: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.player }),
+    antenna: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.antenna }),
+    eye: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.eye }),
+    targetRing: new THREE.MeshBasicMaterial({ color: 0xf3fbff }),
+    targetCore: new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.topLit })
+  }
+
+  const blockGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_HEIGHT, BLOCK_SIZE)
+  const outlineGeometry = new THREE.EdgesGeometry(blockGeometry)
+
+  function resize() {
+    const width = Math.max(host.clientWidth, 1)
+    const height = Math.max(host.clientHeight, 1)
+    const aspect = width / height
+    const viewSize = 4.8
+    camera.left = -viewSize * aspect
+    camera.right = viewSize * aspect
+    camera.top = viewSize
+    camera.bottom = -viewSize
+    camera.updateProjectionMatrix()
+    renderer.setSize(width, height, false)
+    render()
+  }
+
+  function clearGroup(group) {
+    group.children.slice().forEach((child) => {
+      child.traverse?.((node) => {
+        if (!node.geometry) return
+        if (node.geometry !== blockGeometry && node.geometry !== outlineGeometry) {
+          node.geometry.dispose()
+        }
+      })
+      group.remove(child)
+    })
+  }
+
+  function buildBoard(level, litKeyList) {
+    clearGroup(boardGroup)
+    const litSet = new Set(litKeyList)
+    const tiles = []
+
+    level.board.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (!cell) return
+        tiles.push({ x, y, cell })
+      })
+    })
+
+    if (!tiles.length) {
+      render()
+      return
+    }
+
+    const xs = tiles.map((item) => item.x * (BLOCK_SIZE + BOARD_GAP))
+    const zs = tiles.map((item) => item.y * (BLOCK_SIZE + BOARD_GAP))
+    const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
+    const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2
+    boardGroup.position.set(-centerX, 0, -centerZ)
+    shadowPlane.position.x = -centerX
+    shadowPlane.position.z = -centerZ
+
+    tiles.forEach((item) => {
+      const tileGroup = new THREE.Group()
+      tileGroup.position.set(item.x * (BLOCK_SIZE + BOARD_GAP), 0, item.y * (BLOCK_SIZE + BOARD_GAP))
+
+      for (let layer = 0; layer < item.cell.h; layer += 1) {
+        const isTop = layer === item.cell.h - 1
+        const isLit = isTop && litSet.has(platformKey(item.x, item.y))
+        const topMaterial = isTop
+          ? (isLit ? sharedMaterials.topLit : item.cell.target ? sharedMaterials.topTarget : sharedMaterials.topNormal)
+          : sharedMaterials.side
+        const materials = [sharedMaterials.side, sharedMaterials.side, topMaterial, sharedMaterials.side, sharedMaterials.side, sharedMaterials.side]
+        const block = new THREE.Mesh(blockGeometry, materials)
+        block.position.y = (layer + 0.5) * BLOCK_HEIGHT
+        tileGroup.add(block)
+
+        const outline = new THREE.LineSegments(outlineGeometry, sharedMaterials.line)
+        outline.position.copy(block.position)
+        tileGroup.add(outline)
+      }
+
+      if (item.cell.target) {
+        const topY = item.cell.h * BLOCK_HEIGHT + 0.03
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 12, 32), sharedMaterials.targetRing)
+        ring.rotation.x = Math.PI / 2
+        ring.position.set(0, topY, 0)
+        tileGroup.add(ring)
+
+        const core = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 24), sharedMaterials.targetCore)
+        core.position.set(0, topY, 0)
+        tileGroup.add(core)
+      }
+
+      boardGroup.add(tileGroup)
+    })
+
+    render()
+  }
+
+  function updateRobot(level, robotState) {
+    clearGroup(robotGroup)
+    const cell = level.board[robotState.y]?.[robotState.x]
+    if (!cell) {
+      render()
+      return
+    }
+
+    const robotBase = new THREE.Group()
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.44), sharedMaterials.player)
+    body.position.y = 0.56
+    robotBase.add(body)
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.2, 0.32), sharedMaterials.player)
+    head.position.y = 0.96
+    robotBase.add(head)
+
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.24, 12), sharedMaterials.antenna)
+    antenna.position.y = 1.18
+    robotBase.add(antenna)
+
+    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), sharedMaterials.antenna)
+    antennaTip.position.y = 1.34
+    robotBase.add(antennaTip)
+
+    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 10), sharedMaterials.eye)
+    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 10), sharedMaterials.eye)
+    eyeLeft.position.set(-0.08, 0.98, 0.16)
+    eyeRight.position.set(0.08, 0.98, 0.16)
+    robotBase.add(eyeLeft, eyeRight)
+
+    const footLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
+    const footRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
+    footLeft.position.set(-0.1, 0.14, 0)
+    footRight.position.set(0.1, 0.14, 0)
+    robotBase.add(footLeft, footRight)
+
+    const dirRotation = {
+      forward: 0,
+      right: Math.PI / 2,
+      backward: Math.PI,
+      left: -Math.PI / 2
+    }
+
+    robotBase.rotation.y = dirRotation[robotState.dir] || 0
+    robotGroup.position.set(
+      robotState.x * (BLOCK_SIZE + BOARD_GAP) + boardGroup.position.x,
+      cell.h * BLOCK_HEIGHT,
+      robotState.y * (BLOCK_SIZE + BOARD_GAP) + boardGroup.position.z
+    )
+    robotGroup.add(robotBase)
+    render()
+  }
+
+  function update(level, robotState, litKeyList) {
+    buildBoard(level, litKeyList)
+    updateRobot(level, robotState)
+
+    const maxHeight = Math.max(...boardPlatforms.value.map((item) => item.cell.h), 1)
+    camera.position.set(6.8, 7.4 + maxHeight * 0.45, 6.8)
+    camera.lookAt(0, maxHeight * BLOCK_HEIGHT * 0.55, 0)
+    render()
+  }
+
+  function render() {
+    renderer.render(scene, camera)
+  }
+
+  const resizeObserver = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => resize())
+    : null
+
+  if (resizeObserver) {
+    resizeObserver.observe(host)
+  }
+  resize()
+
+  return {
+    host,
+    update,
+    resize,
+    dispose() {
+      resizeObserver?.disconnect()
+      renderer.dispose()
+      blockGeometry.dispose()
+      outlineGeometry.dispose()
+      Object.values(sharedMaterials).forEach((material) => material.dispose())
+      host.innerHTML = ''
+    }
+  }
+}
+
+function syncSceneControllers() {
+  if (screen.value === 'brief' && briefSceneHost.value) {
+    if (!briefSceneController) {
+      briefSceneController = createSceneController(briefSceneHost.value)
+    }
+    briefSceneController?.update(currentLevel.value, currentLevel.value.start, [])
+  } else if (briefSceneController) {
+    briefSceneController.dispose()
+    briefSceneController = null
+  }
+
+  if (screen.value === 'play' && playSceneHost.value) {
+    if (!playSceneController) {
+      playSceneController = createSceneController(playSceneHost.value)
+    }
+    playSceneController?.update(currentLevel.value, bot.value, litKeys.value)
+  } else if (playSceneController) {
+    playSceneController.dispose()
+    playSceneController = null
+  }
+}
+
+watch(
+  () => [screen.value, currentLevel.value.id],
+  async () => {
+    await nextTick()
+    syncSceneControllers()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [currentLevel.value.id, bot.value.x, bot.value.y, bot.value.dir, litKeys.value.join('|')],
+  () => {
+    playSceneController?.update(currentLevel.value, bot.value, litKeys.value)
+    briefSceneController?.update(currentLevel.value, currentLevel.value.start, [])
+  }
+)
+
+onMounted(async () => {
+  await nextTick()
+  syncSceneControllers()
+})
+
+onBeforeUnmount(() => {
+  briefSceneController?.dispose()
+  playSceneController?.dispose()
+  briefSceneController = null
+  playSceneController = null
+})
 
 resetLevel(true)
 </script>
@@ -1311,6 +1545,18 @@ resetLevel(true)
 
 .preview-frame {
   min-height: 440px;
+}
+
+.three-scene-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.three-scene-host :deep(canvas) {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .scene-frame::before {
