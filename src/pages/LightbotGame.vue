@@ -115,7 +115,7 @@
           <div class="brief-preview-board">
             <div class="preview-badge">Preview</div>
             <div class="scene-frame preview-frame">
-              <div class="scene-viewport" :style="sceneViewportStyle">
+              <div class="scene-viewport preview-viewport" :style="sceneViewportStyle">
                 <div class="iso-scene" :style="sceneStyle">
                   <div
                     v-for="cell in sceneCells"
@@ -131,11 +131,12 @@
                       <span v-if="cell.isTarget" class="target-ring"></span>
                     </div>
                   </div>
-                  <div class="robot-layer" :class="robotDirClass" :style="robotStyle">
+                  <div class="robot-layer preview-robot" :class="robotDirClass" :style="robotStyle">
                     <div class="robot-body">
                       <span class="robot-eye left"></span>
                       <span class="robot-eye right"></span>
                       <span class="robot-antenna"></span>
+                      <span class="robot-shadow"></span>
                     </div>
                   </div>
                 </div>
@@ -177,7 +178,7 @@
               <em :class="statusTone">{{ statusText }}</em>
             </div>
 
-            <div class="scene-viewport" :style="sceneViewportStyle">
+            <div class="scene-viewport play-viewport" :style="sceneViewportStyle">
               <div class="iso-scene" :style="sceneStyle">
                 <div
                   v-for="cell in sceneCells"
@@ -195,11 +196,12 @@
                   </div>
                 </div>
 
-                <div class="robot-layer" :class="robotDirClass" :style="robotStyle">
+                <div class="robot-layer play-robot" :class="robotDirClass" :style="robotStyle">
                   <div class="robot-body">
                     <span class="robot-eye left"></span>
                     <span class="robot-eye right"></span>
                     <span class="robot-antenna"></span>
+                    <span class="robot-shadow"></span>
                     <span class="robot-foot left"></span>
                     <span class="robot-foot right"></span>
                   </div>
@@ -240,7 +242,7 @@
         </main>
 
         <aside class="program-sidebar">
-          <section class="program-panel main-tone">
+          <section class="program-panel main-tone" :class="{ active: activeProcedureKey === 'main' }">
             <div class="program-header">
               <span>MAIN</span>
               <button class="tab-btn" :class="{ active: activeProcedureKey === 'main' }" @click="activeProcedureKey = 'main'">Edit</button>
@@ -263,7 +265,7 @@
             </div>
           </section>
 
-          <section class="program-panel proc-tone" :class="{ disabled: !availableProcedureKeys.includes('p1') }">
+          <section class="program-panel proc-tone" :class="{ disabled: !availableProcedureKeys.includes('p1'), active: activeProcedureKey === 'p1' }">
             <div class="program-header">
               <span>PROC1</span>
               <button
@@ -1317,8 +1319,16 @@ resetLevel(true)
 .scene-viewport {
   position: absolute;
   left: 50%;
-  top: 54%;
+  top: 58%;
   transform-origin: center center;
+}
+
+.preview-viewport {
+  top: 63%;
+}
+
+.play-viewport {
+  top: 59%;
 }
 
 .iso-scene {
@@ -1355,9 +1365,19 @@ resetLevel(true)
   width: 96px;
   height: 48px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background: linear-gradient(180deg, #eef2f5, #cfd7de);
-  border: 3px solid #535e69;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, #eef2f5, #cfd7de);
+  border: 3px solid #505a66;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.52), 0 6px 12px rgba(88, 102, 116, 0.12);
+}
+
+.platform-top::after {
+  content: '';
+  position: absolute;
+  inset: 7px 9px 11px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  border: 1px solid rgba(80, 90, 102, 0.18);
 }
 
 .platform-left {
@@ -1383,11 +1403,15 @@ resetLevel(true)
 }
 
 .platform.target .platform-top {
-  background: linear-gradient(180deg, #86b8eb, #578ed1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(180deg, #85b9ee, #5d94d6);
 }
 
 .platform.lit .platform-top {
-  background: linear-gradient(180deg, #fbf18f, #f1cf31);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(180deg, #fff79e, #f0cf33);
 }
 
 .target-ring,
@@ -1403,6 +1427,7 @@ resetLevel(true)
   width: 28px;
   height: 28px;
   border: 5px solid rgba(232, 245, 255, 0.92);
+  box-shadow: 0 0 0 2px rgba(91, 137, 204, 0.28);
 }
 
 .target-core {
@@ -1410,6 +1435,7 @@ resetLevel(true)
   height: 16px;
   background: rgba(255, 252, 165, 0.96);
   box-shadow: 0 0 18px rgba(255, 235, 59, 0.9);
+  animation: lampPulse 1.2s ease-in-out infinite;
 }
 
 .robot-layer {
@@ -1418,44 +1444,46 @@ resetLevel(true)
   width: 42px;
   height: 62px;
   margin-left: -21px;
-  margin-top: -48px;
-  transition: left 240ms ease, top 240ms ease, transform 240ms ease;
+  margin-top: -52px;
+  transition: left 260ms cubic-bezier(.22, 1, .36, 1), top 260ms cubic-bezier(.22, 1, .36, 1), transform 220ms ease;
 }
 
 .robot-body {
   position: relative;
-  width: 42px;
-  height: 50px;
-  border-radius: 18px 18px 16px 16px;
-  background: linear-gradient(180deg, #efeaf7 0%, #cfd2ec 100%);
-  border: 3px solid #6f6f84;
-  box-shadow: 0 8px 16px rgba(88, 90, 121, 0.18);
+  width: 38px;
+  height: 56px;
+  margin-left: 2px;
+  border-radius: 18px 18px 20px 20px;
+  background: linear-gradient(180deg, #64ff58 0%, #2fe74b 100%);
+  border: 3px solid #5e6f7b;
+  box-shadow: inset 0 -7px 0 rgba(22, 160, 38, 0.28), 0 8px 16px rgba(88, 90, 121, 0.16);
+  animation: robotBob 1.25s ease-in-out infinite;
 }
 
 .robot-eye,
 .robot-antenna,
+.robot-shadow,
 .robot-foot {
   position: absolute;
 }
 
 .robot-eye {
-  top: 16px;
-  width: 8px;
-  height: 12px;
+  top: 18px;
+  width: 6px;
+  height: 10px;
   border-radius: 999px;
-  background: #8cddff;
-  box-shadow: 0 0 10px rgba(140, 221, 255, 0.88);
+  background: #171c22;
 }
 
 .robot-eye.left { left: 10px; }
-.robot-eye.right { right: 10px; }
+.robot-eye.right { right: 11px; }
 
 .robot-antenna {
   left: 50%;
   top: -13px;
   width: 4px;
   height: 16px;
-  background: #70718e;
+  background: #7b8292;
   transform: translateX(-50%);
 }
 
@@ -1469,13 +1497,24 @@ resetLevel(true)
   margin-left: -5px;
   border-radius: 999px;
   background: #d8a8ff;
-  border: 2px solid #70718e;
+  border: 2px solid #7b8292;
+}
+
+.robot-shadow {
+  left: 50%;
+  bottom: -14px;
+  width: 34px;
+  height: 12px;
+  margin-left: -17px;
+  border-radius: 50%;
+  background: rgba(65, 79, 95, 0.18);
+  filter: blur(4px);
 }
 
 .robot-foot {
   bottom: -10px;
-  width: 8px;
-  height: 14px;
+  width: 7px;
+  height: 16px;
   border-radius: 999px;
   background: #727790;
 }
@@ -1502,9 +1541,17 @@ resetLevel(true)
   width: 54px;
   height: 54px;
   border-radius: 14px;
-  background: linear-gradient(180deg, #d0d9e2, #aeb8c6);
+  background: linear-gradient(180deg, #eef2f6, #c5ced7);
+  box-shadow: inset 0 0 0 3px #58646f, 0 8px 16px rgba(79, 94, 111, 0.14);
   display: grid;
   place-items: center;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.command-btn:hover:not(:disabled),
+.program-slot.filled:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 3px #58646f, 0 12px 18px rgba(79, 94, 111, 0.18);
 }
 
 .command-btn:disabled,
@@ -1552,6 +1599,10 @@ resetLevel(true)
   opacity: 0.55;
 }
 
+.program-panel.active {
+  box-shadow: 0 24px 60px rgba(103, 126, 157, 0.18), inset 0 0 0 3px rgba(88, 200, 124, 0.45);
+}
+
 .program-header span {
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1588,6 +1639,7 @@ resetLevel(true)
   place-items: center;
   background: rgba(255, 255, 255, 0.86);
   border-style: solid;
+  box-shadow: inset 0 0 0 3px #58646f;
 }
 
 .program-slot.filled.active {
@@ -1627,6 +1679,30 @@ resetLevel(true)
 .finish-card h2 {
   margin: 0;
   font-size: 34px;
+}
+
+@keyframes robotBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes lampPulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.92;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1180px) {
