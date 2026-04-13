@@ -3,11 +3,18 @@
     <div class="lightbot-layout">
       <section class="board-panel">
         <div class="board-header">
-          <div>
+          <div class="board-copy-block">
             <p class="board-kicker">Robot Puzzle</p>
             <h1>{{ currentLevel.title }}</h1>
             <p class="board-copy">{{ currentLevel.description }}</p>
+            <div class="board-meta">
+              <span class="meta-chip">关卡 {{ selectedLevelIndex + 1 }}/{{ levels.length }}</span>
+              <span class="meta-chip">{{ currentLevel.skill }}</span>
+              <span class="meta-chip">地块 {{ currentLevelStats.tiles }}</span>
+              <span class="meta-chip">最高 {{ currentLevelStats.maxHeight }} 层</span>
+            </div>
           </div>
+
           <div class="level-switcher">
             <button
               v-for="(level, index) in levels"
@@ -22,18 +29,23 @@
         </div>
 
         <div class="board-stage">
+          <div class="scene-backdrop"></div>
+
           <div class="scene-shell">
             <div class="iso-scene" :style="sceneStyle">
               <div
                 v-for="cell in sceneCells"
                 :key="cell.key"
                 class="iso-tile"
-                :class="{ target: cell.isTarget, lit: cell.isLit }"
+                :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart }]"
                 :style="cell.style"
               >
+                <div class="tile-shadow"></div>
                 <div class="iso-top">
+                  <span v-if="cell.height > 1" class="height-badge">{{ cell.height }}</span>
                   <span v-if="cell.isTarget && !cell.isLit" class="lamp lamp-off"></span>
                   <span v-else-if="cell.isLit" class="lamp lamp-on"></span>
+                  <span v-if="cell.isStart" class="start-badge">S</span>
                   <span v-if="cell.hasRobot" class="robot-sprite" :style="robotStyle">🤖</span>
                 </div>
                 <div class="iso-left"></div>
@@ -42,32 +54,66 @@
             </div>
           </div>
 
-          <div class="board-status">
-            <div class="status-box">
-              <span>方向</span>
-              <strong>{{ directionLabel }}</strong>
+          <div class="board-overlay left">
+            <div class="mission-card">
+              <div class="mission-title">Map Brief</div>
+              <p>{{ currentLevel.goal }}</p>
+              <div class="mission-row">
+                <span>起点</span>
+                <strong>{{ DIRECTION_LABELS[currentLevel.start.dir] }}</strong>
+              </div>
+              <div class="mission-row">
+                <span>主程序</span>
+                <strong>{{ currentLevel.mainLimit }} 格</strong>
+              </div>
+              <div class="mission-row" v-if="currentLevel.allowProcedure">
+                <span>P1</span>
+                <strong>{{ currentLevel.procLimit }} 格</strong>
+              </div>
+              <div class="mission-row" v-else>
+                <span>P1</span>
+                <strong>本关未启用</strong>
+              </div>
             </div>
-            <div class="status-box">
-              <span>点亮</span>
-              <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
-            </div>
-            <div class="status-box" :class="statusTone">
-              <span>状态</span>
-              <strong>{{ statusText }}</strong>
+          </div>
+
+          <div class="board-overlay right">
+            <div class="board-status">
+              <div class="status-box">
+                <span>方向</span>
+                <strong>{{ directionLabel }}</strong>
+              </div>
+              <div class="status-box">
+                <span>点亮</span>
+                <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
+              </div>
+              <div class="status-box" :class="statusTone">
+                <span>状态</span>
+                <strong>{{ statusText }}</strong>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="control-bar">
           <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="undoLastCommand">↶</button>
-          <button class="control-btn" :disabled="isRunning" @click="resetLevelState">🔈</button>
+          <button class="control-btn" :disabled="isRunning" @click="resetLevelState">⟲</button>
           <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="clearActiveSequence">🗑</button>
           <button class="control-btn play" :disabled="isRunning || mainProgram.length === 0" @click="runProgram">▶</button>
 
           <div class="speed-box">
-            <span>Speed:</span>
+            <span>Speed</span>
             <input v-model="speedValue" class="speed-slider" type="range" min="1" max="5" step="1">
           </div>
+
+          <div class="progress-box">
+            <span>完成度</span>
+            <div class="progress-track">
+              <div class="progress-fill" :style="{ width: `${progressPercent}%` }"></div>
+            </div>
+          </div>
+
+          <button v-if="canGoNextLevel" class="next-btn" @click="goToNextLevel">下一关</button>
         </div>
       </section>
 
@@ -82,7 +128,7 @@
             @click="appendCommand(command.id)"
           >
             <span>{{ command.label }}</span>
-            <small>{{ command.id === 'repeat2' ? '把下一条动作执行 2 次' : command.tip }}</small>
+            <small>{{ command.id === 'repeat2' ? '把紧随其后的动作执行两次' : command.tip }}</small>
           </button>
         </section>
 
@@ -149,7 +195,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'programtools-lightbot-progress-v2'
+const STORAGE_KEY = 'programtools-lightbot-progress-v3'
 const TILE_WIDTH = 92
 const TILE_HEIGHT = 46
 const TILE_DEPTH = 24
@@ -158,91 +204,112 @@ const DIRECTION_LABELS = { north: '向上', east: '向右', south: '向下', wes
 const DIRECTION_VECTORS = { north: [-1, 0], east: [0, 1], south: [1, 0], west: [0, -1] }
 const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 220, 5: 140 }
 const COMMANDS = [
-  { id: 'walk', label: 'Walk forward', tip: '同高度前进一步' },
-  { id: 'right', label: 'Turn 90 degrees to the right', tip: '顺时针转向' },
-  { id: 'left', label: 'Turn 90 degrees to the left', tip: '逆时针转向' },
-  { id: 'jump', label: 'Jump', tip: '上跳一层或向下落' },
+  { id: 'walk', label: 'Walk forward', tip: '同高度向前移动一格' },
+  { id: 'right', label: 'Turn right', tip: '顺时针转 90 度' },
+  { id: 'left', label: 'Turn left', tip: '逆时针转 90 度' },
+  { id: 'jump', label: 'Jump', tip: '向前跳上一层或向下跳落' },
   { id: 'light', label: 'Light', tip: '点亮当前蓝灯格' },
-  { id: 'repeat2', label: 'Repeat 2 times', tip: '重复下一条动作' },
+  { id: 'repeat2', label: 'Repeat 2', tip: '重复下一条动作两次' },
   { id: 'call1', label: 'Call P1', tip: '调用子程序 P1' }
 ]
 
+function tile(height = 1, extras = {}) {
+  return { h: height, theme: 'stone', ...extras }
+}
+
+function lightTile(height = 1, extras = {}) {
+  return tile(height, { target: true, ...extras })
+}
+
 const levels = [
   {
-    id: 'intro-grid',
-    title: 'Level 1: First Lights',
-    description: '先学会走路和点灯。主程序够长，不需要子程序。',
+    id: 'intro-garden',
+    title: 'Level 1: Garden Walk',
+    description: '第一张地图补成了更完整的漂浮花园，先熟悉走路与点灯。',
+    goal: '沿主路点亮两盏蓝灯，不要被旁边的装饰平台干扰。',
+    skill: 'Walk + Light',
     mainLimit: 8,
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, null, null, null],
-      [{ h: 1 }, { h: 1, target: true }, { h: 1 }, { h: 1, target: true }],
-      [null, null, null, null]
+      [null, tile(1, { theme: 'moss' }), null, tile(2, { theme: 'slate' }), null, null],
+      [tile(1, { theme: 'moss' }), tile(1), lightTile(1), tile(1), lightTile(1), tile(1, { theme: 'copper' })],
+      [null, null, tile(1, { theme: 'copper' }), null, tile(2, { theme: 'slate' }), null],
+      [null, null, null, null, null, null]
     ],
-    start: { row: 1, col: 0, dir: 'east' },
+    start: { row: 1, col: 1, dir: 'east' },
     demo: { main: ['walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
   },
   {
-    id: 'jump-path',
-    title: 'Level 2: Jump Up',
-    description: '中间有高台，必须通过 jump 才能继续点灯。',
+    id: 'jump-spire',
+    title: 'Level 2: Jump Spire',
+    description: '地图加入了阶梯和高塔，必须准确使用 jump 才能上台。',
+    goal: '先点亮低处灯，再跳上高台，转向后点亮第二盏灯。',
+    skill: 'Jump + Turn',
     mainLimit: 10,
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, null, { h: 2, target: true }, null],
-      [null, null, { h: 2 }, null],
-      [{ h: 1 }, { h: 1, target: true }, { h: 1 }, null],
-      [null, null, null, null]
+      [null, null, tile(3, { theme: 'slate' }), null, null],
+      [null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'copper' }), tile(2, { theme: 'slate' }), null],
+      [null, tile(1), lightTile(2), null, null],
+      [tile(1, { theme: 'copper' }), lightTile(1), tile(2), tile(1, { theme: 'copper' }), null],
+      [null, null, null, null, null]
     ],
-    start: { row: 2, col: 0, dir: 'east' },
+    start: { row: 3, col: 0, dir: 'east' },
     demo: { main: ['walk', 'light', 'jump', 'left', 'walk', 'light'], proc1: [] }
   },
   {
-    id: 'repeat-lights',
-    title: 'Level 3: Repeat',
-    description: '这一关可以用 Repeat 2 times 缩短主程序。',
+    id: 'repeat-promenade',
+    title: 'Level 3: Repeat Promenade',
+    description: '长廊地图更完整了，周围加了辅路和高台，适合练习 Repeat。',
+    goal: '把三盏连续蓝灯全部点亮，用 Repeat 缩短开局移动。',
+    skill: 'Repeat 2',
     mainLimit: 8,
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, null, null, null, null],
-      [{ h: 1 }, { h: 1, target: true }, { h: 1, target: true }, { h: 1, target: true }, null],
-      [null, null, null, null, null]
+      [null, null, tile(2, { theme: 'slate' }), null, tile(2, { theme: 'slate' }), null, null],
+      [tile(1, { theme: 'moss' }), tile(1), tile(1), lightTile(1), lightTile(1), lightTile(1), tile(1, { theme: 'moss' })],
+      [null, tile(1, { theme: 'copper' }), null, null, null, tile(1, { theme: 'copper' }), null]
     ],
-    start: { row: 1, col: 0, dir: 'east' },
+    start: { row: 1, col: 1, dir: 'east' },
     demo: { main: ['repeat2', 'walk', 'light', 'walk', 'light', 'walk', 'light'], proc1: [] }
   },
   {
-    id: 'procedure-square',
-    title: 'Level 4: Procedure',
-    description: '开始使用 P1，把重复动作折叠成一个子程序。',
+    id: 'procedure-court',
+    title: 'Level 4: Procedure Court',
+    description: '把地图做成了一座中庭，适合用 P1 把循环路线折叠起来。',
+    goal: '起点就在目标格上，先点亮起点，再用 P1 绕中庭一圈。',
+    skill: 'P1 Function',
     mainLimit: 6,
     procLimit: 4,
     allowProcedure: true,
     board: [
-      [null, { h: 1, target: true }, { h: 1, target: true }, null],
-      [null, { h: 1, target: true }, { h: 1, target: true }, null],
-      [null, null, null, null]
+      [null, tile(1, { theme: 'moss' }), tile(1, { theme: 'moss' }), null],
+      [tile(1, { theme: 'copper' }), null, null, tile(1, { theme: 'copper' })],
+      [null, lightTile(1), lightTile(1), null],
+      [null, lightTile(1), lightTile(1), null]
     ],
-    start: { row: 1, col: 1, dir: 'east' },
+    start: { row: 2, col: 1, dir: 'east' },
     demo: { main: ['light', 'call1', 'call1', 'call1'], proc1: ['walk', 'light', 'right'] }
   },
   {
-    id: 'bridge-loop',
-    title: 'Level 5: Bridge',
-    description: '最后一关同时用到 jump、转向和 P1。',
-    mainLimit: 8,
-    procLimit: 6,
+    id: 'signal-bridge',
+    title: 'Level 5: Signal Bridge',
+    description: '最后一关补成了完整桥面，主桥负责过关，两侧塔楼只做视觉地标。',
+    goal: '使用短小的 P1 沿主桥推进，依次点亮三盏灯。',
+    skill: 'Procedure Route',
+    mainLimit: 5,
+    procLimit: 2,
     allowProcedure: true,
     board: [
-      [null, { h: 2 }, { h: 2 }, { h: 2 }, null],
-      [{ h: 1, target: true }, { h: 1 }, { h: 1, target: true }, { h: 1 }, { h: 1, target: true }],
-      [null, { h: 2 }, { h: 2 }, { h: 2 }, null]
+      [null, tile(2, { theme: 'slate' }), null, tile(2, { theme: 'slate' }), null],
+      [tile(1), lightTile(1), lightTile(1), lightTile(1), tile(1)],
+      [null, tile(2, { theme: 'copper' }), null, tile(2, { theme: 'copper' }), null]
     ],
-    start: { row: 0, col: 1, dir: 'east' },
-    demo: { main: ['call1', 'call1', 'call1'], proc1: ['jump', 'light', 'left', 'jump', 'walk', 'right'] }
+    start: { row: 1, col: 0, dir: 'east' },
+    demo: { main: ['call1', 'call1', 'call1'], proc1: ['walk', 'light'] }
   }
 ]
 
@@ -291,6 +358,12 @@ const targetKeys = computed(() => {
 const directionLabel = computed(() => DIRECTION_LABELS[robot.value.dir] || '')
 const activeSequence = computed(() => activeEditor.value === 'proc1' ? proc1Program.value : mainProgram.value)
 const commandPalette = computed(() => COMMANDS.filter((command) => command.id !== 'call1' || currentLevel.value.allowProcedure))
+const isLevelComplete = computed(() => targetKeys.value.length > 0 && targetKeys.value.every((key) => litKeys.value.includes(key)))
+const progressPercent = computed(() => {
+  if (!targetKeys.value.length) return 0
+  return Math.round((litKeys.value.length / targetKeys.value.length) * 100)
+})
+const canGoNextLevel = computed(() => isLevelComplete.value && selectedLevelIndex.value < levels.length - 1)
 const robotStyle = computed(() => {
   const rotation = { north: '-90deg', east: '0deg', south: '90deg', west: '180deg' }[robot.value.dir] || '0deg'
   return { transform: `translate(-50%, -74%) rotate(${rotation})` }
@@ -313,19 +386,26 @@ const sceneMetrics = computed(() => {
     cells: existingCells,
     minX,
     minY,
-    width: Math.ceil(maxX - minX + 48),
-    height: Math.ceil(maxY - minY + 48)
+    width: Math.ceil(maxX - minX + 88),
+    height: Math.ceil(maxY - minY + 96)
   }
 })
+const currentLevelStats = computed(() => ({
+  tiles: sceneMetrics.value.cells.length,
+  maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => Number(item.cell.h || 1)))
+}))
 const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
 const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
   key: keyOf(item.row, item.col),
+  themeClass: `theme-${item.cell.theme || 'stone'}`,
   isTarget: Boolean(item.cell.target),
   isLit: litKeys.value.includes(keyOf(item.row, item.col)),
   hasRobot: robot.value.row === item.row && robot.value.col === item.col,
+  isStart: currentLevel.value.start.row === item.row && currentLevel.value.start.col === item.col,
+  height: Number(item.cell.h || 1),
   style: {
-    left: `${item.x - sceneMetrics.value.minX + 24}px`,
-    top: `${item.y - sceneMetrics.value.minY + 24}px`,
+    left: `${item.x - sceneMetrics.value.minX + 32}px`,
+    top: `${item.y - sceneMetrics.value.minY + 34}px`,
     '--tile-depth': `${Number(item.cell.h || 1) * TILE_DEPTH}px`
   }
 })))
@@ -409,6 +489,11 @@ function selectLevel(index) {
   selectedLevelIndex.value = index
 }
 
+function goToNextLevel() {
+  if (!canGoNextLevel.value) return
+  selectedLevelIndex.value += 1
+}
+
 function appendCommand(command) {
   const target = activeEditor.value === 'proc1' ? proc1Program : mainProgram
   const limit = activeEditor.value === 'proc1' ? currentLevel.value.procLimit : currentLevel.value.mainLimit
@@ -475,9 +560,9 @@ async function executeAction(command, nonce) {
   }
 
   if (command === 'light') {
-    const tile = tileAt(robot.value.row, robot.value.col)
+    const tileData = tileAt(robot.value.row, robot.value.col)
     const currentKey = keyOf(robot.value.row, robot.value.col)
-    if (!tile?.target) failRun('No light tile here')
+    if (!tileData?.target) failRun('No light tile here')
     if (!litKeys.value.includes(currentKey)) {
       litKeys.value = [...litKeys.value, currentKey]
     }
@@ -568,7 +653,7 @@ async function runProgram() {
       setStatus('Program finished, but some lights are still off', 'danger')
     }
   } catch {
-    // failRun already set the status.
+    // failRun already updated the status.
   } finally {
     if (nonce === executionNonce.value) {
       isRunning.value = false
@@ -583,57 +668,78 @@ async function runProgram() {
 .lightbot-page {
   min-height: calc(100vh - 80px);
   padding: 8px;
-  background: #d5d5d5;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.35), transparent 32%),
+    linear-gradient(180deg, #dbd9d4 0%, #cfcbc5 100%);
   color: #fff;
 }
 
 .lightbot-layout {
   min-height: calc(100vh - 96px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 286px;
+  gap: 10px;
 }
 
 .board-panel,
 .side-card {
-  background: #676260;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, #6f6966 0%, #625d5a 100%);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 20px 40px rgba(58, 49, 44, 0.12);
 }
 
 .board-panel {
   display: flex;
   flex-direction: column;
-  padding: 14px 14px 8px;
+  padding: 16px 16px 10px;
 }
 
 .board-header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
   margin-bottom: 12px;
 }
 
+.board-copy-block {
+  max-width: 620px;
+}
+
 .board-kicker {
   margin: 0 0 4px;
-  color: #d8d0cb;
+  color: #e2dbd4;
   font-size: 11px;
-  letter-spacing: .14em;
+  letter-spacing: .16em;
   text-transform: uppercase;
 }
 
 .board-header h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
+  line-height: 1.1;
   color: #fff;
 }
 
 .board-copy {
-  margin: 6px 0 0;
-  color: #e8dfd7;
-  max-width: 520px;
-  line-height: 1.45;
+  margin: 8px 0 0;
+  color: #efe7df;
+  line-height: 1.5;
+}
+
+.board-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.meta-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+  font-size: 12px;
 }
 
 .level-switcher {
@@ -641,22 +747,28 @@ async function runProgram() {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  max-width: 220px;
 }
 
 .level-pill {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: 10px;
-  background: #7f7976;
+  border-radius: 11px;
+  background: #807977;
   color: #fff;
   font-weight: 700;
   cursor: pointer;
+  transition: transform .16s ease, background-color .16s ease;
+}
+
+.level-pill:hover {
+  transform: translateY(-1px);
 }
 
 .level-pill.active {
-  background: #9fd3cb;
-  color: #3f4b49;
+  background: #a6d7ce;
+  color: #314541;
 }
 
 .level-pill.done:not(.active) {
@@ -664,34 +776,51 @@ async function runProgram() {
 }
 
 .board-stage {
-  flex: 1;
   position: relative;
+  flex: 1;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #edf1f4 0%, #e3e8ed 100%);
+}
+
+.scene-backdrop {
+  position: absolute;
+  inset: 0;
   background:
-    linear-gradient(30deg, rgba(213, 219, 225, .8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, .8) 87.5%, rgba(213, 219, 225, .8)),
-    linear-gradient(150deg, rgba(213, 219, 225, .8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, .8) 87.5%, rgba(213, 219, 225, .8)),
-    linear-gradient(90deg, rgba(233, 237, 241, .9) 2%, transparent 2.5%, transparent 97%, rgba(233, 237, 241, .9) 97.5%, rgba(233, 237, 241, .9));
-  background-size: 58px 102px;
-  background-color: #eef1f4;
+    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.82), transparent 36%),
+    radial-gradient(circle at 50% 78%, rgba(137, 179, 217, 0.18), transparent 30%),
+    linear-gradient(30deg, rgba(213, 219, 225, 0.8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, 0.8) 87.5%, rgba(213, 219, 225, 0.8)),
+    linear-gradient(150deg, rgba(213, 219, 225, 0.8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, 0.8) 87.5%, rgba(213, 219, 225, 0.8));
+  background-size: auto, auto, 58px 102px, 58px 102px;
 }
 
 .scene-shell {
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: 24px;
+  padding: 110px 28px 36px;
 }
 
 .iso-scene {
   position: relative;
-  margin: 40px auto 0;
+  margin: 0 auto;
 }
 
 .iso-tile {
   position: absolute;
   width: 92px;
-  height: 70px;
+  height: 74px;
+}
+
+.tile-shadow {
+  position: absolute;
+  left: 12px;
+  top: calc(34px + var(--tile-depth));
+  width: 68px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(33, 43, 58, 0.12);
+  filter: blur(6px);
 }
 
 .iso-top,
@@ -706,8 +835,7 @@ async function runProgram() {
   width: 92px;
   height: 46px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background: #666;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .iso-left {
@@ -716,7 +844,6 @@ async function runProgram() {
   width: 46px;
   height: var(--tile-depth);
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
-  background: #747474;
 }
 
 .iso-right {
@@ -725,19 +852,48 @@ async function runProgram() {
   width: 46px;
   height: var(--tile-depth);
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
-  background: #555;
 }
 
+.theme-stone .iso-top { background: #7a7a77; }
+.theme-stone .iso-left { background: #666663; }
+.theme-stone .iso-right { background: #555553; }
+
+.theme-moss .iso-top { background: #6f7f68; }
+.theme-moss .iso-left { background: #5d6d56; }
+.theme-moss .iso-right { background: #4e5c48; }
+
+.theme-slate .iso-top { background: #718196; }
+.theme-slate .iso-left { background: #5f6f84; }
+.theme-slate .iso-right { background: #506075; }
+
+.theme-copper .iso-top { background: #9b7863; }
+.theme-copper .iso-left { background: #825f4d; }
+.theme-copper .iso-right { background: #714e3f; }
+
 .iso-tile.target .iso-top {
-  background: #6f6f6f;
+  box-shadow: inset 0 0 0 2px rgba(92, 149, 255, 0.18);
 }
 
 .iso-tile.lit .iso-top {
-  background: #7a7a66;
+  box-shadow: inset 0 0 0 2px rgba(255, 229, 108, 0.2);
+}
+
+.iso-tile.start .iso-top::after {
+  content: '';
+  position: absolute;
+  inset: 8px 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.lamp,
+.start-badge,
+.height-badge,
+.robot-sprite {
+  position: absolute;
 }
 
 .lamp {
-  position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -753,32 +909,110 @@ async function runProgram() {
 
 .lamp-on {
   background: #ffe66a;
-  box-shadow: 0 0 18px rgba(255, 226, 77, .78);
+  box-shadow: 0 0 18px rgba(255, 226, 77, 0.78);
+}
+
+.start-badge {
+  left: 12px;
+  top: 12px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  color: #546161;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.height-badge {
+  right: 12px;
+  top: 10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(38, 44, 49, 0.44);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .robot-sprite {
-  position: absolute;
   left: 50%;
   top: 50%;
   font-size: 36px;
-  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, .18));
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.18));
+}
+
+.board-overlay {
+  position: absolute;
+  z-index: 2;
+}
+
+.board-overlay.left {
+  left: 14px;
+  top: 14px;
+}
+
+.board-overlay.right {
+  right: 14px;
+  top: 14px;
+}
+
+.mission-card {
+  width: 220px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(84, 76, 72, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 24px rgba(39, 29, 24, 0.12);
+}
+
+.mission-title {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #efe7df;
+}
+
+.mission-card p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  color: #f5eee7;
+}
+
+.mission-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mission-row span {
+  color: #d7cac1;
 }
 
 .board-status {
-  position: absolute;
-  right: 14px;
-  top: 14px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  max-width: calc(100% - 24px);
+  max-width: 340px;
+  justify-content: flex-end;
 }
 
 .status-box {
-  min-width: 100px;
+  min-width: 104px;
   padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(74, 68, 66, .84);
+  border-radius: 12px;
+  background: rgba(74, 68, 66, 0.86);
   backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
@@ -792,56 +1026,61 @@ async function runProgram() {
 }
 
 .status-box.success {
-  background: rgba(92, 128, 89, .9);
+  background: rgba(92, 128, 89, 0.9);
 }
 
 .status-box.danger {
-  background: rgba(139, 88, 78, .92);
+  background: rgba(139, 88, 78, 0.92);
 }
 
 .control-bar {
-  margin-top: 8px;
-  align-self: flex-start;
+  margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: #6d6865;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #6b6562;
 }
 
 .control-btn,
 .ghost-btn,
 .editor-tabs button,
 .instruction-btn,
-.program-slot.filled {
+.program-slot.filled,
+.next-btn {
   border: 0;
   cursor: pointer;
 }
 
 .control-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 6px;
-  background: #5d5957;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #575351;
   color: #fff;
 }
 
-.control-btn.play {
-  background: #a4d9d1;
-  color: #334b47;
+.control-btn.play,
+.next-btn {
+  background: #a6d7ce;
+  color: #314541;
+  font-weight: 800;
 }
 
 .control-btn:disabled,
 .ghost-btn:disabled,
 .editor-tabs button:disabled,
 .instruction-btn:disabled,
-.program-slot.filled:disabled {
-  opacity: .4;
+.program-slot.filled:disabled,
+.next-btn:disabled {
+  opacity: 0.42;
   cursor: not-allowed;
 }
 
-.speed-box {
+.speed-box,
+.progress-box {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -850,14 +1089,33 @@ async function runProgram() {
 }
 
 .speed-slider {
-  width: 90px;
+  width: 92px;
   accent-color: #9fd3cb;
+}
+
+.progress-track {
+  width: 120px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f7da6c 0%, #9fd3cb 100%);
+}
+
+.next-btn {
+  padding: 9px 14px;
+  border-radius: 10px;
 }
 
 .sidebar-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .side-card {
@@ -874,7 +1132,7 @@ async function runProgram() {
   width: 100%;
   padding: 10px 12px;
   margin-top: 2px;
-  border-top: 1px solid rgba(255, 255, 255, .1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: #fff;
   display: flex;
@@ -910,7 +1168,7 @@ async function runProgram() {
 .ghost-btn {
   padding: 8px 10px;
   border-radius: 8px;
-  background: #5a5755;
+  background: #595654;
   color: #fff;
 }
 
@@ -924,7 +1182,7 @@ async function runProgram() {
 }
 
 .program-section.disabled {
-  opacity: .45;
+  opacity: 0.45;
 }
 
 .sequence-label {
@@ -942,8 +1200,8 @@ async function runProgram() {
 .program-slot {
   min-height: 46px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, .05);
-  border: 1px dashed rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
 }
 
 .program-slot.filled {
@@ -973,7 +1231,7 @@ async function runProgram() {
   padding-top: 16px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1080px) {
   .lightbot-layout {
     grid-template-columns: 1fr;
   }
@@ -981,30 +1239,49 @@ async function runProgram() {
   .sidebar-panel {
     order: -1;
   }
-
-  .program-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .board-header,
   .program-head {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .program-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .level-switcher {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .board-overlay.left,
+  .board-overlay.right {
+    position: static;
+  }
+
+  .board-stage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scene-shell {
+    position: relative;
+    min-height: 360px;
+    padding-top: 20px;
+  }
+
+  .mission-card,
+  .board-status {
+    width: auto;
+    max-width: none;
+    margin: 12px;
   }
 
   .board-status {
-    position: static;
-    margin: 12px 12px 0;
+    justify-content: flex-start;
   }
 
-  .control-bar {
-    flex-wrap: wrap;
+  .program-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 </style>
