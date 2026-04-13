@@ -66,6 +66,12 @@
           <div class="card-title">推箱子</div>
           <div class="card-desc">经典益智游戏，支持自定义关卡。</div>
         </router-link>
+
+        <router-link v-if="showGames && user" to="/lightbot" class="card">
+          <div class="card-icon">🤖</div>
+          <div class="card-title">机器人点灯</div>
+          <div class="card-desc">编排前进、跳跃、转向和子程序，点亮整张地图。</div>
+        </router-link>
       </div>
     </section>
 
