@@ -1,0 +1,55 @@
+{
+  "docId": null,
+  "domainId": "gesp",
+  "titleLike": "2023年12月一级真题卷",
+  "count": 1,
+  "found": true,
+  "items": [
+    {
+      "_id": "697c266a1e7c5e871643c2e0",
+      "content": "{\"zh\":\"# GESP-C++-2023年12月一级真题卷GESP-C++-2023年12月一级真题卷\\n\\n## 一、单选题（共30分）\\n\\n1), 以下C++不可以作为变量的名称的是( )。\\n{{ select(1) }}\\n- A. CCF GESP\\n- B. ccfGESP\\n- C. CCFgesp\\n- D. CCF_GESP\\n\\n2), C++表达式 `10 - 3 * (2 + 1) % 10` 的值是( )。\\n{{ select(2) }}\\n- A. 0\\n- B. 1\\n- C. 2\\n- D. 3\\n\\n3), 假设现在是上午十点，求出N小时（正整数）后是第几天几时，如输入20小时则为第2天6点，如N输入4则为今天14点。为实现相应功能，应在横线处填写代码是( )。\\n```cpp\\n\\tint N, dayX,hourX;\\n\\tcin >> N;\\n\\tdayX = _____, hourX = _____;\\n\\tif(dayX == 0)\\n\\t\\tcout << \\\"今天\\\" << hourX <<\\\"点\\\";\\n\\telse\\n\\t\\t cout << \\\"第\\\" << (dayX + 1) << \\\"天\\\" << hourX << \\\"点\\\";\\n```\\n{{ select(3) }}\\n- A. `(10 + N) % 24` , `(10 + N) / 24`\\n- B. `(10 + N) / 24` , `(10 + N) % 24`\\n- C. `N % 24` , `N / 24`\\n- D. `10 / 24` , `10 % 24`\\n\\n4), 下面的程序用于判断N是否为偶数，横线处应填写代码是（ ）。\\n```cpp\\n\\tcin >> N;\\n\\n\\tif(______)\\n\\t\\tcout << \\\"偶数\\\";\\n\\telse\\n\\t\\tcout << \\\"奇数\\\";\\n```\\n{{ select(4) }}\\n- A. `N % 2 == 0`\\n- B. `N % 2 = 0`\\n- C. `N % 2`\\n- D. `N % 2 != 0`\\n\\n5), 下面对C++代码执行后输出的描述，正确的是（ ）。\\n```cpp\\ncin >> N;\\ncnt = 0;\\nfor(int i = 1; i < N; i++)\\n\\tcnt += 1;\\ncout << cnt;\\n```\\n{{ select(5) }}\\n- A. 如果输⼊的N是⼤于等于2整数，第5⾏将输出N-1。\\n- B. 如果输⼊的N是⼩于等于2整数，第5⾏将输出0。\\n- C. 如果输⼊的N是⼤于等于2整数，第5⾏将输出N。\\n- D. 以上说法均不正确。\\n\\n6), 下面C++代码执行后的输出是（ ）。\\n```cpp\\n\\tcnt = 0;\\n\\tfor(int i = 1; i < 10; i++){\\n\\t\\tcnt += 1;\\n\\t\\ti += 2;\\n\\t}\\n\\tcout << cnt;\\n```\\n{{ select(6) }}\\n- A. 10\\n- B. 9\\n- C. 3\\n- D. 1\\n\\n7), 下面C++代码执行后的输出是（ ）。\\n```cpp\\n\\tcnt = 0;\\n\\tfor(int i = 1; i < 20; i++){\\n\\t\\tif(i % 2)\\n\\t\\t\\tcontinue;\\n\\t\\telse if(i % 3 == 0 && i % 5 == 0)\\n\\t\\t\\tbreak;\\n\\t\\tcnt += i;\\n\\t}\\n\\tcout << cnt;\\n```\\n{{ select(7) }}\\n- A. 90\\n- B. 44\\n- C. 20\\n- D. 10\\n\\n8), 下面C++代码执行后的输出是（ ）。\\n```cpp\\n\\tN = 10;\\n\\tcnt = 0;\\n\\twhile(1){\\n\\t\\tif(N == 0) break;\\n\\t\\tcnt += 1;\\n\\t\\tN -= 2;\\n\\t}\\n\\tcout << cnt;\\n```\\n{{ select(8) }}\\n- A. 11\\n- B. 10\\n- C. 5\\n- D. 4\\n\\n9), 下面C++代码用于判断一个数是否为质数（素数），在横线处应填入代码是（ ）。\\n```cpp\\n\\tcin >> N;\\n\\tcnt = 0;\\n\\tfor(int i = 1; i < N + 1; i++)\\n\\t\\tif(N % i == 0)\\n\\t\\t______;\\n\\tif(cnt == 2)\\n\\t\\tcout << N <<\\\"是质数\\\";\\n\\telse\\n\\t\\t cout << N <<\\\"不是质数\\\";\\n```\\n{{ select(9) }}\\n- A. `cnt = 1`\\n- B. `cnt = 2`\\n- C. `cnt =+ 1`\\n- D. `cnt += 1`\\n\\n10), 对下面的代码，描述正确的是（ ）。\\n```cpp\\n#include <iostream>\\nusing namespace std;\\nint main(int argc, char **argv)\\n{\\n\\n\\tint arr[] = {2,6,3,5,4,8,1,0,9,10};\\n\\tfor(int i = 0; i < 10; i++)\\n\\t\\tcout << arr[i] << \\\" \\\";\\n\\tcout << i << endl;\\n\\t\\n\\tcout << endl;\\n\\n\\treturn 0;\\n}\\n```\\n{{ select(10) }}\\n- A. 输出 `2 6 3 5 4 8 1 0 9 10 10`\\n- B. 输出 `2 6 3 5 4 8 1 0 9 9`\\n- C. 输出 `2 6 3 5 4 8 1 0 9 10`\\n- D. 提示有编译错误\\n\\n11), 执行下面C++代码后输出是（ ）。\\n```cpp\\n\\tint cnt = 0;\\n\\tfor(int i = 10; i > 3; i -= 3)\\n\\t\\tcnt = cnt + i;\\n\\tcout << cnt;\\n```\\n{{ select(11) }}\\n- A. 3\\n- B. 21\\n- C. 27\\n- D. 49\\n\\n12), 定义变量 `char c` ，下面对 `c` 赋值的语句，不符合语法的是( )。\\n{{ select(12) }}\\n- A. `c = (char)66;`\\n- B. `c = (char)(66);`\\n- C. `c = char(66);`\\n- D. `c = char 66;`\\n\\n13), 下图所示C++代码对大写字母 'A' 到 'Z' 分组，对每个字母输出所属的组号，那么输入 'C' 时将输出的组号是？( )。\\n```cpp\\n\\tchar c;\\n\\twhile(1){\\n\\t\\tcin >> c;\\n\\t\\tif(c == 'q') break;\\n\\t\\tswitch(c){\\n\\t\\t\\tcase 'A': cout << \\\"1 \\\"; break;\\n\\t\\t\\tcase 'B': cout << \\\"3 \\\";\\n\\t\\t\\tcase 'C': cout << \\\"3 \\\";\\n\\t\\t\\tcase 'D': cout << \\\"5 \\\"; break;\\n\\t\\t\\tcase 'E': cout << \\\"5 \\\"; break;\\n\\t\\t\\tdefault: cout << \\\"9 \\\";\\n\\t\\t}\\n\\t\\tcout << endl;\\n```\\n{{ select(13) }}\\n- A. 3\\n- B. 3 5\\n- C. 3 5 9\\n- D. 以上都不对\\n\\n14), 某公司新出了一款无人驾驶的小汽车，通过声控智能驾驶系统，乘客只要告诉汽车目的地，车子就能自动选择一条优化路线，告诉乘客后驶达那里。请问下面哪项不是驾驶系统完成选路所必须的。（ ）\\n{{ select(14) }}\\n- A. 麦克风\\n- B. 扬声器\\n- C. 油量表\\n- D. 传感器\\n\\n15), 现代计算机是指电子计算机，它所基于的是（ ）体系结构。\\n{{ select(15) }}\\n- A. 艾伦·图灵\\n- B. 冯·诺依曼\\n- C. 阿塔纳索夫\\n- D. 埃克特-莫克利\\n\\n## 二、判断题（共20分）\\n\\n16), C++表达式 `int(3.14)` 的值为3。( )\\n{{ select(16) }}\\n- true\\n- false\\n\\n17), C++语句 `cout << (2 * 3, 3 % 10, 2+3)` 的输出为 `6,3,5` 。 ( )\\n{{ select(17) }}\\n- true\\n- false\\n\\n18), `for(int i = 1; i < 10; i += 3;) ;` 表示i从1开始到10结束间隔为3，相当于1、4、7、10。（ ）\\n{{ select(18) }}\\n- true\\n- false\\n\\n19), C++表达式 `010+100+001` 的值为111。（ ）\\n{{ select(19) }}\\n- true\\n- false\\n\\n20), `if` 语句中的条件表达式的结果可以为 `int` 类型。\\n{{ select(20) }}\\n- true\\n- false\\n\\n21), 在下面的C++代码 `while(1) continue;` 中，由于循环中的 `continue` 是无条件被执行，因此将导致死循环。（ ）\\n{{ select(21) }}\\n- true\\n- false\\n\\n22), C++表达式 `('1'+'1' == '2' ? flag=1:flag=2)` 的结果值和表达式 `(flag==2)` 的相同。（ ）\\n{{ select(22) }}\\n- true\\n- false\\n\\n23), 在C++的程序中，不能用 `scanf` 作为变量名。（ ）\\n{{ select(23) }}\\n- true\\n- false\\n\\n24), 小杨最近在准备考GESP，他用的Dev C++ 来练习和运行程序，所以Dev C++也是一个小型操作系统。（ ）\\n{{ select(24) }}\\n- true\\n- false\\n\\n25), 任何一个 `while` 循环都可以转化为等价的 `for` 循环（ ）。\\n{{ select(25) }}\\n- true\\n- false\"}",
+      "owner": 7,
+      "domainId": "gesp",
+      "docType": 10,
+      "docId": 227,
+      "title": "GESP-C++-2023年12月一级真题卷GESP-C++-2023年12月一级真题卷",
+      "tag": [
+        "GESP"
+      ],
+      "hidden": true,
+      "nSubmit": 1,
+      "nAccept": 0,
+      "sort": "P000227",
+      "data": [
+        {
+          "_id": "config.yaml",
+          "name": "config.yaml",
+          "size": 516,
+          "lastModified": "2026-01-30T03:32:58.784Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby93dDEvenhqaGxsZm9vNWkwMHhld2puZDN3LnlhbWw="
+        }
+      ],
+      "additional_file": [
+        {
+          "_id": "solution.md",
+          "name": "solution.md",
+          "size": 48960,
+          "lastModified": "2026-01-30T03:32:58.790Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby9qZW4vMGNvczIwdXJlczB0ZGNjbWNpNmN6Lm1k"
+        }
+      ],
+      "config": "type: objective\nanswers:\n  '1':\n  - A\n  - 2\n  '2':\n  - B\n  - 2\n  '3':\n  - B\n  - 2\n  '4':\n  - A\n  - 2\n  '5':\n  - A\n  - 2\n  '6':\n  - C\n  - 2\n  '7':\n  - A\n  - 2\n  '8':\n  - C\n  - 2\n  '9':\n  - D\n  - 2\n  '10':\n  - D\n  - 2\n  '11':\n  - B\n  - 2\n  '12':\n  - D\n  - 2\n  '13':\n  - B\n  - 2\n  '14':\n  - C\n  - 2\n  '15':\n  - B\n  - 2\n  '16':\n  - A\n  - 2\n  '17':\n  - B\n  - 2\n  '18':\n  - B\n  - 2\n  '19':\n  - B\n  - 2\n  '20':\n  - A\n  - 2\n  '21':\n  - A\n  - 2\n  '22':\n  - B\n  - 2\n  '23':\n  - B\n  - 2\n  '24':\n  - B\n  - 2\n  '25':\n  - A\n  - 2\n",
+      "stats": {
+        "AC": 0,
+        "WA": 1,
+        "TLE": 0,
+        "MLE": 0,
+        "RE": 0,
+        "SE": 0,
+        "IGN": 0,
+        "CE": 0,
+        "s8": 1
+      }
+    }
+  ]
+}

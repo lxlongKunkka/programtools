@@ -1,0 +1,44 @@
+{
+  "docId": null,
+  "domainId": "gesp",
+  "titleLike": "2023年9月六级真题卷",
+  "count": 1,
+  "found": true,
+  "items": [
+    {
+      "_id": "697c266b1e7c5e871643c304",
+      "content": "{\"zh\":\"# GESP-C++-2023年9月六级真题卷GESP-C++-2023年9月六级真题卷\\n\\n## 单选题 共30分\\n\\n1), 近年来，线上授课变得普遍，很多有助于改善教学效果的设备也逐渐流行，其中包括比较常用的手写板，那么它属于哪类设备？（ ）\\n{{ select(1) }}\\n- A. 输入\\n- B. 输出\\n- C. 控制\\n- D. 记录\\n\\n2), 如果 $a$ 和 $b$ 均为 `int` 类型的变量，且 $b$ 的值不为 $0$ ，那么下列能正确判断 “ $a$ 是 $b$ 的 $3$ 倍” 的表达式是（ ）。\\n{{ select(2) }}\\n- A. `(a >> 3 == b)`\\n- B. `(a - b) % 3 == 0`\\n- C. `(a / b == 3)`\\n- D. `(a == 3 * b)`\\n\\n3), 以下不属于面向对象程序设计语言的是（ ）。\\n{{ select(3) }}\\n- A. C++\\n- B. Python\\n- C. Java\\n- D. C\\n\\n4), 下面有关 $C++$ 类定义的说法，错误的是（ ）。\\n{{ select(4) }}\\n- A. $C++$ 类实例化时，会执行构造函数。\\n- B. $C++$ 自定义类可以通过定义构造函数实现自动类型转换。\\n- C. $C++$ 自定义类可以通过重载 `>` 、 `<` 等运算符实现大小比较。\\n- D. $C++$ 自定义类可以包含任意类型的成员。\\n\\n5), 有关下面 $C++$ 代码的说法，错误的是（ ）。\\n```cpp\\n#include <iostream>\\n#include <string>\\nusing namespace std;\\n\\nclass MyStr{\\n\\tstring data;\\npublic:\\n\\tMyStr(string _data): data(_data) {}\\n};\\n\\nint main(){\\n\\tMyStr st(\\\"ABC\\\");\\n\\tcout << st << endl;\\n\\treturn 0;\\n}\\n\\n```\\n{{ select(5) }}\\n- A. 代码 `cout << st << endl;` 不会报错，将正常输出 $ABC$ 。\\n- B. 第 $6$ 行代码的 `data` 是 `MyStr` 类的成员变量。\\n- C. 代码 `MyStr st(\\\"ABC\\\");` 不会报错，将执行构造函数。\\n- D. 以上说法均没有错误。\\n\\n6), 下列关于命名空间的说法错误的是（ ）。\\n{{ select(6) }}\\n- A. 命名空间可以嵌套，例如 `namespace A { namespace B { int i;}}`。\\n- B. 命名空间只可以在全局定义。\\n- C. 命名空间中可以存放变量和函数。\\n- D. 如果程序中使用了 `using` 命令同时引用了多个命名空间，并且命名空间中存在相同的函数，会出现程序运行错误。\\n\\n7), 有关下面 $C++$ 代码的说法，正确的是（ ）。\\n```cpp\\n#include <iostream>\\n#include <string>\\nusing namespace std;\\n\\nclass ManyData{\\n\\tint * __data;\\n\\tint head, tail, capacity;\\npublic:\\n\\tManyData(int cap){\\n\\t\\tcapacity = cap;\\n\\t\\t__data = new int[capacity];\\n\\t\\thead = tail = 0;\\n\\t}\\n\\tvoid push(int val){\\n\\t\\t__data[tail++] = val;\\n\\t}\\n\\tint pop(){\\n\\t\\treturn __data[--tail];\\n\\t}\\n\\tint size(){\\n\\t\\treturn tail - head;\\n\\t}\\n};\\n\\n\\nint main(){\\n\\tauto myData = ManyData(100);\\n\\tmyData.push(1);\\n\\tmyData.push(2);\\n\\tmyData.push(3);\\n\\tmyData.push(100);\\n\\tcout << myData.size() << endl;\\n\\tcout << myData.pop() << endl;\\n\\treturn 0;\\n}\\n\\n```\\n{{ select(7) }}\\n- A. 这段代码不能正常运行。\\n- B. `ManyData` 类可用于构造队列（ `Queue` ）数据结构。\\n- C. 在上面代码环境，代码 `cout<< myData.__data[0] << endl;` 可以增加到代码 `main` 函数末尾（ `return 0;` 之前），且不会导致报错。\\n- D. 可以为 `ManyData` 类的 `push()` 、`pop()` 函数增加异常处理代码，否则在使用 `ManyData` 类时可能导致运行时错误或逻辑错误（不一定局限于上述代码中的 `main` 函数）。\\n\\n8), 有关下面 $C++$ 代码的说法，错误的是（ ）。\\n```cpp\\n#include <iostream>\\nusing namespace std;\\n\\nclass MoreData{\\n\\tint * __data;\\n\\tint head, tail, capacity;\\npublic:\\n\\tMoreData(int cap){\\n\\t\\tcapacity = cap;\\n\\t\\t__data = new int[capacity];\\n\\t\\thead = tail = 0;\\n\\t}\\n\\tMoreData & push(int val){\\n\\t\\t__data[tail++] = val;\\n\\t\\treturn *this;\\n\\t}\\n\\tint pop(){\\n\\t\\treturn __data[head++];\\n\\t}\\n\\tint size(){\\n\\t\\treturn tail - head;\\n\\t}\\n};\\n\\n\\nint main(){\\n\\tauto myData = ManyData(100);\\n\\tmyData.push(1);\\n\\tmyData.push(2);\\n\\tmyData.push(3);\\n\\tmyData.push(11).push(12).push(13); // 第29行\\n\\tcout << myData.pop() << endl;\\n\\treturn 0;\\n}\\n\\n```\\n{{ select(8) }}\\n- A. `MoreData` 类可用于构造队列（ `Queue` ）数据结构。\\n- B. 代码第 $29$ 行，连续 `push()` 的用法将导致编译错误。\\n- C. `__data` 是 `MoreData` 类的私有成员，只能在类内访问。\\n- D. 以上说法均没有错误。\\n\\n9), 某内容仅会出现 $ABCDEFG$ ，其对应的出现概率为 $0.40$ 、 $0.30$ 、 $0.15$ 、 $0.05$ 、 $0.04$ 、 $0.03$ 、 $0.03$ ，如下图所示。按照哈夫曼编码规则，假设 $B$ 的编码为 $11$ ，则 $D$ 的编码为（ ）。\\n![图片](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/gesp-images/20260128/mjrjhqgis7o.png)\\n{{ select(9) }}\\n- A. 10010\\n- B. 10011\\n- C. 10111\\n- D. 10001\\n\\n10), 下面有关格雷码的说法，错误的是（ ）。\\n{{ select(10) }}\\n- A. 在格雷码中，任意两个相邻的代码只有一位二进制数不同。\\n- B. 格雷码是一种唯一性编码。\\n- C. 在格雷码中，最大数和最小数只有一位二进制数不同。\\n- D. 格雷码是一种可靠性编码。\\n\\n11), 有关下图的二叉树，说法正确的是\\n![图片](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/gesp-images/20260128/hmwrpzgsts4.png)\\n{{ select(11) }}\\n- A. 既是完全二叉树也是满二叉树。\\n- B. 既是二叉搜索树也是平衡二叉树。\\n- C. 非平衡二叉树。\\n- D. 以上说法都不正确。\\n\\n12), $N$ 个节点的二叉搜索树，其查找的平均时间复杂度为（ ）。\\n{{ select(12) }}\\n- A. $O(1)$\\n- B. $O(N)$\\n- C. $O(\\\\log N)$\\n- D. $O(N^2)$\\n\\n13), 青蛙每次能跳 $1$ 或 $2$ 步。下面是青蛙跳到第 $N$ 步台阶 $C++$ 实现代码。该段代码采用的算法是（ ）。\\n```cpp\\nint jumpFrog(int N){\\n    if(N <= 3)\\n        return N;\\n    return jumpFrog(N - 1) + jumpFrog(N - 2);\\n}\\n\\n```\\n{{ select(13) }}\\n- A. 递推算法\\n- B. 贪心算法\\n- C. 动态规划算法\\n- D. 分治算法\\n\\n14), $N$ 个节点的双向循环链，在其中查找某个节点的平均时间复杂度是（ ）。\\n{{ select(14) }}\\n- A. $O(1)$\\n- B. $O(N)$\\n- C. $O(\\\\log N)$\\n- D. $O(N^2)$\\n\\n15), 关于 $C++$ 语言，以下说法不正确的是（ ）。\\n{{ select(15) }}\\n- A. 若对象被定义为常量，则它只能调用以 `const` 修饰的成员函数。\\n- B. 所有的常量静态变量都只能在类外进行初始化。\\n- C. 若类 $A$ 的对象 $a$ 是类 $B$ 的静态成员变量，则 $a$ 在 `main()` 函数调用之前应被初始化。\\n- D. 静态全局对象、常量全局对象都是在 `main` 函数调用之前完成初始化，执行完 `main` 函数后被析构。\\n\\n## 判断题 共20分\\n\\n16), $TCP/IP$ 的传输层的两个不同的协议分别是 $UDP$ 和 $TCP$ 。\\n{{ select(16) }}\\n- true\\n- false\\n\\n17), $5G$ 网络中， $5G$ 中的 $G$ 表示 $Gigabytes/s$ ，其中 $1GB=1024MB$ 。\\n{{ select(17) }}\\n- true\\n- false\\n\\n18), 在面向对象中，类是对象的实例。\\n{{ select(18) }}\\n- true\\n- false\\n\\n19), 在 $C++$ 类的定义中，使用 `static` 修饰符定义的静态成员被该类的所有对象共享。\\n{{ select(19) }}\\n- true\\n- false\\n\\n20), 在 $C++$ 类的定义中，可以定义初始化函数或运算符函数等。\\n{{ select(20) }}\\n- true\\n- false\\n\\n21), $DFS$ 是深度优先算法的英文简写。\\n{{ select(21) }}\\n- true\\n- false\\n\\n22), 哈夫曼编码是一种有损压缩算法。\\n{{ select(22) }}\\n- true\\n- false\\n\\n23), 有些算法或数据结构在 $C/C++$ 语言中使用指针实现，一个典型的例子就是链表。因此，链表这一数据结构在 $C/C++$ 语言中只能使用指针来实现。\\n{{ select(23) }}\\n- true\\n- false\\n\\n24), 如果节点数为 $N$ ，广度搜索算法的最差时间复杂度为 $O(N)$ 。\\n{{ select(24) }}\\n- true\\n- false\\n\\n25), 二叉搜索树的左右子树也是二叉搜索树。\\n{{ select(25) }}\\n- true\\n- false\"}",
+      "owner": 7,
+      "domainId": "gesp",
+      "docType": 10,
+      "docId": 245,
+      "title": "GESP-C++-2023年9月六级真题卷GESP-C++-2023年9月六级真题卷",
+      "tag": [
+        "GESP"
+      ],
+      "hidden": false,
+      "nSubmit": 0,
+      "nAccept": 0,
+      "sort": "P000245",
+      "data": [
+        {
+          "_id": "config.yaml",
+          "name": "config.yaml",
+          "size": 516,
+          "lastModified": "2026-01-30T03:32:59.116Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby85dHEvdWpodW51b3BvbXF0bjE2ZnNjZjNwLnlhbWw="
+        }
+      ],
+      "additional_file": [
+        {
+          "_id": "solution.md",
+          "name": "solution.md",
+          "size": 57815,
+          "lastModified": "2026-01-30T03:32:59.121Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby9qM3AvNnI0aXFoY2gwdTB4azF6dXhzaWNnLm1k"
+        }
+      ],
+      "config": "type: objective\nanswers:\n  '1':\n  - A\n  - 2\n  '2':\n  - D\n  - 2\n  '3':\n  - D\n  - 2\n  '4':\n  - D\n  - 2\n  '5':\n  - A\n  - 2\n  '6':\n  - B\n  - 2\n  '7':\n  - D\n  - 2\n  '8':\n  - B\n  - 2\n  '9':\n  - C\n  - 2\n  '10':\n  - C\n  - 2\n  '11':\n  - A\n  - 2\n  '12':\n  - C\n  - 2\n  '13':\n  - A\n  - 2\n  '14':\n  - B\n  - 2\n  '15':\n  - B\n  - 2\n  '16':\n  - A\n  - 2\n  '17':\n  - B\n  - 2\n  '18':\n  - B\n  - 2\n  '19':\n  - A\n  - 2\n  '20':\n  - A\n  - 2\n  '21':\n  - A\n  - 2\n  '22':\n  - B\n  - 2\n  '23':\n  - B\n  - 2\n  '24':\n  - B\n  - 2\n  '25':\n  - A\n  - 2\n"
+    }
+  ]
+}

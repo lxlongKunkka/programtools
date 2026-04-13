@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { appConn } from '../db.js'
 
-const ponyPuzzleProfileSchema = new mongoose.Schema({
+const gameProfileSchema = new mongoose.Schema({
   userId: { type: Number, required: true, unique: true },
   coins: { type: Number, default: 80 },
   totalCoinsEarned: { type: Number, default: 0 },
@@ -22,4 +22,4 @@ const ponyPuzzleProfileSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-export default appConn.model('PonyPuzzleProfile', ponyPuzzleProfileSchema)
+export default appConn.model('GameProfile', gameProfileSchema, 'ponypuzzleprofiles')

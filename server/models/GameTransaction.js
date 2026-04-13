@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { appConn } from '../db.js'
 
-const ponyPuzzleTransactionSchema = new mongoose.Schema({
+const gameTransactionSchema = new mongoose.Schema({
   userId: { type: Number, required: true, index: true },
   deltaCoins: { type: Number, default: 0 },
   reason: { type: String, required: true },
@@ -9,9 +9,9 @@ const ponyPuzzleTransactionSchema = new mongoose.Schema({
   meta: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true })
 
-ponyPuzzleTransactionSchema.index(
+gameTransactionSchema.index(
   { uniqueKey: 1 },
   { unique: true, partialFilterExpression: { uniqueKey: { $type: 'string', $ne: '' } } }
 )
 
-export default appConn.model('PonyPuzzleTransaction', ponyPuzzleTransactionSchema)
+export default appConn.model('GameTransaction', gameTransactionSchema, 'ponypuzzletransactions')

@@ -1,0 +1,44 @@
+{
+  "docId": null,
+  "domainId": "gesp",
+  "titleLike": "2024年12月二级真题卷",
+  "count": 1,
+  "found": true,
+  "items": [
+    {
+      "_id": "697c266b1e7c5e871643c30e",
+      "content": "{\"zh\":\"# GESP-C++-2024年12月二级真题卷GESP-C++-2024年12月二级真题卷\\n\\n## 单选题 共30分\\n\\n1), 2024年10⽉ 8⽇ ， 诺贝尔物理学奖“意外地”颁给了两位计算机科学家约翰·霍普菲尔德（John J. Hopfield） 和杰弗⾥·⾟顿（Geoffrey E. Hinton） 。 这两位科学家的主要研究⽅向是（ ） 。\\n{{ select(1) }}\\n- A. 天体物理\\n- B. 流体⼒学\\n- C. ⼈⼯智能\\n- D. 量⼦理论\\n\\n2), 题 计算机系统中存储的基本单位⽤B来表⽰， 它代表的是（ ） ， ⽐如某个照⽚⼤⼩为3MB。\\n{{ select(2) }}\\n- A. Byte\\n- B. Block\\n- C. Bulk\\n- D. Bit\\n\\n3), C++语句 `cout << (3 + 3 % 3 * 2 - 1)` 执⾏后输出的值是（ ） 。\\n{{ select(3) }}\\n- A. -1\\n- B. 4\\n- C. 56\\n- D. 2\\n\\n4), 下⾯C++代码执⾏后其输出是( )。\\n```cpp\\nfor (int i=0; i<10; i++)\\n  printf(\\\"%d\\\",i);\\n```\\n{{ select(4) }}\\n- A. 123456789\\n- B. 0123456789\\n- C. 12345678910\\n- D. 012345678910\\n\\n5), 下⾯C++代码的相关说法中， 正确的是( )。\\n```cpp\\nint tnt;\\nfor (int i=0; i<10; i++)\\n  tnt += i;\\ncout << tnt;\\n```\\n{{ select(5) }}\\n- A. 上述代码执⾏后其输出相当于求1-10的和（包含10）\\n- B. 上述代码执⾏后其输出相当于求1-10的和（不包含10）\\n- C. 上述代码执⾏后其输出相当于求0-10的和（不包含10）\\n- D. 上述代码执⾏后将输出不确定的值\\n\\n6), 下⾯C++代码执⾏后输出是（ ） 。\\n```cpp\\nint i;\\nfor (i=1; i<10; i++)\\n  if (i % 2)\\n    continue;\\n  else\\n    break;\\ncout << i;\\n```\\n{{ select(6) }}\\n- A. 1\\n- B. 2\\n- C. 9\\n- D. 10\\n\\n7), 下⾯C++代码执⾏后的输出是（ ） 。\\n```cpp\\nfor (i=0; i<10; i++){\\n  if (i % 3)\\n    continue;\\n  printf(\\\"0#\\\");\\n}\\nif(i>=10)\\n  printf(\\\"1#\\\");\\n```\\n{{ select(7) }}\\n- A. 0#0#0#0#0#0#0#1#\\n- B. 0#0#0#0#0#0#1#\\n- C. 0#0#0#0#1#\\n- D. 0#0#0#0#\\n\\n8), 下⾯C++代码⽤于输出0-100之前（包含100） 能被7整除但不能被3整除的数， 横线处 不能 填⼊的代码是（ ） 。\\n```cpp\\nfor (i=0; i<100; i++)\\n  if(_____________)\\n    cout << i << endl;\\n```\\n{{ select(8) }}\\n- A. `i % 7 == 0 && i % 3 != 0`\\n- B. `!(i % 7) && i % 3 != 0`\\n- C. `i % 7 && i % 3`\\n- D. `i % 7 == 0 && !(i % 3 == 0)`\\n\\n9), 下⾯C++代码⽤于求正整数各位数字之和， 横线处不应填⼊代码是（ ） 。\\n```cpp\\nint tnt, N;\\nprintf(\\\"请输入正整数： \\\");\\ncin >> N;\\ntnt = 0;\\nwhile (N != 0){\\n  ________________\\n  N /= 10;\\n}\\ncout <<tnt;\\n```\\n{{ select(9) }}\\n- A. `tnt = tnt + N % 10`\\n- B. `tnt += N % 10`\\n- C. `tnt = N % 10 + tnt`\\n- D. `tnt = N % 10`\\n\\n10), 下图的C++程序执⾏后的输出是（ ） 。\\n```cpp\\nfor (i=0; i<5; i++)\\n  for (j=0; j<i; j++)\\n    cout <<j;\\n```\\n{{ select(10) }}\\n- A. 0010120123\\n- B. 01012012301234\\n- C. 001012012301234\\n- D. 01012012301234012345\\n\\n11), 下⾯C++代码⽤于实现图⽰的九九乘法表。 相关说法错误的是（ ） 。\\n```cpp\\n/*\\n1*1=1\\n1*2=2 2*2=4\\n1*3=3 2*3=6 3*3=9\\n1*4=4 2*4=8 3*4=12 4*4=16\\n1*5=5 2*5=10 3*5=15 4*5=20 5*5=25\\n1*6=6 2*6=12 3*6=18 4*6=24 5*6=30 6*6=36\\n1*7=7 2*7=14 3*7=21 4*7=28 5*7=35 6*7=42 7*7=49\\n1*8=8 2*8=16 3*8=24 4*8=32 5*8=40 6*8=48 7*8=56 8*8=64\\n1*9=9 2*9=18 3*9=27 4*9=36 5*9=45 6*9=54 7*9=63 8*9=72 9*9=81\\n*/\\nfor (int Hang=1; Hang<10; Hang++){\\n  for (int Lie=1; Lie<Hang+1; Lie++){\\n    if (Lie * Hang > 9)\\n      printf(\\\"%d*%d=%d \\\", Lie, Hang, Lie*Hang);\\n    else\\n      printf(\\\"%d*%d=%d \\\", Lie, Hang, Lie*Hang);\\n    // L2\\n  }\\n  printf(\\\"\\\\n\\\"); // L1\\n}\\n```\\n{{ select(11) }}\\n- A. 将L1注释的 `printf(\\\"\\\\n\\\")` 移到L2注释所在⾏， 效果相同\\n- B. 将L1注释的 `printf(\\\"\\\\n\\\")` 修改为 `print(\\\"%c\\\", '\\\\n')` 效果相同\\n- C. 将 `Lie * Hang > 9` 修改为 `Lie * Hang >= 10` 效果相同\\n- D. 将 `Lie * Hang > 9` 修改为 `Hang * Lie > 9` 效果相同\\n\\n12), 在数学中N!表示N的阶乘， 即1到N的乘积， 如 `3!=1*2*3` 。 下⾯的C++⽤于求1-N的阶乘之和， 如N为3， 则是 `1!+2!+3!` 。 下⾯代码段补充选项后⽤于实现上述功能， 其中不能实现阶乘和的选项是（ ） 。\\n```cpp\\nint N;\\n\\ncin >> N;\\n\\nint tnt=0, nowNum = 1; //tnt保存求和之值， 当前N的阶乘\\nfor (int i=1; i < N + 1; i++){\\n  ______________ // 基于上一个计算出当前数的阶乘\\n  ______________ // 从1到i每个数阶乘之和\\n}\\ncout << tnt;\\n```\\n{{ select(12) }}\\n- A. ```cpp\\n  nowNum *= i;\\n  tnt += nowNum;\\n  ```\\n- B. ```cpp\\n  nowNum = nowNum * i;\\n  tnt = tnt + nowNum;\\n  ```\\n- C. ```cpp\\n  nowNum *= i;\\n  tnt = nowNum + tnt;\\n  ```\\n- D. ```cpp\\n  nowNum = nowNum + i;\\n  tnt *= nowNum;\\n  ```\\n\\n13), 下⾯C++代码⽤于输出N和M之间（可以包括N和M） 的孪⽣素数。 孪⽣素数是指间隔为2的两个数均为素数， 如11和13分别是素数， 且间隔为2。 `isPrime(N)` ⽤于判断N是否为素数的函数。 为完成上述功能， 横线处应填上的代码是（ ） 。\\n```cpp\\nint N,M;\\n//本题假设N小于M\\ncin >> N >> M;\\nfor (int i = N; i < __________; i++)\\n  if (isPrime(i) && isPrime(i + 2))\\n    printf(\\\"%d %d\\\\n\\\",i, i + 2);\\n```\\n{{ select(13) }}\\n- A. M-2\\n- B. M-1\\n- C. M\\n- D. M+1\\n\\n14), 下⾯C++代码实现输出如下图形， 横线应填⼊的代码是（ ） 。\\n```cpp\\n/*\\n高度:5\\n    *\\n   ***\\n  *****\\n *******\\n*********\\n*/\\nint height;\\ncout << \\\"高度: \\\";\\n//获取用户输入的高度\\ncin >> height;\\nfor (i=0; i<height; i++){\\n  //打印每行前面的空格\\n  for (j = 0; j < _______________; j++)\\n    cout << \\\" \\\";\\n  //打印每行的星号\\n  for (k = 0; k < _______________; k++)\\n    cout << \\\"*\\\";\\n//输出一行后， 换行\\n  cout << endl;\\n}\\n```\\n{{ select(14) }}\\n- A. `height - i`\\n  `2 * i`\\n- B. `height`\\n  `2 * i`\\n- C. `height - i`\\n  `2 * i + 1`\\n- D. `height - i - 1`\\n  `2 * i + 1`\\n\\n15), 下⾯C++代码执⾏后的输出是30， 则横线处不能填⼊（ ） 。\\n```cpp\\nint a=10,b=20,c=30;\\n\\ncout << _____________________ << endl;\\n\\ncout << endl;\\n```\\n{{ select(15) }}\\n- A. `max(max(a, b), c)`\\n- B. `min(a+b, c)`\\n- C. `sqrt(a+b+c)`\\n- D. `(a+b+c)/2`\\n\\n## 判断题 共20分\\n\\n16), 在Windows的资源管理器中为已有⽂件A建⽴副本的操作是Ctrl+C， 然后Ctrl+V。 ( )\\n{{ select(16) }}\\n- true\\n- false\\n\\n17), 在C++代码中， 假设N为正整数， 则 `cout << (N - N / 10 * 10)` 将获得N的个位数。 ( )\\n{{ select(17) }}\\n- true\\n- false\\n\\n18), 在C++语句 `cout << (10 <= N <= 12)` 中， 假设N为12， 则其输出为1。 ( )\\n{{ select(18) }}\\n- true\\n- false\\n\\n19), 如果C++表达式 `int(sqrt(N))*int(sqrt(N)) == N` 的值为True， 则说明N为完全平⽅数， 如4、 9、 25等。 （ ）\\n{{ select(19) }}\\n- true\\n- false\\n\\n20), 下⾯C++代码执⾏后将输出2*3=6。 ( )\\n```cpp\\nint a = 2, b = 3;\\nprintf(\\\"%%a*%%b=%d\\\",a*b);\\n```\\n{{ select(20) }}\\n- true\\n- false\\n\\n21), 以下C++ 代码因为循环变量为 `_` 将导致错误， 即不能作为变量名称， 不符合C++变量命名规范。 （ ）\\n```cpp\\nfor (int _ = 0; _ < 10; _++)\\n  continue;\\n```\\n{{ select(21) }}\\n- true\\n- false\\n\\n22), 下⾯C++代码执⾏后因为有break， 将输出0。 （ ）\\n```cpp\\nint i;\\nfor (i = 0; i < 10; i++){\\n  continue;\\n  break;\\n}\\ncout << i;\\n```\\n{{ select(22) }}\\n- true\\n- false\\n\\n23), 下⾯的C++代码执⾏后将输出18⾏“OK”。 （ ）\\n```cpp\\nint i,j;\\nfor (i = 8; i > 2; i-=2)\\n  for (j =0; j < i; j++)\\n    printf(\\\"OK\\\\n\\\");\\n```\\n{{ select(23) }}\\n- true\\n- false\\n\\n24), 将下⾯C++代码中的 `i = 1` 调整为 `i = 0` 的输出结果相同。 （ ）\\n```cpp\\nint i;\\nint cnt = 0;\\nfor (i = 1; i < 5; i++)\\n    if(i%2) cnt += 1;\\ncout << cnt;\\n```\\n{{ select(24) }}\\n- true\\n- false\\n\\n25), 第 10 题 下⾯两段C++代码都是⽤于求1-10的和， 其运⾏结果相同。 通常说来， for循环都可以⽤while循环实现。 （ ）\\n```cpp\\nint tnt;\\nint i;\\ntnt = 0;\\nfor (i = 1; i < 10 + 1; i++)\\n  tnt += i;\\ncout << tnt << endl;\\n```\\n```cpp\\nint tnt;\\nint i;\\n\\ntnt = 0;\\ni = 1;\\nwhile (i <= 10){\\n  tnt += i;\\n  i += 1;\\n}\\ncout << tnt << endl;\\n```\\n{{ select(25) }}\\n- true\\n- false\"}",
+      "owner": 7,
+      "domainId": "gesp",
+      "docType": 10,
+      "docId": 250,
+      "title": "GESP-C++-2024年12月二级真题卷GESP-C++-2024年12月二级真题卷",
+      "tag": [
+        "GESP"
+      ],
+      "hidden": false,
+      "nSubmit": 0,
+      "nAccept": 0,
+      "sort": "P000250",
+      "data": [
+        {
+          "_id": "config.yaml",
+          "name": "config.yaml",
+          "size": 516,
+          "lastModified": "2026-01-30T03:32:59.209Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby82dncvMWJwd3BydmkwbW1vamd5bzJld282LnlhbWw="
+        }
+      ],
+      "additional_file": [
+        {
+          "_id": "solution.md",
+          "name": "solution.md",
+          "size": 53168,
+          "lastModified": "2026-01-30T03:32:59.217Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby8xcWgvZnB3b3NwM3VybDJ5cHJmY3VpOHRtLm1k"
+        }
+      ],
+      "config": "type: objective\nanswers:\n  '1':\n  - C\n  - 2\n  '2':\n  - A\n  - 2\n  '3':\n  - D\n  - 2\n  '4':\n  - B\n  - 2\n  '5':\n  - D\n  - 2\n  '6':\n  - B\n  - 2\n  '7':\n  - C\n  - 2\n  '8':\n  - C\n  - 2\n  '9':\n  - D\n  - 2\n  '10':\n  - A\n  - 2\n  '11':\n  - A\n  - 2\n  '12':\n  - D\n  - 2\n  '13':\n  - B\n  - 2\n  '14':\n  - D\n  - 2\n  '15':\n  - C\n  - 2\n  '16':\n  - A\n  - 2\n  '17':\n  - A\n  - 2\n  '18':\n  - A\n  - 2\n  '19':\n  - A\n  - 2\n  '20':\n  - B\n  - 2\n  '21':\n  - B\n  - 2\n  '22':\n  - B\n  - 2\n  '23':\n  - T\n  - 2\n  '24':\n  - A\n  - 2\n  '25':\n  - A\n  - 2\n"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "docId": null,
+  "domainId": "gesp",
+  "titleLike": "2024年6月八级真题卷",
+  "count": 1,
+  "found": true,
+  "items": [
+    {
+      "_id": "697c266b1e7c5e871643c332",
+      "content": "{\"zh\":\"# GESP-C++-2024年6月八级真题卷GESP-C++-2024年6月八级真题卷\\n\\n## 单选题 共30分\\n\\n1), GESP活动期间，举办⽅从获胜者ABCDE五个⼈中选出三个⼈排成⼀队升国旗，其中A不能排在队⾸，请问有多少种排法？\\n{{ select(1) }}\\n- A. 24\\n- B. 48\\n- C. 32\\n- D. 12\\n\\n2), 7进制数235转换成3进制数是（ ）。\\n{{ select(2) }}\\n- A. 11121\\n- B. 11122\\n- C. 11211\\n- D. 11112\\n\\n3), $0,1,2,3,4,5$ 这些数字组成⼀个三位数，请问没有重复数字的情况下，有多少种组法（ ）。\\n{{ select(3) }}\\n- A. 180\\n- B. 120\\n- C. 80\\n- D. 100\\n\\n4), 有 $V$ 个顶点、 $E$ 条边的图的深度优先搜索遍历时间复杂度为（ ）。\\n{{ select(4) }}\\n- A. $O(V)$\\n- B. $O(E)$\\n- C. $O(V+E)$\\n- D. $O(log(V+E))$\\n\\n5), ⼀对夫妻⽣男⽣⼥的概率相同。已知这对夫妻有两个孩⼦，其中⼀个是⼥孩，另⼀个是男孩的概率是多少？\\n{{ select(5) }}\\n- A. $\\\\frac{2}{3}$\\n- B. $\\\\frac{1}{4}$\\n- C. $\\\\frac{1}{2}$\\n- D. $\\\\frac{1}{3}$\\n\\n6), 从1到2024这2024个数中，共有（ ）个包含数字6的数。\\n{{ select(6) }}\\n- A. 544\\n- B. 546\\n- C. 564\\n- D. 602\\n\\n7), ⼆进制数 `100.001` 转换成⼗进制数是（ ）。\\n{{ select(7) }}\\n- A. 4.25\\n- B. 4.125\\n- C. 4.5\\n- D. 4.75\\n\\n8), 以下函数声明，哪个是符合C++语法的？（ ）。\\n{{ select(8) }}\\n- A. `void BubbleSort(char a[][], int n);`\\n- B. `void BubbleSort(char a[][20], int n);`\\n- C. `void BubbleSort(char a[10][], int n);`\\n- D. `void BubbleSort(char[,] a, int n);`\\n\\n9), 下⾯有关C++重载的说法，错误的是（ ）。\\n{{ select(9) }}\\n- A. 两个参数个数不同的函数可以重名。\\n- B. 两个参数类型不同的函数可以重名。\\n- C. 两个类的⽅法可以重名。\\n- D. 所有C++运算符均可以重载。\\n\\n10), ⼩于或等于给定正整数 $n$ 的数中，与 $n$ 互质的数的个数，我们称为欧拉函数，记作 $\\\\phi(n)$ 。下⾯说法错误的是（ ）。\\n{{ select(10) }}\\n- A. 如果 $n$ 是质数，那么 $\\\\phi(n) = n-1$ 。\\n- B. 两个质数⼀定是互质数。\\n- C. 两个相邻的数⼀定是互质数。\\n- D. 相邻的两个质数不⼀定是互质数。\\n\\n11), 已知⼀棵⼆叉树有 $10$ 个节点，则其中⾄多有（ ）个节点有 $2$ 个⼦节点。\\n{{ select(11) }}\\n- A. 4\\n- B. 5\\n- C. 6\\n- D. 3\\n\\n12), ⼆项展开式 $(x+y)^n=x^n+nx^{n-1}y+\\\\frac{n(n-1)}{2}x^{n-2}y^2+...+y^n$ 的系数，正好满足杨辉三角的规律。当 $n=10$ 时，二项式展开式中 $xy^9$ 项的系数是（）。\\n{{ select(12) }}\\n- A. 5\\n- B. 9\\n- C. 10\\n- D. 8\\n\\n13), 下⾯程序的时间复杂度为（ ）。 ![图片](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/gesp-images/20260128/xb300dd45.png)\\n{{ select(13) }}\\n- A. $O(N)$\\n- B. $O(N\\\\times logN)$\\n- C. $O(N\\\\times loglogN)$\\n- D. $O(N^2)$\\n\\n14), 下⾯程序的最差时间复杂度为（ ）。 ![图片](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/gesp-images/20260128/9yl50lbombj.png)\\n{{ select(14) }}\\n- A. $O(\\\\sqrt{n})$\\n- B. $O(log(n))$\\n- C. $O(n)$\\n- D. $O(1)$\\n\\n15), 下⾯程序的输出为（ ）。 ![图片](https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/gesp-images/20260128/14rakmwd6m3.png)\\n{{ select(15) }}\\n- A. 90\\n- B. 91\\n- C. 710\\n- D. 711\\n\\n## 判断题 共20分\\n\\n16), ABCDE五个⼩朋友，排成⼀队跑步，其中AB两⼈必须排在⼀起，⼀共有48种排法。\\n{{ select(16) }}\\n- true\\n- false\\n\\n17), 已知 `double` 类型的变量 $a$ 和 $b$ ，则执⾏语句 `a = a + b; b = a - b; a = a - b;` 后，变量 $a$ 和 $b$ 的值会互换。\\n{{ select(17) }}\\n- true\\n- false\\n\\n18), ⼀个袋⼦中有 $3$ 个完全相同的红⾊⼩球、 $2$ 个完全相同的蓝⾊⼩球。每次从中取出 $1$ 个，再放回袋⼦，这样进⾏ $3$ 次后，可能的颜⾊顺序有 $8$ 种。\\n{{ select(18) }}\\n- true\\n- false\\n\\n19), 已知 `int` 类型的变量 $a$ 和 $b$ 中分别存储着⼀个直角三角形的两条直角边的长度，则斜边的长度可以通过表达式 `sqrt(a * a + b * b)` 求得。\\n{{ select(19) }}\\n- true\\n- false\\n\\n20), 在⼀个包含 $v$ 个顶点、 $e$ 条边的带权连通简单有向图上使⽤Dijkstra算法求最短路径，时间复杂度为 $O(v^2)$ ，可进⼀步优化⾄ $O(e+vlog(v))$ 。\\n{{ select(20) }}\\n- true\\n- false\\n\\n21), 在 $N$ 个元素的⼆叉排序树中查找⼀个元素，最差情况的时间复杂度是 $O(logN)$ 。\\n{{ select(21) }}\\n- true\\n- false\\n\\n22), C++语⾔中，可以为同⼀个类定义多个析构函数。\\n{{ select(22) }}\\n- true\\n- false\\n\\n23), 使⽤单链表和使⽤双向链表，查找元素的时间复杂度相同。\\n{{ select(23) }}\\n- true\\n- false\\n\\n24), 为解决哈希函数冲突，可以使⽤不同的哈希函数为每个表项各建⽴⼀个⼦哈希表，⽤来管理该表项的所有冲突元素。这些⼦哈希表⼀定不会发⽣冲突。\\n{{ select(24) }}\\n- true\\n- false\\n\\n25), 要判断⽆向图的连通性，在深度优先搜索和⼴度优先搜索中选择，深度优先的平均时间复杂度更低。\\n{{ select(25) }}\\n- true\\n- false\"}",
+      "owner": 7,
+      "domainId": "gesp",
+      "docType": 10,
+      "docId": 268,
+      "title": "GESP-C++-2024年6月八级真题卷GESP-C++-2024年6月八级真题卷",
+      "tag": [
+        "GESP"
+      ],
+      "hidden": false,
+      "nSubmit": 0,
+      "nAccept": 0,
+      "sort": "P000268",
+      "data": [
+        {
+          "_id": "config.yaml",
+          "name": "config.yaml",
+          "size": 516,
+          "lastModified": "2026-01-30T03:32:59.560Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby83dHUvM2RzZGRmZnQwMDJ3dW5veG4wdzBhLnlhbWw="
+        }
+      ],
+      "additional_file": [
+        {
+          "_id": "solution.md",
+          "name": "solution.md",
+          "size": 48832,
+          "lastModified": "2026-01-30T03:32:59.566Z",
+          "etag": "L2RhdGEvZmlsZS9oeWRyby9zazYvc3Z3OHVlamVvZ2JhdWdxa3Zpam94Lm1k"
+        }
+      ],
+      "config": "type: objective\nanswers:\n  '1':\n  - B\n  - 2\n  '2':\n  - A\n  - 2\n  '3':\n  - D\n  - 2\n  '4':\n  - C\n  - 2\n  '5':\n  - A\n  - 2\n  '6':\n  - A\n  - 2\n  '7':\n  - B\n  - 2\n  '8':\n  - B\n  - 2\n  '9':\n  - D\n  - 2\n  '10':\n  - B\n  - 2\n  '11':\n  - A\n  - 2\n  '12':\n  - C\n  - 2\n  '13':\n  - D\n  - 2\n  '14':\n  - A\n  - 2\n  '15':\n  - A\n  - 2\n  '16':\n  - A\n  - 2\n  '17':\n  - A\n  - 2\n  '18':\n  - A\n  - 2\n  '19':\n  - A\n  - 2\n  '20':\n  - A\n  - 2\n  '21':\n  - B\n  - 2\n  '22':\n  - B\n  - 2\n  '23':\n  - A\n  - 2\n  '24':\n  - B\n  - 2\n  '25':\n  - B\n  - 2\n"
+    }
+  ]
+}

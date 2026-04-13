@@ -24,7 +24,6 @@ const GespTool = () => import('../pages/GespTool.vue')
 const GespMap = () => import('../pages/GespMap.vue')
 const GameSudoku = () => import('../pages/GameSudoku.vue')
 const SokobanGame = () => import('../pages/SokobanGame.vue')
-const PonyPuzzleGame = () => import('../pages/PonyPuzzleGame.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [
@@ -55,7 +54,6 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/pony', component: PonyPuzzleGame, meta: { requiresAuth: true } },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 
@@ -64,7 +62,7 @@ const router = createRouter({
   routes
 })
 
-const GAME_PATHS = new Set(['/sudoku', '/sokoban', '/pony'])
+const GAME_PATHS = new Set(['/sudoku', '/sokoban'])
 let cachedSettings = null
 let settingsPromise = null
 let settingsFetchedAt = 0

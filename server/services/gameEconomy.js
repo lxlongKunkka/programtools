@@ -1,5 +1,5 @@
-import PonyPuzzleProfile from '../models/PonyPuzzleProfile.js'
-import PonyPuzzleTransaction from '../models/PonyPuzzleTransaction.js'
+import GameProfile from '../models/GameProfile.js'
+import GameTransaction from '../models/GameTransaction.js'
 
 export const GAME_ECONOMY_CONFIG = {
   initialCoins: 80,
@@ -17,9 +17,9 @@ export const GAME_ECONOMY_CONFIG = {
 const ENERGY_RECOVERY_MS = GAME_ECONOMY_CONFIG.energyRecoveryMinutes * 60 * 1000
 
 export async function ensureGameProfile(userId) {
-  let profile = await PonyPuzzleProfile.findOne({ userId })
+  let profile = await GameProfile.findOne({ userId })
   if (!profile) {
-    profile = new PonyPuzzleProfile({
+    profile = new GameProfile({
       userId,
       coins: GAME_ECONOMY_CONFIG.initialCoins,
       energy: GAME_ECONOMY_CONFIG.energyMax,
@@ -86,7 +86,7 @@ export async function grantCoins(userId, amount, reason, uniqueKey = '', meta = 
 
   if (uniqueKey) {
     try {
-      await PonyPuzzleTransaction.create({ userId, deltaCoins: safeAmount, reason, uniqueKey, meta })
+      await GameTransaction.create({ userId, deltaCoins: safeAmount, reason, uniqueKey, meta })
     } catch (error) {
       if (error?.code === 11000) {
         return { awarded: false, duplicate: true, amount: 0, profile: await getRecoveredGameProfile(userId) }
@@ -94,7 +94,7 @@ export async function grantCoins(userId, amount, reason, uniqueKey = '', meta = 
       throw error
     }
   } else {
-    await PonyPuzzleTransaction.create({ userId, deltaCoins: safeAmount, reason, meta })
+    await GameTransaction.create({ userId, deltaCoins: safeAmount, reason, meta })
   }
 
   const profile = await getRecoveredGameProfile(userId)
@@ -118,7 +118,7 @@ export async function spendCoins(userId, amount, reason, meta = {}) {
   profile.coins = Number(profile.coins || 0) - safeAmount
   profile.totalCoinsSpent = Number(profile.totalCoinsSpent || 0) + safeAmount
   await profile.save()
-  await PonyPuzzleTransaction.create({ userId, deltaCoins: -safeAmount, reason, meta })
+  await GameTransaction.create({ userId, deltaCoins: -safeAmount, reason, meta })
   return profile
 }
 
