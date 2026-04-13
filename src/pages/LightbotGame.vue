@@ -121,7 +121,7 @@
                     v-for="stack in sceneStacks"
                     :key="`brief-${stack.key}`"
                     class="platform-stack"
-                    :style="stack.shadowStyle"
+                    :style="stack.stackStyle"
                   >
                     <div class="stack-shadow"></div>
                     <div
@@ -191,7 +191,7 @@
                   v-for="stack in sceneStacks"
                   :key="stack.key"
                   class="platform-stack"
-                  :style="stack.shadowStyle"
+                  :style="stack.stackStyle"
                 >
                   <div class="stack-shadow"></div>
                   <div
@@ -571,9 +571,10 @@ const sceneStacks = computed(() => sceneMetrics.value.cells.map((item) => {
 
   return {
     key: item.key,
-    shadowStyle: {
+    stackStyle: {
       left: `${left}px`,
-      top: `${baseTop + item.cell.h * TILE_DEPTH}px`
+      top: `${baseTop}px`,
+      '--shadow-top': `${item.cell.h * TILE_DEPTH + 38}px`
     },
     blocks: Array.from({ length: item.cell.h }, (_, layerIndex) => {
       const isTopBlock = layerIndex === item.cell.h - 1
@@ -582,8 +583,8 @@ const sceneStacks = computed(() => sceneMetrics.value.cells.map((item) => {
         isTarget: isTopBlock && isTarget,
         isLit: isTopBlock && isLit,
         style: {
-          left: `${left}px`,
-          top: `${baseTop + (item.cell.h - layerIndex - 1) * TILE_DEPTH}px`
+          left: '0px',
+          top: `${(item.cell.h - layerIndex - 1) * TILE_DEPTH}px`
         }
       }
     })
@@ -1385,7 +1386,7 @@ resetLevel(true)
 .stack-shadow {
   position: absolute;
   left: 18px;
-  top: 28px;
+  top: var(--shadow-top);
   width: 64px;
   height: 20px;
   border-radius: 50%;
