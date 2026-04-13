@@ -1,197 +1,147 @@
 <template>
   <div class="lightbot-page">
-    <div class="lightbot-shell">
-      <aside class="sidebar level-sidebar">
-        <div class="panel brand-panel">
-          <p class="eyebrow">Logic Game</p>
-          <h1>Robot Light Lab</h1>
-          <p class="subtitle">像 lightbot 一样，把动作编成程序，让机器人按顺序点亮所有蓝灯。</p>
-        </div>
-
-        <div class="panel level-panel">
-          <div class="panel-head">
-            <h2>关卡</h2>
-            <span class="panel-meta">{{ completedCount }}/{{ levels.length }}</span>
+    <div class="lightbot-layout">
+      <section class="board-panel">
+        <div class="board-header">
+          <div>
+            <p class="board-kicker">Robot Puzzle</p>
+            <h1>{{ currentLevel.title }}</h1>
+            <p class="board-copy">{{ currentLevel.description }}</p>
           </div>
-          <button
-            v-for="(level, index) in levels"
-            :key="level.id"
-            class="level-chip"
-            :class="{
-              active: index === selectedLevelIndex,
-              done: completedLevelIds.includes(level.id)
-            }"
-            @click="selectLevel(index)"
-          >
-            <span class="level-no">{{ String(index + 1).padStart(2, '0') }}</span>
-            <span class="level-copy">
-              <strong>{{ level.title }}</strong>
-              <small>{{ level.objective }}</small>
-            </span>
-          </button>
-        </div>
-
-        <div class="panel guide-panel">
-          <div class="panel-head">
-            <h2>规则</h2>
-          </div>
-          <ul>
-            <li>前进只能走到同高度方块。</li>
-            <li>跳跃可以上升一层，或向更低的平台落下。</li>
-            <li>只有站在蓝灯格上时才能点灯。</li>
-            <li>主程序太短时，可以调用 P1 子程序复用动作。</li>
-          </ul>
-        </div>
-      </aside>
-
-      <main class="stage-column">
-        <section class="panel stage-panel">
-          <div class="stage-topbar">
-            <div>
-              <p class="eyebrow">Level {{ selectedLevelIndex + 1 }}</p>
-              <h2>{{ currentLevel.title }}</h2>
-              <p class="stage-copy">{{ currentLevel.description }}</p>
-            </div>
-            <div class="status-cluster">
-              <div class="status-pill">
-                <span>朝向</span>
-                <strong>{{ directionLabel }}</strong>
-              </div>
-              <div class="status-pill">
-                <span>点亮</span>
-                <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
-              </div>
-              <div class="status-pill" :class="messageToneClass">
-                <span>状态</span>
-                <strong>{{ statusText }}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="board-wrap">
-            <div class="board" :style="boardStyle">
-              <div
-                v-for="cell in boardCells"
-                :key="cell.key"
-                class="tile"
-                :class="{
-                  hole: !cell.exists,
-                  target: cell.isTarget,
-                  lit: cell.isLit,
-                  robot: cell.hasRobot,
-                  raised: cell.height > 1
-                }"
-                :style="cell.style"
-              >
-                <div v-if="cell.exists" class="tile-stack">
-                  <div class="tile-top">
-                    <span v-if="cell.isTarget" class="lamp-dot"></span>
-                    <span v-if="cell.hasRobot" class="robot-glyph" :style="robotGlyphStyle">R</span>
-                    <span v-else-if="cell.isLit" class="lamp-glow"></span>
-                  </div>
-                  <div class="tile-height">{{ cell.height }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="legend-row">
-            <span><i class="legend-square target-swatch"></i> 未点亮灯格</span>
-            <span><i class="legend-square lit-swatch"></i> 已点亮</span>
-            <span><i class="legend-square robot-swatch"></i> 机器人</span>
-          </div>
-        </section>
-
-        <section class="panel program-panel">
-          <div class="program-head">
-            <div>
-              <p class="eyebrow">Program Builder</p>
-              <h2>把动作装进程序</h2>
-            </div>
-            <div class="program-tabs">
-              <button :class="{ active: activeEditor === 'main' }" @click="activeEditor = 'main'">
-                Main {{ mainProgram.length }}/{{ currentLevel.mainLimit }}
-              </button>
-              <button :class="{ active: activeEditor === 'proc1' }" @click="activeEditor = 'proc1'" :disabled="!currentLevel.allowProcedure">
-                P1 {{ proc1Program.length }}/{{ currentLevel.procLimit }}
-              </button>
-            </div>
-          </div>
-
-          <div class="command-bank">
+          <div class="level-switcher">
             <button
-              v-for="command in commandPalette"
-              :key="command.id"
-              class="command-card"
-              :class="command.id"
-              @click="appendCommand(command.id)"
-              :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
+              v-for="(level, index) in levels"
+              :key="level.id"
+              class="level-pill"
+              :class="{ active: index === selectedLevelIndex, done: completedLevelIds.includes(level.id) }"
+              @click="selectLevel(index)"
             >
-              <strong>{{ command.label }}</strong>
-              <small>{{ command.tip }}</small>
+              {{ index + 1 }}
             </button>
           </div>
+        </div>
 
-          <div class="editor-grid">
-            <div class="sequence-card">
-              <div class="sequence-head">
-                <h3>Main</h3>
-                <button class="soft-btn" @click="clearSequence('main')">清空</button>
-              </div>
-              <div class="sequence-strip">
-                <button
-                  v-for="(command, index) in mainProgram"
-                  :key="`main-${index}`"
-                  class="slot filled"
-                  :class="[command, { running: runningProgram === 'main' && runningIndex === index }]"
-                  @click="removeCommand('main', index)"
-                >
-                  {{ commandShortLabel(command) }}
-                </button>
-                <div
-                  v-for="slot in emptySlots(currentLevel.mainLimit, mainProgram.length)"
-                  :key="`main-empty-${slot}`"
-                  class="slot empty"
-                >
-                  +
+        <div class="board-stage">
+          <div class="scene-shell">
+            <div class="iso-scene" :style="sceneStyle">
+              <div
+                v-for="cell in sceneCells"
+                :key="cell.key"
+                class="iso-tile"
+                :class="{ target: cell.isTarget, lit: cell.isLit }"
+                :style="cell.style"
+              >
+                <div class="iso-top">
+                  <span v-if="cell.isTarget && !cell.isLit" class="lamp lamp-off"></span>
+                  <span v-else-if="cell.isLit" class="lamp lamp-on"></span>
+                  <span v-if="cell.hasRobot" class="robot-sprite" :style="robotStyle">🤖</span>
                 </div>
-              </div>
-            </div>
-
-            <div class="sequence-card" :class="{ disabled: !currentLevel.allowProcedure }">
-              <div class="sequence-head">
-                <h3>P1</h3>
-                <button class="soft-btn" @click="clearSequence('proc1')" :disabled="!currentLevel.allowProcedure">清空</button>
-              </div>
-              <div class="sequence-strip">
-                <button
-                  v-for="(command, index) in proc1Program"
-                  :key="`proc1-${index}`"
-                  class="slot filled"
-                  :class="[command, { running: runningProgram === 'proc1' && runningIndex === index }]"
-                  @click="removeCommand('proc1', index)"
-                  :disabled="!currentLevel.allowProcedure"
-                >
-                  {{ commandShortLabel(command) }}
-                </button>
-                <div
-                  v-for="slot in emptySlots(currentLevel.procLimit, proc1Program.length)"
-                  :key="`proc-empty-${slot}`"
-                  class="slot empty"
-                >
-                  +
-                </div>
+                <div class="iso-left"></div>
+                <div class="iso-right"></div>
               </div>
             </div>
           </div>
 
-          <div class="control-row">
-            <button class="primary-btn" @click="runProgram" :disabled="isRunning || mainProgram.length === 0">运行程序</button>
-            <button class="soft-btn" @click="resetLevelState">重置关卡</button>
-            <button class="soft-btn" @click="loadDemoSolution">载入示例</button>
+          <div class="board-status">
+            <div class="status-box">
+              <span>方向</span>
+              <strong>{{ directionLabel }}</strong>
+            </div>
+            <div class="status-box">
+              <span>点亮</span>
+              <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
+            </div>
+            <div class="status-box" :class="statusTone">
+              <span>状态</span>
+              <strong>{{ statusText }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-bar">
+          <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="undoLastCommand">↶</button>
+          <button class="control-btn" :disabled="isRunning" @click="resetLevelState">🔈</button>
+          <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="clearActiveSequence">🗑</button>
+          <button class="control-btn play" :disabled="isRunning || mainProgram.length === 0" @click="runProgram">▶</button>
+
+          <div class="speed-box">
+            <span>Speed:</span>
+            <input v-model="speedValue" class="speed-slider" type="range" min="1" max="5" step="1">
+          </div>
+        </div>
+      </section>
+
+      <aside class="sidebar-panel">
+        <section class="side-card">
+          <div class="side-title">Instructions</div>
+          <button
+            v-for="command in commandPalette"
+            :key="command.id"
+            class="instruction-btn"
+            :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
+            @click="appendCommand(command.id)"
+          >
+            <span>{{ command.label }}</span>
+            <small>{{ command.id === 'repeat2' ? '把下一条动作执行 2 次' : command.tip }}</small>
+          </button>
+        </section>
+
+        <section class="side-card program-card">
+          <div class="program-head">
+            <div class="side-title">Program</div>
+            <div class="editor-tabs">
+              <button :class="{ active: activeEditor === 'main' }" @click="activeEditor = 'main'">Main</button>
+              <button :class="{ active: activeEditor === 'proc1' }" :disabled="!currentLevel.allowProcedure" @click="activeEditor = 'proc1'">P1</button>
+            </div>
+          </div>
+
+          <div class="program-section">
+            <div class="sequence-label">Main</div>
+            <div class="program-grid">
+              <button
+                v-for="(command, index) in mainProgram"
+                :key="`main-${index}`"
+                class="program-slot filled"
+                :class="[command, { active: runningProgram === 'main' && runningIndex === index }]"
+                @click="removeCommand('main', index)"
+              >
+                {{ commandLabel(command) }}
+              </button>
+              <div
+                v-for="slot in emptySlots(currentLevel.mainLimit, mainProgram.length)"
+                :key="`main-empty-${slot}`"
+                class="program-slot"
+              ></div>
+            </div>
+          </div>
+
+          <div class="program-section" :class="{ disabled: !currentLevel.allowProcedure }">
+            <div class="sequence-label">P1</div>
+            <div class="program-grid">
+              <button
+                v-for="(command, index) in proc1Program"
+                :key="`proc1-${index}`"
+                class="program-slot filled"
+                :class="[command, { active: runningProgram === 'proc1' && runningIndex === index }]"
+                :disabled="!currentLevel.allowProcedure"
+                @click="removeCommand('proc1', index)"
+              >
+                {{ commandLabel(command) }}
+              </button>
+              <div
+                v-for="slot in emptySlots(currentLevel.procLimit, proc1Program.length)"
+                :key="`proc1-empty-${slot}`"
+                class="program-slot"
+              ></div>
+            </div>
+          </div>
+
+          <div class="program-actions">
+            <button class="ghost-btn" :disabled="isRunning" @click="loadDemoSolution">示例</button>
+            <button class="ghost-btn" :disabled="isRunning" @click="resetEditorAndLevel">重置全部</button>
           </div>
         </section>
-      </main>
+      </aside>
     </div>
   </div>
 </template>
@@ -199,52 +149,44 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'programtools-lightbot-progress-v1'
-const STEP_DELAY = 320
+const STORAGE_KEY = 'programtools-lightbot-progress-v2'
+const TILE_WIDTH = 92
+const TILE_HEIGHT = 46
+const TILE_DEPTH = 24
 const DIRECTIONS = ['north', 'east', 'south', 'west']
-const DIRECTION_LABELS = {
-  north: '上',
-  east: '右',
-  south: '下',
-  west: '左'
-}
-const DIRECTION_VECTORS = {
-  north: [-1, 0],
-  east: [0, 1],
-  south: [1, 0],
-  west: [0, -1]
-}
-const COMMAND_PALETTE = [
-  { id: 'walk', label: '前进', tip: '走到同高度格子' },
-  { id: 'jump', label: '跳跃', tip: '跳上下一层或往下落' },
-  { id: 'left', label: '左转', tip: '逆时针转向' },
-  { id: 'right', label: '右转', tip: '顺时针转向' },
-  { id: 'light', label: '点灯', tip: '点亮当前蓝灯格' },
-  { id: 'call1', label: '调用 P1', tip: '执行子程序' }
+const DIRECTION_LABELS = { north: '向上', east: '向右', south: '向下', west: '向左' }
+const DIRECTION_VECTORS = { north: [-1, 0], east: [0, 1], south: [1, 0], west: [0, -1] }
+const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 220, 5: 140 }
+const COMMANDS = [
+  { id: 'walk', label: 'Walk forward', tip: '同高度前进一步' },
+  { id: 'right', label: 'Turn 90 degrees to the right', tip: '顺时针转向' },
+  { id: 'left', label: 'Turn 90 degrees to the left', tip: '逆时针转向' },
+  { id: 'jump', label: 'Jump', tip: '上跳一层或向下落' },
+  { id: 'light', label: 'Light', tip: '点亮当前蓝灯格' },
+  { id: 'repeat2', label: 'Repeat 2 times', tip: '重复下一条动作' },
+  { id: 'call1', label: 'Call P1', tip: '调用子程序 P1' }
 ]
 
 const levels = [
   {
-    id: 'intro-line',
-    title: '直线点灯',
-    objective: '学会前进与点灯',
-    description: '先从最简单的线性路径开始。机器人需要一路向右，把两盏灯点亮。',
-    mainLimit: 6,
+    id: 'intro-grid',
+    title: 'Level 1: First Lights',
+    description: '先学会走路和点灯。主程序够长，不需要子程序。',
+    mainLimit: 8,
     procLimit: 0,
     allowProcedure: false,
     board: [
       [null, null, null, null],
-      [{ h: 1 }, { h: 1, target: true }, { h: 1, target: true }, { h: 1 }],
+      [{ h: 1 }, { h: 1, target: true }, { h: 1 }, { h: 1, target: true }],
       [null, null, null, null]
     ],
     start: { row: 1, col: 0, dir: 'east' },
-    demo: { main: ['walk', 'light', 'walk', 'light'], proc1: [] }
+    demo: { main: ['walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
   },
   {
-    id: 'stair-turn',
-    title: '转向上楼',
-    objective: '引入跳跃与转向',
-    description: '先走到第一盏灯，再跳上高台，最后转向去点亮第二盏灯。',
+    id: 'jump-path',
+    title: 'Level 2: Jump Up',
+    description: '中间有高台，必须通过 jump 才能继续点灯。',
     mainLimit: 10,
     procLimit: 0,
     allowProcedure: false,
@@ -258,11 +200,25 @@ const levels = [
     demo: { main: ['walk', 'light', 'jump', 'left', 'walk', 'light'], proc1: [] }
   },
   {
-    id: 'repeat-square',
-    title: '重复动作',
-    objective: '第一次使用 P1',
-    description: '每次都执行“走一步、点灯、右转”，这种重复模式适合装进 P1。',
-    mainLimit: 5,
+    id: 'repeat-lights',
+    title: 'Level 3: Repeat',
+    description: '这一关可以用 Repeat 2 times 缩短主程序。',
+    mainLimit: 8,
+    procLimit: 0,
+    allowProcedure: false,
+    board: [
+      [null, null, null, null, null],
+      [{ h: 1 }, { h: 1, target: true }, { h: 1, target: true }, { h: 1, target: true }, null],
+      [null, null, null, null, null]
+    ],
+    start: { row: 1, col: 0, dir: 'east' },
+    demo: { main: ['repeat2', 'walk', 'light', 'walk', 'light', 'walk', 'light'], proc1: [] }
+  },
+  {
+    id: 'procedure-square',
+    title: 'Level 4: Procedure',
+    description: '开始使用 P1，把重复动作折叠成一个子程序。',
+    mainLimit: 6,
     procLimit: 4,
     allowProcedure: true,
     board: [
@@ -274,26 +230,9 @@ const levels = [
     demo: { main: ['light', 'call1', 'call1', 'call1'], proc1: ['walk', 'light', 'right'] }
   },
   {
-    id: 'bridge-drop',
-    title: '高台落差',
-    objective: '理解 jump 的上下差异',
-    description: '中间高桥会让前进失效，必须通过 jump 跨到高台，再跳下去点亮终点。',
-    mainLimit: 12,
-    procLimit: 4,
-    allowProcedure: true,
-    board: [
-      [null, null, { h: 1, target: true }, { h: 1 }, null],
-      [{ h: 1 }, { h: 2 }, { h: 2 }, { h: 2 }, { h: 1, target: true }],
-      [null, null, null, null, null]
-    ],
-    start: { row: 1, col: 0, dir: 'east' },
-    demo: { main: ['jump', 'walk', 'walk', 'right', 'jump', 'light', 'left', 'left', 'jump', 'light'], proc1: [] }
-  },
-  {
-    id: 'procedural-loop',
-    title: '程序员收官',
-    objective: '主程序负责节拍，P1 负责细节',
-    description: '这一关需要把“前进、点灯、跳回高台、左转”拆成一个稳定的套路。',
+    id: 'bridge-loop',
+    title: 'Level 5: Bridge',
+    description: '最后一关同时用到 jump、转向和 P1。',
     mainLimit: 8,
     procLimit: 6,
     allowProcedure: true,
@@ -312,17 +251,12 @@ function keyOf(row, col) {
 }
 
 function cloneRobot(start) {
-  return {
-    row: start.row,
-    col: start.col,
-    dir: start.dir
-  }
+  return { row: start.row, col: start.col, dir: start.dir }
 }
 
-function loadStoredProgress() {
+function loadProgress() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    const parsed = JSON.parse(raw || '{}')
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
     return Array.isArray(parsed.completedLevelIds) ? parsed.completedLevelIds : []
   } catch {
     return []
@@ -333,18 +267,18 @@ const selectedLevelIndex = ref(0)
 const activeEditor = ref('main')
 const mainProgram = ref([])
 const proc1Program = ref([])
-const completedLevelIds = ref(loadStoredProgress())
+const completedLevelIds = ref(loadProgress())
 const litKeys = ref([])
 const robot = ref(cloneRobot(levels[0].start))
-const statusText = ref('准备开始')
+const statusText = ref('Program is empty')
 const statusTone = ref('neutral')
 const isRunning = ref(false)
 const runningProgram = ref('')
 const runningIndex = ref(-1)
 const executionNonce = ref(0)
+const speedValue = ref(3)
 
 const currentLevel = computed(() => levels[selectedLevelIndex.value])
-const completedCount = computed(() => completedLevelIds.value.length)
 const targetKeys = computed(() => {
   const keys = []
   currentLevel.value.board.forEach((row, rowIndex) => {
@@ -355,74 +289,103 @@ const targetKeys = computed(() => {
   return keys
 })
 const directionLabel = computed(() => DIRECTION_LABELS[robot.value.dir] || '')
-const messageToneClass = computed(() => ({
-  success: statusTone.value === 'success',
-  danger: statusTone.value === 'danger'
-}))
-const commandPalette = computed(() => COMMAND_PALETTE)
-const boardStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${currentLevel.value.board[0].length}, minmax(72px, 1fr))`
-}))
-const robotGlyphStyle = computed(() => {
-  const rotation = {
-    north: '-90deg',
-    east: '0deg',
-    south: '90deg',
-    west: '180deg'
-  }[robot.value.dir] || '0deg'
-  return { transform: `rotate(${rotation})` }
+const activeSequence = computed(() => activeEditor.value === 'proc1' ? proc1Program.value : mainProgram.value)
+const commandPalette = computed(() => COMMANDS.filter((command) => command.id !== 'call1' || currentLevel.value.allowProcedure))
+const robotStyle = computed(() => {
+  const rotation = { north: '-90deg', east: '0deg', south: '90deg', west: '180deg' }[robot.value.dir] || '0deg'
+  return { transform: `translate(-50%, -74%) rotate(${rotation})` }
 })
-const boardCells = computed(() => {
-  const cells = []
+const sceneMetrics = computed(() => {
+  const existingCells = []
   currentLevel.value.board.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
-      const exists = Boolean(cell)
-      const key = keyOf(rowIndex, colIndex)
-      const height = Number(cell?.h || 0)
-      cells.push({
-        key,
-        exists,
-        height,
-        isTarget: Boolean(cell?.target),
-        isLit: litKeys.value.includes(key),
-        hasRobot: robot.value.row === rowIndex && robot.value.col === colIndex,
-        style: exists ? { '--stack-height': String(height) } : {}
-      })
+      if (!cell) return
+      const x = (colIndex - rowIndex) * TILE_WIDTH / 2
+      const y = (colIndex + rowIndex) * TILE_HEIGHT / 2 - Number(cell.h || 1) * TILE_DEPTH
+      existingCells.push({ row: rowIndex, col: colIndex, cell, x, y })
     })
   })
-  return cells
+  const minX = Math.min(...existingCells.map((item) => item.x))
+  const minY = Math.min(...existingCells.map((item) => item.y))
+  const maxX = Math.max(...existingCells.map((item) => item.x + TILE_WIDTH))
+  const maxY = Math.max(...existingCells.map((item) => item.y + TILE_HEIGHT + Number(item.cell.h || 1) * TILE_DEPTH))
+  return {
+    cells: existingCells,
+    minX,
+    minY,
+    width: Math.ceil(maxX - minX + 48),
+    height: Math.ceil(maxY - minY + 48)
+  }
 })
+const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
+const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
+  key: keyOf(item.row, item.col),
+  isTarget: Boolean(item.cell.target),
+  isLit: litKeys.value.includes(keyOf(item.row, item.col)),
+  hasRobot: robot.value.row === item.row && robot.value.col === item.col,
+  style: {
+    left: `${item.x - sceneMetrics.value.minX + 24}px`,
+    top: `${item.y - sceneMetrics.value.minY + 24}px`,
+    '--tile-depth': `${Number(item.cell.h || 1) * TILE_DEPTH}px`
+  }
+})))
 
-watch(selectedLevelIndex, () => {
-  resetEditorAndLevel()
-})
-
+watch(selectedLevelIndex, () => resetEditorAndLevel())
 watch(completedLevelIds, (value) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
 }, { deep: true })
+
+function setStatus(text, tone = 'neutral') {
+  statusText.value = text
+  statusTone.value = tone
+}
 
 function emptySlots(limit, used) {
   return Array.from({ length: Math.max(limit - used, 0) }, (_, index) => index)
 }
 
-function commandShortLabel(command) {
+function commandLabel(command) {
   return {
-    walk: 'W',
-    jump: 'J',
-    left: 'L',
-    right: 'R',
-    light: 'B',
+    walk: 'Walk',
+    right: 'Turn R',
+    left: 'Turn L',
+    jump: 'Jump',
+    light: 'Light',
+    repeat2: 'R2',
     call1: 'P1'
-  }[command] || '?'
+  }[command] || command
+}
+
+function delayForSpeed() {
+  return SPEED_MAP[String(speedValue.value)] || SPEED_MAP[3]
 }
 
 function tileAt(row, col) {
   return currentLevel.value.board[row]?.[col] || null
 }
 
-function setStatus(text, tone = 'neutral') {
-  statusText.value = text
-  statusTone.value = tone
+function rotateLeft(dir) {
+  const index = DIRECTIONS.indexOf(dir)
+  return DIRECTIONS[(index + DIRECTIONS.length - 1) % DIRECTIONS.length]
+}
+
+function rotateRight(dir) {
+  const index = DIRECTIONS.indexOf(dir)
+  return DIRECTIONS[(index + 1) % DIRECTIONS.length]
+}
+
+function nextPosition() {
+  const [rowOffset, colOffset] = DIRECTION_VECTORS[robot.value.dir]
+  return { row: robot.value.row + rowOffset, col: robot.value.col + colOffset }
+}
+
+function markCompleteIfNeeded() {
+  if (!targetKeys.value.every((key) => litKeys.value.includes(key))) return false
+  if (!completedLevelIds.value.includes(currentLevel.value.id)) {
+    completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
+  }
+  setStatus('Level complete', 'success')
+  return true
 }
 
 function resetLevelState() {
@@ -432,7 +395,7 @@ function resetLevelState() {
   runningIndex.value = -1
   litKeys.value = []
   robot.value = cloneRobot(currentLevel.value.start)
-  setStatus('已重置关卡')
+  setStatus('Level reset')
 }
 
 function resetEditorAndLevel() {
@@ -446,67 +409,45 @@ function selectLevel(index) {
   selectedLevelIndex.value = index
 }
 
-function currentSequenceRef(name) {
-  return name === 'proc1' ? proc1Program : mainProgram
-}
-
 function appendCommand(command) {
-  if (command === 'call1' && !currentLevel.value.allowProcedure) return
-  const target = currentSequenceRef(activeEditor.value)
+  const target = activeEditor.value === 'proc1' ? proc1Program : mainProgram
   const limit = activeEditor.value === 'proc1' ? currentLevel.value.procLimit : currentLevel.value.mainLimit
   if (target.value.length >= limit) {
-    setStatus('该程序槽位已满', 'danger')
+    setStatus('No more slots available', 'danger')
     return
   }
   target.value = [...target.value, command]
-  setStatus(`已添加 ${commandShortLabel(command)}`)
+  setStatus(`${commandLabel(command)} added`)
 }
 
-function removeCommand(name, index) {
-  const target = currentSequenceRef(name)
+function removeCommand(sequenceName, index) {
+  const target = sequenceName === 'proc1' ? proc1Program : mainProgram
   target.value = target.value.filter((_, itemIndex) => itemIndex !== index)
-  setStatus('已删除该动作')
+  setStatus('Instruction removed')
 }
 
-function clearSequence(name) {
-  const target = currentSequenceRef(name)
-  target.value = []
-  setStatus(`已清空 ${name === 'main' ? 'Main' : 'P1'}`)
+function undoLastCommand() {
+  if (activeEditor.value === 'proc1') {
+    proc1Program.value = proc1Program.value.slice(0, -1)
+  } else {
+    mainProgram.value = mainProgram.value.slice(0, -1)
+  }
+  setStatus('Last instruction removed')
+}
+
+function clearActiveSequence() {
+  if (activeEditor.value === 'proc1') {
+    proc1Program.value = []
+  } else {
+    mainProgram.value = []
+  }
+  setStatus('Sequence cleared')
 }
 
 function loadDemoSolution() {
   mainProgram.value = [...currentLevel.value.demo.main]
   proc1Program.value = [...currentLevel.value.demo.proc1]
-  setStatus('已载入示例解法')
-}
-
-function rotateLeft(dir) {
-  const currentIndex = DIRECTIONS.indexOf(dir)
-  return DIRECTIONS[(currentIndex + DIRECTIONS.length - 1) % DIRECTIONS.length]
-}
-
-function rotateRight(dir) {
-  const currentIndex = DIRECTIONS.indexOf(dir)
-  return DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length]
-}
-
-function nextPosition() {
-  const [rowOffset, colOffset] = DIRECTION_VECTORS[robot.value.dir]
-  return {
-    row: robot.value.row + rowOffset,
-    col: robot.value.col + colOffset
-  }
-}
-
-function markCompleteIfNeeded() {
-  if (targetKeys.value.every((key) => litKeys.value.includes(key))) {
-    if (!completedLevelIds.value.includes(currentLevel.value.id)) {
-      completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
-    }
-    setStatus('全部点亮，通关成功', 'success')
-    return true
-  }
-  return false
+  setStatus('Demo loaded')
 }
 
 function failRun(message) {
@@ -514,77 +455,120 @@ function failRun(message) {
   throw new Error(message)
 }
 
-async function runCommand(command, nonce) {
+async function waitStep() {
+  await new Promise((resolve) => window.setTimeout(resolve, delayForSpeed()))
+}
+
+async function executeAction(command, nonce) {
   if (nonce !== executionNonce.value) return
+
   if (command === 'left') {
     robot.value = { ...robot.value, dir: rotateLeft(robot.value.dir) }
-  } else if (command === 'right') {
+    await waitStep()
+    return
+  }
+
+  if (command === 'right') {
     robot.value = { ...robot.value, dir: rotateRight(robot.value.dir) }
-  } else if (command === 'light') {
-    const currentKey = keyOf(robot.value.row, robot.value.col)
+    await waitStep()
+    return
+  }
+
+  if (command === 'light') {
     const tile = tileAt(robot.value.row, robot.value.col)
-    if (!tile?.target) failRun('这里没有灯，不能点亮')
+    const currentKey = keyOf(robot.value.row, robot.value.col)
+    if (!tile?.target) failRun('No light tile here')
     if (!litKeys.value.includes(currentKey)) {
       litKeys.value = [...litKeys.value, currentKey]
     }
+    await waitStep()
     markCompleteIfNeeded()
-  } else {
-    const currentTile = tileAt(robot.value.row, robot.value.col)
-    const next = nextPosition()
-    const nextTile = tileAt(next.row, next.col)
-    if (!currentTile || !nextTile) failRun('机器人掉出了平台')
-    const currentHeight = Number(currentTile.h || 0)
-    const nextHeight = Number(nextTile.h || 0)
-
-    if (command === 'walk') {
-      if (nextHeight !== currentHeight) failRun('前进只能走到同高度平台')
-      robot.value = { ...robot.value, row: next.row, col: next.col }
-    }
-
-    if (command === 'jump') {
-      const canJumpUp = nextHeight === currentHeight + 1
-      const canDropDown = nextHeight < currentHeight
-      if (!canJumpUp && !canDropDown) failRun('跳跃只能上升一层，或跳向更低的平台')
-      robot.value = { ...robot.value, row: next.row, col: next.col }
-    }
+    return
   }
 
-  await new Promise((resolve) => window.setTimeout(resolve, STEP_DELAY))
+  const currentTile = tileAt(robot.value.row, robot.value.col)
+  const next = nextPosition()
+  const nextTile = tileAt(next.row, next.col)
+
+  if (!currentTile || !nextTile) failRun('Robot would fall off the board')
+
+  const currentHeight = Number(currentTile.h || 0)
+  const nextHeight = Number(nextTile.h || 0)
+
+  if (command === 'walk') {
+    if (nextHeight !== currentHeight) failRun('Walk only works on the same height')
+    robot.value = { ...robot.value, row: next.row, col: next.col }
+    await waitStep()
+    return
+  }
+
+  if (command === 'jump') {
+    const canJumpUp = nextHeight === currentHeight + 1
+    const canDropDown = nextHeight < currentHeight
+    if (!canJumpUp && !canDropDown) failRun('Jump must go up by 1 or down any number of levels')
+    robot.value = { ...robot.value, row: next.row, col: next.col }
+    await waitStep()
+  }
 }
 
 async function runSequence(sequenceName, sequence, nonce, depth = 0, budget = { steps: 0 }) {
-  if (depth > 6) failRun('子程序调用层数过深')
+  if (depth > 6) failRun('Procedure nesting is too deep')
+
   for (let index = 0; index < sequence.length; index += 1) {
     if (nonce !== executionNonce.value) return
-    if (budget.steps > 80) failRun('程序步数过多，疑似死循环')
-    budget.steps += 1
+    if (budget.steps > 100) failRun('Program is too long')
+
+    const command = sequence[index]
     runningProgram.value = sequenceName
     runningIndex.value = index
-    const command = sequence[index]
+
+    if (command === 'repeat2') {
+      const nextCommand = sequence[index + 1]
+      if (!nextCommand) failRun('Repeat needs a following instruction')
+
+      for (let repeatIndex = 0; repeatIndex < 2; repeatIndex += 1) {
+        budget.steps += 1
+        if (nextCommand === 'call1') {
+          if (!currentLevel.value.allowProcedure || proc1Program.value.length === 0) failRun('P1 is empty')
+          await runSequence('proc1', proc1Program.value, nonce, depth + 1, budget)
+        } else {
+          await executeAction(nextCommand, nonce)
+        }
+
+        if (markCompleteIfNeeded()) return
+      }
+
+      index += 1
+      continue
+    }
+
+    budget.steps += 1
     if (command === 'call1') {
-      if (!currentLevel.value.allowProcedure || proc1Program.value.length === 0) failRun('P1 还没有内容')
+      if (!currentLevel.value.allowProcedure || proc1Program.value.length === 0) failRun('P1 is empty')
       await runSequence('proc1', proc1Program.value, nonce, depth + 1, budget)
     } else {
-      await runCommand(command, nonce)
+      await executeAction(command, nonce)
     }
+
     if (markCompleteIfNeeded()) return
   }
 }
 
 async function runProgram() {
   if (isRunning.value || mainProgram.value.length === 0) return
+
   resetLevelState()
   isRunning.value = true
   const nonce = executionNonce.value
-  setStatus('程序运行中')
+  setStatus('Program running')
+
   try {
     await runSequence('main', mainProgram.value, nonce)
-    if (nonce !== executionNonce.value) return
-    if (!targetKeys.value.every((key) => litKeys.value.includes(key))) {
-      setStatus('程序结束了，但还有灯未点亮', 'danger')
+    if (nonce === executionNonce.value && !targetKeys.value.every((key) => litKeys.value.includes(key))) {
+      setStatus('Program finished, but some lights are still off', 'danger')
     }
   } catch {
-    // failRun 已经设置状态
+    // failRun already set the status.
   } finally {
     if (nonce === executionNonce.value) {
       isRunning.value = false
@@ -597,500 +581,430 @@ async function runProgram() {
 
 <style scoped>
 .lightbot-page {
-  --bg-top: #f4f0ff;
-  --bg-bottom: #d9ecff;
-  --ink: #1f2840;
-  --muted: #66728f;
-  --line: rgba(89, 110, 160, 0.18);
-  --panel: rgba(255, 255, 255, 0.78);
-  --purple: #5f4bff;
-  --teal: #2aa8a1;
-  --orange: #ff9151;
   min-height: calc(100vh - 80px);
-  padding: 18px;
-  background:
-    radial-gradient(circle at top left, rgba(116, 107, 255, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(58, 187, 215, 0.22), transparent 24%),
-    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
-  color: var(--ink);
-}
-
-.lightbot-shell {
-  max-width: 1380px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 18px;
-}
-
-.sidebar,
-.stage-column {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(53, 67, 110, 0.12);
-  backdrop-filter: blur(18px);
-}
-
-.brand-panel,
-.level-panel,
-.guide-panel,
-.stage-panel,
-.program-panel {
-  padding: 20px;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--purple);
-  font-weight: 700;
-}
-
-.brand-panel h1,
-.stage-topbar h2,
-.program-head h2 {
-  margin: 0;
-  font-size: 34px;
-  line-height: 1.05;
-}
-
-.subtitle,
-.stage-copy {
-  margin: 10px 0 0;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.panel-head,
-.program-head,
-.sequence-head,
-.stage-topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.panel-head h2,
-.sequence-head h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.panel-meta {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(95, 75, 255, 0.1);
-  color: var(--purple);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.level-chip {
-  width: 100%;
-  margin-top: 10px;
-  padding: 14px;
-  border: 1px solid rgba(104, 120, 164, 0.16);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  display: flex;
-  gap: 12px;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.level-chip:hover {
-  transform: translateY(-1px);
-  border-color: rgba(95, 75, 255, 0.4);
-}
-
-.level-chip.active {
-  border-color: rgba(95, 75, 255, 0.55);
-  box-shadow: 0 10px 24px rgba(95, 75, 255, 0.16);
-}
-
-.level-chip.done .level-no {
-  background: linear-gradient(135deg, #27c49a, #17936f);
+  padding: 8px;
+  background: #d5d5d5;
   color: #fff;
 }
 
-.level-no {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  border-radius: 14px;
+.lightbot-layout {
+  min-height: calc(100vh - 96px);
   display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 800;
-  background: rgba(95, 75, 255, 0.12);
-  color: var(--purple);
-}
-
-.level-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.level-copy strong {
-  font-size: 15px;
-}
-
-.level-copy small,
-.guide-panel li {
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.guide-panel ul {
-  margin: 12px 0 0;
-  padding-left: 18px;
-}
-
-.status-cluster {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.status-pill {
-  min-width: 96px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(96, 114, 161, 0.16);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.status-pill span {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.status-pill strong {
-  font-size: 15px;
-}
-
-.status-pill.success {
-  background: rgba(39, 196, 154, 0.16);
-}
-
-.status-pill.danger {
-  background: rgba(255, 122, 100, 0.16);
-}
-
-.board-wrap {
-  margin-top: 22px;
-  overflow-x: auto;
-}
-
-.board {
-  display: grid;
-  gap: 14px;
-  min-width: fit-content;
-  align-items: end;
-}
-
-.tile {
-  width: 100%;
-  min-width: 72px;
-  aspect-ratio: 1;
-  position: relative;
-}
-
-.tile.hole {
-  visibility: hidden;
-}
-
-.tile-stack {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.tile-top {
-  position: relative;
-  height: calc(52px + (var(--stack-height) - 1) * 12px);
-  border-radius: 20px;
-  background: linear-gradient(180deg, #fcfdff 0%, #d9ebff 100%);
-  border: 1px solid rgba(111, 143, 206, 0.35);
-  box-shadow:
-    inset 0 -10px 20px rgba(94, 135, 199, 0.1),
-    0 14px 28px rgba(79, 101, 145, 0.16);
-  display: grid;
-  place-items: center;
-}
-
-.tile.raised .tile-top {
-  background: linear-gradient(180deg, #f7f5ff 0%, #dce8ff 100%);
-}
-
-.tile.target .tile-top {
-  background: linear-gradient(180deg, #f9fbff 0%, #d8f0ff 100%);
-}
-
-.tile.lit .tile-top {
-  background: linear-gradient(180deg, #fff4bd 0%, #ffd65b 100%);
-}
-
-.lamp-dot,
-.lamp-glow {
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-}
-
-.lamp-dot {
-  background: radial-gradient(circle at 30% 30%, #d7f6ff, #3aa7d8 70%);
-  box-shadow: 0 0 0 6px rgba(58, 167, 216, 0.12);
-}
-
-.lamp-glow {
-  background: radial-gradient(circle at 35% 35%, #fffef3, #ffca2a 72%);
-  box-shadow: 0 0 22px rgba(255, 197, 46, 0.72);
-}
-
-.robot-glyph {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #5f4bff, #2ba5e6);
-  color: #fff;
-  font-weight: 900;
-  box-shadow: 0 10px 20px rgba(59, 86, 167, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.tile-height {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(43, 64, 97, 0.46);
-}
-
-.legend-row {
-  margin-top: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.legend-square {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  margin-right: 6px;
-  vertical-align: -2px;
-}
-
-.target-swatch { background: #52b3e3; }
-.lit-swatch { background: #ffcb39; }
-.robot-swatch { background: #5f4bff; }
-
-.program-tabs {
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) 270px;
   gap: 8px;
 }
 
-.program-tabs button,
-.soft-btn,
-.primary-btn {
-  border: 0;
-  border-radius: 14px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+.board-panel,
+.side-card {
+  background: #676260;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.program-tabs button {
-  background: rgba(98, 110, 159, 0.1);
-  color: var(--muted);
+.board-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 8px;
 }
 
-.program-tabs button.active {
-  background: linear-gradient(135deg, #5f4bff, #2aa8a1);
+.board-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.board-kicker {
+  margin: 0 0 4px;
+  color: #d8d0cb;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.board-header h1 {
+  margin: 0;
+  font-size: 28px;
   color: #fff;
 }
 
-.program-tabs button:disabled,
-.soft-btn:disabled,
-.primary-btn:disabled,
-.command-card:disabled {
-  opacity: 0.45;
+.board-copy {
+  margin: 6px 0 0;
+  color: #e8dfd7;
+  max-width: 520px;
+  line-height: 1.45;
+}
+
+.level-switcher {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.level-pill {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: #7f7976;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.level-pill.active {
+  background: #9fd3cb;
+  color: #3f4b49;
+}
+
+.level-pill.done:not(.active) {
+  background: #8eb08a;
+}
+
+.board-stage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    linear-gradient(30deg, rgba(213, 219, 225, .8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, .8) 87.5%, rgba(213, 219, 225, .8)),
+    linear-gradient(150deg, rgba(213, 219, 225, .8) 12%, transparent 12.5%, transparent 87%, rgba(213, 219, 225, .8) 87.5%, rgba(213, 219, 225, .8)),
+    linear-gradient(90deg, rgba(233, 237, 241, .9) 2%, transparent 2.5%, transparent 97%, rgba(233, 237, 241, .9) 97.5%, rgba(233, 237, 241, .9));
+  background-size: 58px 102px;
+  background-color: #eef1f4;
+}
+
+.scene-shell {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+.iso-scene {
+  position: relative;
+  margin: 40px auto 0;
+}
+
+.iso-tile {
+  position: absolute;
+  width: 92px;
+  height: 70px;
+}
+
+.iso-top,
+.iso-left,
+.iso-right {
+  position: absolute;
+}
+
+.iso-top {
+  left: 0;
+  top: 0;
+  width: 92px;
+  height: 46px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background: #666;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.iso-left {
+  left: 0;
+  top: 22px;
+  width: 46px;
+  height: var(--tile-depth);
+  clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
+  background: #747474;
+}
+
+.iso-right {
+  right: 0;
+  top: 22px;
+  width: 46px;
+  height: var(--tile-depth);
+  clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
+  background: #555;
+}
+
+.iso-tile.target .iso-top {
+  background: #6f6f6f;
+}
+
+.iso-tile.lit .iso-top {
+  background: #7a7a66;
+}
+
+.lamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.lamp-off {
+  background: #1e74ea;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.lamp-on {
+  background: #ffe66a;
+  box-shadow: 0 0 18px rgba(255, 226, 77, .78);
+}
+
+.robot-sprite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 36px;
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, .18));
+}
+
+.board-status {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
+}
+
+.status-box {
+  min-width: 100px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(74, 68, 66, .84);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.status-box span {
+  font-size: 11px;
+  color: #d4cbc5;
+  text-transform: uppercase;
+}
+
+.status-box.success {
+  background: rgba(92, 128, 89, .9);
+}
+
+.status-box.danger {
+  background: rgba(139, 88, 78, .92);
+}
+
+.control-bar {
+  margin-top: 8px;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #6d6865;
+}
+
+.control-btn,
+.ghost-btn,
+.editor-tabs button,
+.instruction-btn,
+.program-slot.filled {
+  border: 0;
+  cursor: pointer;
+}
+
+.control-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: #5d5957;
+  color: #fff;
+}
+
+.control-btn.play {
+  background: #a4d9d1;
+  color: #334b47;
+}
+
+.control-btn:disabled,
+.ghost-btn:disabled,
+.editor-tabs button:disabled,
+.instruction-btn:disabled,
+.program-slot.filled:disabled {
+  opacity: .4;
   cursor: not-allowed;
 }
 
-.command-bank {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+.speed-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 700;
 }
 
-.command-card {
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(97, 115, 163, 0.14);
-  background: rgba(255, 255, 255, 0.78);
+.speed-slider {
+  width: 90px;
+  accent-color: #9fd3cb;
+}
+
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.side-card {
+  padding: 12px;
+}
+
+.side-title {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.instruction-btn {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  background: transparent;
+  color: #fff;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  cursor: pointer;
+  gap: 2px;
+  text-align: left;
 }
 
-.command-card strong {
-  font-size: 15px;
+.instruction-btn small {
+  color: #d7cdca;
 }
 
-.command-card small {
-  color: var(--muted);
-  line-height: 1.4;
-}
-
-.command-card.walk { border-color: rgba(72, 146, 255, 0.24); }
-.command-card.jump { border-color: rgba(255, 145, 81, 0.24); }
-.command-card.left, .command-card.right { border-color: rgba(95, 75, 255, 0.24); }
-.command-card.light { border-color: rgba(255, 198, 46, 0.28); }
-.command-card.call1 { border-color: rgba(42, 168, 161, 0.3); }
-
-.editor-grid {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.sequence-card {
-  border: 1px solid rgba(97, 115, 163, 0.12);
-  border-radius: 20px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.sequence-card.disabled {
-  opacity: 0.52;
-}
-
-.sequence-strip {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
-  gap: 10px;
-}
-
-.slot {
-  min-height: 54px;
-  border-radius: 16px;
-  border: 1px dashed rgba(99, 117, 166, 0.28);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-}
-
-.slot.filled {
-  border-style: solid;
-  background: rgba(255, 255, 255, 0.84);
-  cursor: pointer;
-}
-
-.slot.running {
-  box-shadow: 0 0 0 3px rgba(95, 75, 255, 0.22);
-  transform: translateY(-1px);
-}
-
-.slot.walk { color: #2570d6; }
-.slot.jump { color: #d96d2b; }
-.slot.left, .slot.right { color: #5f4bff; }
-.slot.light { color: #d59d00; }
-.slot.call1 { color: #0f8d88; }
-
-.slot.empty {
-  color: rgba(104, 123, 173, 0.42);
-}
-
-.control-row {
-  margin-top: 18px;
+.program-card {
+  flex: 1;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.program-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.primary-btn {
-  background: linear-gradient(135deg, #5f4bff, #2aa8a1);
+.editor-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.editor-tabs button,
+.ghost-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #5a5755;
   color: #fff;
 }
 
-.soft-btn {
-  background: rgba(100, 117, 162, 0.1);
-  color: var(--ink);
+.editor-tabs button.active {
+  background: #9fd3cb;
+  color: #334b47;
 }
 
-@media (max-width: 1120px) {
-  .lightbot-shell {
+.program-section {
+  margin-top: 14px;
+}
+
+.program-section.disabled {
+  opacity: .45;
+}
+
+.sequence-label {
+  margin-bottom: 8px;
+  color: #d6ceca;
+  font-weight: 700;
+}
+
+.program-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.program-slot {
+  min-height: 46px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px dashed rgba(255, 255, 255, .14);
+}
+
+.program-slot.filled {
+  border-style: solid;
+  background: #7a7471;
+  color: #fff;
+  font-weight: 700;
+}
+
+.program-slot.filled.active {
+  outline: 2px solid #9fd3cb;
+  outline-offset: 1px;
+}
+
+.program-slot.walk { background: #6c7d92; }
+.program-slot.right,
+.program-slot.left { background: #7d6c92; }
+.program-slot.jump { background: #92786c; }
+.program-slot.light { background: #8e8959; }
+.program-slot.repeat2 { background: #6e8a66; }
+.program-slot.call1 { background: #4f7f78; }
+
+.program-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+@media (max-width: 980px) {
+  .lightbot-layout {
     grid-template-columns: 1fr;
   }
 
-  .command-bank {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .sidebar-panel {
+    order: -1;
+  }
+
+  .program-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .lightbot-page {
-    padding: 12px;
-  }
-
-  .brand-panel h1,
-  .stage-topbar h2,
-  .program-head h2 {
-    font-size: 28px;
-  }
-
-  .stage-topbar,
-  .program-head,
-  .panel-head,
-  .sequence-head {
+  .board-header,
+  .program-head {
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  .status-cluster {
-    justify-content: flex-start;
+  .program-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .command-bank,
-  .editor-grid {
-    grid-template-columns: 1fr;
+  .board-status {
+    position: static;
+    margin: 12px 12px 0;
   }
 
-  .board {
-    grid-template-columns: repeat(4, minmax(64px, 1fr)) !important;
+  .control-bar {
+    flex-wrap: wrap;
   }
 }
 </style>
