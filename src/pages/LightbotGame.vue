@@ -54,40 +54,17 @@
             </div>
           </div>
 
-          <div class="board-overlay left">
-            <div class="mission-card">
-              <div class="mission-title">Map Brief</div>
-              <p>{{ currentLevel.goal }}</p>
-              <div class="mission-row">
-                <span>起点</span>
-                <strong>{{ DIRECTION_LABELS[currentLevel.start.dir] }}</strong>
-              </div>
-              <div class="mission-row">
-                <span>主程序</span>
-                <strong>{{ currentLevel.mainLimit }} 格</strong>
-              </div>
-              <div class="mission-row" v-if="currentLevel.allowProcedure">
-                <span>P1</span>
-                <strong>{{ currentLevel.procLimit }} 格</strong>
-              </div>
-              <div class="mission-row" v-else>
-                <span>P1</span>
-                <strong>本关未启用</strong>
-              </div>
-            </div>
-          </div>
-
           <div class="board-overlay right">
-            <div class="board-status">
-              <div class="status-box">
+            <div class="board-status compact">
+              <div class="status-box mini">
                 <span>方向</span>
                 <strong>{{ directionLabel }}</strong>
               </div>
-              <div class="status-box">
+              <div class="status-box mini">
                 <span>点亮</span>
                 <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
               </div>
-              <div class="status-box" :class="statusTone">
+              <div class="status-box mini" :class="statusTone">
                 <span>状态</span>
                 <strong>{{ statusText }}</strong>
               </div>
@@ -118,18 +95,62 @@
       </section>
 
       <aside class="sidebar-panel">
+        <section class="side-card map-card">
+          <div class="side-title">Map Brief</div>
+          <p class="map-copy">{{ currentLevel.goal }}</p>
+          <div class="mission-row">
+            <span>起点方向</span>
+            <strong>{{ DIRECTION_LABELS[currentLevel.start.dir] }}</strong>
+          </div>
+          <div class="mission-row">
+            <span>Main</span>
+            <strong>{{ currentLevel.mainLimit }} 格</strong>
+          </div>
+          <div class="mission-row" v-if="currentLevel.allowProcedure">
+            <span>P1</span>
+            <strong>{{ currentLevel.procLimit }} 格</strong>
+          </div>
+          <div class="mission-row" v-else>
+            <span>P1</span>
+            <strong>未启用</strong>
+          </div>
+
+          <div class="legend-grid">
+            <div class="legend-item">
+              <span class="legend-swatch route"></span>
+              <span>主路地块</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch decor"></span>
+              <span>装饰平台</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch lamp"></span>
+              <span>目标灯格</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch start">S</span>
+              <span>起点</span>
+            </div>
+          </div>
+        </section>
+
         <section class="side-card">
           <div class="side-title">Instructions</div>
-          <button
-            v-for="command in commandPalette"
-            :key="command.id"
-            class="instruction-btn"
-            :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
-            @click="appendCommand(command.id)"
-          >
-            <span>{{ command.label }}</span>
-            <small>{{ command.id === 'repeat2' ? '把紧随其后的动作执行两次' : command.tip }}</small>
-          </button>
+          <div class="instruction-grid">
+            <button
+              v-for="command in commandPalette"
+              :key="command.id"
+              class="instruction-btn"
+              :class="command.id"
+              :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
+              @click="appendCommand(command.id)"
+            >
+              <span class="instruction-icon">{{ commandGlyph(command.id) }}</span>
+              <span class="instruction-label">{{ command.label }}</span>
+              <small>{{ command.id === 'repeat2' ? '把紧随其后的动作执行两次' : command.tip }}</small>
+            </button>
+          </div>
         </section>
 
         <section class="side-card program-card">
@@ -151,7 +172,8 @@
                 :class="[command, { active: runningProgram === 'main' && runningIndex === index }]"
                 @click="removeCommand('main', index)"
               >
-                {{ commandLabel(command) }}
+                <span class="program-glyph">{{ commandGlyph(command) }}</span>
+                <span class="program-name">{{ commandLabel(command) }}</span>
               </button>
               <div
                 v-for="slot in emptySlots(currentLevel.mainLimit, mainProgram.length)"
@@ -172,7 +194,8 @@
                 :disabled="!currentLevel.allowProcedure"
                 @click="removeCommand('proc1', index)"
               >
-                {{ commandLabel(command) }}
+                <span class="program-glyph">{{ commandGlyph(command) }}</span>
+                <span class="program-name">{{ commandLabel(command) }}</span>
               </button>
               <div
                 v-for="slot in emptySlots(currentLevel.procLimit, proc1Program.length)"
@@ -434,6 +457,18 @@ function commandLabel(command) {
     repeat2: 'R2',
     call1: 'P1'
   }[command] || command
+}
+
+function commandGlyph(command) {
+  return {
+    walk: '↑',
+    right: '↱',
+    left: '↰',
+    jump: '⤴',
+    light: '✦',
+    repeat2: '×2',
+    call1: 'P1'
+  }[command] || '?'
 }
 
 function delayForSpeed() {
@@ -783,6 +818,14 @@ async function runProgram() {
   background: linear-gradient(180deg, #edf1f4 0%, #e3e8ed 100%);
 }
 
+.board-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 16%, transparent 84%, rgba(52, 67, 86, 0.08));
+}
+
 .scene-backdrop {
   position: absolute;
   inset: 0;
@@ -798,7 +841,7 @@ async function runProgram() {
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: 110px 28px 36px;
+  padding: 72px 28px 36px;
 }
 
 .iso-scene {
@@ -870,12 +913,22 @@ async function runProgram() {
 .theme-copper .iso-left { background: #825f4d; }
 .theme-copper .iso-right { background: #714e3f; }
 
+.theme-stone .tile-shadow,
+.theme-moss .tile-shadow {
+  background: rgba(33, 43, 58, 0.12);
+}
+
+.theme-slate .tile-shadow,
+.theme-copper .tile-shadow {
+  background: rgba(24, 32, 42, 0.19);
+}
+
 .iso-tile.target .iso-top {
-  box-shadow: inset 0 0 0 2px rgba(92, 149, 255, 0.18);
+  box-shadow: inset 0 0 0 2px rgba(92, 149, 255, 0.24), 0 0 0 2px rgba(255, 255, 255, 0.06);
 }
 
 .iso-tile.lit .iso-top {
-  box-shadow: inset 0 0 0 2px rgba(255, 229, 108, 0.2);
+  box-shadow: inset 0 0 0 2px rgba(255, 229, 108, 0.28), 0 0 16px rgba(255, 226, 77, 0.18);
 }
 
 .iso-tile.start .iso-top::after {
@@ -961,6 +1014,15 @@ async function runProgram() {
 .board-overlay.right {
   right: 14px;
   top: 14px;
+}
+
+.board-status.compact {
+  max-width: 260px;
+}
+
+.status-box.mini {
+  min-width: 78px;
+  padding: 8px 9px;
 }
 
 .mission-card {
@@ -1122,28 +1184,123 @@ async function runProgram() {
   padding: 12px;
 }
 
+.map-card {
+  background: linear-gradient(180deg, #6d6662 0%, #595350 100%);
+}
+
+.map-copy {
+  margin: 0 0 12px;
+  line-height: 1.55;
+  color: #f3ece4;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #efe7df;
+  font-size: 12px;
+}
+
+.legend-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.legend-swatch.route {
+  background: linear-gradient(180deg, #8b8b86, #666663);
+}
+
+.legend-swatch.decor {
+  background: linear-gradient(180deg, #73849b, #506075);
+}
+
+.legend-swatch.lamp {
+  background: #1e74ea;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12) inset;
+}
+
+.legend-swatch.start {
+  background: rgba(255, 255, 255, 0.9);
+  color: #4e5d5c;
+}
+
 .side-title {
   margin-bottom: 8px;
   font-size: 16px;
   font-weight: 700;
 }
 
+.instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .instruction-btn {
   width: 100%;
-  padding: 10px 12px;
-  margin-top: 2px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
+  min-height: 92px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  justify-content: flex-start;
+  gap: 6px;
   text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
 }
+
+.instruction-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.instruction-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(16, 23, 32, 0.2);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.instruction-label {
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.instruction-btn.walk .instruction-icon { background: #6c7d92; }
+.instruction-btn.right .instruction-icon,
+.instruction-btn.left .instruction-icon { background: #7d6c92; }
+.instruction-btn.jump .instruction-icon { background: #92786c; }
+.instruction-btn.light .instruction-icon { background: #8e8959; }
+.instruction-btn.repeat2 .instruction-icon { background: #6e8a66; }
+.instruction-btn.call1 .instruction-icon { background: #4f7f78; }
 
 .instruction-btn small {
   color: #d7cdca;
+  line-height: 1.35;
 }
 
 .program-card {
@@ -1209,6 +1366,12 @@ async function runProgram() {
   background: #7a7471;
   color: #fff;
   font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 2px;
 }
 
 .program-slot.filled.active {
@@ -1223,6 +1386,16 @@ async function runProgram() {
 .program-slot.light { background: #8e8959; }
 .program-slot.repeat2 { background: #6e8a66; }
 .program-slot.call1 { background: #4f7f78; }
+
+.program-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.program-name {
+  font-size: 10px;
+  line-height: 1;
+}
 
 .program-actions {
   margin-top: auto;
@@ -1269,7 +1442,6 @@ async function runProgram() {
     padding-top: 20px;
   }
 
-  .mission-card,
   .board-status {
     width: auto;
     max-width: none;
@@ -1278,6 +1450,10 @@ async function runProgram() {
 
   .board-status {
     justify-content: flex-start;
+  }
+
+  .instruction-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .program-grid {
