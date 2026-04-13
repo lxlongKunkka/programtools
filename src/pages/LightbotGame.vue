@@ -38,7 +38,7 @@
                   v-for="cell in sceneCells"
                   :key="cell.key"
                   class="iso-tile"
-                  :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart }]"
+                  :class="[cell.themeClass, { target: cell.isTarget, lit: cell.isLit, start: cell.isStart, flat: cell.isFlat }]"
                   :style="cell.style"
                 >
                   <div class="tile-shadow"></div>
@@ -392,15 +392,17 @@ const sceneMetrics = computed(() => {
   currentLevel.value.board.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
       if (!cell) return
+      const height = Number(cell.h || 1)
+      const elevationDepth = Math.max(height - 1, 0) * TILE_DEPTH
       const x = (colIndex - rowIndex) * TILE_WIDTH / 2
-      const y = (colIndex + rowIndex) * TILE_HEIGHT / 2 - Number(cell.h || 1) * TILE_DEPTH
-      existingCells.push({ row: rowIndex, col: colIndex, cell, x, y })
+      const y = (colIndex + rowIndex) * TILE_HEIGHT / 2 - elevationDepth
+      existingCells.push({ row: rowIndex, col: colIndex, cell, x, y, height, elevationDepth })
     })
   })
   const minX = Math.min(...existingCells.map((item) => item.x))
   const minY = Math.min(...existingCells.map((item) => item.y))
   const maxX = Math.max(...existingCells.map((item) => item.x + TILE_WIDTH))
-  const maxY = Math.max(...existingCells.map((item) => item.y + TILE_HEIGHT + Number(item.cell.h || 1) * TILE_DEPTH))
+  const maxY = Math.max(...existingCells.map((item) => item.y + TILE_HEIGHT + item.elevationDepth))
   return {
     cells: existingCells,
     minX,
@@ -411,7 +413,7 @@ const sceneMetrics = computed(() => {
 })
 const currentLevelStats = computed(() => ({
   tiles: sceneMetrics.value.cells.length,
-  maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => Number(item.cell.h || 1)))
+  maxHeight: Math.max(...sceneMetrics.value.cells.map((item) => item.height))
 }))
 const sceneScale = computed(() => {
   const widthScale = 980 / sceneMetrics.value.width
@@ -431,11 +433,12 @@ const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
   isLit: litKeys.value.includes(keyOf(item.row, item.col)),
   hasRobot: robot.value.row === item.row && robot.value.col === item.col,
   isStart: currentLevel.value.start.row === item.row && currentLevel.value.start.col === item.col,
-  height: Number(item.cell.h || 1),
+  isFlat: item.elevationDepth === 0,
+  height: item.height,
   style: {
     left: `${item.x - sceneMetrics.value.minX + 32}px`,
     top: `${item.y - sceneMetrics.value.minY + 34}px`,
-    '--tile-depth': `${Number(item.cell.h || 1) * TILE_DEPTH}px`
+    '--tile-depth': `${item.elevationDepth}px`
   }
 })))
 
@@ -869,6 +872,10 @@ async function runProgram() {
   height: 74px;
 }
 
+.iso-tile.flat {
+  height: 46px;
+}
+
 .tile-shadow {
   position: absolute;
   left: 12px;
@@ -909,6 +916,12 @@ async function runProgram() {
   width: 46px;
   height: var(--tile-depth);
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
+}
+
+.iso-tile.flat .tile-shadow,
+.iso-tile.flat .iso-left,
+.iso-tile.flat .iso-right {
+  display: none;
 }
 
 .theme-stone .iso-top { background: #7a7a77; }
