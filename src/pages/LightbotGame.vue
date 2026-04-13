@@ -257,11 +257,9 @@ const levels = [
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, tile(1, { theme: 'moss' }), tile(1, { theme: 'moss' }), null, null],
-      [tile(1), tile(1), lightTile(1), tile(1), lightTile(1)],
-      [null, tile(1, { theme: 'copper' }), null, tile(1, { theme: 'copper' }), null]
+      [tile(1), tile(1), lightTile(1), tile(1), lightTile(1)]
     ],
-    start: { row: 1, col: 0, dir: 'east' },
+    start: { row: 0, col: 0, dir: 'east' },
     demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], proc1: [] }
   },
   {
@@ -274,11 +272,10 @@ const levels = [
     procLimit: 0,
     allowProcedure: false,
     board: [
-      [null, null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'slate' }), null],
-      [null, tile(1), tile(1), tile(2), null],
-      [tile(1, { theme: 'copper' }), lightTile(1), tile(1, { theme: 'copper' }), null, null]
+      [null, null, tile(2, { theme: 'slate' }), lightTile(2, { theme: 'slate' })],
+      [tile(1), lightTile(1), tile(1), tile(2)]
     ],
-    start: { row: 3, col: 0, dir: 'east' },
+    start: { row: 1, col: 0, dir: 'east' },
     demo: { main: ['walk', 'light', 'walk', 'jump', 'walk', 'light'], proc1: [] }
   },
   {
