@@ -6,7 +6,7 @@
           <p class="screen-kicker">Lightbot Lab</p>
           <h1>Learn programming logic by guiding a robot across light tiles.</h1>
           <p class="hero-text">
-            先对齐教程入口，再进入选关和正式关卡。当前这版把流程拆成教程页、关卡页和完成页，不再把所有信息堆在一个界面里。
+            现在默认直接进入选关页，点卡片就能开玩；教程和关卡简介保留为辅助入口，不再强制经过。
           </p>
           <div class="hero-actions">
             <button class="hero-btn primary" @click="goToLevelSelect">Start Learning</button>
@@ -43,9 +43,10 @@
         <div>
           <p class="screen-kicker">Choose A Puzzle</p>
           <h1>Level Select</h1>
-          <p>先进入关卡简介，再开始编程。</p>
+          <p>点关卡卡片直接开始，右下角可以看简介。</p>
         </div>
         <div class="select-actions">
+          <button class="hero-btn primary" @click="quickStartLevel()">Continue</button>
           <button class="pill-btn" @click="screen = 'tutorial'">Tutorial</button>
           <button class="pill-btn" @click="openEditor">Level Editor</button>
           <div class="progress-chip">{{ completedLevelIds.length }}/{{ levels.length }} complete</div>
@@ -58,7 +59,7 @@
           :key="level.id"
           class="level-card"
           :class="{ done: completedLevelIds.includes(level.id), current: index === selectedLevelIndex }"
-          @click="openLevelBrief(index)"
+          @click="quickStartLevel(index)"
         >
           <div class="level-card-head">
             <span class="level-card-index">{{ index + 1 }}</span>
@@ -70,6 +71,7 @@
             <span>Main {{ level.mainLimit }}</span>
             <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
             <span v-else>No proc</span>
+            <button class="level-brief-btn" @click.stop="openLevelBrief(index)">简介</button>
           </div>
         </button>
       </div>
@@ -481,8 +483,14 @@ function loadProgress() {
   }
 }
 
-const screen = ref('tutorial')
-const selectedLevelIndex = ref(0)
+function findRecommendedLevelIndex() {
+  const completedIds = loadProgress()
+  const nextIndex = levels.findIndex((level) => !completedIds.includes(level.id))
+  return nextIndex >= 0 ? nextIndex : 0
+}
+
+const screen = ref('select')
+const selectedLevelIndex = ref(findRecommendedLevelIndex())
 const activeProcedureKey = ref('main')
 const mainProcedure = ref([])
 const procedures = ref({ p1: [] })
@@ -757,6 +765,14 @@ function resetLevel(clearPrograms = false) {
 function goToLevelSelect() {
   activeCustomLevel.value = null
   screen.value = 'select'
+}
+
+function quickStartLevel(index = selectedLevelIndex.value) {
+  activeCustomLevel.value = null
+  selectedLevelIndex.value = index
+  resetLevel(true)
+  screen.value = 'play'
+  setStatus('Level ready')
 }
 
 function openLevelBrief(index) {
@@ -1576,6 +1592,16 @@ resetLevel(true)
 
 .level-card.done {
   background: linear-gradient(180deg, #e5f6de, #ffffff);
+}
+
+.level-brief-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(91, 169, 214, 0.14);
+  color: #3d6078;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .level-card-head,
