@@ -1406,11 +1406,9 @@ resetLevel(true)
   width: 96px;
   height: 48px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 40%),
-    linear-gradient(180deg, #eef2f5, #cfd7de);
-  border: 3px solid #505a66;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.52), 0 6px 12px rgba(88, 102, 116, 0.12);
+  background: #565e68;
+  border: 3px solid #2e3438;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .block-top::after {
@@ -1418,7 +1416,7 @@ resetLevel(true)
   position: absolute;
   inset: 7px 9px 11px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  border: 1px solid rgba(80, 90, 102, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .block-left {
@@ -1427,9 +1425,9 @@ resetLevel(true)
   width: 48px;
   height: 22px;
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
-  background: linear-gradient(180deg, #cfd5dd, #a9b3c2);
-  border-left: 3px solid #535e69;
-  border-bottom: 3px solid #535e69;
+  background: #646a71;
+  border-left: 3px solid #2e3438;
+  border-bottom: 3px solid #2e3438;
 }
 
 .block-right {
@@ -1438,27 +1436,21 @@ resetLevel(true)
   width: 48px;
   height: 22px;
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
-  background: linear-gradient(180deg, #bcc7d2, #96a2b2);
-  border-right: 3px solid #535e69;
-  border-bottom: 3px solid #535e69;
+  background: #646a71;
+  border-right: 3px solid #2e3438;
+  border-bottom: 3px solid #2e3438;
 }
 
 .block-top.target {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 38%),
-    linear-gradient(180deg, #85b9ee, #5d94d6);
+  background: #1e4d6f;
 }
 
 .block-top.start:not(.target):not(.lit) {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 38%),
-    linear-gradient(180deg, #5ea8de, #3f86c6);
+  background: #1e4d6f;
 }
 
 .block-top.lit {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 38%),
-    linear-gradient(180deg, #fff79e, #f0cf33);
+  background: #fffd00;
 }
 
 .target-ring,
@@ -1474,7 +1466,6 @@ resetLevel(true)
   width: 28px;
   height: 28px;
   border: 5px solid rgba(232, 245, 255, 0.92);
-  box-shadow: 0 0 0 2px rgba(91, 137, 204, 0.28);
 }
 
 .target-core {
@@ -1501,9 +1492,9 @@ resetLevel(true)
   height: 56px;
   margin-left: 2px;
   border-radius: 18px 18px 20px 20px;
-  background: linear-gradient(180deg, #64ff58 0%, #2fe74b 100%);
-  border: 3px solid #5e6f7b;
-  box-shadow: inset 0 -7px 0 rgba(22, 160, 38, 0.28), 0 8px 16px rgba(88, 90, 121, 0.16);
+  background: #38ff00;
+  border: 3px solid #2e3438;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.16), 0 8px 16px rgba(88, 90, 121, 0.12);
   animation: robotBob 1.25s ease-in-out infinite;
 }
 
