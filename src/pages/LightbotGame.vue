@@ -78,7 +78,9 @@
           <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="undoLastCommand">↶</button>
           <button class="control-btn" :disabled="isRunning" @click="resetLevelState">⟲</button>
           <button class="control-btn" :disabled="isRunning || activeSequence.length === 0" @click="clearActiveSequence">🗑</button>
-          <button class="control-btn play" :disabled="isRunning || mainProgram.length === 0" @click="runProgram">▶</button>
+          <button class="control-btn play icon-only" :disabled="isRunning || mainProgram.length === 0" @click="runProgram">
+            <img class="ui-sprite" src="/lightbot/run.png" alt="Run">
+          </button>
 
           <div class="speed-box">
             <span>Speed</span>
@@ -148,7 +150,9 @@
               :disabled="command.id === 'call1' && !currentLevel.allowProcedure"
               @click="appendCommand(command.id)"
             >
-              <span class="instruction-icon">{{ commandGlyph(command.id) }}</span>
+              <span class="instruction-icon">
+                <img class="instruction-sprite" :src="commandSprite(command.id)" :alt="command.label">
+              </span>
               <span class="instruction-label">{{ command.label }}</span>
               <small>{{ command.id === 'repeat2' ? '把紧随其后的动作执行两次' : command.tip }}</small>
             </button>
@@ -174,7 +178,9 @@
                 :class="[command, { active: runningProgram === 'main' && runningIndex === index }]"
                 @click="removeCommand('main', index)"
               >
-                <span class="program-glyph">{{ commandGlyph(command) }}</span>
+                <span class="program-glyph icon">
+                  <img class="program-sprite" :src="commandSprite(command)" :alt="commandLabel(command)">
+                </span>
                 <span class="program-name">{{ commandLabel(command) }}</span>
               </button>
               <div
@@ -196,7 +202,9 @@
                 :disabled="!currentLevel.allowProcedure"
                 @click="removeCommand('proc1', index)"
               >
-                <span class="program-glyph">{{ commandGlyph(command) }}</span>
+                <span class="program-glyph icon">
+                  <img class="program-sprite" :src="commandSprite(command)" :alt="commandLabel(command)">
+                </span>
                 <span class="program-name">{{ commandLabel(command) }}</span>
               </button>
               <div
@@ -478,6 +486,18 @@ function commandGlyph(command) {
     repeat2: '×2',
     call1: 'P1'
   }[command] || '?'
+}
+
+function commandSprite(command) {
+  return {
+    walk: '/lightbot/operation-move.png',
+    right: '/lightbot/operation-turn-right.png',
+    left: '/lightbot/operation-turn-left.png',
+    jump: '/lightbot/operation-jump.png',
+    light: '/lightbot/operation-lamp.png',
+    repeat2: '/lightbot/operation-jump.png',
+    call1: '/lightbot/operation-proc.png'
+  }[command] || '/lightbot/operation-move.png'
 }
 
 function delayForSpeed() {
@@ -928,44 +948,44 @@ async function runProgram() {
 }
 
 .theme-stone {
-  --tile-top-edge: rgba(60, 60, 57, 0.62);
+  --tile-top-edge: #2e3438;
   --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(61, 61, 58, 0.5);
+  --tile-side-edge: rgba(46, 52, 56, 0.72);
 }
 
-.theme-stone .iso-top { background: #7a7a77; }
-.theme-stone .iso-left { background: #666663; }
-.theme-stone .iso-right { background: #555553; }
+.theme-stone .iso-top { background: #565e68; }
+.theme-stone .iso-left { background: #c0cad7; }
+.theme-stone .iso-right { background: #aab3bf; }
 
 .theme-moss {
-  --tile-top-edge: rgba(57, 73, 51, 0.66);
+  --tile-top-edge: #2e3438;
   --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(49, 62, 44, 0.54);
+  --tile-side-edge: rgba(46, 52, 56, 0.72);
 }
 
-.theme-moss .iso-top { background: #6f7f68; }
-.theme-moss .iso-left { background: #5d6d56; }
-.theme-moss .iso-right { background: #4e5c48; }
+.theme-moss .iso-top { background: #565e68; }
+.theme-moss .iso-left { background: #c0cad7; }
+.theme-moss .iso-right { background: #aab3bf; }
 
 .theme-slate {
-  --tile-top-edge: rgba(71, 86, 106, 0.68);
+  --tile-top-edge: #2e3438;
   --tile-top-inner: rgba(255, 255, 255, 0.1);
-  --tile-side-edge: rgba(61, 74, 92, 0.56);
+  --tile-side-edge: rgba(46, 52, 56, 0.72);
 }
 
-.theme-slate .iso-top { background: #718196; }
-.theme-slate .iso-left { background: #5f6f84; }
-.theme-slate .iso-right { background: #506075; }
+.theme-slate .iso-top { background: #565e68; }
+.theme-slate .iso-left { background: #c0cad7; }
+.theme-slate .iso-right { background: #aab3bf; }
 
 .theme-copper {
-  --tile-top-edge: rgba(112, 76, 56, 0.68);
+  --tile-top-edge: #2e3438;
   --tile-top-inner: rgba(255, 255, 255, 0.08);
-  --tile-side-edge: rgba(92, 61, 46, 0.56);
+  --tile-side-edge: rgba(46, 52, 56, 0.72);
 }
 
-.theme-copper .iso-top { background: #9b7863; }
-.theme-copper .iso-left { background: #825f4d; }
-.theme-copper .iso-right { background: #714e3f; }
+.theme-copper .iso-top { background: #565e68; }
+.theme-copper .iso-left { background: #c0cad7; }
+.theme-copper .iso-right { background: #aab3bf; }
 
 .theme-stone .tile-shadow,
 .theme-moss .tile-shadow {
@@ -978,11 +998,13 @@ async function runProgram() {
 }
 
 .iso-tile.target .iso-top {
-  box-shadow: inset 0 0 0 2px rgba(92, 149, 255, 0.24), 0 0 0 2px rgba(255, 255, 255, 0.06);
+  background: #1e4d6f;
+  box-shadow: inset 0 0 0 2px rgba(111, 176, 255, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .iso-tile.lit .iso-top {
-  box-shadow: inset 0 0 0 2px rgba(255, 229, 108, 0.28), 0 0 16px rgba(255, 226, 77, 0.18);
+  background: #fffd00;
+  box-shadow: inset 0 0 0 2px rgba(255, 243, 121, 0.34), 0 0 16px rgba(255, 226, 77, 0.18);
 }
 
 .iso-tile.start .iso-top::after {
@@ -1185,6 +1207,19 @@ async function runProgram() {
   font-weight: 800;
 }
 
+.control-btn.icon-only {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.ui-sprite {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
 .control-btn:disabled,
 .ghost-btn:disabled,
 .editor-tabs button:disabled,
@@ -1334,9 +1369,15 @@ async function runProgram() {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(16, 23, 32, 0.2);
+  background: rgba(231, 224, 156, 0.9);
   font-size: 18px;
   font-weight: 800;
+}
+
+.instruction-sprite {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .instruction-label {
@@ -1344,13 +1385,15 @@ async function runProgram() {
   line-height: 1.15;
 }
 
-.instruction-btn.walk .instruction-icon { background: #6c7d92; }
+.instruction-btn.walk .instruction-icon,
 .instruction-btn.right .instruction-icon,
-.instruction-btn.left .instruction-icon { background: #7d6c92; }
-.instruction-btn.jump .instruction-icon { background: #92786c; }
-.instruction-btn.light .instruction-icon { background: #8e8959; }
-.instruction-btn.repeat2 .instruction-icon { background: #6e8a66; }
-.instruction-btn.call1 .instruction-icon { background: #4f7f78; }
+.instruction-btn.left .instruction-icon,
+.instruction-btn.jump .instruction-icon,
+.instruction-btn.light .instruction-icon,
+.instruction-btn.repeat2 .instruction-icon,
+.instruction-btn.call1 .instruction-icon {
+  box-shadow: inset 0 0 0 2px #56606b;
+}
 
 .instruction-btn small {
   color: #d7cdca;
@@ -1441,9 +1484,29 @@ async function runProgram() {
 .program-slot.repeat2 { background: #6e8a66; }
 .program-slot.call1 { background: #4f7f78; }
 
+.program-slot {
+  overflow: hidden;
+}
+
 .program-glyph {
   font-size: 16px;
   line-height: 1;
+}
+
+.program-glyph.icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(244, 239, 187, 0.94);
+  box-shadow: inset 0 0 0 2px #56606b;
+}
+
+.program-sprite {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .program-name {
