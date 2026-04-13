@@ -410,6 +410,83 @@ const levels = [
     ],
     start: { x: 0, y: 2, dir: 'right' },
     demo: { main: ['walk', 'p1', 'left', 'light', 'right', 'p1'], p1: ['jump', 'light', 'jump'] }
+  },
+  {
+    id: 'level-6',
+    title: 'Level 6: Twin Lamps',
+    skill: 'Multi-target pathing',
+    description: '开始要求一次路线中依次点亮多个目标格。',
+    goal: '沿着外圈平台前进，点亮顶部左右两端的目标格。',
+    mainLimit: 12,
+    procLimits: {},
+    tips: [
+      { title: 'Route order', copy: '先走到一端点灯，再沿着同一条边回到另一端。' },
+      { title: 'Stay flat', copy: '这一关没有高度变化，重点是路径规划和转向。' }
+    ],
+    board: [
+      [makeTile(2, true), makeTile(2), makeTile(2, true)],
+      [makeTile(2), null, makeTile(2)],
+      [makeTile(2), makeTile(2), makeTile(2)]
+    ],
+    start: { x: 0, y: 2, dir: 'forward' },
+    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'light', 'left', 'walk', 'walk', 'light'], p1: [] }
+  },
+  {
+    id: 'level-7',
+    title: 'Level 7: Double Height',
+    skill: 'Jump chain',
+    description: '把平地转向和连续 Jump 放在同一关里。',
+    goal: '先点亮起点灯，再转向爬上高台，点亮最顶端的目标格。',
+    mainLimit: 8,
+    procLimits: {},
+    tips: [
+      { title: 'Light first', copy: '起点本身就是目标格，别忘了先点亮。' },
+      { title: 'Jump chain', copy: '连续升高的平台只能用 Jump，Walk 无法上台阶。' }
+    ],
+    board: [
+      [makeTile(1), makeTile(2), makeTile(3), makeTile(4, true)],
+      [makeTile(1, true), null, null, null]
+    ],
+    start: { x: 0, y: 1, dir: 'left' },
+    demo: { main: ['light', 'walk', 'right', 'jump', 'jump', 'jump', 'light'], p1: [] }
+  },
+  {
+    id: 'level-8',
+    title: 'Level 8: Procedure Rail',
+    skill: 'Procedure reuse',
+    description: '把重复的“前进一步并点灯”抽成过程调用。',
+    goal: '沿着一条直线连续点亮三个目标格。',
+    mainLimit: 4,
+    procLimits: { p1: 2 },
+    tips: [
+      { title: 'Repeatable chunk', copy: '这关适合把重复动作抽到 PROC1，避免 MAIN 过长。' },
+      { title: 'Final lamp', copy: '最后一个目标格上不需要再移动，只需要补一次 Light。' }
+    ],
+    board: [
+      [makeTile(2, true), makeTile(2), makeTile(2, true), makeTile(2), makeTile(2, true)]
+    ],
+    start: { x: 0, y: 0, dir: 'forward' },
+    demo: { main: ['light', 'p1', 'p1'], p1: ['walk', 'light'] }
+  },
+  {
+    id: 'level-9',
+    title: 'Level 9: Corner Tower',
+    skill: 'Turns + height mix',
+    description: '路径先在平地上横向展开，再在拐角跳上高台。',
+    goal: '先点亮右下角灯，再转向跳上高台，点亮顶部目标格。',
+    mainLimit: 10,
+    procLimits: {},
+    tips: [
+      { title: 'Two phases', copy: '先完成平地部分，再处理拐角后的上台阶动作。' },
+      { title: 'Jump at corner', copy: '拐角后的第一步是升高一层，所以这里必须用 Jump。' }
+    ],
+    board: [
+      [makeTile(1), makeTile(1), makeTile(2), makeTile(2, true)],
+      [makeTile(1), null, null, makeTile(2)],
+      [makeTile(1), makeTile(1), makeTile(1), makeTile(1, true)]
+    ],
+    start: { x: 0, y: 2, dir: 'forward' },
+    demo: { main: ['walk', 'walk', 'walk', 'light', 'left', 'jump', 'walk', 'light'], p1: [] }
   }
 ]
 
