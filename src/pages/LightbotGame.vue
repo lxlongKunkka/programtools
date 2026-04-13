@@ -487,123 +487,10 @@ const levels = [
     ],
     start: { x: 0, y: 2, dir: 'forward' },
     demo: { main: ['walk', 'walk', 'walk', 'light', 'left', 'jump', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-10',
-    title: 'Level 10: Three Corners',
-    skill: 'Outer-ring routing',
-    description: '需要沿着外圈平台规划一整圈，依次点亮三个角落。',
-    goal: '点亮右下、右上和左上三个角落目标格。',
-    mainLimit: 12,
-    procLimits: {},
-    tips: [
-      { title: 'Corner order', copy: '先顺着底边走到右下角，再沿右边和上边收掉另外两个目标。' },
-      { title: 'No shortcuts', copy: '中间空缺不能穿过，只能沿外圈绕行。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2, true)],
-      [makeTile(2), null, makeTile(2)],
-      [makeTile(2), makeTile(2), makeTile(2, true)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'light', 'left', 'walk', 'walk', 'light', 'left', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-11',
-    title: 'Level 11: Downhill Echo',
-    skill: 'Descending jumps',
-    description: '这一关强调 Jump 不只是上台阶，下坡也要用它。',
-    goal: '从最高平台一路向下，依次点亮三个目标格。',
-    mainLimit: 6,
-    procLimits: {},
-    tips: [
-      { title: 'Jump down too', copy: '当前实现里，下坡同样使用 Jump，Walk 只适合同高度移动。' },
-      { title: 'Start on lamp', copy: '起点就是第一个目标格，先点亮再出发。' }
-    ],
-    board: [
-      [makeTile(4, true), makeTile(3), makeTile(2, true), makeTile(1, true)]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['light', 'jump', 'jump', 'light', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-12',
-    title: 'Level 12: Triple Pulse',
-    skill: 'Procedure rhythm',
-    description: '把稳定重复的节奏完全交给 PROC1。',
-    goal: '沿直线依次点亮三个等间距目标格。',
-    mainLimit: 3,
-    procLimits: { p1: 4 },
-    tips: [
-      { title: 'Three-beat pattern', copy: '目标格之间的距离完全相同，非常适合过程调用。' },
-      { title: 'Open with light', copy: '先点亮起点，然后两次调用 PROC1 就能收完剩余目标。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2), makeTile(2, true), makeTile(2), makeTile(2), makeTile(2, true)]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['light', 'p1', 'p1'], p1: ['walk', 'walk', 'walk', 'light'] }
-  },
-  {
-    id: 'level-13',
-    title: 'Level 13: Bent Stair',
-    skill: 'Turn into jump',
-    description: '先完成平地横移，再在拐角连续跳上高台。',
-    goal: '点亮起点，然后在拐角后跳上最高目标格。',
-    mainLimit: 8,
-    procLimits: {},
-    tips: [
-      { title: 'Flat then climb', copy: '前半段是平地 Walk，转弯之后立刻切到 Jump。' },
-      { title: 'Mind the corner', copy: '别在转向前提前 Jump，否则会撞到同高度平地。' }
-    ],
-    board: [
-      [null, null, makeTile(3, true)],
-      [null, null, makeTile(2)],
-      [makeTile(1, true), makeTile(1), makeTile(1)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['light', 'walk', 'walk', 'left', 'jump', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-14',
-    title: 'Level 14: Four Beacon Loop',
-    skill: 'Long route planning',
-    description: '一条完整的长回路，要求你在不走错方向的情况下点亮四个角。',
-    goal: '顺时针绕场一圈，点亮四个角落目标格。',
-    mainLimit: 14,
-    procLimits: {},
-    tips: [
-      { title: 'Loop discipline', copy: '这是目前最长的纯平地路线，转向次数少但不能出错。' },
-      { title: 'Corners only', copy: '只有四个角是目标格，中间格子只是路径。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2), makeTile(2, true)],
-      [makeTile(2, true), makeTile(2), makeTile(2), makeTile(2, true)]
-    ],
-    start: { x: 0, y: 1, dir: 'forward' },
-    demo: { main: ['light', 'walk', 'walk', 'walk', 'light', 'left', 'walk', 'light', 'left', 'walk', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-15',
-    title: 'Level 15: Zigzag Signal',
-    skill: 'Mixed mastery',
-    description: '把转向、上下层和多个目标混在一起，作为当前阶段的收束关。',
-    goal: '依次点亮底边终点、右上高台和左上高台三个目标格。',
-    mainLimit: 12,
-    procLimits: { p1: 3 },
-    tips: [
-      { title: 'Split the path', copy: '先处理底边目标，再沿右侧爬高，最后横向收掉左上角。' },
-      { title: 'Use PROC1 for climbs', copy: '两段连续上升动作可以抽成一个小过程。' }
-    ],
-    board: [
-      [makeTile(3, true), makeTile(3), makeTile(3, true)],
-      [makeTile(1), null, makeTile(2)],
-      [makeTile(1), makeTile(1), makeTile(1, true)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'light', 'left', 'p1', 'light', 'left', 'walk', 'walk', 'light'], p1: ['jump', 'jump'] }
   }
 ]
+
+const VALID_LEVEL_IDS = new Set(levels.map((level) => level.id))
 
 function platformKey(x, y) {
   return `${x},${y}`
@@ -616,7 +503,9 @@ function cloneBot(start) {
 function loadProgress() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    return Array.isArray(parsed.completedLevelIds) ? parsed.completedLevelIds : []
+    return Array.isArray(parsed.completedLevelIds)
+      ? parsed.completedLevelIds.filter((levelId) => VALID_LEVEL_IDS.has(levelId))
+      : []
   } catch {
     return []
   }
