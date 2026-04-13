@@ -899,7 +899,8 @@ async function runProgram() {
   width: 92px;
   height: 46px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--tile-top-edge, rgba(255, 255, 255, 0.28));
+  box-shadow: inset 0 0 0 1px var(--tile-top-inner, rgba(255, 255, 255, 0.12));
 }
 
 .iso-left {
@@ -908,6 +909,7 @@ async function runProgram() {
   width: 46px;
   height: var(--tile-depth);
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
+  border-left: 1px solid var(--tile-side-edge, rgba(255, 255, 255, 0.12));
 }
 
 .iso-right {
@@ -916,6 +918,7 @@ async function runProgram() {
   width: 46px;
   height: var(--tile-depth);
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
+  border-right: 1px solid var(--tile-side-edge, rgba(0, 0, 0, 0.14));
 }
 
 .iso-tile.flat .tile-shadow,
@@ -924,17 +927,41 @@ async function runProgram() {
   display: none;
 }
 
+.theme-stone {
+  --tile-top-edge: rgba(60, 60, 57, 0.62);
+  --tile-top-inner: rgba(255, 255, 255, 0.08);
+  --tile-side-edge: rgba(61, 61, 58, 0.5);
+}
+
 .theme-stone .iso-top { background: #7a7a77; }
 .theme-stone .iso-left { background: #666663; }
 .theme-stone .iso-right { background: #555553; }
+
+.theme-moss {
+  --tile-top-edge: rgba(57, 73, 51, 0.66);
+  --tile-top-inner: rgba(255, 255, 255, 0.08);
+  --tile-side-edge: rgba(49, 62, 44, 0.54);
+}
 
 .theme-moss .iso-top { background: #6f7f68; }
 .theme-moss .iso-left { background: #5d6d56; }
 .theme-moss .iso-right { background: #4e5c48; }
 
+.theme-slate {
+  --tile-top-edge: rgba(71, 86, 106, 0.68);
+  --tile-top-inner: rgba(255, 255, 255, 0.1);
+  --tile-side-edge: rgba(61, 74, 92, 0.56);
+}
+
 .theme-slate .iso-top { background: #718196; }
 .theme-slate .iso-left { background: #5f6f84; }
 .theme-slate .iso-right { background: #506075; }
+
+.theme-copper {
+  --tile-top-edge: rgba(112, 76, 56, 0.68);
+  --tile-top-inner: rgba(255, 255, 255, 0.08);
+  --tile-side-edge: rgba(92, 61, 46, 0.56);
+}
 
 .theme-copper .iso-top { background: #9b7863; }
 .theme-copper .iso-left { background: #825f4d; }
