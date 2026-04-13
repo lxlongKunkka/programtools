@@ -860,7 +860,7 @@ function createSceneController(host) {
   fillLight.position.set(-6, 9, -8)
   scene.add(ambientLight, keyLight, fillLight)
 
-  let currentViewSize = 4.1
+  let currentViewSize = 3.55
   let currentMaxHeight = 1
 
   const shadowPlane = new THREE.Mesh(
@@ -937,7 +937,7 @@ function createSceneController(host) {
     const spanX = Math.max(...xs) - Math.min(...xs) + BLOCK_SIZE
     const spanZ = Math.max(...zs) - Math.min(...zs) + BLOCK_SIZE
     currentMaxHeight = Math.max(...heights, 1)
-    currentViewSize = Math.max(2.6, Math.min(4.2, Math.max(spanX, spanZ) * 0.68 + currentMaxHeight * 0.24))
+    currentViewSize = Math.max(2.15, Math.min(3.55, Math.max(spanX, spanZ) * 0.56 + currentMaxHeight * 0.18))
     boardGroup.position.set(-centerX, 0, -centerZ)
     shadowPlane.position.x = -centerX
     shadowPlane.position.z = -centerZ
@@ -1006,20 +1006,27 @@ function createSceneController(host) {
     antennaTip.position.y = 1.34
     robotBase.add(antennaTip)
 
-    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 10), sharedMaterials.eye)
-    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 10), sharedMaterials.eye)
-    eyeLeft.position.set(-0.08, 0.98, 0.16)
-    eyeRight.position.set(0.08, 0.98, 0.16)
+    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), sharedMaterials.eye)
+    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), sharedMaterials.eye)
+    eyeLeft.position.set(-0.075, 0.985, 0.172)
+    eyeRight.position.set(0.075, 0.985, 0.172)
     robotBase.add(eyeLeft, eyeRight)
 
-    const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.11, 0.03), sharedMaterials.eye)
-    facePlate.position.set(0, 0.84, 0.235)
+    const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.03), sharedMaterials.eye)
+    facePlate.position.set(0, 0.85, 0.225)
     robotBase.add(facePlate)
 
-    const frontMarker = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12), sharedMaterials.antenna)
-    frontMarker.rotation.x = Math.PI / 2
-    frontMarker.position.set(0, 0.63, 0.34)
-    robotBase.add(frontMarker)
+    const browPlate = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.035, 0.04), sharedMaterials.antenna)
+    browPlate.position.set(0, 1.055, 0.18)
+    robotBase.add(browPlate)
+
+    const frontNose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.06), sharedMaterials.antenna)
+    frontNose.position.set(0, 0.86, 0.26)
+    robotBase.add(frontNose)
+
+    const chestPanel = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.03), sharedMaterials.eye)
+    chestPanel.position.set(0, 0.57, 0.235)
+    robotBase.add(chestPanel)
 
     const footLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
     const footRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
@@ -1049,7 +1056,7 @@ function createSceneController(host) {
     updateRobot(level, robotState)
     resize()
 
-    camera.position.set(6.25, 7 + currentMaxHeight * 0.48, 6.25)
+    camera.position.set(5.6, 6.5 + currentMaxHeight * 0.44, 5.6)
     camera.lookAt(0, currentMaxHeight * BLOCK_HEIGHT * 0.58, 0)
     render()
   }
