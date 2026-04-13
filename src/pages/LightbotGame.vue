@@ -1,45 +1,182 @@
 <template>
-  <div class="lightbot-page">
-    <div class="lightbot-shell">
-      <section class="board-panel">
-        <header class="board-header">
-          <div>
-            <p class="eyebrow">Robot Puzzle</p>
-            <h1>{{ currentLevel.title }}</h1>
-            <p class="subtitle">{{ currentLevel.description }}</p>
+  <div class="lightbot-page" :class="`screen-${screen}`">
+    <section v-if="screen === 'tutorial'" class="tutorial-screen">
+      <div class="tutorial-hero">
+        <div class="hero-copy">
+          <p class="screen-kicker">Lightbot Lab</p>
+          <h1>Learn programming logic by guiding a robot across light tiles.</h1>
+          <p class="hero-text">
+            先对齐教程入口，再进入选关和正式关卡。当前这版把流程拆成教程页、关卡页和完成页，不再把所有信息堆在一个界面里。
+          </p>
+          <div class="hero-actions">
+            <button class="hero-btn primary" @click="goToLevelSelect">Start Learning</button>
+            <button class="hero-btn" @click="openLevelBrief(0)">Jump To Level 1</button>
           </div>
-          <div class="level-strip">
-            <button
-              v-for="(level, index) in levels"
-              :key="level.id"
-              class="level-pill"
-              :class="{ active: index === selectedLevelIndex, done: completedLevelIds.includes(level.id) }"
-              @click="selectLevel(index)"
-            >
-              {{ index + 1 }}
-            </button>
-          </div>
-        </header>
+        </div>
 
-        <div class="board-stage">
-          <div class="board-grid"></div>
-
-          <div class="status-cluster">
-            <div class="status-card">
-              <span>方向</span>
-              <strong>{{ directionLabel }}</strong>
+        <div class="hero-gallery">
+          <article v-for="card in tutorialCards" :key="card.title" class="tutorial-card">
+            <div class="tutorial-card-visual" :class="card.theme">
+              <div class="mini-board">
+                <span v-for="n in 6" :key="n" class="mini-tile"></span>
+              </div>
+              <div class="mini-program">
+                <span v-for="step in card.steps" :key="step" class="mini-chip">{{ step }}</span>
+              </div>
             </div>
-            <div class="status-card">
-              <span>点亮</span>
+            <h2>{{ card.title }}</h2>
+            <p>{{ card.copy }}</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="tutorial-learn">
+        <h2>What you'll learn</h2>
+        <ul>
+          <li v-for="item in learningPoints" :key="item">{{ item }}</li>
+        </ul>
+      </div>
+    </section>
+
+    <section v-else-if="screen === 'select'" class="select-screen">
+      <header class="select-header">
+        <div>
+          <p class="screen-kicker">Choose A Puzzle</p>
+          <h1>Level Select</h1>
+          <p>先进入关卡简介，再开始编程。</p>
+        </div>
+        <div class="select-actions">
+          <button class="pill-btn" @click="screen = 'tutorial'">Tutorial</button>
+          <div class="progress-chip">{{ completedLevelIds.length }}/{{ levels.length }} complete</div>
+        </div>
+      </header>
+
+      <div class="level-grid">
+        <button
+          v-for="(level, index) in levels"
+          :key="level.id"
+          class="level-card"
+          :class="{ done: completedLevelIds.includes(level.id), current: index === selectedLevelIndex }"
+          @click="openLevelBrief(index)"
+        >
+          <div class="level-card-head">
+            <span class="level-card-index">{{ index + 1 }}</span>
+            <span class="level-card-tag">{{ level.skill }}</span>
+          </div>
+          <strong>{{ level.title }}</strong>
+          <p>{{ level.goal }}</p>
+          <div class="level-card-foot">
+            <span>Main {{ level.mainLimit }}</span>
+            <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
+            <span v-else>No proc</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section v-else-if="screen === 'brief'" class="brief-screen">
+      <div class="brief-shell">
+        <button class="back-chip" @click="screen = 'select'">← Back</button>
+        <div class="brief-copy">
+          <p class="screen-kicker">Level Brief</p>
+          <h1>{{ currentLevel.title }}</h1>
+          <p class="brief-summary">{{ currentLevel.description }}</p>
+          <p class="brief-goal">{{ currentLevel.goal }}</p>
+
+          <div class="brief-meta">
+            <div>
+              <span>Main</span>
+              <strong>{{ currentLevel.mainLimit }} slots</strong>
+            </div>
+            <div>
+              <span>P1</span>
+              <strong>{{ currentLevel.procLimits.p1 || 0 }} slots</strong>
+            </div>
+            <div>
+              <span>Skill</span>
+              <strong>{{ currentLevel.skill }}</strong>
+            </div>
+          </div>
+
+          <div class="brief-tips">
+            <article v-for="tip in currentLevel.tips" :key="tip.title">
+              <h2>{{ tip.title }}</h2>
+              <p>{{ tip.copy }}</p>
+            </article>
+          </div>
+
+          <div class="hero-actions">
+            <button class="hero-btn primary" @click="startLevel">Enter Puzzle</button>
+            <button class="hero-btn" @click="loadDemoAndStart">Load Demo</button>
+          </div>
+        </div>
+
+        <div class="brief-preview">
+          <div class="brief-preview-board">
+            <div class="preview-badge">Preview</div>
+            <div class="scene-frame preview-frame">
+              <div class="scene-viewport" :style="sceneViewportStyle">
+                <div class="iso-scene" :style="sceneStyle">
+                  <div
+                    v-for="cell in sceneCells"
+                    :key="`brief-${cell.key}`"
+                    class="platform"
+                    :class="{ target: cell.isTarget, lit: cell.isLit }"
+                    :style="cell.style"
+                  >
+                    <div class="platform-shadow"></div>
+                    <div class="platform-left"></div>
+                    <div class="platform-right"></div>
+                    <div class="platform-top">
+                      <span v-if="cell.isTarget" class="target-ring"></span>
+                    </div>
+                  </div>
+                  <div class="robot-layer" :class="robotDirClass" :style="robotStyle">
+                    <div class="robot-body">
+                      <span class="robot-eye left"></span>
+                      <span class="robot-eye right"></span>
+                      <span class="robot-antenna"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-else class="play-screen">
+      <div class="play-shell">
+        <aside class="hud-rail">
+          <button class="rail-btn" @click="screen = 'select'">←</button>
+          <button class="rail-btn" @click="resetLevel(false)">↺</button>
+          <button class="rail-btn muted" @click="screen = 'brief'">?</button>
+        </aside>
+
+        <main class="board-stage">
+          <header class="board-topbar">
+            <div class="board-topbar-copy">
+              <p class="screen-kicker">{{ currentLevel.skill }}</p>
+              <h1>{{ currentLevel.title }}</h1>
+            </div>
+            <div class="board-topbar-actions">
+              <button class="run-btn" :disabled="isRunning || mainProcedure.length === 0" @click="runCode">
+                <img src="/lightbot/run.png" alt="Run">
+              </button>
+              <button class="reset-btn" :disabled="isRunning" @click="resetLevel(false)">
+                <img src="/lightbot/stop.png" alt="Reset">
+              </button>
+            </div>
+          </header>
+
+          <div class="scene-frame">
+            <div class="status-float">
+              <span>{{ directionLabel }}</span>
               <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
+              <em :class="statusTone">{{ statusText }}</em>
             </div>
-            <div class="status-card" :class="statusTone">
-              <span>状态</span>
-              <strong>{{ statusText }}</strong>
-            </div>
-          </div>
 
-          <div class="scene-shell">
             <div class="scene-viewport" :style="sceneViewportStyle">
               <div class="iso-scene" :style="sceneStyle">
                 <div
@@ -50,142 +187,138 @@
                   :style="cell.style"
                 >
                   <div class="platform-shadow"></div>
-                  <div class="platform-top">
-                    <span v-if="cell.isTarget" class="target-ring"></span>
-                    <span v-if="cell.isStart" class="start-badge">S</span>
-                    <div v-if="cell.hasRobot" class="bot" :class="robotDirClass">
-                      <span class="bot-eye left"></span>
-                      <span class="bot-eye right"></span>
-                      <span class="bot-mark"></span>
-                    </div>
-                  </div>
                   <div class="platform-left"></div>
                   <div class="platform-right"></div>
+                  <div class="platform-top">
+                    <span v-if="cell.isTarget" class="target-ring"></span>
+                    <span v-if="cell.isLit" class="target-core"></span>
+                  </div>
+                </div>
+
+                <div class="robot-layer" :class="robotDirClass" :style="robotStyle">
+                  <div class="robot-body">
+                    <span class="robot-eye left"></span>
+                    <span class="robot-eye right"></span>
+                    <span class="robot-antenna"></span>
+                    <span class="robot-foot left"></span>
+                    <span class="robot-foot right"></span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <footer class="control-bar">
-          <button class="control-btn icon" :disabled="isRunning || mainProcedure.length === 0" @click="runCode">
-            <img class="control-sprite" src="/lightbot/run.png" alt="Run">
-          </button>
-          <button class="control-btn icon" :disabled="isRunning" @click="resetCode">
-            <img class="control-sprite" src="/lightbot/stop.png" alt="Reset">
-          </button>
-          <button class="control-btn" :disabled="isRunning || activeProcedure.length === 0" @click="undoLastOperation">↶</button>
-          <button class="control-btn" :disabled="isRunning || activeProcedure.length === 0" @click="clearActiveProcedure">🗑</button>
-
-          <div class="speed-box">
-            <span>Speed</span>
-            <input v-model="speedValue" class="speed-slider" type="range" min="1" max="5" step="1">
-          </div>
-
-          <button v-if="canGoNextLevel" class="next-btn" @click="goToNextLevel">下一关</button>
-        </footer>
-      </section>
-
-      <aside class="sidebar-panel">
-        <section class="panel-card brief-card">
-          <div class="panel-title">Map Brief</div>
-          <p class="brief-copy">{{ currentLevel.goal }}</p>
-          <div class="brief-row">
-            <span>Main</span>
-            <strong>{{ currentLevel.mainLimit }} 格</strong>
-          </div>
-          <div
-            v-for="procKey in availableProcedureKeys"
-            :key="procKey"
-            class="brief-row"
-          >
-            <span>{{ procKey.toUpperCase() }}</span>
-            <strong>{{ currentLevel.procLimits[procKey] }} 格</strong>
-          </div>
-        </section>
-
-        <section class="panel-card">
-          <div class="panel-title">Instructions</div>
-          <div class="instruction-grid">
+          <footer class="command-bar">
             <button
               v-for="operation in operationPalette"
               :key="operation.id"
-              class="instruction-btn"
-              :disabled="operation.id.startsWith('proc') && !availableProcedureKeys.includes(operation.id)"
+              class="command-btn"
+              :disabled="isRunning || (operation.id === 'p1' && !availableProcedureKeys.includes('p1'))"
               @click="appendOperation(operation.id)"
             >
-              <span class="instruction-icon">
-                <img class="instruction-sprite" :src="operationSprite(operation.id)" :alt="operation.label">
-              </span>
-              <span class="instruction-label">{{ operation.label }}</span>
-              <small>{{ operation.tip }}</small>
+              <img :src="operationSprite(operation.id)" :alt="operation.label">
             </button>
-          </div>
-        </section>
 
-        <section class="panel-card program-card">
-          <div class="program-head">
-            <div class="panel-title">Program</div>
-            <div class="proc-tabs">
-              <button
-                v-for="procKey in procedureTabs"
-                :key="procKey"
-                :class="{ active: activeProcedureKey === procKey }"
-                :disabled="procKey !== 'main' && !availableProcedureKeys.includes(procKey)"
-                @click="activeProcedureKey = procKey"
-              >
-                {{ procKey.toUpperCase() }}
-              </button>
+            <div class="speed-box">
+              <span>Speed</span>
+              <input v-model="speedValue" type="range" min="1" max="5" step="1">
+            </div>
+          </footer>
+
+          <div v-if="showFinishPanel" class="finish-panel">
+            <div class="finish-card">
+              <p class="screen-kicker">Puzzle Complete</p>
+              <h2>{{ currentLevel.title }}</h2>
+              <p>所有目标格已经点亮。现在可以继续下一关或返回选关。</p>
+              <div class="finish-actions">
+                <button class="hero-btn primary" @click="goToNextLevel">Next Level</button>
+                <button class="hero-btn" @click="resetLevel(false)">Replay</button>
+                <button class="hero-btn" @click="screen = 'select'">Level Select</button>
+              </div>
             </div>
           </div>
+        </main>
 
-          <div class="program-block">
-            <div class="program-label">{{ activeProcedureKey.toUpperCase() }}</div>
-            <div class="program-grid">
+        <aside class="program-sidebar">
+          <section class="program-panel main-tone">
+            <div class="program-header">
+              <span>MAIN</span>
+              <button class="tab-btn" :class="{ active: activeProcedureKey === 'main' }" @click="activeProcedureKey = 'main'">Edit</button>
+            </div>
+            <div class="program-grid big">
               <button
-                v-for="(operation, index) in activeProcedure"
-                :key="`${activeProcedureKey}-${index}`"
+                v-for="(operation, index) in mainProcedure"
+                :key="`main-${index}`"
                 class="program-slot filled"
-                :class="{ active: runningProcedureKey === activeProcedureKey && runningOperationIndex === index }"
-                @click="removeOperation(activeProcedureKey, index)"
+                :class="{ active: runningProcedureKey === 'main' && runningOperationIndex === index }"
+                @click="removeOperation('main', index)"
               >
-                <span class="slot-icon">
-                  <img class="program-sprite" :src="operationSprite(operation)" :alt="operationLabel(operation)">
-                </span>
-                <span class="slot-label">{{ operationLabel(operation) }}</span>
+                <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
-                v-for="slot in emptySlots(activeLimit, activeProcedure.length)"
-                :key="`${activeProcedureKey}-empty-${slot}`"
+                v-for="slot in emptySlots(currentLevel.mainLimit, mainProcedure.length)"
+                :key="`main-empty-${slot}`"
                 class="program-slot"
               ></div>
             </div>
-          </div>
+          </section>
 
-          <div class="program-actions">
-            <button class="ghost-btn" :disabled="isRunning" @click="loadDemoProgram">示例</button>
-            <button class="ghost-btn" :disabled="isRunning" @click="clearAllPrograms">清空程序</button>
-          </div>
-        </section>
-      </aside>
-    </div>
+          <section class="program-panel proc-tone" :class="{ disabled: !availableProcedureKeys.includes('p1') }">
+            <div class="program-header">
+              <span>PROC1</span>
+              <button
+                class="tab-btn"
+                :class="{ active: activeProcedureKey === 'p1' }"
+                :disabled="!availableProcedureKeys.includes('p1')"
+                @click="activeProcedureKey = 'p1'"
+              >
+                Edit
+              </button>
+            </div>
+            <div class="program-grid">
+              <button
+                v-for="(operation, index) in procedures.p1"
+                :key="`p1-${index}`"
+                class="program-slot filled"
+                :class="{ active: runningProcedureKey === 'p1' && runningOperationIndex === index }"
+                :disabled="!availableProcedureKeys.includes('p1')"
+                @click="removeOperation('p1', index)"
+              >
+                <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
+              </button>
+              <div
+                v-for="slot in emptySlots(currentLevel.procLimits.p1 || 0, procedures.p1.length)"
+                :key="`p1-empty-${slot}`"
+                class="program-slot"
+              ></div>
+            </div>
+          </section>
+
+          <section class="program-tools">
+            <button class="tool-btn" :disabled="isRunning" @click="undoLastOperation">Undo</button>
+            <button class="tool-btn" :disabled="isRunning" @click="clearActiveProcedure">Clear Active</button>
+            <button class="tool-btn" :disabled="isRunning" @click="loadDemoProgram">Load Demo</button>
+            <button class="tool-btn" :disabled="isRunning" @click="resetLevel(true)">Clear All</button>
+          </section>
+        </aside>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'programtools-lightbot-progress-v4'
+const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const TILE_WIDTH = 96
 const TILE_HEIGHT = 48
 const TILE_DEPTH = 22
-const PROCEDURE_TABS = ['main', 'p1']
 const DIRECTION_ORDER = ['forward', 'right', 'backward', 'left']
 const DIRECTION_LABELS = {
-  forward: '向右',
-  right: '向下',
-  backward: '向左',
-  left: '向上'
+  forward: 'Facing east',
+  right: 'Facing south',
+  backward: 'Facing west',
+  left: 'Facing north'
 }
 const DIRECTION_VECTORS = {
   forward: { x: 1, y: 0 },
@@ -193,15 +326,23 @@ const DIRECTION_VECTORS = {
   backward: { x: -1, y: 0 },
   left: { x: 0, y: -1 }
 }
-const SPEED_MAP = { 1: 540, 2: 420, 3: 300, 4: 210, 5: 140 }
-const OPERATION_PALETTE = [
-  { id: 'walk', label: 'Walk forward', tip: '前进到同高度相邻平台' },
-  { id: 'light', label: 'Light', tip: '切换当前目标灯状态' },
-  { id: 'left', label: 'Turn left', tip: '逆时针转 90 度' },
-  { id: 'right', label: 'Turn right', tip: '顺时针转 90 度' },
-  { id: 'jump', label: 'Jump', tip: '向前跳上一层或跳下任意层' },
-  { id: 'p1', label: 'Call P1', tip: '调用子程序 P1' }
+const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 200, 5: 130 }
+const operationPalette = [
+  { id: 'walk', label: 'Walk' },
+  { id: 'light', label: 'Light' },
+  { id: 'left', label: 'Turn left' },
+  { id: 'right', label: 'Turn right' },
+  { id: 'jump', label: 'Jump' },
+  { id: 'p1', label: 'Call P1' }
 ]
+
+const tutorialCards = [
+  { title: 'Sequencing', copy: '把动作按顺序放入 MAIN，让机器人一步一步执行。', theme: 'mint', steps: ['↑', '💡', '↺'] },
+  { title: 'Procedures', copy: '把重复片段放进 PROC1，然后在 MAIN 里调用它。', theme: 'cream', steps: ['P1', '↑', 'P1'] },
+  { title: 'Loops By Recursion', copy: 'PROC1 里再调用 P1，就能得到递归式循环。', theme: 'sky', steps: ['P1', '⟳', '💡'] }
+]
+
+const learningPoints = ['Sequencing', 'Decomposition', 'Procedures', 'Recursive loops', 'Spatial reasoning']
 
 function makeTile(height = 1, target = false) {
   return { h: height, target }
@@ -211,23 +352,31 @@ const levels = [
   {
     id: 'level-1',
     title: 'Level 1: First Light',
-    description: '按 Another-LightBot 的方式，从最基础的平面开灯开始。',
-    goal: '沿平台向前，点亮两个目标格。',
+    skill: 'Sequencing',
+    description: '最基础的关卡。先学会沿着平地前进并打开灯。',
+    goal: '沿着平台向前，点亮两盏灯。',
     mainLimit: 8,
     procLimits: {},
-    board: [
-      [makeTile(), makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)]
+    tips: [
+      { title: 'Walk', copy: '只有前方存在同高度平台时，Walk 才会生效。' },
+      { title: 'Light', copy: '机器人站在目标格上时，Light 才会切换灯的状态。' }
     ],
+    board: [[makeTile(), makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)]],
     start: { x: 0, y: 0, dir: 'forward' },
     demo: { main: ['walk', 'walk', 'light', 'walk', 'walk', 'light'], p1: [] }
   },
   {
     id: 'level-2',
-    title: 'Level 2: Jump',
-    description: '第二关加入一级高差，逻辑按照参考仓库的 jump 规则执行。',
-    goal: '先点亮低处灯，再跳上一级高台点亮第二个灯。',
+    title: 'Level 2: Step Up',
+    skill: 'Jump',
+    description: '这一关引入一级高差，用 Jump 上台阶。',
+    goal: '点亮低处和高处的两盏灯。',
     mainLimit: 8,
     procLimits: {},
+    tips: [
+      { title: 'Jump up', copy: 'Jump 允许上升一层。' },
+      { title: 'Drop down', copy: 'Jump 也允许向下跳到更低的平台。' }
+    ],
     board: [
       [null, null, makeTile(2), makeTile(2, true)],
       [makeTile(), makeTile(1, true), makeTile(), makeTile(2)]
@@ -237,11 +386,16 @@ const levels = [
   },
   {
     id: 'level-3',
-    title: 'Level 3: Turns',
-    description: '第三关需要转向，方向系统与参考仓库的四向枚举一致。',
-    goal: '通过左右转在 L 形平台上点亮两盏灯。',
+    title: 'Level 3: Corner Path',
+    skill: 'Turns',
+    description: '转向系统开始生效，路径变成拐角。',
+    goal: '转弯后点亮 L 形路径两端的灯。',
     mainLimit: 10,
     procLimits: {},
+    tips: [
+      { title: 'Turn', copy: 'Left 和 Right 只改变朝向，不会移动机器人。' },
+      { title: 'Plan ahead', copy: '先想好面朝方向，再安排移动。' }
+    ],
     board: [
       [makeTile(), makeTile(), makeTile(1, true)],
       [null, null, makeTile()],
@@ -253,10 +407,15 @@ const levels = [
   {
     id: 'level-4',
     title: 'Level 4: Procedure',
-    description: '从这一关开始启用子程序 P1，流程接近参考仓库的 SubProcedure。',
-    goal: '利用 P1 复用重复动作，点亮四个目标格。',
+    skill: 'Procedures',
+    description: 'MAIN 空间不够了，需要把重复动作塞进 PROC1。',
+    goal: '利用 PROC1 复用两次相同动作，点亮四盏灯。',
     mainLimit: 6,
     procLimits: { p1: 4 },
+    tips: [
+      { title: 'PROC1', copy: 'PROC1 像一个可复用的函数。' },
+      { title: 'Reuse', copy: '把重复的 walk + light 放进去，MAIN 只负责调用和转向。' }
+    ],
     board: [
       [null, makeTile(1, true), makeTile(1, true)],
       [makeTile(), makeTile(), makeTile()],
@@ -267,11 +426,16 @@ const levels = [
   },
   {
     id: 'level-5',
-    title: 'Level 5: Bridge',
-    description: '最后一关综合 walk、jump 和 P1。',
-    goal: '跨过桥面并使用 P1 完成连续开灯。',
+    title: 'Level 5: Bridge Loop',
+    skill: 'Procedures + Jump',
+    description: '综合关卡，带跳跃和过程调用。',
+    goal: '跨过桥面并通过 PROC1 连续点亮目标格。',
     mainLimit: 8,
     procLimits: { p1: 3 },
+    tips: [
+      { title: 'Chain actions', copy: 'PROC1 适合装入一个小动作链。' },
+      { title: 'Timing', copy: '最后一步要在目标格上执行 Light。' }
+    ],
     board: [
       [null, makeTile(2), null, makeTile(2)],
       [makeTile(), makeTile(1, true), makeTile(), makeTile(1, true)],
@@ -299,6 +463,7 @@ function loadProgress() {
   }
 }
 
+const screen = ref('tutorial')
 const selectedLevelIndex = ref(0)
 const activeProcedureKey = ref('main')
 const mainProcedure = ref([])
@@ -306,19 +471,17 @@ const procedures = ref({ p1: [] })
 const completedLevelIds = ref(loadProgress())
 const litKeys = ref([])
 const bot = ref(cloneBot(levels[0].start))
-const statusText = ref('Program is empty')
-const statusTone = ref('neutral')
 const isRunning = ref(false)
 const runningProcedureKey = ref('')
 const runningOperationIndex = ref(-1)
 const runNonce = ref(0)
 const speedValue = ref(3)
+const statusText = ref('Ready')
+const statusTone = ref('neutral')
+const showFinishPanel = ref(false)
 
 const currentLevel = computed(() => levels[selectedLevelIndex.value])
-const procedureTabs = computed(() => PROCEDURE_TABS)
 const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
-const activeProcedure = computed(() => activeProcedureKey.value === 'main' ? mainProcedure.value : (procedures.value[activeProcedureKey.value] || []))
-const activeLimit = computed(() => activeProcedureKey.value === 'main' ? currentLevel.value.mainLimit : (currentLevel.value.procLimits[activeProcedureKey.value] || 0))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 
@@ -349,26 +512,32 @@ const sceneMetrics = computed(() => {
     const y = (item.x + item.y) * TILE_HEIGHT / 2 - item.cell.h * TILE_DEPTH
     return { ...item, sceneX: x, sceneY: y }
   })
+
   const minX = Math.min(...cells.map((cell) => cell.sceneX))
   const minY = Math.min(...cells.map((cell) => cell.sceneY))
   const maxX = Math.max(...cells.map((cell) => cell.sceneX + TILE_WIDTH))
   const maxY = Math.max(...cells.map((cell) => cell.sceneY + TILE_HEIGHT + cell.cell.h * TILE_DEPTH))
+
   return {
     cells,
     minX,
     minY,
-    width: Math.ceil(maxX - minX + 96),
-    height: Math.ceil(maxY - minY + 96)
+    width: Math.ceil(maxX - minX + 120),
+    height: Math.ceil(maxY - minY + 120)
   }
 })
 
 const sceneScale = computed(() => {
-  const widthScale = 920 / sceneMetrics.value.width
-  const heightScale = 520 / sceneMetrics.value.height
-  return Math.max(1.2, Math.min(2.6, widthScale, heightScale))
+  const widthScale = 860 / sceneMetrics.value.width
+  const heightScale = 480 / sceneMetrics.value.height
+  return Math.max(1.15, Math.min(2.3, widthScale, heightScale))
 })
 
-const sceneStyle = computed(() => ({ width: `${sceneMetrics.value.width}px`, height: `${sceneMetrics.value.height}px` }))
+const sceneStyle = computed(() => ({
+  width: `${sceneMetrics.value.width}px`,
+  height: `${sceneMetrics.value.height}px`
+}))
+
 const sceneViewportStyle = computed(() => ({
   width: `${sceneMetrics.value.width}px`,
   height: `${sceneMetrics.value.height}px`,
@@ -379,126 +548,40 @@ const sceneCells = computed(() => sceneMetrics.value.cells.map((item) => ({
   key: item.key,
   isTarget: Boolean(item.cell.target),
   isLit: litKeys.value.includes(item.key),
-  isStart: currentLevel.value.start.x === item.x && currentLevel.value.start.y === item.y,
-  hasRobot: bot.value.x === item.x && bot.value.y === item.y,
   style: {
-    left: `${item.sceneX - sceneMetrics.value.minX + 48}px`,
-    top: `${item.sceneY - sceneMetrics.value.minY + 48}px`,
+    left: `${item.sceneX - sceneMetrics.value.minX + 58}px`,
+    top: `${item.sceneY - sceneMetrics.value.minY + 56}px`,
     '--stack-height': `${item.cell.h * TILE_DEPTH}px`
   }
 })))
 
-const canGoNextLevel = computed(() => targetKeys.value.length > 0 && targetKeys.value.every((key) => litKeys.value.includes(key)) && selectedLevelIndex.value < levels.length - 1)
+const robotStyle = computed(() => {
+  const cell = sceneMetrics.value.cells.find((item) => item.x === bot.value.x && item.y === bot.value.y)
+  if (!cell) {
+    return { display: 'none' }
+  }
 
-watch(selectedLevelIndex, () => initializeLevelState())
+  return {
+    left: `${cell.sceneX - sceneMetrics.value.minX + 106}px`,
+    top: `${cell.sceneY - sceneMetrics.value.minY + 64 - cell.cell.h * 0}px`
+  }
+})
+
 watch(completedLevelIds, (value) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
 }, { deep: true })
-
-function initializeLevelState() {
-  activeProcedureKey.value = 'main'
-  mainProcedure.value = []
-  procedures.value = { p1: [] }
-  resetCode()
-}
 
 function setStatus(text, tone = 'neutral') {
   statusText.value = text
   statusTone.value = tone
 }
 
-function selectLevel(index) {
-  selectedLevelIndex.value = index
-}
-
-function resetCode() {
-  runNonce.value += 1
-  isRunning.value = false
-  runningProcedureKey.value = ''
-  runningOperationIndex.value = -1
-  litKeys.value = []
-  bot.value = cloneBot(currentLevel.value.start)
-  setStatus(mainProcedure.value.length ? 'Code reset' : 'Program is empty')
-}
-
-function clearAllPrograms() {
-  mainProcedure.value = []
-  procedures.value = { p1: [] }
-  activeProcedureKey.value = 'main'
-  resetCode()
-}
-
-function emptySlots(limit, used) {
-  return Array.from({ length: Math.max(limit - used, 0) }, (_, index) => index)
-}
-
-function appendOperation(operationId) {
-  const limit = activeLimit.value
-  if (activeProcedure.value.length >= limit) {
-    setStatus('No empty slot left', 'danger')
-    return
-  }
-
-  if (activeProcedureKey.value === 'main') {
-    mainProcedure.value = [...mainProcedure.value, operationId]
-  } else {
-    procedures.value = {
-      ...procedures.value,
-      [activeProcedureKey.value]: [...(procedures.value[activeProcedureKey.value] || []), operationId]
-    }
-  }
-
-  setStatus(`${operationLabel(operationId)} added`)
-}
-
-function removeOperation(procKey, index) {
-  if (procKey === 'main') {
-    mainProcedure.value = mainProcedure.value.filter((_, itemIndex) => itemIndex !== index)
-  } else {
-    procedures.value = {
-      ...procedures.value,
-      [procKey]: (procedures.value[procKey] || []).filter((_, itemIndex) => itemIndex !== index)
-    }
-  }
-  setStatus('Operation removed')
-}
-
-function undoLastOperation() {
-  if (activeProcedureKey.value === 'main') {
-    mainProcedure.value = mainProcedure.value.slice(0, -1)
-  } else {
-    procedures.value = {
-      ...procedures.value,
-      [activeProcedureKey.value]: (procedures.value[activeProcedureKey.value] || []).slice(0, -1)
-    }
-  }
-  setStatus('Last operation removed')
-}
-
-function clearActiveProcedure() {
-  if (activeProcedureKey.value === 'main') {
-    mainProcedure.value = []
-  } else {
-    procedures.value = {
-      ...procedures.value,
-      [activeProcedureKey.value]: []
-    }
-  }
-  setStatus('Procedure cleared')
-}
-
-function loadDemoProgram() {
-  mainProcedure.value = [...currentLevel.value.demo.main]
-  procedures.value = { p1: [...(currentLevel.value.demo.p1 || [])] }
-  setStatus('Demo loaded')
-}
-
 function operationLabel(operationId) {
   return {
     walk: 'Walk',
     light: 'Light',
-    left: 'Turn L',
-    right: 'Turn R',
+    left: 'Left',
+    right: 'Right',
     jump: 'Jump',
     p1: 'P1'
   }[operationId] || operationId
@@ -513,6 +596,107 @@ function operationSprite(operationId) {
     jump: '/lightbot/operation-jump.png',
     p1: '/lightbot/operation-proc.png'
   }[operationId] || '/lightbot/operation-move.png'
+}
+
+function emptySlots(limit, used) {
+  return Array.from({ length: Math.max(limit - used, 0) }, (_, index) => index)
+}
+
+function resetLevel(clearPrograms = false) {
+  runNonce.value += 1
+  isRunning.value = false
+  runningProcedureKey.value = ''
+  runningOperationIndex.value = -1
+  showFinishPanel.value = false
+  litKeys.value = []
+  bot.value = cloneBot(currentLevel.value.start)
+  if (clearPrograms) {
+    mainProcedure.value = []
+    procedures.value = { p1: [] }
+    activeProcedureKey.value = 'main'
+  }
+  setStatus(mainProcedure.value.length ? 'Code reset' : 'Program is empty')
+}
+
+function goToLevelSelect() {
+  screen.value = 'select'
+}
+
+function openLevelBrief(index) {
+  selectedLevelIndex.value = index
+  resetLevel(true)
+  screen.value = 'brief'
+}
+
+function startLevel() {
+  resetLevel(false)
+  screen.value = 'play'
+}
+
+function loadDemoProgram() {
+  mainProcedure.value = [...currentLevel.value.demo.main]
+  procedures.value = { p1: [...(currentLevel.value.demo.p1 || [])] }
+  setStatus('Demo loaded')
+}
+
+function loadDemoAndStart() {
+  loadDemoProgram()
+  startLevel()
+}
+
+function appendOperation(operationId) {
+  if (activeProcedureKey.value === 'p1' && !availableProcedureKeys.value.includes('p1')) {
+    return
+  }
+
+  const isMain = activeProcedureKey.value === 'main'
+  const currentList = isMain ? mainProcedure.value : procedures.value.p1
+  const limit = isMain ? currentLevel.value.mainLimit : (currentLevel.value.procLimits.p1 || 0)
+  if (currentList.length >= limit) {
+    setStatus('No empty slot left', 'danger')
+    return
+  }
+
+  if (isMain) {
+    mainProcedure.value = [...mainProcedure.value, operationId]
+  } else {
+    procedures.value = { ...procedures.value, p1: [...procedures.value.p1, operationId] }
+  }
+
+  setStatus(`${operationLabel(operationId)} added`)
+}
+
+function removeOperation(procKey, index) {
+  if (isRunning.value) return
+  if (procKey === 'main') {
+    mainProcedure.value = mainProcedure.value.filter((_, itemIndex) => itemIndex !== index)
+  } else {
+    procedures.value = {
+      ...procedures.value,
+      p1: procedures.value.p1.filter((_, itemIndex) => itemIndex !== index)
+    }
+  }
+  setStatus('Operation removed')
+}
+
+function undoLastOperation() {
+  if (isRunning.value) return
+  if (activeProcedureKey.value === 'main') {
+    mainProcedure.value = mainProcedure.value.slice(0, -1)
+  } else {
+    procedures.value = { ...procedures.value, p1: procedures.value.p1.slice(0, -1) }
+  }
+  setStatus('Last operation removed')
+}
+
+function clearActiveProcedure() {
+  if (isRunning.value) return
+  if (activeProcedureKey.value === 'main') {
+    mainProcedure.value = []
+  } else {
+    procedures.value = { ...procedures.value, p1: [] }
+  }
+  setStatus('Procedure cleared')
 }
 
 function platformAt(x, y) {
@@ -546,10 +730,13 @@ function toggleCurrentTarget() {
 }
 
 function markFinished() {
-  if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) return false
+  if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) {
+    return false
+  }
   if (!completedLevelIds.value.includes(currentLevel.value.id)) {
     completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
   }
+  showFinishPanel.value = true
   setStatus('Level complete', 'success')
   return true
 }
@@ -558,7 +745,7 @@ function waitStep() {
   return new Promise((resolve) => window.setTimeout(resolve, SPEED_MAP[String(speedValue.value)] || SPEED_MAP[3]))
 }
 
-async function executeOperation(operationId, nonce) {
+async function executeOperation(operationId, nonce, depth) {
   if (nonce !== runNonce.value) return
 
   if (operationId === 'right') {
@@ -574,9 +761,8 @@ async function executeOperation(operationId, nonce) {
   }
 
   if (operationId === 'light') {
-    const switched = toggleCurrentTarget()
-    if (!switched) {
-      setStatus('Switch ignored: no target on this platform', 'danger')
+    if (!toggleCurrentTarget()) {
+      setStatus('Light ignored: no target here', 'danger')
     }
     await waitStep()
     markFinished()
@@ -584,7 +770,7 @@ async function executeOperation(operationId, nonce) {
   }
 
   if (operationId === 'p1') {
-    await runProcedure('p1', procedures.value.p1 || [], nonce)
+    await runProcedure('p1', procedures.value.p1, nonce, depth + 1)
     return
   }
 
@@ -620,22 +806,23 @@ async function executeOperation(operationId, nonce) {
 }
 
 async function runProcedure(procKey, operations, nonce, depth = 0) {
-  if (depth > 6 || nonce !== runNonce.value) return
+  if (depth > 8 || nonce !== runNonce.value) return
   for (let index = 0; index < operations.length; index += 1) {
     if (nonce !== runNonce.value) return
     runningProcedureKey.value = procKey
     runningOperationIndex.value = index
-    await executeOperation(operations[index], nonce)
+    await executeOperation(operations[index], nonce, depth)
     if (markFinished()) return
   }
 }
 
 async function runCode() {
   if (!mainProcedure.value.length || isRunning.value) return
-  resetCode()
+  resetLevel(false)
   const nonce = runNonce.value
   isRunning.value = true
   setStatus('Program running')
+
   try {
     await runProcedure('main', mainProcedure.value, nonce)
     if (nonce === runNonce.value && !markFinished()) {
@@ -651,158 +838,492 @@ async function runCode() {
 }
 
 function goToNextLevel() {
-  if (!canGoNextLevel.value) return
-  selectedLevelIndex.value += 1
+  if (selectedLevelIndex.value < levels.length - 1) {
+    openLevelBrief(selectedLevelIndex.value + 1)
+  } else {
+    screen.value = 'select'
+  }
 }
 
-initializeLevelState()
+resetLevel(true)
 </script>
 
 <style scoped>
 .lightbot-page {
   min-height: calc(100vh - 80px);
-  padding: 8px;
-  background: #d5dde4;
-  color: #fff;
+  padding: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.72), transparent 32%),
+    linear-gradient(180deg, #eff4f1 0%, #e1ebf5 100%);
+  color: #34414d;
 }
 
-.lightbot-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
-  gap: 10px;
-  min-height: calc(100vh - 96px);
+.screen-kicker {
+  margin: 0 0 8px;
+  color: #5ba9d6;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
-.board-panel,
-.panel-card {
-  border-radius: 14px;
-  background: #6a6462;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+.tutorial-screen,
+.select-screen,
+.brief-screen,
+.play-screen {
+  min-height: calc(100vh - 104px);
 }
 
-.board-panel {
+.tutorial-screen {
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  gap: 24px;
 }
 
-.board-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-  margin-bottom: 12px;
+.tutorial-hero {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) 1fr;
+  gap: 24px;
 }
 
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 11px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: #e6ddd5;
+.hero-copy,
+.tutorial-card,
+.tutorial-learn,
+.select-header,
+.level-card,
+.brief-shell,
+.board-stage,
+.program-panel,
+.program-tools {
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(103, 126, 157, 0.18);
 }
 
-.board-header h1 {
+.hero-copy {
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(188, 239, 224, 0.95), rgba(226, 245, 235, 0.95));
+}
+
+.hero-copy h1,
+.select-header h1,
+.brief-copy h1,
+.board-topbar h1 {
   margin: 0;
-  font-size: 28px;
+  line-height: 1.04;
 }
 
-.subtitle {
-  margin: 6px 0 0;
-  color: #efe6de;
+.hero-copy h1 {
+  font-size: clamp(36px, 4.2vw, 58px);
 }
 
-.level-strip {
+.hero-text,
+.brief-summary,
+.brief-goal,
+.level-card p,
+.tutorial-card p {
+  line-height: 1.6;
+  color: #425363;
+}
+
+.hero-actions,
+.finish-actions {
   display: flex;
-  gap: 6px;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
 }
 
-.level-pill {
-  width: 36px;
-  height: 36px;
+.hero-btn,
+.pill-btn,
+.tab-btn,
+.tool-btn,
+.rail-btn,
+.level-card,
+.command-btn,
+.program-slot.filled,
+.back-chip,
+.run-btn,
+.reset-btn {
   border: 0;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.level-pill.active {
-  background: #9fd3cb;
-  color: #354542;
+.hero-btn,
+.pill-btn,
+.back-chip,
+.tool-btn {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #314454;
+  font-weight: 800;
 }
 
-.level-pill.done:not(.active) {
-  background: #85b48d;
+.hero-btn.primary,
+.run-btn,
+.tab-btn.active {
+  background: linear-gradient(180deg, #68d16f, #43b653);
+  color: #fff;
+}
+
+.hero-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tutorial-card {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.tutorial-card-visual {
+  min-height: 180px;
+  padding: 16px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tutorial-card-visual.mint { background: linear-gradient(180deg, #c8efe0, #f0f5d9); }
+.tutorial-card-visual.cream { background: linear-gradient(180deg, #fbf0d7, #f7f8ea); }
+.tutorial-card-visual.sky { background: linear-gradient(180deg, #dbe6ff, #eef2ff); }
+
+.mini-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.mini-tile {
+  display: block;
+  height: 34px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #66a9df, #8ecdf0);
+  box-shadow: inset 0 -6px 0 rgba(255, 255, 255, 0.35);
+}
+
+.mini-program {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mini-chip {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.tutorial-learn {
+  padding: 28px 32px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.tutorial-learn h2 {
+  margin: 0 0 12px;
+  font-size: 34px;
+  color: #5ba9d6;
+}
+
+.tutorial-learn ul {
+  margin: 0;
+  padding-left: 22px;
+  columns: 2;
+  line-height: 1.8;
+}
+
+.select-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.select-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-chip {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #edf5cf;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.level-card {
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  text-align: left;
+}
+
+.level-card.current {
+  outline: 3px solid #8dc9ef;
+}
+
+.level-card.done {
+  background: linear-gradient(180deg, #e5f6de, #ffffff);
+}
+
+.level-card-head,
+.level-card-foot,
+.program-header,
+.board-topbar,
+.select-header,
+.brief-meta,
+.status-float,
+.program-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.level-card-index {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #66c7dc;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.level-card-tag {
+  color: #5e7f98;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brief-shell {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) 1fr;
+  gap: 24px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  position: relative;
+}
+
+.back-chip {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+}
+
+.brief-copy {
+  padding: 60px 10px 10px 10px;
+}
+
+.brief-meta {
+  margin: 24px 0;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #f7f8ea;
+}
+
+.brief-meta span {
+  display: block;
+  margin-bottom: 6px;
+  color: #6b7c88;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.brief-tips {
+  display: grid;
+  gap: 14px;
+}
+
+.brief-tips article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #eef6fb;
+}
+
+.brief-tips h2,
+.tutorial-card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.brief-preview {
+  display: grid;
+  place-items: center;
+}
+
+.brief-preview-board {
+  width: 100%;
+  padding: 20px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #f9efdc, #fdfbf3);
+}
+
+.preview-badge {
+  width: fit-content;
+  margin: 0 auto 14px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: #6d8190;
+  font-weight: 800;
+}
+
+.play-shell {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) 320px;
+  gap: 18px;
+}
+
+.hud-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rail-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #90d4e8, #5db4d2);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.rail-btn.muted {
+  background: rgba(255, 255, 255, 0.86);
+  color: #5f7e91;
 }
 
 .board-stage {
   position: relative;
-  flex: 1;
   overflow: hidden;
-  border-radius: 14px;
-  background: #dce3ea;
+  padding: 22px;
+  background: linear-gradient(180deg, #eff5ec, #dff0e7 58%, #e3ebf9);
 }
 
-.board-grid {
+.board-topbar {
+  margin-bottom: 14px;
+}
+
+.board-topbar-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.run-btn,
+.reset-btn {
+  width: 74px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.run-btn img,
+.reset-btn img,
+.command-btn img,
+.program-slot.filled img {
+  width: 28px;
+  height: 28px;
+}
+
+.reset-btn {
+  background: linear-gradient(180deg, #f9f9f9, #e4e6eb);
+}
+
+.scene-frame {
+  position: relative;
+  min-height: 560px;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.72), transparent 38%),
+    linear-gradient(180deg, rgba(203, 239, 221, 0.8), rgba(242, 248, 250, 0.92));
+}
+
+.preview-frame {
+  min-height: 440px;
+}
+
+.scene-frame::before {
+  content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(30deg, rgba(153, 168, 183, 0.18) 12%, transparent 12.5%, transparent 87%, rgba(153, 168, 183, 0.18) 87.5%, rgba(153, 168, 183, 0.18)),
-    linear-gradient(150deg, rgba(153, 168, 183, 0.18) 12%, transparent 12.5%, transparent 87%, rgba(153, 168, 183, 0.18) 87.5%, rgba(153, 168, 183, 0.18));
+  background-image:
+    linear-gradient(30deg, rgba(112, 154, 160, 0.12) 12%, transparent 12.5%, transparent 87%, rgba(112, 154, 160, 0.12) 87.5%, rgba(112, 154, 160, 0.12)),
+    linear-gradient(150deg, rgba(112, 154, 160, 0.12) 12%, transparent 12.5%, transparent 87%, rgba(112, 154, 160, 0.12) 87.5%, rgba(112, 154, 160, 0.12));
   background-size: 58px 102px;
 }
 
-.status-cluster {
+.status-float {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  top: 18px;
+  right: 18px;
+  z-index: 4;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
 }
 
-.status-card {
-  min-width: 92px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(93, 87, 84, 0.9);
+.status-float strong {
+  font-size: 22px;
 }
 
-.status-card span {
-  display: block;
-  font-size: 11px;
-  color: #ddd0c6;
-  text-transform: uppercase;
+.status-float em {
+  font-style: normal;
+  font-weight: 700;
+  color: #657686;
 }
 
-.status-card.success {
-  background: rgba(86, 132, 88, 0.92);
+.status-float em.success {
+  color: #42a351;
 }
 
-.status-card.danger {
-  background: rgba(135, 83, 75, 0.92);
-}
-
-.scene-shell {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 20px 20px;
+.status-float em.danger {
+  color: #d6605c;
 }
 
 .scene-viewport {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 54%;
   transform-origin: center center;
 }
 
 .iso-scene {
   position: relative;
+  transform: translate(-50%, -50%);
 }
 
 .platform {
@@ -818,7 +1339,7 @@ initializeLevelState()
   width: 64px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(45, 56, 69, 0.15);
+  background: rgba(45, 56, 69, 0.14);
   filter: blur(8px);
 }
 
@@ -834,9 +1355,9 @@ initializeLevelState()
   width: 96px;
   height: 48px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background: #565e68;
-  border: 2px solid #2e3438;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #eef2f5, #cfd7de);
+  border: 3px solid #535e69;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.48);
 }
 
 .platform-left {
@@ -845,8 +1366,9 @@ initializeLevelState()
   width: 48px;
   height: var(--stack-height);
   clip-path: polygon(100% 0, 100% 100%, 0 78%, 0 24%);
-  background: #c0cad7;
-  border-left: 2px solid #2e3438;
+  background: linear-gradient(180deg, #cfd5dd, #a9b3c2);
+  border-left: 3px solid #535e69;
+  border-bottom: 3px solid #535e69;
 }
 
 .platform-right {
@@ -855,134 +1377,141 @@ initializeLevelState()
   width: 48px;
   height: var(--stack-height);
   clip-path: polygon(0 0, 100% 24%, 100% 78%, 0 100%);
-  background: #aab3bf;
-  border-right: 2px solid #2e3438;
+  background: linear-gradient(180deg, #bcc7d2, #96a2b2);
+  border-right: 3px solid #535e69;
+  border-bottom: 3px solid #535e69;
 }
 
 .platform.target .platform-top {
-  background: #1e4d6f;
+  background: linear-gradient(180deg, #86b8eb, #578ed1);
 }
 
 .platform.lit .platform-top {
-  background: #ffef00;
+  background: linear-gradient(180deg, #fbf18f, #f1cf31);
+}
+
+.target-ring,
+.target-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
 }
 
 .target-ring {
+  width: 28px;
+  height: 28px;
+  border: 5px solid rgba(232, 245, 255, 0.92);
+}
+
+.target-core {
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 252, 165, 0.96);
+  box-shadow: 0 0 18px rgba(255, 235, 59, 0.9);
+}
+
+.robot-layer {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 34px;
-  height: 20px;
-  transform: translate(-50%, -50%);
-  border-radius: 8px;
-  border: 4px solid rgba(75, 144, 255, 0.8);
-  background: transparent;
+  z-index: 5;
+  width: 42px;
+  height: 62px;
+  margin-left: -21px;
+  margin-top: -48px;
+  transition: left 240ms ease, top 240ms ease, transform 240ms ease;
 }
 
-.platform.lit .target-ring {
-  border-color: rgba(255, 247, 107, 0.92);
+.robot-body {
+  position: relative;
+  width: 42px;
+  height: 50px;
+  border-radius: 18px 18px 16px 16px;
+  background: linear-gradient(180deg, #efeaf7 0%, #cfd2ec 100%);
+  border: 3px solid #6f6f84;
+  box-shadow: 0 8px 16px rgba(88, 90, 121, 0.18);
 }
 
-.start-badge {
-  position: absolute;
-  left: 16px;
-  top: 14px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.88);
-  color: #4a5961;
-  font-weight: 800;
-}
-
-.bot {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 48px;
-  height: 48px;
-  border-radius: 50% 50% 46% 46%;
-  background: linear-gradient(180deg, #fefefe 0%, #d5d9dd 100%);
-  border: 4px solid #20262c;
-  transform: translate(-50%, -74%);
-  box-shadow: 10px 0 0 rgba(255, 255, 255, 0.12);
-}
-
-.bot-eye,
-.bot-mark {
+.robot-eye,
+.robot-antenna,
+.robot-foot {
   position: absolute;
 }
 
-.bot-eye {
+.robot-eye {
   top: 16px;
+  width: 8px;
+  height: 12px;
+  border-radius: 999px;
+  background: #8cddff;
+  box-shadow: 0 0 10px rgba(140, 221, 255, 0.88);
+}
+
+.robot-eye.left { left: 10px; }
+.robot-eye.right { right: 10px; }
+
+.robot-antenna {
+  left: 50%;
+  top: -13px;
+  width: 4px;
+  height: 16px;
+  background: #70718e;
+  transform: translateX(-50%);
+}
+
+.robot-antenna::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 999px;
+  background: #d8a8ff;
+  border: 2px solid #70718e;
+}
+
+.robot-foot {
+  bottom: -10px;
   width: 8px;
   height: 14px;
   border-radius: 999px;
-  background: #19d5ff;
+  background: #727790;
 }
 
-.bot-eye.left { left: 12px; }
-.bot-eye.right { right: 12px; }
+.robot-foot.left { left: 10px; }
+.robot-foot.right { right: 10px; }
 
-.bot-mark {
-  left: 50%;
-  top: -7px;
-  width: 8px;
-  height: 16px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: #ff552f;
-}
+.robot-layer.dir-right { transform: rotate(90deg); }
+.robot-layer.dir-backward { transform: rotate(180deg); }
+.robot-layer.dir-left { transform: rotate(-90deg); }
 
-.bot.dir-right { transform: translate(-50%, -74%) rotate(90deg); }
-.bot.dir-backward { transform: translate(-50%, -74%) rotate(180deg); }
-.bot.dir-left { transform: translate(-50%, -74%) rotate(-90deg); }
-
-.control-bar {
-  margin-top: 10px;
+.command-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #6a6462;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
 }
 
-.control-btn,
-.next-btn,
-.ghost-btn,
-.proc-tabs button,
-.instruction-btn,
-.program-slot.filled {
-  border: 0;
-  cursor: pointer;
-}
-
-.control-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #56514f;
-  color: #fff;
-}
-
-.control-btn.icon {
+.command-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #d0d9e2, #aeb8c6);
   display: grid;
   place-items: center;
 }
 
-.control-sprite {
-  width: 24px;
-  height: 24px;
-}
-
-.control-btn:disabled,
-.instruction-btn:disabled,
-.ghost-btn:disabled,
-.proc-tabs button:disabled,
+.command-btn:disabled,
+.run-btn:disabled,
+.reset-btn:disabled,
+.tool-btn:disabled,
+.tab-btn:disabled,
 .program-slot.filled:disabled {
   opacity: 0.42;
   cursor: not-allowed;
@@ -992,219 +1521,173 @@ initializeLevelState()
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 6px;
-  color: #fff;
-}
-
-.speed-slider {
-  width: 90px;
-  accent-color: #e7df9c;
-}
-
-.next-btn {
   margin-left: auto;
-  padding: 9px 14px;
-  border-radius: 10px;
-  background: #e7df9c;
-  color: #3c434b;
+  font-weight: 700;
+}
+
+.speed-box input {
+  width: 110px;
+  accent-color: #60c883;
+}
+
+.program-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.program-panel {
+  padding: 16px;
+}
+
+.program-panel.main-tone {
+  background: linear-gradient(180deg, #f9eea3, #f2e37d);
+}
+
+.program-panel.proc-tone {
+  background: linear-gradient(180deg, #d5d7dd, #bcc2cb);
+}
+
+.program-panel.disabled {
+  opacity: 0.55;
+}
+
+.program-header span {
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.tab-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
   font-weight: 800;
-}
-
-.sidebar-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.panel-card {
-  padding: 12px;
-}
-
-.panel-title {
-  margin-bottom: 8px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.brief-copy {
-  margin: 0 0 12px;
-  color: #f1e7de;
-  line-height: 1.5;
-}
-
-.brief-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 8px;
-  margin-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.instruction-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.instruction-btn {
-  min-height: 92px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.instruction-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #e7df9c;
-  box-shadow: inset 0 0 0 2px #56606b;
-  display: grid;
-  place-items: center;
-}
-
-.instruction-sprite {
-  width: 24px;
-  height: 24px;
-}
-
-.instruction-label {
-  font-weight: 700;
-}
-
-.instruction-btn small {
-  color: #ddd3cb;
-  line-height: 1.35;
-}
-
-.program-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.program-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-}
-
-.proc-tabs {
-  display: flex;
-  gap: 6px;
-}
-
-.proc-tabs button,
-.ghost-btn {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #5a5552;
-  color: #fff;
-}
-
-.proc-tabs button.active {
-  background: #e7df9c;
-  color: #374147;
-}
-
-.program-block {
-  margin-top: 14px;
-}
-
-.program-label {
-  margin-bottom: 8px;
-  font-weight: 700;
-  color: #ece1d7;
 }
 
 .program-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.program-grid.big {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
 }
 
 .program-slot {
-  min-height: 64px;
-  border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
+  min-height: 62px;
+  border-radius: 14px;
+  border: 2px dashed rgba(58, 71, 84, 0.3);
+  background: rgba(255, 255, 255, 0.26);
 }
 
 .program-slot.filled {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.86);
   border-style: solid;
-  background: #5f6975;
-  color: #fff;
 }
 
 .program-slot.filled.active {
-  outline: 2px solid #e7df9c;
+  outline: 3px solid #4ec96b;
 }
 
-.slot-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #e7df9c;
-  box-shadow: inset 0 0 0 2px #56606b;
+.program-tools {
+  padding: 14px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  flex: 1 1 44%;
+}
+
+.finish-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
   display: grid;
   place-items: center;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
 }
 
-.program-sprite {
-  width: 18px;
-  height: 18px;
+.finish-card {
+  width: min(520px, calc(100% - 40px));
+  padding: 30px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(86, 118, 145, 0.26);
 }
 
-.slot-label {
-  font-size: 10px;
-  font-weight: 700;
+.finish-card h2 {
+  margin: 0;
+  font-size: 34px;
 }
 
-.program-actions {
-  margin-top: auto;
-  padding-top: 16px;
-  display: flex;
-  gap: 8px;
-}
-
-@media (max-width: 1080px) {
-  .lightbot-shell {
+@media (max-width: 1180px) {
+  .tutorial-hero,
+  .brief-shell,
+  .play-shell {
     grid-template-columns: 1fr;
+  }
+
+  .hud-rail {
+    flex-direction: row;
+  }
+
+  .level-grid,
+  .hero-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 760px) {
-  .board-header,
-  .program-head {
+  .lightbot-page {
+    padding: 8px;
+  }
+
+  .hero-copy,
+  .select-header,
+  .brief-shell,
+  .board-stage,
+  .program-panel,
+  .program-tools,
+  .tutorial-learn {
+    border-radius: 18px;
+  }
+
+  .hero-gallery,
+  .level-grid,
+  .program-grid,
+  .program-grid.big {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .select-header,
+  .board-topbar,
+  .status-float,
+  .brief-meta,
+  .program-tools {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .instruction-grid,
-  .program-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .scene-frame {
+    min-height: 420px;
   }
 
-  .status-cluster {
-    position: static;
-    padding: 12px 12px 0;
-    justify-content: flex-start;
+  .tutorial-learn ul {
+    columns: 1;
   }
 
-  .scene-shell {
-    padding-top: 18px;
+  .speed-box {
+    width: 100%;
+    margin-left: 0;
   }
 }
 </style>
