@@ -132,7 +132,7 @@
                     >
                       <div class="block-left"></div>
                       <div class="block-right"></div>
-                      <div class="block-top" :class="{ target: block.isTarget, lit: block.isLit }">
+                      <div class="block-top" :class="{ start: block.isStart, target: block.isTarget, lit: block.isLit }">
                         <span v-if="block.isTarget" class="target-ring"></span>
                         <span v-if="block.isLit" class="target-core"></span>
                       </div>
@@ -202,7 +202,7 @@
                   >
                     <div class="block-left"></div>
                     <div class="block-right"></div>
-                    <div class="block-top" :class="{ target: block.isTarget, lit: block.isLit }">
+                    <div class="block-top" :class="{ start: block.isStart, target: block.isTarget, lit: block.isLit }">
                       <span v-if="block.isTarget" class="target-ring"></span>
                       <span v-if="block.isLit" class="target-core"></span>
                     </div>
@@ -369,20 +369,20 @@ const levels = [
     title: 'Level 1: First Light',
     skill: 'Sequencing',
     description: '最基础的关卡。先学会沿着平地前进并打开灯。',
-    goal: '沿着竖直平台前进，点亮尽头的一盏灯。',
-    mainLimit: 4,
+    goal: '从起始蓝色方块出发，走到右上角点亮目标格。',
+    mainLimit: 6,
     procLimits: {},
     tips: [
       { title: 'Walk', copy: '只有前方存在同高度平台时，Walk 才会生效。' },
       { title: 'Light', copy: '机器人站在目标格上时，Light 才会切换灯的状态。' }
     ],
     board: [
-      [makeTile(1, true)],
-      [makeTile()],
-      [makeTile()]
+      [makeTile(2), makeTile(2), makeTile(2, true)],
+      [makeTile(), makeTile(), makeTile()],
+      [makeTile(), makeTile(), null]
     ],
-    start: { x: 0, y: 2, dir: 'left' },
-    demo: { main: ['walk', 'walk', 'light'], p1: [] }
+    start: { x: 0, y: 0, dir: 'forward' },
+    demo: { main: ['right', 'walk', 'left', 'jump', 'walk', 'light'], p1: [] }
   },
   {
     id: 'level-2',
@@ -580,6 +580,7 @@ const sceneStacks = computed(() => sceneMetrics.value.cells.map((item) => {
       const isTopBlock = layerIndex === item.cell.h - 1
       return {
         blockKey: `${item.key}-${layerIndex}`,
+        isStart: isTopBlock && currentLevel.value.start.x === item.x && currentLevel.value.start.y === item.y,
         isTarget: isTopBlock && isTarget,
         isLit: isTopBlock && isLit,
         style: {
@@ -1446,6 +1447,12 @@ resetLevel(true)
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 38%),
     linear-gradient(180deg, #85b9ee, #5d94d6);
+}
+
+.block-top.start:not(.target):not(.lit) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(180deg, #5ea8de, #3f86c6);
 }
 
 .block-top.lit {
