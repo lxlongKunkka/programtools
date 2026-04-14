@@ -9,6 +9,16 @@ const CUSTOM_CHAPTER_ID = 'custom-shared'
 const CUSTOM_CHAPTER_TITLE = '自定义关卡'
 const CUSTOM_CHAPTER_ORDER = 999
 
+function isAdminUser(user) {
+  return Boolean(user && (user.role === 'admin' || user.priv === -1))
+}
+
+function isCustomLevelOwner(doc, user) {
+  if (!doc?.isCustom || !user) return false
+  if (doc.createdBy == null || user.id == null) return false
+  return Number(doc.createdBy) === Number(user.id)
+}
+
 function normalizeTip(tip) {
   return {
     title: String(tip?.title || '').trim().slice(0, 80),
@@ -161,6 +171,20 @@ router.put('/levels/:id', authenticateToken, async (req, res) => {
   try {
     const requestedId = String(req.params.id || '').trim()
     const existingDoc = await LightbotLevelOverride.findOne({ levelId: requestedId }).lean()
+    const originalLevel = LIGHTBOT_LEVELS.find((item) => item.id === requestedId)
+
+    if (existingDoc?.isCustom) {
+      if (!isCustomLevelOwner(existingDoc, req.user)) {
+        return res.status(403).json({ success: false, error: '只有创建者本人可以修改这个自定义关卡' })
+      }
+    } else if (originalLevel) {
+      if (!isAdminUser(req.user)) {
+        return res.status(403).json({ success: false, error: '只有管理员可以修改默认关卡' })
+      }
+    } else {
+      return res.status(400).json({ success: false, error: '关卡不存在' })
+    }
+
     const level = normalizeLightbotLevel(
       { ...(req.body?.level || {}), id: requestedId },
       { existingDoc, allowCustom: Boolean(existingDoc?.isCustom) }
@@ -237,6 +261,14 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
     const existingDoc = await LightbotLevelOverride.findOne({ levelId: requestedId }).lean()
     if (!originalLevel && !existingDoc?.isCustom) {
       return res.status(400).json({ success: false, error: '关卡不存在' })
+    }
+
+    if (existingDoc?.isCustom) {
+      if (!isCustomLevelOwner(existingDoc, req.user)) {
+        return res.status(403).json({ success: false, error: '只有创建者本人可以删除这个自定义关卡' })
+      }
+    } else if (!isAdminUser(req.user)) {
+      return res.status(403).json({ success: false, error: '只有管理员可以删除默认关卡' })
     }
 
     const sourceLevel = existingDoc?.isCustom

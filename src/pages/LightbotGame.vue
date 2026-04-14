@@ -40,11 +40,12 @@
               </div>
               <strong>{{ level.title }}</strong>
               <p>{{ level.goal }}</p>
+              <p class="level-card-author">{{ getLevelAuthorLabel(level) }}</p>
               <div class="level-card-foot">
                 <span>Main {{ level.mainLimit }}</span>
                 <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
                 <span v-else>No proc</span>
-                <button class="level-brief-btn" @click.stop="openEditor(level)">编辑</button>
+                <button class="level-brief-btn" :disabled="!canEditLevel(level)" :title="getLevelEditHint(level)" @click.stop="openEditor(level)">编辑</button>
                 <button class="level-brief-btn" @click.stop="openLevelBrief(levelGlobalIndex(group, index))">简介</button>
               </div>
             </button>
@@ -75,6 +76,10 @@
               <span>Skill</span>
               <strong>{{ currentLevel.skill }}</strong>
             </div>
+            <div>
+              <span>Author</span>
+              <strong>{{ getLevelAuthorName(currentLevel) }}</strong>
+            </div>
           </div>
 
           <div class="brief-tips">
@@ -87,7 +92,7 @@
           <div class="hero-actions">
             <button class="hero-btn primary" @click="startLevel">Enter Puzzle</button>
             <button class="hero-btn" :disabled="!hasCurrentDemo" @click="loadDemoAndStart">Load Demo</button>
-            <button class="hero-btn" @click="openEditor(currentLevel)">编辑此关</button>
+            <button class="hero-btn" :disabled="!canEditLevel(currentLevel)" :title="getLevelEditHint(currentLevel)" @click="openEditor(currentLevel)">编辑此关</button>
           </div>
         </div>
 
@@ -232,6 +237,7 @@
             <div class="board-topbar-copy">
               <p class="screen-kicker">{{ currentLevel.skill }}</p>
               <h1>{{ currentLevel.title }}</h1>
+              <p class="board-author">{{ getLevelAuthorLabel(currentLevel) }}</p>
             </div>
             <div class="board-topbar-actions">
               <button class="run-btn" :disabled="isRunning || mainProcedure.length === 0" @click="runCode">
@@ -462,6 +468,19 @@ function cloneLevelDefinition(level) {
   }
 }
 
+function isCustomLevel(level) {
+  return Boolean(level?.isCustom)
+}
+
+function getLevelAuthorName(level) {
+  if (!level) return '系统默认'
+  return String(level.createdByName || level.updatedByName || (isCustomLevel(level) ? '未知作者' : '系统默认')).trim() || '系统默认'
+}
+
+function getLevelAuthorLabel(level) {
+  return `作者：${getLevelAuthorName(level)}`
+}
+
 function findOccupiedBounds(board) {
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
@@ -558,6 +577,9 @@ function createDefaultEditorDraft() {
   board[0][0] = makeTile(1)
   board[0][1] = makeTile(1, true)
   return {
+    sourceLevelId: null,
+    sourceIsCustom: false,
+    sourceCreatedBy: null,
     title: 'My Level',
     skill: 'Custom',
     description: '学员自制关卡。',
@@ -572,6 +594,8 @@ function createDefaultEditorDraft() {
 function serializeEditorDraft(draft) {
   return {
     sourceLevelId: draft.sourceLevelId || null,
+    sourceIsCustom: Boolean(draft.sourceIsCustom),
+    sourceCreatedBy: Number.isFinite(Number(draft.sourceCreatedBy)) ? Number(draft.sourceCreatedBy) : null,
     chapterId: draft.chapterId || null,
     chapterTitle: draft.chapterTitle || null,
     chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : null,
@@ -600,6 +624,10 @@ function loadSavedEditorDraft() {
     const normalized = normalizeEditorState(parsed.board, parsed.start || { x: 0, y: 0, dir: 'forward' })
     return {
       sourceLevelId: typeof parsed.sourceLevelId === 'string' ? parsed.sourceLevelId : null,
+      sourceIsCustom: typeof parsed.sourceLevelId === 'string'
+        ? (typeof parsed.sourceIsCustom === 'boolean' ? parsed.sourceIsCustom : !VALID_LEVEL_IDS.has(parsed.sourceLevelId))
+        : false,
+      sourceCreatedBy: Number.isFinite(Number(parsed.sourceCreatedBy)) ? Number(parsed.sourceCreatedBy) : null,
       chapterId: typeof parsed.chapterId === 'string' ? parsed.chapterId : null,
       chapterTitle: typeof parsed.chapterTitle === 'string' ? parsed.chapterTitle : null,
       chapterOrder: Number.isFinite(parsed.chapterOrder) ? parsed.chapterOrder : null,
@@ -627,6 +655,8 @@ function createEditorDraftFromLevel(level) {
 
   return {
     sourceLevelId: level.id,
+    sourceIsCustom: Boolean(level.isCustom),
+    sourceCreatedBy: Number.isFinite(Number(level.createdBy)) ? Number(level.createdBy) : null,
     chapterId: level.chapterId || null,
     chapterTitle: level.chapterTitle || null,
     chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : null,
@@ -824,6 +854,7 @@ const activeCustomLevel = ref(null)
 const editorTool = ref('platform')
 const editorHeight = ref(1)
 const editorReturnScreen = ref('select')
+const currentUser = ref(getStoredLightbotUser())
 const editorDraft = reactive(createDefaultEditorDraft())
 const editorBaseDraft = ref(createDefaultEditorDraft())
 const editorVerification = ref(null)
@@ -836,6 +867,12 @@ let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
+const currentUserId = computed(() => {
+  const raw = currentUser.value?.id ?? currentUser.value?._id
+  const numeric = Number(raw)
+  return Number.isFinite(numeric) ? numeric : null
+})
+const isAdmin = computed(() => Boolean(currentUser.value && (currentUser.value.role === 'admin' || currentUser.value.priv === -1)))
 const hasCurrentDemo = computed(() => {
   const demo = currentLevel.value.demo || { main: [], p1: [] }
   return (demo.main?.length || 0) + (demo.p1?.length || 0) > 0
@@ -846,21 +883,34 @@ const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
-const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId))
-const editorDeleteLabel = computed(() => '删除关卡')
+const editorCanModifySource = computed(() => {
+  if (!editorDraft.sourceLevelId) return true
+  if (editorDraft.sourceIsCustom) {
+    if (editorDraft.sourceCreatedBy == null || currentUserId.value == null) return true
+    return Number(editorDraft.sourceCreatedBy) === Number(currentUserId.value)
+  }
+  return isAdmin.value
+})
+const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId) && editorCanModifySource.value)
+const editorDeleteLabel = computed(() => (editorDraft.sourceIsCustom ? '删除自定义关卡' : '删除默认关卡'))
 const canSaveEditorLevel = computed(() => {
-  return Boolean(editorVerification.value?.solvable) && editorVerification.value.signature === editorSignature.value
+  return editorCanModifySource.value && Boolean(editorVerification.value?.solvable) && editorVerification.value.signature === editorSignature.value
 })
 const editorPublishToneClass = computed(() => {
+  if (!editorCanModifySource.value) return 'danger'
   if (!editorVerification.value) return 'pending'
   return editorVerification.value.solvable ? 'success' : 'danger'
 })
 const editorPublishTitle = computed(() => {
+  if (!editorCanModifySource.value) return '无权修改此关卡'
   if (!editorVerification.value) return '保存前验证'
   if (!editorDraft.sourceLevelId) return editorVerification.value.solvable ? '可新建关卡' : '当前是新建草稿'
   return editorVerification.value.solvable ? '可保存到游戏' : '验证未通过'
 })
 const editorPublishMessage = computed(() => {
+  if (!editorCanModifySource.value) {
+    return editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人修改。' : '默认关卡只能由管理员修改。'
+  }
   if (!editorVerification.value) {
     return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
   }
@@ -872,6 +922,25 @@ const editorPublishMessage = computed(() => {
   }
   return `${editorVerification.value.message}。点击“保存到游戏”后，数据库中的共享关卡会被更新，所有人都会看到最新版本。`
 })
+
+function isOwnedCustomLevel(level) {
+  if (!isCustomLevel(level)) return false
+  if (level.createdBy == null || currentUserId.value == null) return false
+  return Number(level.createdBy) === Number(currentUserId.value)
+}
+
+function canEditLevel(level) {
+  if (!level) return true
+  return isCustomLevel(level) ? isOwnedCustomLevel(level) : isAdmin.value
+}
+
+function getLevelEditHint(level) {
+  if (!level) return '新建自定义关卡'
+  if (isCustomLevel(level)) {
+    return canEditLevel(level) ? '编辑你创建的自定义关卡' : '这个自定义关卡只能由创建者本人编辑'
+  }
+  return isAdmin.value ? '编辑默认关卡' : '默认关卡只能由管理员编辑'
+}
 
 const boardPlatforms = computed(() => {
   const platforms = []
@@ -1009,6 +1078,11 @@ function resetEditorDraft() {
 }
 
 function openEditor(level = null) {
+  if (level && !canEditLevel(level)) {
+    setStatus(getLevelEditHint(level), 'danger')
+    return
+  }
+
   activeCustomLevel.value = null
   editorReturnScreen.value = screen.value === 'brief' ? 'brief' : 'select'
   const nextDraft = level ? createEditorDraftFromLevel(level) : (loadSavedEditorDraft() || createDefaultEditorDraft())
@@ -1043,6 +1117,11 @@ function replaceEditorDraft(nextDraft) {
 }
 
 async function deleteEditorData() {
+  if (!editorCanModifySource.value) {
+    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人删除' : '默认关卡只能由管理员删除', 'danger')
+    return
+  }
+
   if (!editorDraft.sourceLevelId) {
     setStatus('当前草稿还不是正式关卡，无法删除关卡', 'danger')
     return
@@ -1177,6 +1256,11 @@ function verifyEditorLevelForPublish() {
 }
 
 async function saveEditorLevelToGame() {
+  if (!editorCanModifySource.value) {
+    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人修改' : '默认关卡只能由管理员修改', 'danger')
+    return
+  }
+
   if (!canSaveEditorLevel.value) {
     setStatus('Save blocked: verify current draft first', 'danger')
     return
@@ -2293,6 +2377,14 @@ resetLevel(true)
   margin: 8px 0 0;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.level-card-author,
+.board-author {
+  margin: 8px 0 0;
+  color: #6d7f8d;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .level-card.current {
