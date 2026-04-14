@@ -229,7 +229,7 @@
               <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
               <button class="pill-btn" @click="verifyEditorLevelForPublish">验证通关</button>
               <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
-              <button class="hero-btn" :disabled="!canPublishEditorLevel" @click="publishEditorLevel">发布关卡</button>
+              <button class="hero-btn" :disabled="!canSaveEditorLevel" @click="saveEditorLevelToGame">保存到游戏</button>
             </div>
 
             <div class="editor-publish-card" :class="editorPublishToneClass">
@@ -397,6 +397,7 @@ import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const EDITOR_DRAFT_STORAGE_KEY = 'programtools-lightbot-editor-draft-v1'
+const LEVEL_OVERRIDE_STORAGE_KEY = 'programtools-lightbot-level-overrides-v1'
 const EDITOR_GRID_SIZE = 6
 const TILE_WIDTH = 96
 const TILE_HEIGHT = 48
@@ -446,19 +447,26 @@ const tutorialCards = [
 
 const learningPoints = ['Sequencing', 'Decomposition', 'Procedures', 'Recursive loops', 'Spatial reasoning']
 
-const levels = LIGHTBOT_LEVELS
-const levelGroups = LIGHTBOT_LEVEL_GROUPS.map((group, order) => ({
-  ...group,
-  order,
-  startIndex: levels.findIndex((level) => level.id === group.levels[0]?.id)
-}))
-
 function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
 }
 
 function cloneBoard(board) {
   return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
+}
+
+function cloneLevelDefinition(level) {
+  return {
+    ...level,
+    procLimits: { ...(level.procLimits || {}) },
+    tips: (level.tips || []).map((tip) => ({ ...tip })),
+    board: cloneBoard(level.board),
+    start: { ...level.start },
+    demo: {
+      main: [...(level.demo?.main || [])],
+      p1: [...(level.demo?.p1 || [])]
+    }
+  }
 }
 
 function findOccupiedBounds(board) {
@@ -570,6 +578,14 @@ function createDefaultEditorDraft() {
 
 function serializeEditorDraft(draft) {
   return {
+    sourceLevelId: draft.sourceLevelId || null,
+    chapterId: draft.chapterId || null,
+    chapterTitle: draft.chapterTitle || null,
+    chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : null,
+    demo: {
+      main: [...(draft.demo?.main || [])],
+      p1: [...(draft.demo?.p1 || [])]
+    },
     title: draft.title,
     skill: draft.skill,
     description: draft.description,
@@ -590,6 +606,14 @@ function loadSavedEditorDraft() {
 
     const normalized = normalizeEditorState(parsed.board, parsed.start || { x: 0, y: 0, dir: 'forward' })
     return {
+      sourceLevelId: typeof parsed.sourceLevelId === 'string' ? parsed.sourceLevelId : null,
+      chapterId: typeof parsed.chapterId === 'string' ? parsed.chapterId : null,
+      chapterTitle: typeof parsed.chapterTitle === 'string' ? parsed.chapterTitle : null,
+      chapterOrder: Number.isFinite(parsed.chapterOrder) ? parsed.chapterOrder : null,
+      demo: {
+        main: [...(parsed.demo?.main || [])],
+        p1: [...(parsed.demo?.p1 || [])]
+      },
       title: typeof parsed.title === 'string' ? parsed.title : 'My Level',
       skill: typeof parsed.skill === 'string' ? parsed.skill : 'Custom',
       description: typeof parsed.description === 'string' ? parsed.description : '学员自制关卡。',
@@ -609,6 +633,14 @@ function createEditorDraftFromLevel(level) {
   const start = normalized.remapPoint(level.start)
 
   return {
+    sourceLevelId: level.id,
+    chapterId: level.chapterId || null,
+    chapterTitle: level.chapterTitle || null,
+    chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : null,
+    demo: {
+      main: [...(level.demo?.main || [])],
+      p1: [...(level.demo?.p1 || [])]
+    },
     title: level.title,
     skill: level.skill,
     description: level.description,
@@ -633,7 +665,10 @@ function applyDraftToEditor(draft) {
 
 function buildCustomLevel(draft) {
   return {
-    id: 'custom-level',
+    id: draft.sourceLevelId || 'custom-level',
+    chapterId: draft.chapterId || 'custom',
+    chapterTitle: draft.chapterTitle || '自定义',
+    chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : -1,
     title: draft.title.trim() || 'My Level',
     skill: draft.skill.trim() || 'Custom',
     description: draft.description.trim() || '学员自制关卡。',
@@ -646,9 +681,44 @@ function buildCustomLevel(draft) {
     ],
     board: cloneBoard(draft.board),
     start: { ...draft.start },
-    demo: { main: [], p1: [] }
+    demo: {
+      main: [...(draft.demo?.main || [])],
+      p1: [...(draft.demo?.p1 || [])]
+    }
   }
 }
+
+function loadLevelOverrides() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LEVEL_OVERRIDE_STORAGE_KEY) || '{}')
+    if (!parsed || typeof parsed !== 'object') return {}
+
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter(([, value]) => value && typeof value === 'object' && Array.isArray(value.board))
+        .map(([levelId, value]) => [levelId, cloneLevelDefinition(value)])
+    )
+  } catch {
+    return {}
+  }
+}
+
+function persistLevelOverrides(overrides) {
+  localStorage.setItem(LEVEL_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides))
+}
+
+const levelOverrides = ref(loadLevelOverrides())
+const levels = computed(() => LIGHTBOT_LEVELS.map((level) => cloneLevelDefinition(levelOverrides.value[level.id] || level)))
+const levelGroups = computed(() => {
+  const levelById = new Map(levels.value.map((level) => [level.id, level]))
+
+  return LIGHTBOT_LEVEL_GROUPS.map((group, order) => ({
+    ...group,
+    order,
+    levels: group.levels.map((level) => levelById.get(level.id) || cloneLevelDefinition(level)),
+    startIndex: levels.value.findIndex((level) => level.id === group.levels[0]?.id)
+  }))
+})
 
 function platformKey(x, y) {
   return `${x},${y}`
@@ -671,7 +741,7 @@ function loadProgress() {
 
 function findRecommendedLevelIndex() {
   const completedIds = loadProgress()
-  const nextIndex = levels.findIndex((level) => !completedIds.includes(level.id))
+  const nextIndex = levels.value.findIndex((level) => !completedIds.includes(level.id))
   return nextIndex >= 0 ? nextIndex : 0
 }
 
@@ -690,7 +760,7 @@ const mainProcedure = ref([])
 const procedures = ref({ p1: [] })
 const completedLevelIds = ref(loadProgress())
 const litKeys = ref([])
-const bot = ref(cloneBot(levels[0].start))
+const bot = ref(cloneBot(levels.value[0].start))
 const isRunning = ref(false)
 const runningProcedureKey = ref('')
 const runningOperationIndex = ref(-1)
@@ -715,7 +785,7 @@ let briefSceneController = null
 let playSceneController = null
 let editorSceneController = null
 
-const currentLevel = computed(() => activeCustomLevel.value || levels[selectedLevelIndex.value])
+const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value])
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
 const hasCurrentDemo = computed(() => {
   const demo = currentLevel.value.demo || { main: [], p1: [] }
@@ -727,23 +797,29 @@ const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
-const canPublishEditorLevel = computed(() => editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value)
+const canSaveEditorLevel = computed(() => {
+  return Boolean(editorDraft.sourceLevelId) && editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value
+})
 const editorPublishToneClass = computed(() => {
   if (!editorVerification.value) return 'pending'
   return editorVerification.value.solvable ? 'success' : 'danger'
 })
 const editorPublishTitle = computed(() => {
-  if (!editorVerification.value) return '发布前验证'
-  return editorVerification.value.solvable ? '已验证可通关' : '验证未通过'
+  if (!editorVerification.value) return '保存前验证'
+  if (!editorDraft.sourceLevelId) return '当前是新建草稿'
+  return editorVerification.value.solvable ? '可保存到游戏' : '验证未通过'
 })
 const editorPublishMessage = computed(() => {
   if (!editorVerification.value) {
-    return '发布前需要先验证；发布动作只会导出 JSON 并复制到剪贴板，不会自动写入内置关卡列表。'
+    return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
   }
   if (editorVerification.value.signature !== editorSignature.value) {
-    return '草稿已经修改，必须重新验证后才能发布。'
+    return '草稿已经修改，必须重新验证后才能保存到游戏。'
   }
-  return `${editorVerification.value.message}。发布动作只会导出 JSON 并复制到剪贴板，不会自动写入内置关卡列表。`
+  if (!editorDraft.sourceLevelId) {
+    return '当前是新建草稿，还没有对应的内置关卡槽位；请从现有关卡进入编辑器后再保存到游戏。'
+  }
+  return `${editorVerification.value.message}。点击“保存到游戏”后，这个关卡会在当前浏览器里直接替换为你修改后的版本。`
 })
 
 const boardPlatforms = computed(() => {
@@ -992,38 +1068,40 @@ function verifyEditorLevelForPublish() {
   setStatus('Level verified for publish', 'success')
 }
 
-function publishEditorLevel() {
-  if (!canPublishEditorLevel.value) {
-    setStatus('Publish blocked: verify current draft first', 'danger')
+function saveEditorLevelToGame() {
+  if (!canSaveEditorLevel.value) {
+    if (!editorDraft.sourceLevelId) {
+      setStatus('当前草稿没有对应的内置关卡，无法直接保存到游戏', 'danger')
+      return
+    }
+    setStatus('Save blocked: verify current draft first', 'danger')
     return
   }
 
   const program = editorSolvedProgram.value || { main: [], p1: [] }
-  const publishLevel = {
+  const savedLevel = cloneLevelDefinition({
     ...editorLevelPreview.value,
     demo: {
       main: [...program.main],
       p1: [...program.p1]
     }
+  })
+
+  const nextOverrides = {
+    ...levelOverrides.value,
+    [savedLevel.id]: savedLevel
   }
 
-  const payload = JSON.stringify(publishLevel, null, 2)
-  const blob = new Blob([payload], { type: 'application/json;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `${publishLevel.id || 'custom-level'}-${Date.now()}.json`
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
-
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(payload).catch(() => {})
+  levelOverrides.value = nextOverrides
+  persistLevelOverrides(nextOverrides)
+  editorDraft.demo = {
+    main: [...savedLevel.demo.main],
+    p1: [...savedLevel.demo.p1]
   }
+  editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
   saveEditorDraft()
-  setStatus('关卡 JSON 已导出并复制到剪贴板；如需真正入库，还要把它写回关卡数据文件', 'success')
+  setStatus('已保存到游戏；这个关卡在当前浏览器里会直接使用你修改后的版本', 'success')
 }
 
 function startCustomPlaytest() {
@@ -1319,7 +1397,7 @@ function goToNextLevel() {
     screen.value = 'editor'
     return
   }
-  if (selectedLevelIndex.value < levels.length - 1) {
+  if (selectedLevelIndex.value < levels.value.length - 1) {
     quickStartLevel(selectedLevelIndex.value + 1)
   } else {
     screen.value = 'select'
