@@ -19,6 +19,7 @@ const lightbotDemoSchema = new mongoose.Schema({
 
 const lightbotLevelOverrideSchema = new mongoose.Schema({
   levelId: { type: String, required: true, unique: true, index: true },
+  isCustom: { type: Boolean, default: false, index: true },
   chapterId: { type: String, required: true },
   chapterTitle: { type: String, required: true },
   chapterOrder: { type: Number, required: true },
@@ -37,6 +38,8 @@ const lightbotLevelOverrideSchema = new mongoose.Schema({
   board: { type: [[mongoose.Schema.Types.Mixed]], required: true },
   start: { type: lightbotStartSchema, required: true },
   demo: { type: lightbotDemoSchema, default: () => ({ main: [], p1: [] }) },
+  createdBy: { type: Number, default: null },
+  createdByName: { type: String, default: null, maxlength: 80 },
   updatedBy: { type: Number, required: true },
   updatedByName: { type: String, required: true, maxlength: 80 },
   isDeleted: { type: Boolean, default: false, index: true },

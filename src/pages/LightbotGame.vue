@@ -684,15 +684,18 @@ function buildCustomLevel(draft) {
 const deletedLevelIds = ref([])
 const deletedLevelIdSet = computed(() => new Set(deletedLevelIds.value))
 const levelOverrides = ref({})
+const customLevels = ref([])
 const levels = computed(() => {
-  return LIGHTBOT_LEVELS
+  const builtInLevels = LIGHTBOT_LEVELS
     .filter((level) => !deletedLevelIdSet.value.has(level.id))
     .map((level) => cloneLevelDefinition(levelOverrides.value[level.id] || level))
+
+  return [...builtInLevels, ...customLevels.value.map((level) => cloneLevelDefinition(level))]
 })
 const levelGroups = computed(() => {
   const levelById = new Map(levels.value.map((level) => [level.id, level]))
 
-  return LIGHTBOT_LEVEL_GROUPS.map((group, order) => {
+  const builtInGroups = LIGHTBOT_LEVEL_GROUPS.map((group, order) => {
     const visibleLevels = group.levels
       .filter((level) => !deletedLevelIdSet.value.has(level.id))
       .map((level) => levelById.get(level.id) || cloneLevelDefinition(level))
@@ -704,6 +707,22 @@ const levelGroups = computed(() => {
       startIndex: visibleLevels.length ? levels.value.findIndex((level) => level.id === visibleLevels[0]?.id) : -1
     }
   }).filter((group) => group.levels.length)
+
+  if (!customLevels.value.length) {
+    return builtInGroups
+  }
+
+  const customGroupLevels = customLevels.value.map((level) => levelById.get(level.id) || cloneLevelDefinition(level))
+  return [
+    ...builtInGroups,
+    {
+      id: 'custom-shared',
+      title: '自定义关卡',
+      order: builtInGroups.length,
+      levels: customGroupLevels,
+      startIndex: customGroupLevels.length ? levels.value.findIndex((level) => level.id === customGroupLevels[0]?.id) : -1
+    }
+  ]
 })
 
 function platformKey(x, y) {
@@ -733,29 +752,44 @@ function findRecommendedLevelIndex() {
 
 function normalizeServerLevelOverrides(items) {
   if (!Array.isArray(items)) {
-    return { overrides: {}, deletedIds: [] }
+    return { overrides: {}, customLevels: [], deletedIds: [] }
   }
 
   const overrides = {}
+  const customLevels = []
   const deletedIds = []
 
   items.forEach((level) => {
-    if (!level || typeof level !== 'object' || !VALID_LEVEL_IDS.has(level.id)) return
+    if (!level || typeof level !== 'object' || !level.id) return
     if (level.isDeleted) {
-      deletedIds.push(level.id)
+      if (VALID_LEVEL_IDS.has(level.id)) {
+        deletedIds.push(level.id)
+      }
       return
     }
     if (!Array.isArray(level.board)) return
+    if (level.isCustom) {
+      customLevels.push(cloneLevelDefinition(level))
+      return
+    }
+    if (!VALID_LEVEL_IDS.has(level.id)) return
     overrides[level.id] = cloneLevelDefinition(level)
   })
 
-  return { overrides, deletedIds }
+  customLevels.sort((a, b) => {
+    const aTime = new Date(a.updatedAt || 0).getTime()
+    const bTime = new Date(b.updatedAt || 0).getTime()
+    return aTime - bTime
+  })
+
+  return { overrides, customLevels, deletedIds }
 }
 
 async function fetchSharedLevelOverrides() {
   const response = await request.get('/api/lightbot/levels')
   const normalized = normalizeServerLevelOverrides(response?.data)
   levelOverrides.value = normalized.overrides
+  customLevels.value = normalized.customLevels
   deletedLevelIds.value = normalized.deletedIds
 }
 
@@ -815,7 +849,7 @@ const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? 
 const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId))
 const editorDeleteLabel = computed(() => '删除关卡')
 const canSaveEditorLevel = computed(() => {
-  return Boolean(editorDraft.sourceLevelId) && editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value
+  return Boolean(editorVerification.value?.solvable) && editorVerification.value.signature === editorSignature.value
 })
 const editorPublishToneClass = computed(() => {
   if (!editorVerification.value) return 'pending'
@@ -823,7 +857,7 @@ const editorPublishToneClass = computed(() => {
 })
 const editorPublishTitle = computed(() => {
   if (!editorVerification.value) return '保存前验证'
-  if (!editorDraft.sourceLevelId) return '当前是新建草稿'
+  if (!editorDraft.sourceLevelId) return editorVerification.value.solvable ? '可新建关卡' : '当前是新建草稿'
   return editorVerification.value.solvable ? '可保存到游戏' : '验证未通过'
 })
 const editorPublishMessage = computed(() => {
@@ -834,7 +868,7 @@ const editorPublishMessage = computed(() => {
     return '草稿已经修改，必须重新验证后才能保存到游戏。'
   }
   if (!editorDraft.sourceLevelId) {
-    return '当前是新建草稿，还没有对应的内置关卡槽位；请从现有关卡进入编辑器后再保存到游戏。'
+    return `${editorVerification.value.message}。点击“保存到游戏”后，会创建一个新的共享关卡，并出现在“自定义关卡”章节里。`
   }
   return `${editorVerification.value.message}。点击“保存到游戏”后，数据库中的共享关卡会被更新，所有人都会看到最新版本。`
 })
@@ -943,6 +977,13 @@ watch(completedLevelIds, (value) => {
   writeLightbotStorage(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
 }, { deep: true })
 
+watch(levels, (value) => {
+  if (!value.length) return
+  if (selectedLevelIndex.value >= value.length) {
+    selectedLevelIndex.value = value.length - 1
+  }
+}, { deep: true })
+
 function setStatus(text, tone = 'neutral') {
   statusText.value = text
   statusTone.value = tone
@@ -1018,7 +1059,10 @@ async function deleteEditorData() {
     const nextOverrides = { ...levelOverrides.value }
     delete nextOverrides[deletedLevelId]
     levelOverrides.value = nextOverrides
-    deletedLevelIds.value = Array.from(new Set([...deletedLevelIds.value, deletedLevelId]))
+    customLevels.value = customLevels.value.filter((level) => level.id !== deletedLevelId)
+    if (VALID_LEVEL_IDS.has(deletedLevelId)) {
+      deletedLevelIds.value = Array.from(new Set([...deletedLevelIds.value, deletedLevelId]))
+    }
     removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
 
     if (completedLevelIds.value.includes(deletedLevelId)) {
@@ -1134,10 +1178,6 @@ function verifyEditorLevelForPublish() {
 
 async function saveEditorLevelToGame() {
   if (!canSaveEditorLevel.value) {
-    if (!editorDraft.sourceLevelId) {
-      setStatus('当前草稿没有对应的内置关卡，无法直接保存到游戏', 'danger')
-      return
-    }
     setStatus('Save blocked: verify current draft first', 'danger')
     return
   }
@@ -1152,11 +1192,20 @@ async function saveEditorLevelToGame() {
   })
 
   try {
-    const response = await request.put(`/api/lightbot/levels/${encodeURIComponent(savedLevel.id)}`, { level: savedLevel })
+    const response = editorDraft.sourceLevelId
+      ? await request.put(`/api/lightbot/levels/${encodeURIComponent(savedLevel.id)}`, { level: savedLevel })
+      : await request.post('/api/lightbot/levels', { level: savedLevel })
     const sharedLevel = cloneLevelDefinition(response?.data || savedLevel)
-    levelOverrides.value = {
-      ...levelOverrides.value,
-      [sharedLevel.id]: sharedLevel
+    if (sharedLevel.isCustom) {
+      customLevels.value = [...customLevels.value.filter((level) => level.id !== sharedLevel.id), sharedLevel]
+    } else {
+      levelOverrides.value = {
+        ...levelOverrides.value,
+        [sharedLevel.id]: sharedLevel
+      }
+    }
+    if (sharedLevel.isCustom) {
+      Object.assign(editorDraft, createEditorDraftFromLevel(sharedLevel))
     }
     editorDraft.demo = {
       main: [...sharedLevel.demo.main],
@@ -1165,7 +1214,7 @@ async function saveEditorLevelToGame() {
     editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
     saveEditorDraft()
-    setStatus('已保存到数据库；所有人现在看到的都是这个关卡的最新版本', 'success')
+    setStatus(sharedLevel.isCustom ? '已创建新关卡；所有人现在都能在“自定义关卡”章节看到它' : '已保存到数据库；所有人现在看到的都是这个关卡的最新版本', 'success')
   } catch (error) {
     setStatus(error.message || '保存共享关卡失败', 'danger')
   }

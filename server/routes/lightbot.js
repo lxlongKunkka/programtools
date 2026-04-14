@@ -1,9 +1,13 @@
+import crypto from 'crypto'
 import express from 'express'
 import LightbotLevelOverride from '../models/LightbotLevelOverride.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { LIGHTBOT_LEVELS, VALID_LEVEL_IDS } from '../../src/data/lightbotLevels.js'
 
 const router = express.Router()
+const CUSTOM_CHAPTER_ID = 'custom-shared'
+const CUSTOM_CHAPTER_TITLE = '自定义关卡'
+const CUSTOM_CHAPTER_ORDER = 999
 
 function normalizeTip(tip) {
   return {
@@ -37,26 +41,45 @@ function normalizeBoard(board) {
   })
 }
 
-function normalizeLightbotLevel(level) {
+function normalizeLightbotLevel(level, options = {}) {
   if (!level || typeof level !== 'object') {
     throw new Error('缺少关卡数据')
   }
 
   const levelId = String(level.id || '').trim()
-  if (!VALID_LEVEL_IDS.has(levelId)) {
+  const existingDoc = options.existingDoc || null
+  const allowCustom = Boolean(options.allowCustom)
+  const isBuiltIn = VALID_LEVEL_IDS.has(levelId)
+  const isExistingCustom = Boolean(existingDoc?.isCustom)
+
+  if (!isBuiltIn && !allowCustom && !isExistingCustom) {
     throw new Error('只能覆盖现有内置关卡')
   }
 
+  if (!levelId) {
+    throw new Error('缺少关卡编号')
+  }
+
   const originalLevel = LIGHTBOT_LEVELS.find((item) => item.id === levelId)
-  if (!originalLevel) {
+  if (!originalLevel && !isExistingCustom && !allowCustom) {
     throw new Error('关卡不存在')
   }
 
+  const baseChapterId = isBuiltIn ? originalLevel.chapterId : (existingDoc?.chapterId || CUSTOM_CHAPTER_ID)
+  const baseChapterTitle = isBuiltIn ? originalLevel.chapterTitle : (existingDoc?.chapterTitle || CUSTOM_CHAPTER_TITLE)
+  const baseChapterOrder = isBuiltIn ? originalLevel.chapterOrder : (existingDoc?.chapterOrder ?? CUSTOM_CHAPTER_ORDER)
+  const baseTitle = isBuiltIn ? originalLevel.title : (existingDoc?.title || 'My Level')
+  const baseSkill = isBuiltIn ? originalLevel.skill : (existingDoc?.skill || 'Custom')
+  const baseDescription = isBuiltIn ? originalLevel.description : (existingDoc?.description || '学员自制关卡。')
+  const baseGoal = isBuiltIn ? originalLevel.goal : (existingDoc?.goal || '点亮所有目标格。')
+  const baseMainLimit = isBuiltIn ? originalLevel.mainLimit : (existingDoc?.mainLimit || 8)
+  const baseTips = isBuiltIn ? (originalLevel.tips || []) : (existingDoc?.tips || [])
+  const baseDir = isBuiltIn ? originalLevel.start.dir : (existingDoc?.start?.dir || 'forward')
   const board = normalizeBoard(level.board)
   const start = {
     x: Math.max(0, Number(level.start?.x) || 0),
     y: Math.max(0, Number(level.start?.y) || 0),
-    dir: ['forward', 'right', 'backward', 'left'].includes(level.start?.dir) ? level.start.dir : originalLevel.start.dir
+    dir: ['forward', 'right', 'backward', 'left'].includes(level.start?.dir) ? level.start.dir : baseDir
   }
 
   if (!board[start.y]?.[start.x]) {
@@ -70,18 +93,19 @@ function normalizeLightbotLevel(level) {
 
   return {
     levelId,
-    chapterId: String(level.chapterId || originalLevel.chapterId || '').trim() || originalLevel.chapterId,
-    chapterTitle: String(level.chapterTitle || originalLevel.chapterTitle || '').trim() || originalLevel.chapterTitle,
-    chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : originalLevel.chapterOrder,
-    title: String(level.title || originalLevel.title).trim().slice(0, 80),
-    skill: String(level.skill || originalLevel.skill).trim().slice(0, 40),
-    description: String(level.description || originalLevel.description).trim().slice(0, 240),
-    goal: String(level.goal || originalLevel.goal).trim().slice(0, 240),
-    mainLimit: Math.max(1, Math.min(40, Number(level.mainLimit) || originalLevel.mainLimit || 8)),
+    isCustom: !isBuiltIn,
+    chapterId: String(level.chapterId || baseChapterId || '').trim() || baseChapterId,
+    chapterTitle: String(level.chapterTitle || baseChapterTitle || '').trim() || baseChapterTitle,
+    chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : baseChapterOrder,
+    title: String(level.title || baseTitle).trim().slice(0, 80),
+    skill: String(level.skill || baseSkill).trim().slice(0, 40),
+    description: String(level.description || baseDescription).trim().slice(0, 240),
+    goal: String(level.goal || baseGoal).trim().slice(0, 240),
+    mainLimit: Math.max(1, Math.min(40, Number(level.mainLimit) || baseMainLimit || 8)),
     procLimits: {
       p1: Math.max(0, Math.min(20, Number(level.procLimits?.p1) || 0))
     },
-    tips: (Array.isArray(level.tips) ? level.tips : originalLevel.tips || []).map(normalizeTip).filter((tip) => tip.title && tip.copy),
+    tips: (Array.isArray(level.tips) ? level.tips : baseTips).map(normalizeTip).filter((tip) => tip.title && tip.copy),
     board,
     start,
     demo: {
@@ -94,6 +118,7 @@ function normalizeLightbotLevel(level) {
 function toClientLevel(doc) {
   return {
     id: doc.levelId,
+    isCustom: Boolean(doc.isCustom),
     chapterId: doc.chapterId,
     chapterTitle: doc.chapterTitle,
     chapterOrder: doc.chapterOrder,
@@ -111,6 +136,8 @@ function toClientLevel(doc) {
       p1: [...(doc.demo?.p1 || [])]
     },
     isDeleted: Boolean(doc.isDeleted),
+    createdBy: doc.createdBy,
+    createdByName: doc.createdByName,
     updatedBy: doc.updatedBy,
     updatedByName: doc.updatedByName,
     deletedAt: doc.deletedAt,
@@ -133,12 +160,18 @@ router.get('/levels', authenticateToken, async (req, res) => {
 router.put('/levels/:id', authenticateToken, async (req, res) => {
   try {
     const requestedId = String(req.params.id || '').trim()
-    const level = normalizeLightbotLevel({ ...(req.body?.level || {}), id: requestedId })
+    const existingDoc = await LightbotLevelOverride.findOne({ levelId: requestedId }).lean()
+    const level = normalizeLightbotLevel(
+      { ...(req.body?.level || {}), id: requestedId },
+      { existingDoc, allowCustom: Boolean(existingDoc?.isCustom) }
+    )
 
     const updated = await LightbotLevelOverride.findOneAndUpdate(
       { levelId: requestedId },
       {
         ...level,
+        createdBy: existingDoc?.createdBy ?? req.user.id,
+        createdByName: existingDoc?.createdByName ?? (req.user.username || 'unknown'),
         updatedBy: req.user.id,
         updatedByName: req.user.username || 'unknown',
         isDeleted: false,
@@ -160,38 +193,97 @@ router.put('/levels/:id', authenticateToken, async (req, res) => {
   }
 })
 
+router.post('/levels', authenticateToken, async (req, res) => {
+  try {
+    const levelId = `custom-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`
+    const level = normalizeLightbotLevel(
+      {
+        ...(req.body?.level || {}),
+        id: levelId,
+        chapterId: CUSTOM_CHAPTER_ID,
+        chapterTitle: CUSTOM_CHAPTER_TITLE,
+        chapterOrder: CUSTOM_CHAPTER_ORDER
+      },
+      { allowCustom: true }
+    )
+
+    const created = await LightbotLevelOverride.create({
+      ...level,
+      createdBy: req.user.id,
+      createdByName: req.user.username || 'unknown',
+      updatedBy: req.user.id,
+      updatedByName: req.user.username || 'unknown',
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByName: null
+    })
+
+    res.status(201).json({ success: true, data: toClientLevel(created.toObject()) })
+  } catch (error) {
+    const message = error?.message || '新增 Lightbot 关卡失败'
+    const status = message.includes('失败') ? 500 : 400
+    if (status === 500) {
+      console.error('Failed to create Lightbot level:', error)
+    }
+    res.status(status).json({ success: false, error: message })
+  }
+})
+
 router.delete('/levels/:id', authenticateToken, async (req, res) => {
   try {
     const requestedId = String(req.params.id || '').trim()
-    if (!VALID_LEVEL_IDS.has(requestedId)) {
+    const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === requestedId)
+    const existingDoc = await LightbotLevelOverride.findOne({ levelId: requestedId }).lean()
+    if (!originalLevel && !existingDoc?.isCustom) {
       return res.status(400).json({ success: false, error: '关卡不存在' })
     }
 
-    const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === requestedId)
-    if (!originalLevel) {
-      return res.status(400).json({ success: false, error: '关卡不存在' })
-    }
+    const sourceLevel = existingDoc?.isCustom
+      ? {
+          levelId: existingDoc.levelId,
+          isCustom: true,
+          chapterId: existingDoc.chapterId,
+          chapterTitle: existingDoc.chapterTitle,
+          chapterOrder: existingDoc.chapterOrder,
+          title: existingDoc.title,
+          skill: existingDoc.skill,
+          description: existingDoc.description,
+          goal: existingDoc.goal,
+          mainLimit: existingDoc.mainLimit,
+          procLimits: existingDoc.procLimits || {},
+          tips: existingDoc.tips || [],
+          board: existingDoc.board,
+          start: existingDoc.start,
+          demo: existingDoc.demo || { main: [], p1: [] },
+          createdBy: existingDoc.createdBy,
+          createdByName: existingDoc.createdByName
+        }
+      : originalLevel
 
     const deletedLevel = await LightbotLevelOverride.findOneAndUpdate(
       { levelId: requestedId },
       {
         levelId: requestedId,
-        chapterId: originalLevel.chapterId,
-        chapterTitle: originalLevel.chapterTitle,
-        chapterOrder: originalLevel.chapterOrder,
-        title: originalLevel.title,
-        skill: originalLevel.skill,
-        description: originalLevel.description,
-        goal: originalLevel.goal,
-        mainLimit: originalLevel.mainLimit,
-        procLimits: { ...(originalLevel.procLimits || {}) },
-        tips: (originalLevel.tips || []).map(normalizeTip),
-        board: originalLevel.board,
-        start: originalLevel.start,
+        isCustom: Boolean(existingDoc?.isCustom),
+        chapterId: sourceLevel.chapterId,
+        chapterTitle: sourceLevel.chapterTitle,
+        chapterOrder: sourceLevel.chapterOrder,
+        title: sourceLevel.title,
+        skill: sourceLevel.skill,
+        description: sourceLevel.description,
+        goal: sourceLevel.goal,
+        mainLimit: sourceLevel.mainLimit,
+        procLimits: { ...(sourceLevel.procLimits || {}) },
+        tips: (sourceLevel.tips || []).map(normalizeTip),
+        board: sourceLevel.board,
+        start: sourceLevel.start,
         demo: {
-          main: normalizeOperationList(originalLevel.demo?.main),
-          p1: normalizeOperationList(originalLevel.demo?.p1)
+          main: normalizeOperationList(sourceLevel.demo?.main),
+          p1: normalizeOperationList(sourceLevel.demo?.p1)
         },
+        createdBy: existingDoc?.createdBy ?? null,
+        createdByName: existingDoc?.createdByName ?? null,
         updatedBy: req.user.id,
         updatedByName: req.user.username || 'unknown',
         isDeleted: true,
