@@ -225,6 +225,7 @@
             </div>
 
             <div class="editor-action-row">
+              <button class="pill-btn" @click="saveEditorDraft">保存草稿</button>
               <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
               <button class="pill-btn" @click="verifyEditorLevelForPublish">验证通关</button>
               <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
@@ -395,6 +396,7 @@ import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } fro
 import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
+const EDITOR_DRAFT_STORAGE_KEY = 'programtools-lightbot-editor-draft-v1'
 const EDITOR_GRID_SIZE = 6
 const TILE_WIDTH = 96
 const TILE_HEIGHT = 48
@@ -566,6 +568,42 @@ function createDefaultEditorDraft() {
   }
 }
 
+function serializeEditorDraft(draft) {
+  return {
+    title: draft.title,
+    skill: draft.skill,
+    description: draft.description,
+    goal: draft.goal,
+    mainLimit: Number(draft.mainLimit) || 8,
+    p1Limit: Number(draft.p1Limit) || 0,
+    start: { ...draft.start },
+    board: cloneBoard(draft.board)
+  }
+}
+
+function loadSavedEditorDraft() {
+  try {
+    const raw = localStorage.getItem(EDITOR_DRAFT_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || !Array.isArray(parsed.board)) return null
+
+    const normalized = normalizeEditorState(parsed.board, parsed.start || { x: 0, y: 0, dir: 'forward' })
+    return {
+      title: typeof parsed.title === 'string' ? parsed.title : 'My Level',
+      skill: typeof parsed.skill === 'string' ? parsed.skill : 'Custom',
+      description: typeof parsed.description === 'string' ? parsed.description : '学员自制关卡。',
+      goal: typeof parsed.goal === 'string' ? parsed.goal : '点亮所有目标格。',
+      mainLimit: Number(parsed.mainLimit) || 8,
+      p1Limit: Number(parsed.p1Limit) || 0,
+      start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
+      board: normalized.board
+    }
+  } catch {
+    return null
+  }
+}
+
 function createEditorDraftFromLevel(level) {
   const normalized = normalizeEditorBoard(level.board)
   const start = normalized.remapPoint(level.start)
@@ -700,12 +738,12 @@ const editorPublishTitle = computed(() => {
 })
 const editorPublishMessage = computed(() => {
   if (!editorVerification.value) {
-    return '发布关卡前，必须先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
+    return '发布前需要先验证；发布动作只会导出 JSON 并复制到剪贴板，不会自动写入内置关卡列表。'
   }
   if (editorVerification.value.signature !== editorSignature.value) {
     return '草稿已经修改，必须重新验证后才能发布。'
   }
-  return editorVerification.value.message
+  return `${editorVerification.value.message}。发布动作只会导出 JSON 并复制到剪贴板，不会自动写入内置关卡列表。`
 })
 
 const boardPlatforms = computed(() => {
@@ -838,7 +876,7 @@ function resetEditorDraft() {
 
 function openEditor(level = null) {
   activeCustomLevel.value = null
-  const nextDraft = level ? createEditorDraftFromLevel(level) : createDefaultEditorDraft()
+  const nextDraft = level ? createEditorDraftFromLevel(level) : (loadSavedEditorDraft() || createDefaultEditorDraft())
   editorBaseDraft.value = {
     ...nextDraft,
     start: { ...nextDraft.start },
@@ -846,7 +884,13 @@ function openEditor(level = null) {
   }
   applyDraftToEditor(nextDraft)
   screen.value = 'editor'
-  setStatus(level ? 'Loaded level into editor' : 'Editor ready')
+  setStatus(level ? 'Loaded level into editor' : (loadSavedEditorDraft() ? '已载入保存草稿' : 'Editor ready'))
+}
+
+function saveEditorDraft() {
+  const payload = serializeEditorDraft(editorDraft)
+  localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, JSON.stringify(payload))
+  setStatus('草稿已保存到本地浏览器', 'success')
 }
 
 function applyEditorCell(x, y) {
@@ -978,7 +1022,8 @@ function publishEditorLevel() {
     navigator.clipboard.writeText(payload).catch(() => {})
   }
 
-  setStatus('Verified level exported', 'success')
+  saveEditorDraft()
+  setStatus('关卡 JSON 已导出并复制到剪贴板；如需真正入库，还要把它写回关卡数据文件', 'success')
 }
 
 function startCustomPlaytest() {
