@@ -453,6 +453,20 @@ function cloneBoard(board) {
   return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
 }
 
+function normalizeEditorBoard(board, minimumSize = EDITOR_GRID_SIZE) {
+  const height = Math.max(minimumSize, board.length)
+  const width = Math.max(minimumSize, ...board.map((row) => row.length))
+  const normalized = Array.from({ length: height }, () => Array.from({ length: width }, () => null))
+
+  board.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      normalized[y][x] = cell ? { ...cell } : null
+    })
+  })
+
+  return normalized
+}
+
 function findFirstPlatform(board) {
   for (let y = 0; y < board.length; y += 1) {
     for (let x = 0; x < board[y].length; x += 1) {
@@ -489,7 +503,7 @@ function createEditorDraftFromLevel(level) {
     mainLimit: Number(level.mainLimit) || 8,
     p1Limit: Number(level.procLimits?.p1) || 0,
     start: { ...level.start },
-    board: cloneBoard(level.board)
+    board: normalizeEditorBoard(level.board)
   }
 }
 
