@@ -3363,6 +3363,7 @@ resetLevel(true)
     grid-auto-flow: column;
     grid-auto-columns: minmax(220px, 78vw);
     gap: 10px;
+    max-height: min(30dvh, 220px);
     overflow-x: auto;
     overflow-y: hidden;
     align-items: stretch;
@@ -3381,13 +3382,21 @@ resetLevel(true)
   }
 
   .screen-play .program-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     padding: 12px;
+    overflow: hidden;
   }
 
   .screen-play .program-grid,
   .screen-play .program-grid.big {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    padding-right: 2px;
+    scrollbar-width: thin;
   }
 
   .screen-play .program-slot {
@@ -3399,6 +3408,7 @@ resetLevel(true)
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     align-content: start;
+    overflow-y: auto;
   }
 
   .screen-play .program-tools .tool-btn {
