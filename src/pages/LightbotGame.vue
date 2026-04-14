@@ -3239,6 +3239,172 @@ resetLevel(true)
     padding: 8px;
   }
 
+  .screen-play.lightbot-page {
+    height: calc(100dvh - 80px);
+    min-height: calc(100dvh - 80px);
+    overflow: hidden;
+  }
+
+  .screen-play .play-screen {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .screen-play .play-shell {
+    height: 100%;
+    gap: 8px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .screen-play .hud-rail {
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .screen-play .rail-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 20px;
+    flex: 0 0 auto;
+  }
+
+  .screen-play .board-stage {
+    min-height: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .screen-play .board-topbar {
+    margin-bottom: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .screen-play .board-topbar-copy {
+    min-width: 0;
+  }
+
+  .screen-play .board-topbar-copy h1 {
+    font-size: 22px;
+  }
+
+  .screen-play .screen-kicker,
+  .screen-play .board-author {
+    margin: 0;
+  }
+
+  .screen-play .board-topbar-actions {
+    margin-left: auto;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .screen-play .run-btn,
+  .screen-play .reset-btn {
+    width: 60px;
+    height: 46px;
+  }
+
+  .screen-play .scene-frame {
+    flex: 1 1 auto;
+    min-height: clamp(250px, 42dvh, 380px);
+  }
+
+  .screen-play .status-float {
+    top: 10px;
+    right: 10px;
+    padding: 8px 10px;
+    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .screen-play .status-float strong {
+    font-size: 18px;
+  }
+
+  .screen-play .command-bar {
+    margin-top: 0;
+    padding: 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .screen-play .command-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .screen-play .command-btn {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 auto;
+  }
+
+  .screen-play .speed-box {
+    width: auto;
+    margin-left: 6px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .screen-play .speed-box input {
+    width: 88px;
+  }
+
+  .screen-play .program-sidebar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(220px, 78vw);
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: stretch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .screen-play .program-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .screen-play .program-panel,
+  .screen-play .program-tools {
+    min-width: 0;
+    height: 100%;
+  }
+
+  .screen-play .program-panel {
+    padding: 12px;
+  }
+
+  .screen-play .program-grid,
+  .screen-play .program-grid.big {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .screen-play .program-slot {
+    min-height: 54px;
+  }
+
+  .screen-play .program-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-content: start;
+  }
+
+  .screen-play .program-tools .tool-btn {
+    min-height: 44px;
+  }
+
   .hero-copy,
   .select-header,
   .brief-shell,
@@ -3282,6 +3448,10 @@ resetLevel(true)
 
   .scene-frame {
     min-height: 420px;
+  }
+
+  .screen-play .scene-frame {
+    min-height: clamp(250px, 42dvh, 380px);
   }
 
   .tutorial-learn ul {
