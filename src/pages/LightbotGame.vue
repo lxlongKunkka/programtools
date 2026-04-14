@@ -886,6 +886,7 @@ const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? 
 const editorCanModifySource = computed(() => {
   if (!editorDraft.sourceLevelId) return true
   if (editorDraft.sourceIsCustom) {
+    if (isAdmin.value) return true
     if (editorDraft.sourceCreatedBy == null || currentUserId.value == null) return true
     return Number(editorDraft.sourceCreatedBy) === Number(currentUserId.value)
   }
@@ -909,7 +910,7 @@ const editorPublishTitle = computed(() => {
 })
 const editorPublishMessage = computed(() => {
   if (!editorCanModifySource.value) {
-    return editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人修改。' : '默认关卡只能由管理员修改。'
+    return editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人或管理员修改。' : '默认关卡只能由管理员修改。'
   }
   if (!editorVerification.value) {
     return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
@@ -931,13 +932,13 @@ function isOwnedCustomLevel(level) {
 
 function canEditLevel(level) {
   if (!level) return true
-  return isCustomLevel(level) ? isOwnedCustomLevel(level) : isAdmin.value
+  return isCustomLevel(level) ? (isAdmin.value || isOwnedCustomLevel(level)) : isAdmin.value
 }
 
 function getLevelEditHint(level) {
   if (!level) return '新建自定义关卡'
   if (isCustomLevel(level)) {
-    return canEditLevel(level) ? '编辑你创建的自定义关卡' : '这个自定义关卡只能由创建者本人编辑'
+    return canEditLevel(level) ? (isOwnedCustomLevel(level) ? '编辑你创建的自定义关卡' : '以管理员身份编辑用户创建的自定义关卡') : '这个自定义关卡只能由创建者本人或管理员编辑'
   }
   return isAdmin.value ? '编辑默认关卡' : '默认关卡只能由管理员编辑'
 }
@@ -1118,7 +1119,7 @@ function replaceEditorDraft(nextDraft) {
 
 async function deleteEditorData() {
   if (!editorCanModifySource.value) {
-    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人删除' : '默认关卡只能由管理员删除', 'danger')
+    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人或管理员删除' : '默认关卡只能由管理员删除', 'danger')
     return
   }
 
@@ -1257,7 +1258,7 @@ function verifyEditorLevelForPublish() {
 
 async function saveEditorLevelToGame() {
   if (!editorCanModifySource.value) {
-    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人修改' : '默认关卡只能由管理员修改', 'danger')
+    setStatus(editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人或管理员修改' : '默认关卡只能由管理员修改', 'danger')
     return
   }
 

@@ -19,6 +19,10 @@ function isCustomLevelOwner(doc, user) {
   return Number(doc.createdBy) === Number(user.id)
 }
 
+function canManageCustomLevel(doc, user) {
+  return isAdminUser(user) || isCustomLevelOwner(doc, user)
+}
+
 function normalizeTip(tip) {
   return {
     title: String(tip?.title || '').trim().slice(0, 80),
@@ -174,8 +178,8 @@ router.put('/levels/:id', authenticateToken, async (req, res) => {
     const originalLevel = LIGHTBOT_LEVELS.find((item) => item.id === requestedId)
 
     if (existingDoc?.isCustom) {
-      if (!isCustomLevelOwner(existingDoc, req.user)) {
-        return res.status(403).json({ success: false, error: '只有创建者本人可以修改这个自定义关卡' })
+      if (!canManageCustomLevel(existingDoc, req.user)) {
+        return res.status(403).json({ success: false, error: '只有创建者本人或管理员可以修改这个自定义关卡' })
       }
     } else if (originalLevel) {
       if (!isAdminUser(req.user)) {
@@ -264,8 +268,8 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
     }
 
     if (existingDoc?.isCustom) {
-      if (!isCustomLevelOwner(existingDoc, req.user)) {
-        return res.status(403).json({ success: false, error: '只有创建者本人可以删除这个自定义关卡' })
+      if (!canManageCustomLevel(existingDoc, req.user)) {
+        return res.status(403).json({ success: false, error: '只有创建者本人或管理员可以删除这个自定义关卡' })
       }
     } else if (!isAdminUser(req.user)) {
       return res.status(403).json({ success: false, error: '只有管理员可以删除默认关卡' })
