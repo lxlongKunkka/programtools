@@ -200,7 +200,7 @@
               <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
             </div>
 
-            <p class="editor-grid-hint">先选 Platform，再点击左侧 6x6 网格中的空白格添加地板。右侧区域只用于预览。</p>
+            <p class="editor-grid-hint">先选 Platform，再点击左侧网格中的空白格添加地板。画布会按地图内容自动扩展，右侧区域只用于预览。</p>
 
             <div class="editor-grid-board">
               <div v-for="(row, y) in editorDraft.board" :key="`editor-row-${y}`" class="editor-grid-row">
@@ -453,18 +453,84 @@ function cloneBoard(board) {
   return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
 }
 
-function normalizeEditorBoard(board, minimumSize = EDITOR_GRID_SIZE) {
-  const height = Math.max(minimumSize, board.length)
-  const width = Math.max(minimumSize, ...board.map((row) => row.length))
-  const normalized = Array.from({ length: height }, () => Array.from({ length: width }, () => null))
+function findOccupiedBounds(board) {
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
 
   board.forEach((row, y) => {
     row.forEach((cell, x) => {
-      normalized[y][x] = cell ? { ...cell } : null
+      if (!cell) return
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x)
+      maxY = Math.max(maxY, y)
     })
   })
 
-  return normalized
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+    return null
+  }
+
+  return { minX, minY, maxX, maxY }
+}
+
+function normalizeEditorBoard(board, minimumSize = EDITOR_GRID_SIZE) {
+  const bounds = findOccupiedBounds(board)
+  if (!bounds) {
+    return {
+      board: createEmptyEditorBoard(minimumSize),
+      remapPoint(point) {
+        return { ...point }
+      }
+    }
+  }
+
+  const contentWidth = bounds.maxX - bounds.minX + 1
+  const contentHeight = bounds.maxY - bounds.minY + 1
+  const width = Math.max(minimumSize, contentWidth + 2)
+  const height = Math.max(minimumSize, contentHeight + 2)
+  const offsetX = Math.floor((width - contentWidth) / 2)
+  const offsetY = Math.floor((height - contentHeight) / 2)
+  const normalized = Array.from({ length: height }, () => Array.from({ length: width }, () => null))
+
+  for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
+    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      const cell = board[y]?.[x] || null
+      if (!cell) continue
+      normalized[offsetY + y - bounds.minY][offsetX + x - bounds.minX] = { ...cell }
+    }
+  }
+
+  return {
+    board: normalized,
+    remapPoint(point) {
+      return {
+        ...point,
+        x: offsetX + point.x - bounds.minX,
+        y: offsetY + point.y - bounds.minY
+      }
+    }
+  }
+}
+
+function normalizeEditorState(board, start) {
+  const normalized = normalizeEditorBoard(board)
+  const remappedStart = normalized.remapPoint(start)
+  const fallbackStart = findFirstPlatform(normalized.board) || { x: 0, y: 0 }
+  const nextStart = normalized.board[remappedStart.y]?.[remappedStart.x]
+    ? remappedStart
+    : fallbackStart
+
+  return {
+    board: normalized.board,
+    start: {
+      ...start,
+      x: nextStart.x,
+      y: nextStart.y
+    }
+  }
 }
 
 function findFirstPlatform(board) {
@@ -495,6 +561,9 @@ function createDefaultEditorDraft() {
 }
 
 function createEditorDraftFromLevel(level) {
+  const normalized = normalizeEditorBoard(level.board)
+  const start = normalized.remapPoint(level.start)
+
   return {
     title: level.title,
     skill: level.skill,
@@ -502,8 +571,8 @@ function createEditorDraftFromLevel(level) {
     goal: level.goal,
     mainLimit: Number(level.mainLimit) || 8,
     p1Limit: Number(level.procLimits?.p1) || 0,
-    start: { ...level.start },
-    board: normalizeEditorBoard(level.board)
+    start,
+    board: normalized.board
   }
 }
 
@@ -775,25 +844,28 @@ function openEditor(level = null) {
 function applyEditorCell(x, y) {
   const board = cloneBoard(editorDraft.board)
   const currentCell = board[y][x]
+  let nextStart = { ...editorDraft.start }
 
   if (editorTool.value === 'erase') {
     board[y][x] = null
     if (editorDraft.start.x === x && editorDraft.start.y === y) {
-      const nextStart = findFirstPlatform(board)
-      if (nextStart) {
-        editorDraft.start = { ...editorDraft.start, ...nextStart }
+      const fallbackStart = findFirstPlatform(board)
+      if (fallbackStart) {
+        nextStart = { ...nextStart, ...fallbackStart }
       }
     }
   } else if (editorTool.value === 'start') {
     if (!currentCell) {
       board[y][x] = makeTile(editorHeight.value)
     }
-    editorDraft.start = { ...editorDraft.start, x, y }
+    nextStart = { ...nextStart, x, y }
   } else {
     board[y][x] = makeTile(editorHeight.value, editorTool.value === 'target')
   }
 
-  editorDraft.board = board
+  const normalized = normalizeEditorState(board, nextStart)
+  editorDraft.board = normalized.board
+  editorDraft.start = normalized.start
 }
 
 function validateEditorLevel() {
