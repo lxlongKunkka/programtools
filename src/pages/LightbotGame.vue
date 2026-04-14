@@ -1131,7 +1131,7 @@ function goToNextLevel() {
     return
   }
   if (selectedLevelIndex.value < levels.length - 1) {
-    openLevelBrief(selectedLevelIndex.value + 1)
+    quickStartLevel(selectedLevelIndex.value + 1)
   } else {
     screen.value = 'select'
   }
