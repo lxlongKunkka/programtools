@@ -3311,7 +3311,7 @@ resetLevel(true)
 
   .screen-play .scene-frame {
     flex: 1 1 auto;
-    min-height: clamp(180px, 30dvh, 260px);
+    min-height: clamp(170px, 28dvh, 240px);
   }
 
   .screen-play .status-float {
@@ -3329,7 +3329,7 @@ resetLevel(true)
 
   .screen-play .command-bar {
     margin-top: 0;
-    padding: 8px;
+    padding: 9px;
     gap: 6px;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -3342,8 +3342,8 @@ resetLevel(true)
   }
 
   .screen-play .command-btn {
-    width: 44px;
-    height: 44px;
+    width: 50px;
+    height: 50px;
     flex: 0 0 auto;
   }
 
@@ -3364,7 +3364,7 @@ resetLevel(true)
     grid-auto-flow: column;
     grid-auto-columns: minmax(180px, 68vw);
     gap: 8px;
-    max-height: min(22dvh, 150px);
+    max-height: min(20dvh, 136px);
     overflow-x: auto;
     overflow-y: hidden;
     align-items: stretch;
