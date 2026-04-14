@@ -200,7 +200,7 @@
               <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
             </div>
 
-            <p class="editor-grid-hint">先选 Platform，再点击左侧网格或右侧 3D 预览中的空白格添加地板。画布会按地图内容自动扩展。</p>
+            <p class="editor-grid-hint">先选 Platform，再在左侧网格或右侧 3D 预览中点击或拖拽刷地板。画布会按地图内容自动扩展。</p>
 
             <div class="editor-grid-board">
               <div
@@ -214,7 +214,8 @@
                   :key="`editor-cell-${x}-${y}`"
                   class="editor-grid-cell"
                   :class="editorCellClass(x, y)"
-                  @click="applyEditorCell(x, y)"
+                  @pointerdown.prevent="beginEditorPaint(x, y)"
+                  @pointerenter="continueEditorPaint(x, y)"
                 >
                   <span v-if="editorCellAt(x, y)" class="cell-height">{{ editorCellAt(x, y).h }}</span>
                   <span v-if="editorDraft.start.x === x && editorDraft.start.y === y" class="cell-start">S</span>
@@ -669,6 +670,8 @@ const editorHeight = ref(1)
 const editorDraft = reactive(createDefaultEditorDraft())
 const editorBaseDraft = ref(createDefaultEditorDraft())
 const editorVerification = ref(null)
+let editorPaintActive = false
+let editorPaintedKeys = new Set()
 
 let briefSceneController = null
 let playSceneController = null
@@ -871,6 +874,27 @@ function applyEditorCell(x, y) {
   const normalized = normalizeEditorState(board, nextStart)
   editorDraft.board = normalized.board
   editorDraft.start = normalized.start
+}
+
+function beginEditorPaint(x, y) {
+  editorPaintActive = true
+  editorPaintedKeys = new Set()
+  continueEditorPaint(x, y)
+}
+
+function continueEditorPaint(x, y) {
+  if (!editorPaintActive) return
+
+  const key = platformKey(x, y)
+  if (editorPaintedKeys.has(key)) return
+
+  editorPaintedKeys.add(key)
+  applyEditorCell(x, y)
+}
+
+function endEditorPaint() {
+  editorPaintActive = false
+  editorPaintedKeys.clear()
 }
 
 function validateEditorLevel() {
@@ -1557,7 +1581,9 @@ function createSceneController(host, options = {}) {
     renderer.render(scene, camera)
   }
 
-  function handleSceneClick(event) {
+  function pickEditorCell(event) {
+    if (!options.onCellSelect) return null
+
     if (!options.onCellSelect) return
 
     const rect = renderer.domElement.getBoundingClientRect()
@@ -1566,10 +1592,40 @@ function createSceneController(host, options = {}) {
     raycaster.setFromCamera(pointer, camera)
 
     const hit = raycaster.intersectObjects(interactiveTargets, false).find((entry) => entry.object.userData?.editorCell)
-    if (!hit) return
+    return hit?.object.userData?.editorCell || null
+  }
 
-    const { x, y } = hit.object.userData.editorCell
-    options.onCellSelect(x, y)
+  function handleScenePointerDown(event) {
+    if (!options.onCellSelect) return
+
+    const cell = pickEditorCell(event)
+    if (!cell) return
+
+    renderer.domElement.setPointerCapture?.(event.pointerId)
+    options.onPaintStart?.(cell.x, cell.y)
+  }
+
+  function handleScenePointerMove(event) {
+    if (!options.onCellSelect || !editorPaintActive) return
+
+    const cell = pickEditorCell(event)
+    if (!cell) return
+
+    options.onPaintMove?.(cell.x, cell.y)
+  }
+
+  function handleScenePointerUp(event) {
+    if (!options.onCellSelect) return
+
+    renderer.domElement.releasePointerCapture?.(event.pointerId)
+    options.onPaintEnd?.()
+  }
+
+  function handleScenePointerCancel(event) {
+    if (!options.onCellSelect) return
+
+    renderer.domElement.releasePointerCapture?.(event.pointerId)
+    options.onPaintEnd?.()
   }
 
   const resizeObserver = typeof ResizeObserver !== 'undefined'
@@ -1580,7 +1636,10 @@ function createSceneController(host, options = {}) {
     resizeObserver.observe(host)
   }
   if (options.onCellSelect) {
-    renderer.domElement.addEventListener('click', handleSceneClick)
+    renderer.domElement.addEventListener('pointerdown', handleScenePointerDown)
+    renderer.domElement.addEventListener('pointermove', handleScenePointerMove)
+    renderer.domElement.addEventListener('pointerup', handleScenePointerUp)
+    renderer.domElement.addEventListener('pointercancel', handleScenePointerCancel)
   }
   resize()
 
@@ -1591,7 +1650,10 @@ function createSceneController(host, options = {}) {
     dispose() {
       resizeObserver?.disconnect()
       if (options.onCellSelect) {
-        renderer.domElement.removeEventListener('click', handleSceneClick)
+        renderer.domElement.removeEventListener('pointerdown', handleScenePointerDown)
+        renderer.domElement.removeEventListener('pointermove', handleScenePointerMove)
+        renderer.domElement.removeEventListener('pointerup', handleScenePointerUp)
+        renderer.domElement.removeEventListener('pointercancel', handleScenePointerCancel)
       }
       renderer.dispose()
       blockGeometry.dispose()
@@ -1628,7 +1690,12 @@ function syncSceneControllers() {
 
   if (screen.value === 'editor' && editorSceneHost.value) {
     if (!editorSceneController) {
-      editorSceneController = createSceneController(editorSceneHost.value, { onCellSelect: applyEditorCell })
+      editorSceneController = createSceneController(editorSceneHost.value, {
+        onCellSelect: applyEditorCell,
+        onPaintStart: beginEditorPaint,
+        onPaintMove: continueEditorPaint,
+        onPaintEnd: endEditorPaint
+      })
     }
     editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
   } else if (editorSceneController) {
@@ -1661,12 +1728,18 @@ watch(editorSignature, () => {
   editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
 })
 
+watch(screen, () => {
+  endEditorPaint()
+})
+
 onMounted(async () => {
+  window.addEventListener('pointerup', endEditorPaint)
   await nextTick()
   syncSceneControllers()
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('pointerup', endEditorPaint)
   briefSceneController?.dispose()
   playSceneController?.dispose()
   editorSceneController?.dispose()
@@ -2217,6 +2290,7 @@ resetLevel(true)
   background: rgba(226, 234, 241, 0.45);
   color: #2d3f4d;
   font-weight: 800;
+  user-select: none;
 }
 
 .editor-grid-cell.filled {
@@ -2369,6 +2443,7 @@ resetLevel(true)
 
 .editor-scene-host :deep(canvas) {
   cursor: crosshair;
+  touch-action: none;
 }
 
 .scene-frame::before {
