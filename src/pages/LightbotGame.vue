@@ -3271,10 +3271,10 @@ resetLevel(true)
 
   .screen-play .board-stage {
     min-height: 0;
-    padding: 12px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
   .screen-play .board-topbar {
@@ -3289,7 +3289,7 @@ resetLevel(true)
   }
 
   .screen-play .board-topbar-copy h1 {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .screen-play .screen-kicker,
@@ -3305,32 +3305,32 @@ resetLevel(true)
 
   .screen-play .run-btn,
   .screen-play .reset-btn {
-    width: 60px;
-    height: 46px;
+    width: 54px;
+    height: 42px;
   }
 
   .screen-play .scene-frame {
     flex: 1 1 auto;
-    min-height: clamp(250px, 42dvh, 380px);
+    min-height: clamp(180px, 30dvh, 260px);
   }
 
   .screen-play .status-float {
     top: 10px;
     right: 10px;
-    padding: 8px 10px;
-    gap: 8px;
+    padding: 6px 8px;
+    gap: 6px;
     flex-direction: row;
     align-items: center;
   }
 
   .screen-play .status-float strong {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .screen-play .command-bar {
     margin-top: 0;
-    padding: 10px;
-    gap: 8px;
+    padding: 8px;
+    gap: 6px;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
@@ -3342,32 +3342,33 @@ resetLevel(true)
   }
 
   .screen-play .command-btn {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     flex: 0 0 auto;
   }
 
   .screen-play .speed-box {
     width: auto;
-    margin-left: 6px;
+    margin-left: 4px;
     flex: 0 0 auto;
     white-space: nowrap;
+    font-size: 12px;
   }
 
   .screen-play .speed-box input {
-    width: 88px;
+    width: 72px;
   }
 
   .screen-play .program-sidebar {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(220px, 78vw);
-    gap: 10px;
-    max-height: min(30dvh, 220px);
+    grid-auto-columns: minmax(180px, 68vw);
+    gap: 8px;
+    max-height: min(22dvh, 150px);
     overflow-x: auto;
     overflow-y: hidden;
     align-items: stretch;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
     scrollbar-width: none;
   }
 
@@ -3384,14 +3385,14 @@ resetLevel(true)
   .screen-play .program-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    padding: 12px;
+    padding: 10px;
     overflow: hidden;
   }
 
   .screen-play .program-grid,
   .screen-play .program-grid.big {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     min-height: 0;
     overflow-y: auto;
     align-content: start;
@@ -3400,19 +3401,21 @@ resetLevel(true)
   }
 
   .screen-play .program-slot {
-    min-height: 54px;
+    min-height: 44px;
   }
 
   .screen-play .program-tools {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     align-content: start;
     overflow-y: auto;
   }
 
   .screen-play .program-tools .tool-btn {
-    min-height: 44px;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
   .hero-copy,
