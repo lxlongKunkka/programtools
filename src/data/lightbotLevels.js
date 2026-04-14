@@ -294,8 +294,9 @@ function inferDraftStartDirection(tiles, startTile) {
 function buildDraftLevel(chapter, level, index) {
   const startTile = level.tiles.find((tile) => tile.tile === 'S') || level.tiles[0]
   const targetCount = level.tiles.filter((tile) => tile.tile === 'L').length
-  const procLimit = chapterProcLimit(chapter.id)
-  const startDir = inferDraftStartDirection(level.tiles, startTile)
+  const procLimit = level.procLimit ?? chapterProcLimit(chapter.id)
+  const startDir = level.startDir || inferDraftStartDirection(level.tiles, startTile)
+  const mainLimit = level.mainLimit ?? chapterMainLimit(chapter.id, level.tiles.length)
 
   return {
     id: level.id,
@@ -306,7 +307,7 @@ function buildDraftLevel(chapter, level, index) {
     skill: chapter.title,
     description: `${level.summary} 由你提供的坐标草案自动生成。`,
     goal: targetCount > 1 ? '点亮所有目标格。' : '点亮目标格。',
-    mainLimit: chapterMainLimit(chapter.id, level.tiles.length),
+    mainLimit,
     procLimits: procLimit ? { p1: procLimit } : {},
     tips: [
       { title: 'Draft Import', copy: '该关卡由章节草案坐标自动生成，可继续在关卡编辑器中微调。' },
@@ -331,7 +332,7 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
       { id: 'base-6', summary: '小十字平台，中心与分支有目标点。', tiles: [{ x: 1, y: 0, z: 0, tile: 'S' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'N' }] },
       { id: 'base-7', summary: '外圈低台，右上角高亮目标点。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 0, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'N' }] },
       { id: 'base-8', summary: '中央高台，周围低平台包裹。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 2, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'L' }] },
-      { id: 'base-9', summary: '中心平台加四向短臂，四灯围绕中心。', tiles: [{ x: 1, y: 1, z: 0, tile: 'S' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'L' }] }
+      { id: 'base-9', summary: '中心平台加四向短臂，四灯围绕中心。', mainLimit: 18, tiles: [{ x: 1, y: 1, z: 0, tile: 'S' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'L' }] }
     ]
   },
   {
@@ -357,8 +358,8 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
       { id: 'overload-2', summary: '折返多层阶梯群，变体路径明显。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 1, tile: 'L' }, { x: 3, y: 2, z: 2, tile: 'N' }, { x: 2, y: 2, z: 2, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 1, y: 1, z: 2, tile: 'L' }] },
       { id: 'overload-3', summary: '中心出发的星状高柱组合。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 2, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 2, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 2, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 2, tile: 'L' }] },
       { id: 'overload-4', summary: '中心隆起，四周支路展开。', tiles: [{ x: 2, y: 2, z: 1, tile: 'S' }, { x: 2, y: 1, z: 2, tile: 'L' }, { x: 2, y: 0, z: 2, tile: 'N' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 2, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 2, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 2, tile: 'L' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'N' }] },
-      { id: 'overload-5', summary: '小型竖向塔台，带跨越段。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 1, z: 2, tile: 'L' }, { x: 4, y: 1, z: 2, tile: 'N' }, { x: 5, y: 0, z: 3, tile: 'L' }] },
-      { id: 'overload-6', summary: '多个岛块围绕中心，重复跳跃模板。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }, { x: 0, y: 1, z: 1, tile: 'N' }, { x: 4, y: 1, z: 1, tile: 'N' }, { x: 0, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'N' }] },
+      { id: 'overload-5', summary: '小型竖向塔台，带跨越段。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'N' }, { x: 3, y: 1, z: 2, tile: 'L' }, { x: 4, y: 1, z: 2, tile: 'N' }, { x: 4, y: 0, z: 2, tile: 'N' }, { x: 5, y: 0, z: 3, tile: 'L' }] },
+      { id: 'overload-6', summary: '多个岛块围绕中心，重复跳跃模板。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }, { x: 0, y: 1, z: 1, tile: 'N' }, { x: 4, y: 1, z: 1, tile: 'N' }, { x: 0, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'N' }] },
       { id: 'overload-7', summary: '中心模板向外辐射的十字平台。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 1, tile: 'L' }] },
       { id: 'overload-8', summary: '高柱串联，重复跨越高点。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 1, tile: 'N' }, { x: 2, y: 3, z: 2, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 2, tile: 'L' }, { x: 5, y: 3, z: 1, tile: 'N' }, { x: 6, y: 3, z: 2, tile: 'L' }] },
       { id: 'overload-9', summary: '台阶迷宫与桥面混合的综合关。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 3, y: 3, z: 2, tile: 'N' }, { x: 2, y: 3, z: 2, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'N' }, { x: 1, y: 2, z: 1, tile: 'L' }, { x: 2, y: 2, z: 2, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 4, y: 2, z: 1, tile: 'N' }, { x: 5, y: 2, z: 1, tile: 'L' }] }
@@ -369,7 +370,7 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
     title: '回圈',
     levels: [
       { id: 'circle-1', summary: '直桥型平台，重复前进加点亮。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 4, y: 0, z: 0, tile: 'N' }, { x: 5, y: 0, z: 0, tile: 'L' }] },
-      { id: 'circle-2', summary: '平面插高柱，固定模式重复访问。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }] },
+      { id: 'circle-2', summary: '平面插高柱，固定模式重复访问。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }] },
       { id: 'circle-3', summary: '紧凑多层平台，局部短循环。', tiles: [{ x: 1, y: 2, z: 0, tile: 'S' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'L' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 0, y: 2, z: 0, tile: 'N' }] },
       { id: 'circle-4', summary: '大号方环地图，四边同构。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'L' }, { x: 0, y: 3, z: 0, tile: 'N' }, { x: 1, y: 3, z: 0, tile: 'L' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 3, y: 3, z: 0, tile: 'L' }] },
       { id: 'circle-5', summary: '外围回路加中央高点。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }] },
@@ -396,7 +397,7 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
     id: 'clg',
     title: '挑战等级',
     levels: [
-      { id: 'clg-1', summary: '多层台阶大块结构，两侧伸出低平台。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 2, tile: 'L' }, { x: 4, y: 3, z: 2, tile: 'N' }, { x: 5, y: 3, z: 1, tile: 'L' }, { x: 1, y: 5, z: 0, tile: 'L' }, { x: 4, y: 5, z: 0, tile: 'L' }] },
+      { id: 'clg-1', summary: '多层台阶大块结构，两侧伸出低平台。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 4, y: 4, z: 1, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 2, tile: 'L' }, { x: 4, y: 3, z: 2, tile: 'N' }, { x: 5, y: 3, z: 1, tile: 'L' }, { x: 1, y: 5, z: 0, tile: 'L' }, { x: 4, y: 5, z: 0, tile: 'L' }] },
       { id: 'clg-2', summary: '超大平面斜向平台，后段抬高。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 4, y: 2, z: 0, tile: 'L' }, { x: 5, y: 2, z: 1, tile: 'N' }, { x: 6, y: 2, z: 1, tile: 'L' }, { x: 7, y: 2, z: 2, tile: 'N' }, { x: 8, y: 2, z: 2, tile: 'L' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 5, y: 1, z: 1, tile: 'L' }, { x: 6, y: 1, z: 1, tile: 'N' }] },
       { id: 'clg-3', summary: '中央高、两侧低的对称阶梯群。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 2, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'L' }, { x: 5, y: 3, z: 0, tile: 'N' }, { x: 6, y: 3, z: 0, tile: 'L' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'N' }] },
       { id: 'clg-4', summary: '彩色大平面地图，有明显主路径。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 5, y: 1, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 4, y: 0, z: 0, tile: 'N' }, { x: 4, y: 2, z: 0, tile: 'L' }] },

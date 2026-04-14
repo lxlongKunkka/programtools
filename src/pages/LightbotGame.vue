@@ -216,7 +216,18 @@
 
             <div class="editor-action-row">
               <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
+              <button class="pill-btn" @click="verifyEditorLevelForPublish">验证通关</button>
               <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
+              <button class="hero-btn" :disabled="!canPublishEditorLevel" @click="publishEditorLevel">发布关卡</button>
+            </div>
+
+            <div class="editor-publish-card" :class="editorPublishToneClass">
+              <strong>{{ editorPublishTitle }}</strong>
+              <p>{{ editorPublishMessage }}</p>
+              <template v-if="editorSolvedProgram">
+                <div class="editor-solution-line">MAIN: {{ formatOps(editorSolvedProgram.main) }}</div>
+                <div v-if="editorSolvedProgram.p1?.length" class="editor-solution-line">P1: {{ formatOps(editorSolvedProgram.p1) }}</div>
+              </template>
             </div>
           </div>
         </aside>
@@ -371,6 +382,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as THREE from 'three'
 import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
+import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const EDITOR_GRID_SIZE = 6
@@ -539,6 +551,7 @@ const activeCustomLevel = ref(null)
 const editorTool = ref('platform')
 const editorHeight = ref(1)
 const editorDraft = reactive(createDefaultEditorDraft())
+const editorVerification = ref(null)
 
 let briefSceneController = null
 let playSceneController = null
@@ -555,6 +568,25 @@ const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
+const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
+const canPublishEditorLevel = computed(() => editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value)
+const editorPublishToneClass = computed(() => {
+  if (!editorVerification.value) return 'pending'
+  return editorVerification.value.solvable ? 'success' : 'danger'
+})
+const editorPublishTitle = computed(() => {
+  if (!editorVerification.value) return '发布前验证'
+  return editorVerification.value.solvable ? '已验证可通关' : '验证未通过'
+})
+const editorPublishMessage = computed(() => {
+  if (!editorVerification.value) {
+    return '发布关卡前，必须先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
+  }
+  if (editorVerification.value.signature !== editorSignature.value) {
+    return '草稿已经修改，必须重新验证后才能发布。'
+  }
+  return editorVerification.value.message
+})
 
 const boardPlatforms = computed(() => {
   const platforms = []
@@ -686,6 +718,7 @@ function resetEditorDraft() {
     start: { ...nextDraft.start },
     board: cloneBoard(nextDraft.board)
   })
+  editorVerification.value = null
   editorTool.value = 'platform'
   editorHeight.value = 1
   setStatus('Editor reset')
@@ -733,6 +766,75 @@ function validateEditorLevel() {
     return { ok: false, message: 'Add at least one target tile' }
   }
   return { ok: true }
+}
+
+function verifyEditorLevelForPublish() {
+  const validation = validateEditorLevel()
+  if (!validation.ok) {
+    editorVerification.value = {
+      solvable: false,
+      signature: editorSignature.value,
+      message: validation.message
+    }
+    setStatus(validation.message, 'danger')
+    return
+  }
+
+  const level = editorLevelPreview.value
+  const solveResult = solveLevelProgram(level)
+  if (!solveResult.solvable) {
+    editorVerification.value = {
+      solvable: false,
+      signature: editorSignature.value,
+      message: solveResult.reason
+    }
+    setStatus(solveResult.reason, 'danger')
+    return
+  }
+
+  editorVerification.value = {
+    solvable: true,
+    signature: editorSignature.value,
+    program: {
+      main: [...solveResult.main],
+      p1: [...solveResult.p1]
+    },
+    message: `已验证通过：最短 ${solveResult.rawLength} 步，MAIN ${solveResult.main.length}/${level.mainLimit}${level.procLimits.p1 ? `，P1 ${solveResult.p1.length}/${level.procLimits.p1}` : ''}`
+  }
+  setStatus('Level verified for publish', 'success')
+}
+
+function publishEditorLevel() {
+  if (!canPublishEditorLevel.value) {
+    setStatus('Publish blocked: verify current draft first', 'danger')
+    return
+  }
+
+  const program = editorSolvedProgram.value || { main: [], p1: [] }
+  const publishLevel = {
+    ...editorLevelPreview.value,
+    demo: {
+      main: [...program.main],
+      p1: [...program.p1]
+    }
+  }
+
+  const payload = JSON.stringify(publishLevel, null, 2)
+  const blob = new Blob([payload], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `${publishLevel.id || 'custom-level'}-${Date.now()}.json`
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(payload).catch(() => {})
+  }
+
+  setStatus('Verified level exported', 'success')
 }
 
 function startCustomPlaytest() {
@@ -1357,6 +1459,9 @@ watch(
 )
 
 watch(editorSignature, () => {
+  if (editorVerification.value && editorVerification.value.signature !== editorSignature.value) {
+    editorVerification.value = null
+  }
   editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
 })
 
@@ -1850,6 +1955,43 @@ resetLevel(true)
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.editor-publish-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f3f7fa;
+  border: 1px solid rgba(91, 113, 130, 0.16);
+}
+
+.editor-publish-card.success {
+  background: #edf8ee;
+  border-color: rgba(76, 176, 101, 0.28);
+}
+
+.editor-publish-card.danger {
+  background: #fff2f1;
+  border-color: rgba(216, 89, 89, 0.26);
+}
+
+.editor-publish-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.editor-publish-card p {
+  margin: 0;
+  color: #526575;
+  line-height: 1.5;
+}
+
+.editor-solution-line {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #324555;
+  word-break: break-word;
 }
 
 .editor-grid-board {
