@@ -110,8 +110,12 @@ function toClientLevel(doc) {
       main: [...(doc.demo?.main || [])],
       p1: [...(doc.demo?.p1 || [])]
     },
+    isDeleted: Boolean(doc.isDeleted),
     updatedBy: doc.updatedBy,
     updatedByName: doc.updatedByName,
+    deletedAt: doc.deletedAt,
+    deletedBy: doc.deletedBy,
+    deletedByName: doc.deletedByName,
     updatedAt: doc.updatedAt
   }
 }
@@ -136,7 +140,11 @@ router.put('/levels/:id', authenticateToken, async (req, res) => {
       {
         ...level,
         updatedBy: req.user.id,
-        updatedByName: req.user.username || 'unknown'
+        updatedByName: req.user.username || 'unknown',
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        deletedByName: null
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean()
@@ -159,8 +167,42 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: '关卡不存在' })
     }
 
-    await LightbotLevelOverride.deleteOne({ levelId: requestedId })
-    res.json({ success: true })
+    const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === requestedId)
+    if (!originalLevel) {
+      return res.status(400).json({ success: false, error: '关卡不存在' })
+    }
+
+    const deletedLevel = await LightbotLevelOverride.findOneAndUpdate(
+      { levelId: requestedId },
+      {
+        levelId: requestedId,
+        chapterId: originalLevel.chapterId,
+        chapterTitle: originalLevel.chapterTitle,
+        chapterOrder: originalLevel.chapterOrder,
+        title: originalLevel.title,
+        skill: originalLevel.skill,
+        description: originalLevel.description,
+        goal: originalLevel.goal,
+        mainLimit: originalLevel.mainLimit,
+        procLimits: { ...(originalLevel.procLimits || {}) },
+        tips: (originalLevel.tips || []).map(normalizeTip),
+        board: originalLevel.board,
+        start: originalLevel.start,
+        demo: {
+          main: normalizeOperationList(originalLevel.demo?.main),
+          p1: normalizeOperationList(originalLevel.demo?.p1)
+        },
+        updatedBy: req.user.id,
+        updatedByName: req.user.username || 'unknown',
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.user.id,
+        deletedByName: req.user.username || 'unknown'
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean()
+
+    res.json({ success: true, data: toClientLevel(deletedLevel) })
   } catch (error) {
     console.error('Failed to delete Lightbot level override:', error)
     res.status(500).json({ success: false, error: '删除 Lightbot 关卡失败' })

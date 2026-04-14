@@ -38,7 +38,11 @@ const lightbotLevelOverrideSchema = new mongoose.Schema({
   start: { type: lightbotStartSchema, required: true },
   demo: { type: lightbotDemoSchema, default: () => ({ main: [], p1: [] }) },
   updatedBy: { type: Number, required: true },
-  updatedByName: { type: String, required: true, maxlength: 80 }
+  updatedByName: { type: String, required: true, maxlength: 80 },
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: Number, default: null },
+  deletedByName: { type: String, default: null, maxlength: 80 }
 }, {
   timestamps: true,
   collection: 'lightbot_level_overrides'

@@ -187,7 +187,7 @@
 
             <div class="editor-action-row">
               <button class="pill-btn" @click="saveEditorDraft">保存草稿</button>
-              <button class="pill-btn" @click="deleteEditorData">{{ editorDeleteLabel }}</button>
+              <button v-if="canDeleteEditorLevel" class="pill-btn" @click="deleteEditorData">{{ editorDeleteLabel }}</button>
               <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
               <button class="pill-btn" @click="verifyEditorLevelForPublish">验证通关</button>
               <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
@@ -681,17 +681,29 @@ function buildCustomLevel(draft) {
   }
 }
 
+const deletedLevelIds = ref([])
+const deletedLevelIdSet = computed(() => new Set(deletedLevelIds.value))
 const levelOverrides = ref({})
-const levels = computed(() => LIGHTBOT_LEVELS.map((level) => cloneLevelDefinition(levelOverrides.value[level.id] || level)))
+const levels = computed(() => {
+  return LIGHTBOT_LEVELS
+    .filter((level) => !deletedLevelIdSet.value.has(level.id))
+    .map((level) => cloneLevelDefinition(levelOverrides.value[level.id] || level))
+})
 const levelGroups = computed(() => {
   const levelById = new Map(levels.value.map((level) => [level.id, level]))
 
-  return LIGHTBOT_LEVEL_GROUPS.map((group, order) => ({
-    ...group,
-    order,
-    levels: group.levels.map((level) => levelById.get(level.id) || cloneLevelDefinition(level)),
-    startIndex: levels.value.findIndex((level) => level.id === group.levels[0]?.id)
-  }))
+  return LIGHTBOT_LEVEL_GROUPS.map((group, order) => {
+    const visibleLevels = group.levels
+      .filter((level) => !deletedLevelIdSet.value.has(level.id))
+      .map((level) => levelById.get(level.id) || cloneLevelDefinition(level))
+
+    return {
+      ...group,
+      order,
+      levels: visibleLevels,
+      startIndex: visibleLevels.length ? levels.value.findIndex((level) => level.id === visibleLevels[0]?.id) : -1
+    }
+  }).filter((group) => group.levels.length)
 })
 
 function platformKey(x, y) {
@@ -720,18 +732,31 @@ function findRecommendedLevelIndex() {
 }
 
 function normalizeServerLevelOverrides(items) {
-  if (!Array.isArray(items)) return {}
+  if (!Array.isArray(items)) {
+    return { overrides: {}, deletedIds: [] }
+  }
 
-  return Object.fromEntries(
-    items
-      .filter((level) => level && typeof level === 'object' && VALID_LEVEL_IDS.has(level.id) && Array.isArray(level.board))
-      .map((level) => [level.id, cloneLevelDefinition(level)])
-  )
+  const overrides = {}
+  const deletedIds = []
+
+  items.forEach((level) => {
+    if (!level || typeof level !== 'object' || !VALID_LEVEL_IDS.has(level.id)) return
+    if (level.isDeleted) {
+      deletedIds.push(level.id)
+      return
+    }
+    if (!Array.isArray(level.board)) return
+    overrides[level.id] = cloneLevelDefinition(level)
+  })
+
+  return { overrides, deletedIds }
 }
 
 async function fetchSharedLevelOverrides() {
   const response = await request.get('/api/lightbot/levels')
-  levelOverrides.value = normalizeServerLevelOverrides(response?.data)
+  const normalized = normalizeServerLevelOverrides(response?.data)
+  levelOverrides.value = normalized.overrides
+  deletedLevelIds.value = normalized.deletedIds
 }
 
 function levelGlobalIndex(group, index) {
@@ -749,7 +774,7 @@ const mainProcedure = ref([])
 const procedures = ref({ p1: [] })
 const completedLevelIds = ref(loadProgress())
 const litKeys = ref([])
-const bot = ref(cloneBot(levels.value[0].start))
+const bot = ref(cloneBot((levels.value[0] || LIGHTBOT_LEVELS[0]).start))
 const isRunning = ref(false)
 const runningProcedureKey = ref('')
 const runningOperationIndex = ref(-1)
@@ -775,7 +800,7 @@ let briefSceneController = null
 let playSceneController = null
 let editorSceneController = null
 
-const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value])
+const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
 const hasCurrentDemo = computed(() => {
   const demo = currentLevel.value.demo || { main: [], p1: [] }
@@ -787,8 +812,8 @@ const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
-const hasSavedEditorOverride = computed(() => Boolean(editorDraft.sourceLevelId && levelOverrides.value[editorDraft.sourceLevelId]))
-const editorDeleteLabel = computed(() => (hasSavedEditorOverride.value ? '删除关卡修改' : '删除草稿'))
+const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId))
+const editorDeleteLabel = computed(() => '删除关卡')
 const canSaveEditorLevel = computed(() => {
   return Boolean(editorDraft.sourceLevelId) && editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value
 })
@@ -977,34 +1002,35 @@ function replaceEditorDraft(nextDraft) {
 }
 
 async function deleteEditorData() {
-  if (hasSavedEditorOverride.value && editorDraft.sourceLevelId) {
-    if (!window.confirm('删除后会恢复这个关卡的原版内容，所有人都会看到恢复后的版本。继续吗？')) {
-      return
-    }
-
-    try {
-      await request.delete(`/api/lightbot/levels/${encodeURIComponent(editorDraft.sourceLevelId)}`)
-      const nextOverrides = { ...levelOverrides.value }
-      delete nextOverrides[editorDraft.sourceLevelId]
-      levelOverrides.value = nextOverrides
-      removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
-
-      const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === editorDraft.sourceLevelId)
-      replaceEditorDraft(originalLevel ? createEditorDraftFromLevel(originalLevel) : createDefaultEditorDraft())
-      setStatus('已恢复为原版关卡，所有人看到的都是恢复后的版本', 'success')
-    } catch (error) {
-      setStatus(error.message || '删除共享关卡失败', 'danger')
-    }
+  if (!editorDraft.sourceLevelId) {
+    setStatus('当前草稿还不是正式关卡，无法删除关卡', 'danger')
     return
   }
 
-  if (!window.confirm('删除后会清空当前草稿，继续吗？')) {
+  if (!window.confirm('删除后，这个关卡会从所有人的章节列表里消失。继续吗？')) {
     return
   }
 
-  removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
-  replaceEditorDraft(createDefaultEditorDraft())
-  setStatus('已删除当前草稿', 'success')
+  try {
+    const deletedLevelId = editorDraft.sourceLevelId
+    await request.delete(`/api/lightbot/levels/${encodeURIComponent(deletedLevelId)}`)
+
+    const nextOverrides = { ...levelOverrides.value }
+    delete nextOverrides[deletedLevelId]
+    levelOverrides.value = nextOverrides
+    deletedLevelIds.value = Array.from(new Set([...deletedLevelIds.value, deletedLevelId]))
+    removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
+
+    if (completedLevelIds.value.includes(deletedLevelId)) {
+      completedLevelIds.value = completedLevelIds.value.filter((levelId) => levelId !== deletedLevelId)
+    }
+
+    selectedLevelIndex.value = Math.min(selectedLevelIndex.value, Math.max(levels.value.length - 1, 0))
+    leaveEditor()
+    setStatus('关卡已删除，所有人的列表中都不会再显示它', 'success')
+  } catch (error) {
+    setStatus(error.message || '删除共享关卡失败', 'danger')
+  }
 }
 
 function applyEditorCell(x, y) {
