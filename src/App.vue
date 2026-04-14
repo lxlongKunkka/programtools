@@ -47,7 +47,7 @@
         <router-link v-else to="/login">登录</router-link>
       </nav>
     </header>
-    <main>
+    <main :class="{ 'has-mobile-bottom-nav': showMobileBottomNav && mobileBottomItems.length }">
       <router-view v-slot="{ Component }">
         <keep-alive include="SolutionReport,Translate,SolveData">
           <component :is="Component" />
@@ -55,7 +55,7 @@
       </router-view>
     </main>
 
-    <nav v-if="mobileBottomItems.length" class="mobile-bottom-nav" :class="{ 'quiz-actions': isQuizDailyRoute }" :aria-label="isQuizDailyRoute ? '客观题快捷操作' : '常用导航'">
+    <nav v-if="showMobileBottomNav && mobileBottomItems.length" class="mobile-bottom-nav" :class="{ 'quiz-actions': isQuizDailyRoute }" :aria-label="isQuizDailyRoute ? '客观题快捷操作' : '常用导航'">
       <template v-for="item in mobileBottomItems" :key="item.key">
         <router-link
           v-if="item.type === 'route'"
@@ -142,6 +142,9 @@ export default {
     },
     isCompactQuizMobileNav() {
       return this.isMobileViewport && (this.isQuizDailyRoute || this.isLoginRoute)
+    },
+    showMobileBottomNav() {
+      return !this.$route?.meta?.hideMobileBottomNav
     },
     mobileBottomItems() {
       if (this.isQuizDailyRoute) {
@@ -414,8 +417,12 @@ main { padding: 0; }
     gap: 6px;
   }
 
-  main {
+  main.has-mobile-bottom-nav {
     padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+
+  main:not(.has-mobile-bottom-nav) {
+    padding-bottom: 0;
   }
 
   .mobile-bottom-nav {
