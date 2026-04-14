@@ -451,6 +451,41 @@ function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
 }
 
+function getStoredLightbotUser() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('user_info') || 'null')
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function getLightbotStorageKey(baseKey) {
+  const user = getStoredLightbotUser()
+  const userKey = user?.id || user?._id || user?.username || 'guest'
+  return `${baseKey}:${String(userKey)}`
+}
+
+function readLightbotStorage(baseKey) {
+  const scopedKey = getLightbotStorageKey(baseKey)
+  const scopedValue = localStorage.getItem(scopedKey)
+  if (scopedValue !== null) {
+    return scopedValue
+  }
+
+  const legacyValue = localStorage.getItem(baseKey)
+  if (legacyValue !== null) {
+    localStorage.setItem(scopedKey, legacyValue)
+    return legacyValue
+  }
+
+  return null
+}
+
+function writeLightbotStorage(baseKey, value) {
+  localStorage.setItem(getLightbotStorageKey(baseKey), value)
+}
+
 function cloneBoard(board) {
   return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
 }
@@ -599,7 +634,7 @@ function serializeEditorDraft(draft) {
 
 function loadSavedEditorDraft() {
   try {
-    const raw = localStorage.getItem(EDITOR_DRAFT_STORAGE_KEY)
+    const raw = readLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
     if (!parsed || !Array.isArray(parsed.board)) return null
@@ -690,7 +725,7 @@ function buildCustomLevel(draft) {
 
 function loadLevelOverrides() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(LEVEL_OVERRIDE_STORAGE_KEY) || '{}')
+    const parsed = JSON.parse(readLightbotStorage(LEVEL_OVERRIDE_STORAGE_KEY) || '{}')
     if (!parsed || typeof parsed !== 'object') return {}
 
     return Object.fromEntries(
@@ -704,7 +739,7 @@ function loadLevelOverrides() {
 }
 
 function persistLevelOverrides(overrides) {
-  localStorage.setItem(LEVEL_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides))
+  writeLightbotStorage(LEVEL_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides))
 }
 
 const levelOverrides = ref(loadLevelOverrides())
@@ -730,7 +765,7 @@ function cloneBot(start) {
 
 function loadProgress() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    const parsed = JSON.parse(readLightbotStorage(STORAGE_KEY) || '{}')
     return Array.isArray(parsed.completedLevelIds)
       ? parsed.completedLevelIds.filter((levelId) => VALID_LEVEL_IDS.has(levelId))
       : []
@@ -819,7 +854,7 @@ const editorPublishMessage = computed(() => {
   if (!editorDraft.sourceLevelId) {
     return '当前是新建草稿，还没有对应的内置关卡槽位；请从现有关卡进入编辑器后再保存到游戏。'
   }
-  return `${editorVerification.value.message}。点击“保存到游戏”后，这个关卡会在当前浏览器里直接替换为你修改后的版本。`
+  return `${editorVerification.value.message}。点击“保存到游戏”后，这个关卡只会在当前登录账号下替换为你修改后的版本。`
 })
 
 const boardPlatforms = computed(() => {
@@ -923,7 +958,7 @@ const robotStyle = computed(() => {
 })
 
 watch(completedLevelIds, (value) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
+  writeLightbotStorage(STORAGE_KEY, JSON.stringify({ completedLevelIds: value }))
 }, { deep: true })
 
 function setStatus(text, tone = 'neutral') {
@@ -965,8 +1000,8 @@ function openEditor(level = null) {
 
 function saveEditorDraft() {
   const payload = serializeEditorDraft(editorDraft)
-  localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, JSON.stringify(payload))
-  setStatus('草稿已保存到本地浏览器', 'success')
+  writeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY, JSON.stringify(payload))
+  setStatus('草稿已保存到当前账号的本地浏览器数据', 'success')
 }
 
 function applyEditorCell(x, y) {
@@ -1101,7 +1136,7 @@ function saveEditorLevelToGame() {
   editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
   saveEditorDraft()
-  setStatus('已保存到游戏；这个关卡在当前浏览器里会直接使用你修改后的版本', 'success')
+  setStatus('已保存到游戏；这个关卡只会在当前登录账号下使用你修改后的版本', 'success')
 }
 
 function startCustomPlaytest() {
