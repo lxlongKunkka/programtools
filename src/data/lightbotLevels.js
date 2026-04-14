@@ -325,28 +325,142 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
     title: '基本',
     levels: [
       {
-        id: 'base-0',
-        summary: '截图复刻：两步直行后点亮终点。',
+        id: 'base-1',
+        summary: '原图 1-1：2x3 矩形底板，终点位于右下。',
         mainLimit: 3,
         startDir: 'forward',
         tiles: [
-          { x: 0, y: 0, z: 0, tile: 'S' },
+          { x: 0, y: 0, z: 0, tile: 'N' },
           { x: 1, y: 0, z: 0, tile: 'N' },
-          { x: 2, y: 0, z: 0, tile: 'L' },
-          { x: 0, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 0, z: 0, tile: 'N' },
+          { x: 0, y: 1, z: 0, tile: 'S' },
           { x: 1, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 1, z: 0, tile: 'L' }
+        ]
+      },
+      {
+        id: 'base-2',
+        summary: '原图 1-2：矩形底板中央立柱，起点在右后侧。',
+        mainLimit: 7,
+        tiles: [
+          { x: 0, y: 0, z: 0, tile: 'N' },
+          { x: 1, y: 0, z: 1, tile: 'N' },
+          { x: 2, y: 0, z: 0, tile: 'S' },
+          { x: 0, y: 1, z: 0, tile: 'N' },
+          { x: 1, y: 1, z: 0, tile: 'L' },
           { x: 2, y: 1, z: 0, tile: 'N' }
         ]
       },
-      { id: 'base-1', summary: '2x2 小平台，单灯入门。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'L' }] },
-      { id: 'base-2', summary: '平面小平台，两端各有目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'L' }] },
-      { id: 'base-3', summary: '低平台接一个 1 层高台。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }] },
-      { id: 'base-4', summary: '一字长桥，中段和末端有目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }] },
-      { id: 'base-5', summary: '阶梯塔，最高点是关键灯块。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 3, y: 0, z: 2, tile: 'L' }] },
-      { id: 'base-6', summary: '小十字平台，中心与分支有目标点。', tiles: [{ x: 1, y: 0, z: 0, tile: 'S' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'N' }] },
-      { id: 'base-7', summary: '外圈低台，右上角高亮目标点。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 0, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'N' }] },
-      { id: 'base-8', summary: '中央高台，周围低平台包裹。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 2, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'L' }] },
-      { id: 'base-9', summary: '中心平台加四向短臂，四灯围绕中心。', mainLimit: 18, tiles: [{ x: 1, y: 1, z: 0, tile: 'S' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'L' }] }
+      {
+        id: 'base-3',
+        summary: '原图 1-3：左后高台接右侧台阶，目标位于左上高台。',
+        mainLimit: 8,
+        tiles: [
+          { x: 0, y: 1, z: 0, tile: 'S' },
+          { x: 1, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 1, z: 1, tile: 'N' },
+          { x: 3, y: 1, z: 0, tile: 'N' },
+          { x: 1, y: 0, z: 1, tile: 'L' },
+          { x: 2, y: 0, z: 1, tile: 'N' },
+          { x: 2, y: 2, z: 0, tile: 'N' }
+        ]
+      },
+      {
+        id: 'base-4',
+        summary: '原图 1-4：双排长桥，目标位于最右端。',
+        mainLimit: 6,
+        tiles: [
+          { x: 0, y: 0, z: 0, tile: 'N' },
+          { x: 1, y: 0, z: 0, tile: 'N' },
+          { x: 2, y: 0, z: 0, tile: 'N' },
+          { x: 3, y: 0, z: 0, tile: 'L' },
+          { x: 0, y: 1, z: 0, tile: 'S' },
+          { x: 1, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 1, z: 0, tile: 'N' },
+          { x: 3, y: 1, z: 0, tile: 'N' }
+        ]
+      },
+      {
+        id: 'base-5',
+        summary: '原图 1-5：逐层上升的阶梯塔，顶层为目标。',
+        mainLimit: 7,
+        tiles: [
+          { x: 0, y: 2, z: 0, tile: 'N' },
+          { x: 1, y: 2, z: 0, tile: 'S' },
+          { x: 2, y: 2, z: 0, tile: 'N' },
+          { x: 3, y: 2, z: 0, tile: 'N' },
+          { x: 1, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 1, z: 1, tile: 'N' },
+          { x: 3, y: 1, z: 1, tile: 'N' },
+          { x: 2, y: 0, z: 2, tile: 'L' }
+        ]
+      },
+      {
+        id: 'base-6',
+        summary: '原图 1-6：左后高台开局，依次点亮三处目标。',
+        mainLimit: 11,
+        tiles: [
+          { x: 0, y: 0, z: 1, tile: 'S' },
+          { x: 0, y: 1, z: 0, tile: 'N' },
+          { x: 1, y: 1, z: 1, tile: 'L' },
+          { x: 2, y: 1, z: 0, tile: 'L' },
+          { x: 1, y: 2, z: 0, tile: 'L' },
+          { x: 2, y: 2, z: 0, tile: 'N' },
+          { x: 0, y: 2, z: 0, tile: 'N' }
+        ]
+      },
+      {
+        id: 'base-7',
+        summary: '原图 1-7：大底板连接右侧高台，三个目标分布在高台一侧。',
+        mainLimit: 12,
+        tiles: [
+          { x: 0, y: 2, z: 0, tile: 'S' },
+          { x: 1, y: 1, z: 1, tile: 'N' },
+          { x: 1, y: 2, z: 0, tile: 'N' },
+          { x: 1, y: 3, z: 0, tile: 'N' },
+          { x: 2, y: 0, z: 1, tile: 'N' },
+          { x: 2, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 2, z: 0, tile: 'N' },
+          { x: 2, y: 3, z: 0, tile: 'N' },
+          { x: 3, y: 0, z: 1, tile: 'N' },
+          { x: 3, y: 1, z: 0, tile: 'N' },
+          { x: 3, y: 2, z: 0, tile: 'N' },
+          { x: 3, y: 3, z: 0, tile: 'N' },
+          { x: 4, y: 1, z: 1, tile: 'L' },
+          { x: 4, y: 2, z: 1, tile: 'L' },
+          { x: 4, y: 0, z: 1, tile: 'L' }
+        ]
+      },
+      {
+        id: 'base-8',
+        summary: '原图 1-8：左侧台阶抬升到顶层，途中和顶层各有一个目标。',
+        mainLimit: 12,
+        tiles: [
+          { x: 0, y: 2, z: 0, tile: 'N' },
+          { x: 1, y: 2, z: 0, tile: 'S' },
+          { x: 2, y: 2, z: 0, tile: 'N' },
+          { x: 3, y: 2, z: 0, tile: 'N' },
+          { x: 1, y: 1, z: 1, tile: 'N' },
+          { x: 2, y: 1, z: 0, tile: 'N' },
+          { x: 3, y: 1, z: 1, tile: 'L' },
+          { x: 2, y: 0, z: 1, tile: 'N' },
+          { x: 3, y: 0, z: 2, tile: 'L' },
+          { x: 4, y: 1, z: 0, tile: 'N' },
+          { x: 4, y: 2, z: 0, tile: 'N' }
+        ]
+      },
+      {
+        id: 'base-9',
+        summary: '原图 1-9：十字目标围绕中心，起点位于左侧伸出平台。',
+        mainLimit: 12,
+        tiles: [
+          { x: 0, y: 1, z: 0, tile: 'S' },
+          { x: 1, y: 0, z: 0, tile: 'L' },
+          { x: 2, y: 0, z: 0, tile: 'L' },
+          { x: 1, y: 1, z: 0, tile: 'L' },
+          { x: 2, y: 1, z: 0, tile: 'L' }
+        ]
+      }
     ]
   },
   {

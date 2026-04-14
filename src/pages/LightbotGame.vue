@@ -200,6 +200,8 @@
               <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
             </div>
 
+            <p class="editor-grid-hint">先选 Platform，再点击左侧 6x6 网格中的空白格添加地板。右侧区域只用于预览。</p>
+
             <div class="editor-grid-board">
               <div v-for="(row, y) in editorDraft.board" :key="`editor-row-${y}`" class="editor-grid-row">
                 <button
@@ -238,7 +240,7 @@
           <div class="editor-card grow">
             <div class="program-header">
               <span>Preview</span>
-              <span class="editor-preview-hint">Click cells to build a puzzle.</span>
+              <span class="editor-preview-hint">在左侧网格编辑，右侧 3D 预览会同步更新。</span>
             </div>
             <div class="scene-frame editor-frame">
               <div ref="editorSceneHost" class="three-scene-host editor-scene-host"></div>
@@ -2026,6 +2028,13 @@ resetLevel(true)
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.editor-grid-hint {
+  margin: 14px 0 0;
+  color: #6f8190;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .editor-grid-row {

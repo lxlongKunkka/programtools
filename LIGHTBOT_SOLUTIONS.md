@@ -55,14 +55,14 @@
 ## 条件式
 
 - `if-1`: MAIN `walk light walk walk light right walk right walk light walk walk light`
-- `if-2`: MAIN `walk jump light left walk right jump light`
-- `if-3`: MAIN `walk light walk walk light right walk walk light left left walk left walk light walk walk left walk light`
-- `if-4`: MAIN `walk light walk walk light left walk left walk light left walk walk light`
-- `if-5`: MAIN `walk walk light walk walk light`
-- `if-6`: MAIN `walk jump light left walk right jump light left walk right jump light`
-- `if-7`: MAIN `walk light walk walk light right walk walk light right jump walk light jump light`
-
-## 挑战等级
+- `base-2`: `walk right walk light`
+- `base-3`: `walk left jump light`
+- `base-4`: `walk walk walk left walk light`
+- `base-5`: `walk left jump jump light`
+- `base-6`: `jump walk left walk light left jump light right jump light`
+- `base-7`: `walk walk walk jump light left walk light walk light`
+- `base-8`: `walk walk left jump light jump light`
+- `base-9`: `walk light walk light left walk light left walk light`
 
 - `clg-1`: MAIN `walk right p1 left walk right jump p1 jump light right walk jump light left left jump left jump jump light`; P1 `walk light left`
 - `clg-2`: MAIN `walk walk light walk walk light jump left walk light left left walk left walk light jump walk light`
