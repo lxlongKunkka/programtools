@@ -200,10 +200,15 @@
               <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
             </div>
 
-            <p class="editor-grid-hint">先选 Platform，再点击左侧网格中的空白格添加地板。画布会按地图内容自动扩展，右侧区域只用于预览。</p>
+            <p class="editor-grid-hint">先选 Platform，再点击左侧网格或右侧 3D 预览中的空白格添加地板。画布会按地图内容自动扩展。</p>
 
             <div class="editor-grid-board">
-              <div v-for="(row, y) in editorDraft.board" :key="`editor-row-${y}`" class="editor-grid-row">
+              <div
+                v-for="(row, y) in editorDraft.board"
+                :key="`editor-row-${y}`"
+                class="editor-grid-row"
+                :style="{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }"
+              >
                 <button
                   v-for="(_, x) in row"
                   :key="`editor-cell-${x}-${y}`"
@@ -1270,7 +1275,7 @@ function openPlayContext() {
   screen.value = 'brief'
 }
 
-function createSceneController(host) {
+function createSceneController(host, options = {}) {
   if (!host) return null
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
@@ -1284,6 +1289,9 @@ function createSceneController(host) {
   const camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.1, 100)
   const boardGroup = new THREE.Group()
   const robotGroup = new THREE.Group()
+  const raycaster = new THREE.Raycaster()
+  const pointer = new THREE.Vector2()
+  const interactiveTargets = []
 
   scene.add(boardGroup)
   scene.add(robotGroup)
@@ -1316,11 +1324,17 @@ function createSceneController(host) {
     antenna: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.antenna }),
     eye: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.eye }),
     targetRing: new THREE.MeshBasicMaterial({ color: 0xf3fbff }),
-    targetCore: new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.topLit })
+    targetCore: new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.topLit }),
+    editorGhost: new THREE.MeshBasicMaterial({ color: 0x8fb0c4, transparent: true, opacity: 0.18 }),
+    editorGhostLine: new THREE.LineBasicMaterial({ color: 0x8ea7bb, transparent: true, opacity: 0.4 }),
+    hitArea: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   }
 
   const blockGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_HEIGHT, BLOCK_SIZE)
   const outlineGeometry = new THREE.EdgesGeometry(blockGeometry)
+  const editorGhostGeometry = new THREE.BoxGeometry(BLOCK_SIZE * 0.94, 0.02, BLOCK_SIZE * 0.94)
+  const editorGhostOutline = new THREE.EdgesGeometry(editorGhostGeometry)
+  const hitPlaneGeometry = new THREE.PlaneGeometry(BLOCK_SIZE * 0.94, BLOCK_SIZE * 0.94)
 
   function resize() {
     const width = Math.max(host.clientWidth, 1)
@@ -1336,10 +1350,19 @@ function createSceneController(host) {
   }
 
   function clearGroup(group) {
+    if (group === boardGroup) {
+      interactiveTargets.length = 0
+    }
     group.children.slice().forEach((child) => {
       child.traverse?.((node) => {
         if (!node.geometry) return
-        if (node.geometry !== blockGeometry && node.geometry !== outlineGeometry) {
+        if (
+          node.geometry !== blockGeometry &&
+          node.geometry !== outlineGeometry &&
+          node.geometry !== editorGhostGeometry &&
+          node.geometry !== editorGhostOutline &&
+          node.geometry !== hitPlaneGeometry
+        ) {
           node.geometry.dispose()
         }
       })
@@ -1351,6 +1374,8 @@ function createSceneController(host) {
     clearGroup(boardGroup)
     const litSet = new Set(litKeyList)
     const tiles = []
+    const boardHeight = level.board.length
+    const boardWidth = Math.max(...level.board.map((row) => row.length), 0)
 
     level.board.forEach((row, y) => {
       row.forEach((cell, x) => {
@@ -1359,13 +1384,17 @@ function createSceneController(host) {
       })
     })
 
-    if (!tiles.length) {
+    if (!tiles.length && !options.onCellSelect) {
       render()
       return
     }
 
-    const xs = tiles.map((item) => item.x * (BLOCK_SIZE + BOARD_GAP))
-    const zs = tiles.map((item) => item.y * (BLOCK_SIZE + BOARD_GAP))
+    const layoutCells = options.onCellSelect
+      ? Array.from({ length: boardHeight }, (_, y) => Array.from({ length: boardWidth }, (_, x) => ({ x, y }))).flat()
+      : tiles
+
+    const xs = layoutCells.map((item) => item.x * (BLOCK_SIZE + BOARD_GAP))
+    const zs = layoutCells.map((item) => item.y * (BLOCK_SIZE + BOARD_GAP))
     const heights = tiles.map((item) => item.cell.h)
     const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
     const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2
@@ -1377,6 +1406,32 @@ function createSceneController(host) {
     shadowPlane.position.x = -centerX
     shadowPlane.position.z = -centerZ
     shadowPlane.scale.setScalar(Math.max(spanX, spanZ) / 2.8)
+
+    if (options.onCellSelect) {
+      for (let y = 0; y < boardHeight; y += 1) {
+        for (let x = 0; x < boardWidth; x += 1) {
+          const existingCell = level.board[y]?.[x] || null
+          const hitY = (existingCell?.h || 0) * BLOCK_HEIGHT + 0.03
+
+          if (!existingCell) {
+            const ghost = new THREE.Mesh(editorGhostGeometry, sharedMaterials.editorGhost)
+            ghost.position.set(x * (BLOCK_SIZE + BOARD_GAP), 0.01, y * (BLOCK_SIZE + BOARD_GAP))
+            boardGroup.add(ghost)
+
+            const ghostOutline = new THREE.LineSegments(editorGhostOutline, sharedMaterials.editorGhostLine)
+            ghostOutline.position.copy(ghost.position)
+            boardGroup.add(ghostOutline)
+          }
+
+          const hitArea = new THREE.Mesh(hitPlaneGeometry, sharedMaterials.hitArea)
+          hitArea.rotation.x = -Math.PI / 2
+          hitArea.position.set(x * (BLOCK_SIZE + BOARD_GAP), hitY, y * (BLOCK_SIZE + BOARD_GAP))
+          hitArea.userData.editorCell = { x, y }
+          boardGroup.add(hitArea)
+          interactiveTargets.push(hitArea)
+        }
+      }
+    }
 
     tiles.forEach((item) => {
       const tileGroup = new THREE.Group()
@@ -1391,7 +1446,9 @@ function createSceneController(host) {
         const materials = [sharedMaterials.side, sharedMaterials.side, topMaterial, sharedMaterials.side, sharedMaterials.side, sharedMaterials.side]
         const block = new THREE.Mesh(blockGeometry, materials)
         block.position.y = (layer + 0.5) * BLOCK_HEIGHT
+        block.userData.editorCell = { x: item.x, y: item.y }
         tileGroup.add(block)
+        interactiveTargets.push(block)
 
         const outline = new THREE.LineSegments(outlineGeometry, sharedMaterials.line)
         outline.position.copy(block.position)
@@ -1500,12 +1557,30 @@ function createSceneController(host) {
     renderer.render(scene, camera)
   }
 
+  function handleSceneClick(event) {
+    if (!options.onCellSelect) return
+
+    const rect = renderer.domElement.getBoundingClientRect()
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    raycaster.setFromCamera(pointer, camera)
+
+    const hit = raycaster.intersectObjects(interactiveTargets, false).find((entry) => entry.object.userData?.editorCell)
+    if (!hit) return
+
+    const { x, y } = hit.object.userData.editorCell
+    options.onCellSelect(x, y)
+  }
+
   const resizeObserver = typeof ResizeObserver !== 'undefined'
     ? new ResizeObserver(() => resize())
     : null
 
   if (resizeObserver) {
     resizeObserver.observe(host)
+  }
+  if (options.onCellSelect) {
+    renderer.domElement.addEventListener('click', handleSceneClick)
   }
   resize()
 
@@ -1515,9 +1590,15 @@ function createSceneController(host) {
     resize,
     dispose() {
       resizeObserver?.disconnect()
+      if (options.onCellSelect) {
+        renderer.domElement.removeEventListener('click', handleSceneClick)
+      }
       renderer.dispose()
       blockGeometry.dispose()
       outlineGeometry.dispose()
+      editorGhostGeometry.dispose()
+      editorGhostOutline.dispose()
+      hitPlaneGeometry.dispose()
       Object.values(sharedMaterials).forEach((material) => material.dispose())
       host.innerHTML = ''
     }
@@ -1547,7 +1628,7 @@ function syncSceneControllers() {
 
   if (screen.value === 'editor' && editorSceneHost.value) {
     if (!editorSceneController) {
-      editorSceneController = createSceneController(editorSceneHost.value)
+      editorSceneController = createSceneController(editorSceneHost.value, { onCellSelect: applyEditorCell })
     }
     editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
   } else if (editorSceneController) {
@@ -2125,7 +2206,6 @@ resetLevel(true)
 
 .editor-grid-row {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2285,6 +2365,10 @@ resetLevel(true)
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.editor-scene-host :deep(canvas) {
+  cursor: crosshair;
 }
 
 .scene-frame::before {
