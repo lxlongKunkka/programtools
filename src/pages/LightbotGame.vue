@@ -83,6 +83,7 @@
                 <span>Main {{ level.mainLimit }}</span>
                 <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
                 <span v-else>No proc</span>
+                <button class="level-brief-btn" @click.stop="openEditor(level)">编辑</button>
                 <button class="level-brief-btn" @click.stop="openLevelBrief(levelGlobalIndex(group, index))">简介</button>
               </div>
             </button>
@@ -125,6 +126,7 @@
           <div class="hero-actions">
             <button class="hero-btn primary" @click="startLevel">Enter Puzzle</button>
             <button class="hero-btn" :disabled="!hasCurrentDemo" @click="loadDemoAndStart">Load Demo</button>
+            <button class="hero-btn" @click="openEditor(currentLevel)">编辑此关</button>
           </div>
         </div>
 
@@ -476,6 +478,30 @@ function createDefaultEditorDraft() {
   }
 }
 
+function createEditorDraftFromLevel(level) {
+  return {
+    title: level.title,
+    skill: level.skill,
+    description: level.description,
+    goal: level.goal,
+    mainLimit: Number(level.mainLimit) || 8,
+    p1Limit: Number(level.procLimits?.p1) || 0,
+    start: { ...level.start },
+    board: cloneBoard(level.board)
+  }
+}
+
+function applyDraftToEditor(draft) {
+  Object.assign(editorDraft, {
+    ...draft,
+    start: { ...draft.start },
+    board: cloneBoard(draft.board)
+  })
+  editorVerification.value = null
+  editorTool.value = 'platform'
+  editorHeight.value = 1
+}
+
 function buildCustomLevel(draft) {
   return {
     id: 'custom-level',
@@ -551,6 +577,7 @@ const activeCustomLevel = ref(null)
 const editorTool = ref('platform')
 const editorHeight = ref(1)
 const editorDraft = reactive(createDefaultEditorDraft())
+const editorBaseDraft = ref(createDefaultEditorDraft())
 const editorVerification = ref(null)
 
 let briefSceneController = null
@@ -712,21 +739,21 @@ function editorCellClass(x, y) {
 }
 
 function resetEditorDraft() {
-  const nextDraft = createDefaultEditorDraft()
-  Object.assign(editorDraft, {
-    ...nextDraft,
-    start: { ...nextDraft.start },
-    board: cloneBoard(nextDraft.board)
-  })
-  editorVerification.value = null
-  editorTool.value = 'platform'
-  editorHeight.value = 1
+  applyDraftToEditor(editorBaseDraft.value)
   setStatus('Editor reset')
 }
 
-function openEditor() {
+function openEditor(level = null) {
   activeCustomLevel.value = null
+  const nextDraft = level ? createEditorDraftFromLevel(level) : createDefaultEditorDraft()
+  editorBaseDraft.value = {
+    ...nextDraft,
+    start: { ...nextDraft.start },
+    board: cloneBoard(nextDraft.board)
+  }
+  applyDraftToEditor(nextDraft)
   screen.value = 'editor'
+  setStatus(level ? 'Loaded level into editor' : 'Editor ready')
 }
 
 function applyEditorCell(x, y) {
