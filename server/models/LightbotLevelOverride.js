@@ -1,0 +1,47 @@
+import mongoose from 'mongoose'
+import { appConn } from '../db.js'
+
+const lightbotTipSchema = new mongoose.Schema({
+  title: { type: String, required: true, maxlength: 80 },
+  copy: { type: String, required: true, maxlength: 240 }
+}, { _id: false })
+
+const lightbotStartSchema = new mongoose.Schema({
+  x: { type: Number, required: true },
+  y: { type: Number, required: true },
+  dir: { type: String, required: true, enum: ['forward', 'right', 'backward', 'left'] }
+}, { _id: false })
+
+const lightbotDemoSchema = new mongoose.Schema({
+  main: { type: [String], default: [] },
+  p1: { type: [String], default: [] }
+}, { _id: false })
+
+const lightbotLevelOverrideSchema = new mongoose.Schema({
+  levelId: { type: String, required: true, unique: true, index: true },
+  chapterId: { type: String, required: true },
+  chapterTitle: { type: String, required: true },
+  chapterOrder: { type: Number, required: true },
+  title: { type: String, required: true, maxlength: 80 },
+  skill: { type: String, required: true, maxlength: 40 },
+  description: { type: String, required: true, maxlength: 240 },
+  goal: { type: String, required: true, maxlength: 240 },
+  mainLimit: { type: Number, required: true, min: 1, max: 40 },
+  procLimits: {
+    type: new mongoose.Schema({
+      p1: { type: Number, default: 0, min: 0, max: 20 }
+    }, { _id: false }),
+    default: () => ({})
+  },
+  tips: { type: [lightbotTipSchema], default: [] },
+  board: { type: [[mongoose.Schema.Types.Mixed]], required: true },
+  start: { type: lightbotStartSchema, required: true },
+  demo: { type: lightbotDemoSchema, default: () => ({ main: [], p1: [] }) },
+  updatedBy: { type: Number, required: true },
+  updatedByName: { type: String, required: true, maxlength: 80 }
+}, {
+  timestamps: true,
+  collection: 'lightbot_level_overrides'
+})
+
+export default appConn.model('LightbotLevelOverride', lightbotLevelOverrideSchema)

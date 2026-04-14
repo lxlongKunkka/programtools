@@ -395,10 +395,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import * as THREE from 'three'
 import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
 import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
+import request from '../utils/request'
 
 const STORAGE_KEY = 'programtools-lightbot-progress-v5'
 const EDITOR_DRAFT_STORAGE_KEY = 'programtools-lightbot-editor-draft-v1'
-const LEVEL_OVERRIDE_STORAGE_KEY = 'programtools-lightbot-level-overrides-v1'
 const EDITOR_GRID_SIZE = 6
 const TILE_WIDTH = 96
 const TILE_HEIGHT = 48
@@ -728,26 +728,7 @@ function buildCustomLevel(draft) {
   }
 }
 
-function loadLevelOverrides() {
-  try {
-    const parsed = JSON.parse(readLightbotStorage(LEVEL_OVERRIDE_STORAGE_KEY) || '{}')
-    if (!parsed || typeof parsed !== 'object') return {}
-
-    return Object.fromEntries(
-      Object.entries(parsed)
-        .filter(([, value]) => value && typeof value === 'object' && Array.isArray(value.board))
-        .map(([levelId, value]) => [levelId, cloneLevelDefinition(value)])
-    )
-  } catch {
-    return {}
-  }
-}
-
-function persistLevelOverrides(overrides) {
-  writeLightbotStorage(LEVEL_OVERRIDE_STORAGE_KEY, JSON.stringify(overrides))
-}
-
-const levelOverrides = ref(loadLevelOverrides())
+const levelOverrides = ref({})
 const levels = computed(() => LIGHTBOT_LEVELS.map((level) => cloneLevelDefinition(levelOverrides.value[level.id] || level)))
 const levelGroups = computed(() => {
   const levelById = new Map(levels.value.map((level) => [level.id, level]))
@@ -783,6 +764,21 @@ function findRecommendedLevelIndex() {
   const completedIds = loadProgress()
   const nextIndex = levels.value.findIndex((level) => !completedIds.includes(level.id))
   return nextIndex >= 0 ? nextIndex : 0
+}
+
+function normalizeServerLevelOverrides(items) {
+  if (!Array.isArray(items)) return {}
+
+  return Object.fromEntries(
+    items
+      .filter((level) => level && typeof level === 'object' && VALID_LEVEL_IDS.has(level.id) && Array.isArray(level.board))
+      .map((level) => [level.id, cloneLevelDefinition(level)])
+  )
+}
+
+async function fetchSharedLevelOverrides() {
+  const response = await request.get('/api/lightbot/levels')
+  levelOverrides.value = normalizeServerLevelOverrides(response?.data)
 }
 
 function levelGlobalIndex(group, index) {
@@ -862,7 +858,7 @@ const editorPublishMessage = computed(() => {
   if (!editorDraft.sourceLevelId) {
     return '当前是新建草稿，还没有对应的内置关卡槽位；请从现有关卡进入编辑器后再保存到游戏。'
   }
-  return `${editorVerification.value.message}。点击“保存到游戏”后，这个关卡只会在当前登录账号下替换为你修改后的版本。`
+  return `${editorVerification.value.message}。点击“保存到游戏”后，数据库中的共享关卡会被更新，所有人都会看到最新版本。`
 })
 
 const boardPlatforms = computed(() => {
@@ -1027,21 +1023,25 @@ function replaceEditorDraft(nextDraft) {
   applyDraftToEditor(nextDraft)
 }
 
-function deleteEditorData() {
+async function deleteEditorData() {
   if (hasSavedEditorOverride.value && editorDraft.sourceLevelId) {
-    if (!window.confirm('删除后会恢复这个关卡的原版内容，仅删除当前账号下保存的修改。继续吗？')) {
+    if (!window.confirm('删除后会恢复这个关卡的原版内容，所有人都会看到恢复后的版本。继续吗？')) {
       return
     }
 
-    const nextOverrides = { ...levelOverrides.value }
-    delete nextOverrides[editorDraft.sourceLevelId]
-    levelOverrides.value = nextOverrides
-    persistLevelOverrides(nextOverrides)
-    removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
+    try {
+      await request.delete(`/api/lightbot/levels/${encodeURIComponent(editorDraft.sourceLevelId)}`)
+      const nextOverrides = { ...levelOverrides.value }
+      delete nextOverrides[editorDraft.sourceLevelId]
+      levelOverrides.value = nextOverrides
+      removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
 
-    const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === editorDraft.sourceLevelId)
-    replaceEditorDraft(originalLevel ? createEditorDraftFromLevel(originalLevel) : createDefaultEditorDraft())
-    setStatus('已删除当前账号下的关卡修改，恢复为原版关卡', 'success')
+      const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === editorDraft.sourceLevelId)
+      replaceEditorDraft(originalLevel ? createEditorDraftFromLevel(originalLevel) : createDefaultEditorDraft())
+      setStatus('已恢复为原版关卡，所有人看到的都是恢复后的版本', 'success')
+    } catch (error) {
+      setStatus(error.message || '删除共享关卡失败', 'danger')
+    }
     return
   }
 
@@ -1153,7 +1153,7 @@ function verifyEditorLevelForPublish() {
   setStatus('Level verified for publish', 'success')
 }
 
-function saveEditorLevelToGame() {
+async function saveEditorLevelToGame() {
   if (!canSaveEditorLevel.value) {
     if (!editorDraft.sourceLevelId) {
       setStatus('当前草稿没有对应的内置关卡，无法直接保存到游戏', 'danger')
@@ -1172,21 +1172,24 @@ function saveEditorLevelToGame() {
     }
   })
 
-  const nextOverrides = {
-    ...levelOverrides.value,
-    [savedLevel.id]: savedLevel
-  }
+  try {
+    const response = await request.put(`/api/lightbot/levels/${encodeURIComponent(savedLevel.id)}`, { level: savedLevel })
+    const sharedLevel = cloneLevelDefinition(response?.data || savedLevel)
+    levelOverrides.value = {
+      ...levelOverrides.value,
+      [sharedLevel.id]: sharedLevel
+    }
+    editorDraft.demo = {
+      main: [...sharedLevel.demo.main],
+      p1: [...sharedLevel.demo.p1]
+    }
+    editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
-  levelOverrides.value = nextOverrides
-  persistLevelOverrides(nextOverrides)
-  editorDraft.demo = {
-    main: [...savedLevel.demo.main],
-    p1: [...savedLevel.demo.p1]
+    saveEditorDraft()
+    setStatus('已保存到数据库；所有人现在看到的都是这个关卡的最新版本', 'success')
+  } catch (error) {
+    setStatus(error.message || '保存共享关卡失败', 'danger')
   }
-  editorBaseDraft.value = serializeEditorDraft(editorDraft)
-
-  saveEditorDraft()
-  setStatus('已保存到游戏；这个关卡只会在当前登录账号下使用你修改后的版本', 'success')
 }
 
 function startCustomPlaytest() {
@@ -1942,6 +1945,14 @@ watch(screen, () => {
 
 onMounted(async () => {
   window.addEventListener('pointerup', endEditorPaint)
+  try {
+    await fetchSharedLevelOverrides()
+    if (!activeCustomLevel.value) {
+      bot.value = cloneBot(levels.value[selectedLevelIndex.value].start)
+    }
+  } catch (error) {
+    setStatus(error.message || '读取共享关卡失败，已回退到内置关卡', 'danger')
+  }
   await nextTick()
   syncSceneControllers()
 })
