@@ -226,6 +226,7 @@
 
             <div class="editor-action-row">
               <button class="pill-btn" @click="saveEditorDraft">保存草稿</button>
+              <button class="pill-btn" @click="deleteEditorData">{{ editorDeleteLabel }}</button>
               <button class="pill-btn" @click="resetEditorDraft">Reset Draft</button>
               <button class="pill-btn" @click="verifyEditorLevelForPublish">验证通关</button>
               <button class="hero-btn primary" @click="startCustomPlaytest">Playtest</button>
@@ -484,6 +485,10 @@ function readLightbotStorage(baseKey) {
 
 function writeLightbotStorage(baseKey, value) {
   localStorage.setItem(getLightbotStorageKey(baseKey), value)
+}
+
+function removeLightbotStorage(baseKey) {
+  localStorage.removeItem(getLightbotStorageKey(baseKey))
 }
 
 function cloneBoard(board) {
@@ -833,6 +838,8 @@ const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
+const hasSavedEditorOverride = computed(() => Boolean(editorDraft.sourceLevelId && levelOverrides.value[editorDraft.sourceLevelId]))
+const editorDeleteLabel = computed(() => (hasSavedEditorOverride.value ? '删除关卡修改' : '删除草稿'))
 const canSaveEditorLevel = computed(() => {
   return Boolean(editorDraft.sourceLevelId) && editorVerification.value?.solvable && editorVerification.value.signature === editorSignature.value
 })
@@ -1009,6 +1016,42 @@ function saveEditorDraft() {
   const payload = serializeEditorDraft(editorDraft)
   writeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY, JSON.stringify(payload))
   setStatus('草稿已保存到当前账号的本地浏览器数据', 'success')
+}
+
+function replaceEditorDraft(nextDraft) {
+  editorBaseDraft.value = {
+    ...nextDraft,
+    start: { ...nextDraft.start },
+    board: cloneBoard(nextDraft.board)
+  }
+  applyDraftToEditor(nextDraft)
+}
+
+function deleteEditorData() {
+  if (hasSavedEditorOverride.value && editorDraft.sourceLevelId) {
+    if (!window.confirm('删除后会恢复这个关卡的原版内容，仅删除当前账号下保存的修改。继续吗？')) {
+      return
+    }
+
+    const nextOverrides = { ...levelOverrides.value }
+    delete nextOverrides[editorDraft.sourceLevelId]
+    levelOverrides.value = nextOverrides
+    persistLevelOverrides(nextOverrides)
+    removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
+
+    const originalLevel = LIGHTBOT_LEVELS.find((level) => level.id === editorDraft.sourceLevelId)
+    replaceEditorDraft(originalLevel ? createEditorDraftFromLevel(originalLevel) : createDefaultEditorDraft())
+    setStatus('已删除当前账号下的关卡修改，恢复为原版关卡', 'success')
+    return
+  }
+
+  if (!window.confirm('删除后会清空当前草稿，继续吗？')) {
+    return
+  }
+
+  removeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
+  replaceEditorDraft(createDefaultEditorDraft())
+  setStatus('已删除当前草稿', 'success')
 }
 
 function applyEditorCell(x, y) {
