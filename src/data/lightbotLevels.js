@@ -324,6 +324,20 @@ const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
     id: 'base',
     title: '基本',
     levels: [
+      {
+        id: 'base-0',
+        summary: '截图复刻：两步直行后点亮终点。',
+        mainLimit: 3,
+        startDir: 'forward',
+        tiles: [
+          { x: 0, y: 0, z: 0, tile: 'S' },
+          { x: 1, y: 0, z: 0, tile: 'N' },
+          { x: 2, y: 0, z: 0, tile: 'L' },
+          { x: 0, y: 1, z: 0, tile: 'N' },
+          { x: 1, y: 1, z: 0, tile: 'N' },
+          { x: 2, y: 1, z: 0, tile: 'N' }
+        ]
+      },
       { id: 'base-1', summary: '2x2 小平台，单灯入门。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'L' }] },
       { id: 'base-2', summary: '平面小平台，两端各有目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'L' }] },
       { id: 'base-3', summary: '低平台接一个 1 层高台。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }] },
