@@ -1,44 +1,6 @@
 <template>
   <div class="lightbot-page" :class="`screen-${screen}`">
-    <section v-if="screen === 'tutorial'" class="tutorial-screen">
-      <div class="tutorial-hero">
-        <div class="hero-copy">
-          <p class="screen-kicker">Lightbot Lab</p>
-          <h1>Learn programming logic by guiding a robot across light tiles.</h1>
-          <p class="hero-text">
-            现在默认直接进入选关页，点卡片就能开玩；教程和关卡简介保留为辅助入口，不再强制经过。
-          </p>
-          <div class="hero-actions">
-            <button class="hero-btn primary" @click="goToLevelSelect">Start Learning</button>
-            <button class="hero-btn" @click="openLevelBrief(0)">Jump To Level 1</button>
-          </div>
-        </div>
-
-        <div class="hero-gallery">
-          <article v-for="card in tutorialCards" :key="card.title" class="tutorial-card">
-            <div class="tutorial-card-visual" :class="card.theme">
-              <div class="mini-board">
-                <span v-for="n in 6" :key="n" class="mini-tile"></span>
-              </div>
-              <div class="mini-program">
-                <span v-for="step in card.steps" :key="step" class="mini-chip">{{ step }}</span>
-              </div>
-            </div>
-            <h2>{{ card.title }}</h2>
-            <p>{{ card.copy }}</p>
-          </article>
-        </div>
-      </div>
-
-      <div class="tutorial-learn">
-        <h2>What you'll learn</h2>
-        <ul>
-          <li v-for="item in learningPoints" :key="item">{{ item }}</li>
-        </ul>
-      </div>
-    </section>
-
-    <section v-else-if="screen === 'select'" class="select-screen">
+    <section v-if="screen === 'select'" class="select-screen">
       <header class="select-header">
         <div>
           <p class="screen-kicker">Choose A Puzzle</p>
@@ -47,8 +9,7 @@
         </div>
         <div class="select-actions">
           <button class="hero-btn primary" @click="quickStartLevel()">Continue</button>
-          <button class="pill-btn" @click="screen = 'tutorial'">Tutorial</button>
-          <button class="pill-btn" @click="openEditor">Level Editor</button>
+          <button class="pill-btn" @click="openEditor()">Level Editor</button>
           <div class="progress-chip">{{ completedLevelIds.length }}/{{ levels.length }} complete</div>
         </div>
       </header>
@@ -439,14 +400,6 @@ const operationPalette = [
   { id: 'jump', label: 'Jump' },
   { id: 'p1', label: 'Call P1' }
 ]
-
-const tutorialCards = [
-  { title: 'Sequencing', copy: '把动作按顺序放入 MAIN，让机器人一步一步执行。', theme: 'mint', steps: ['↑', '💡', '↺'] },
-  { title: 'Procedures', copy: '把重复片段放进 PROC1，然后在 MAIN 里调用它。', theme: 'cream', steps: ['P1', '↑', 'P1'] },
-  { title: 'Loops By Recursion', copy: 'PROC1 里再调用 P1，就能得到递归式循环。', theme: 'sky', steps: ['P1', '⟳', '💡'] }
-]
-
-const learningPoints = ['Sequencing', 'Decomposition', 'Procedures', 'Recursive loops', 'Spatial reasoning']
 
 function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
