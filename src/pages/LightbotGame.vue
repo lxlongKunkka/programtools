@@ -147,7 +147,7 @@
           <div class="editor-card">
             <div class="program-header">
               <span>Level Editor</span>
-              <button class="pill-btn" @click="goToLevelSelect">Back</button>
+              <button class="pill-btn" @click="leaveEditor">Back</button>
             </div>
 
             <div class="editor-form-grid">
@@ -810,6 +810,7 @@ const editorSceneHost = ref(null)
 const activeCustomLevel = ref(null)
 const editorTool = ref('platform')
 const editorHeight = ref(1)
+const editorReturnScreen = ref('select')
 const editorDraft = reactive(createDefaultEditorDraft())
 const editorBaseDraft = ref(createDefaultEditorDraft())
 const editorVerification = ref(null)
@@ -987,6 +988,7 @@ function resetEditorDraft() {
 
 function openEditor(level = null) {
   activeCustomLevel.value = null
+  editorReturnScreen.value = screen.value === 'brief' ? 'brief' : 'select'
   const nextDraft = level ? createEditorDraftFromLevel(level) : (loadSavedEditorDraft() || createDefaultEditorDraft())
   editorBaseDraft.value = {
     ...nextDraft,
@@ -996,6 +998,11 @@ function openEditor(level = null) {
   applyDraftToEditor(nextDraft)
   screen.value = 'editor'
   setStatus(level ? 'Loaded level into editor' : (loadSavedEditorDraft() ? '已载入保存草稿' : 'Editor ready'))
+}
+
+function leaveEditor() {
+  activeCustomLevel.value = null
+  screen.value = editorReturnScreen.value === 'brief' ? 'brief' : 'select'
 }
 
 function saveEditorDraft() {
