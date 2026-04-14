@@ -1573,81 +1573,105 @@ resetLevel(true)
 .select-screen {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .select-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 24px 28px;
+  gap: 16px;
+  padding: 16px 20px;
   background: rgba(255, 255, 255, 0.9);
+}
+
+.select-header h1 {
+  font-size: 30px;
+}
+
+.select-header p:last-child {
+  margin: 4px 0 0;
+  font-size: 14px;
 }
 
 .select-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .progress-chip {
-  min-height: 46px;
-  padding: 0 18px;
+  min-height: 38px;
+  padding: 0 14px;
   border-radius: 999px;
   background: #edf5cf;
   display: grid;
   place-items: center;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .chapter-groups {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
 }
 
 .chapter-group {
-  padding: 22px;
-  border-radius: 28px;
+  padding: 14px 16px 16px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 20px 40px rgba(103, 126, 157, 0.12);
+  box-shadow: 0 16px 32px rgba(103, 126, 157, 0.1);
 }
 
 .chapter-group-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .chapter-group-header h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 20px;
 }
 
 .chapter-progress {
-  min-height: 42px;
-  padding: 0 16px;
+  min-height: 34px;
+  padding: 0 12px;
   border-radius: 999px;
   background: #eef6ff;
   color: #456176;
   display: grid;
   place-items: center;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .level-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
 }
 
 .level-card {
-  padding: 22px;
+  padding: 14px;
   background: rgba(255, 255, 255, 0.88);
   text-align: left;
+}
+
+.level-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.level-card p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .level-card.current {
@@ -1659,12 +1683,12 @@ resetLevel(true)
 }
 
 .level-brief-btn {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgba(91, 169, 214, 0.14);
   color: #3d6078;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -1683,22 +1707,28 @@ resetLevel(true)
 }
 
 .level-card-index {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: #66c7dc;
   color: #fff;
   display: grid;
   place-items: center;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .level-card-tag {
   color: #5e7f98;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.level-card-foot {
+  margin-top: 10px;
+  font-size: 13px;
 }
 
 .brief-shell {
@@ -2437,7 +2467,7 @@ resetLevel(true)
 
   .level-grid,
   .hero-gallery {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   }
 }
 
@@ -2462,6 +2492,14 @@ resetLevel(true)
   .program-grid.big,
   .editor-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chapter-group {
+    padding: 12px;
+  }
+
+  .level-card {
+    padding: 12px;
   }
 
   .editor-form-grid label.full-span {
