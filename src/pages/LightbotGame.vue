@@ -3087,6 +3087,11 @@ resetLevel(true)
   align-self: center;
 }
 
+.command-btn img,
+.program-slot.filled img {
+  transform: translateX(-1.5px);
+}
+
 .reset-btn {
   background: linear-gradient(180deg, #f9f9f9, #e4e6eb);
 }
