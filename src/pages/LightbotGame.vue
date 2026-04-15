@@ -3700,20 +3700,22 @@ resetLevel(true)
   }
 
   .screen-play.lightbot-page {
-    height: calc(100dvh - 80px);
     min-height: calc(100dvh - 80px);
-    overflow: hidden;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .screen-play .play-screen {
-    min-height: 0;
-    height: 100%;
+    min-height: auto;
+    height: auto;
   }
 
   .screen-play .play-shell {
-    height: 100%;
+    height: auto;
     gap: 6px;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto;
   }
 
   .screen-play .hud-rail {
@@ -3730,11 +3732,12 @@ resetLevel(true)
   }
 
   .screen-play .board-stage {
-    min-height: 0;
+    min-height: auto;
     padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    overflow: visible;
   }
 
   .screen-play .play-context-row {
@@ -3792,8 +3795,9 @@ resetLevel(true)
   }
 
   .screen-play .scene-frame {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: clamp(150px, 24dvh, 210px);
+    height: clamp(150px, 24dvh, 210px);
     border-radius: 20px;
   }
 
@@ -3856,9 +3860,9 @@ resetLevel(true)
     grid-auto-flow: column;
     grid-auto-columns: minmax(182px, 72vw);
     gap: 6px;
-    max-height: min(29dvh, 210px);
+    max-height: none;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     align-items: stretch;
     padding-bottom: 2px;
     scrollbar-width: none;
@@ -3871,14 +3875,14 @@ resetLevel(true)
   .screen-play .program-panel,
   .screen-play .program-tools {
     min-width: 0;
-    height: 100%;
+    height: auto;
   }
 
   .screen-play .program-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     padding: 8px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .screen-play .program-header {
@@ -3900,7 +3904,7 @@ resetLevel(true)
   .screen-play .program-grid.big {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 5px;
-    min-height: 0;
+    min-height: auto;
     overflow-y: visible;
     align-content: start;
     margin-top: 8px;
@@ -3924,10 +3928,24 @@ resetLevel(true)
 
   .screen-play .play-tools {
     grid-column: auto;
+    order: 4;
   }
 
   .screen-play .play-leaderboard-bottom {
     grid-column: auto;
+    order: 5;
+  }
+
+  .screen-play .hud-rail {
+    order: 1;
+  }
+
+  .screen-play .board-stage {
+    order: 2;
+  }
+
+  .screen-play .program-sidebar {
+    order: 3;
   }
 
   .screen-play .program-tools .tool-btn {
