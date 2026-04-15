@@ -3072,6 +3072,11 @@ resetLevel(true)
   border-radius: 14px;
   display: grid;
   place-items: center;
+  padding: 0;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: 0;
 }
 
 .run-btn img,
@@ -3081,18 +3086,12 @@ resetLevel(true)
   width: 28px;
   height: 28px;
   display: block;
-  margin: auto;
   object-fit: contain;
-  justify-self: center;
-  align-self: center;
-}
-
-.command-btn img {
-  transform: translateX(-1.5px);
-}
-
-.program-slot.filled img {
-  transform: none;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .reset-btn {
@@ -3400,6 +3399,11 @@ resetLevel(true)
   box-shadow: inset 0 0 0 3px #58646f, 0 8px 16px rgba(79, 94, 111, 0.14);
   display: grid;
   place-items: center;
+  padding: 0;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: 0;
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -3495,6 +3499,11 @@ resetLevel(true)
   background: rgba(255, 255, 255, 0.86);
   border-style: solid;
   box-shadow: inset 0 0 0 3px #58646f;
+  padding: 0;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: 0;
 }
 
 .program-slot.filled.active {
