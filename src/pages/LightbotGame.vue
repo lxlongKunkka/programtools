@@ -3857,11 +3857,10 @@ resetLevel(true)
 
   .screen-play .program-sidebar {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(182px, 72vw);
+    grid-template-columns: 1fr;
     gap: 6px;
     max-height: none;
-    overflow-x: auto;
+    overflow-x: visible;
     overflow-y: visible;
     align-items: stretch;
     padding-bottom: 2px;
@@ -3876,6 +3875,7 @@ resetLevel(true)
   .screen-play .program-tools {
     min-width: 0;
     height: auto;
+    width: 100%;
   }
 
   .screen-play .program-panel {
