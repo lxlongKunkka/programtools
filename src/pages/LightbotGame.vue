@@ -3087,9 +3087,12 @@ resetLevel(true)
   align-self: center;
 }
 
-.command-btn img,
-.program-slot.filled img {
+.command-btn img {
   transform: translateX(-1.5px);
+}
+
+.program-slot.filled img {
+  transform: none;
 }
 
 .reset-btn {
