@@ -306,7 +306,6 @@
 
           <div class="scene-frame">
             <div class="status-float">
-              <span>{{ directionLabel }}</span>
               <strong>{{ litKeys.length }}/{{ targetKeys.length }}</strong>
               <em :class="statusTone">{{ statusText }}</em>
             </div>
