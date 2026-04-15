@@ -334,36 +334,6 @@
             </div>
           </footer>
 
-          <section v-if="showPlayLeaderboard" class="play-leaderboard">
-            <div class="play-leaderboard-header">
-              <div>
-                <p class="screen-kicker">Leaderboard</p>
-                <h2>本关排行榜</h2>
-              </div>
-              <span v-if="levelLeaderboard.length">Top {{ levelLeaderboard.length }}</span>
-            </div>
-
-            <div v-if="levelLeaderboard.length" class="lightbot-leaderboard-list compact">
-              <div
-                v-for="(record, index) in levelLeaderboard"
-                :key="`play-${record.userId}-${record.completedAt}`"
-                class="lightbot-leaderboard-item"
-                :class="{ me: record.userId === currentUserId }"
-              >
-                <span class="rank">{{ index + 1 }}</span>
-                <div class="lightbot-leaderboard-copy">
-                  <strong>{{ record.username }}</strong>
-                  <span>总代码 {{ record.totalCommands }} · 执行 {{ record.executionSteps }}</span>
-                </div>
-                <div class="lightbot-leaderboard-meta">
-                  <span>MAIN {{ record.mainLength }}</span>
-                  <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
-                </div>
-              </div>
-            </div>
-            <p v-else class="brief-ranking-empty">还没人通关这关，你可以先拿第一。</p>
-          </section>
-
           <div v-if="showFinishPanel" class="finish-panel">
             <div class="finish-card">
               <p class="screen-kicker">Puzzle Complete</p>
@@ -470,6 +440,36 @@
           <button class="tool-btn" :disabled="isRunning" @click="clearActiveProcedure">Clear Active</button>
           <button class="tool-btn" :disabled="isRunning || !hasCurrentDemo" @click="loadDemoProgram">Load Demo</button>
           <button class="tool-btn" :disabled="isRunning" @click="resetLevel(true)">Clear All</button>
+        </section>
+
+        <section v-if="showPlayLeaderboard" class="play-leaderboard play-leaderboard-bottom">
+          <div class="play-leaderboard-header">
+            <div>
+              <p class="screen-kicker">Leaderboard</p>
+              <h2>本关排行榜</h2>
+            </div>
+            <span v-if="levelLeaderboard.length">Top {{ levelLeaderboard.length }}</span>
+          </div>
+
+          <div v-if="levelLeaderboard.length" class="lightbot-leaderboard-list compact">
+            <div
+              v-for="(record, index) in levelLeaderboard"
+              :key="`play-${record.userId}-${record.completedAt}`"
+              class="lightbot-leaderboard-item"
+              :class="{ me: record.userId === currentUserId }"
+            >
+              <span class="rank">{{ index + 1 }}</span>
+              <div class="lightbot-leaderboard-copy">
+                <strong>{{ record.username }}</strong>
+                <span>总代码 {{ record.totalCommands }} · 执行 {{ record.executionSteps }}</span>
+              </div>
+              <div class="lightbot-leaderboard-meta">
+                <span>MAIN {{ record.mainLength }}</span>
+                <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
+              </div>
+            </div>
+          </div>
+          <p v-else class="brief-ranking-empty">还没人通关这关，你可以先拿第一。</p>
         </section>
       </div>
     </section>
@@ -3513,6 +3513,10 @@ resetLevel(true)
   grid-column: 2 / 4;
 }
 
+.play-leaderboard-bottom {
+  grid-column: 2 / 4;
+}
+
 .program-panel {
   padding: 16px;
 }
@@ -3919,6 +3923,10 @@ resetLevel(true)
   }
 
   .screen-play .play-tools {
+    grid-column: auto;
+  }
+
+  .screen-play .play-leaderboard-bottom {
     grid-column: auto;
   }
 
