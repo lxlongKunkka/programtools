@@ -3860,11 +3860,14 @@ resetLevel(true)
     grid-template-columns: 1fr;
     gap: 6px;
     max-height: none;
+    width: 100%;
+    max-width: 100%;
     overflow-x: visible;
     overflow-y: visible;
     align-items: stretch;
     padding-bottom: 2px;
     scrollbar-width: none;
+    box-sizing: border-box;
   }
 
   .screen-play .program-sidebar::-webkit-scrollbar {
@@ -3876,28 +3879,38 @@ resetLevel(true)
     min-width: 0;
     height: auto;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .screen-play .program-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    padding: 8px;
+    padding: 8px 6px;
     overflow: visible;
   }
 
   .screen-play .program-header {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     gap: 6px;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .screen-play .program-header span {
     font-size: 12px;
     letter-spacing: 0.05em;
+    min-width: 0;
   }
 
   .screen-play .tab-btn {
     min-height: 28px;
-    padding: 0 10px;
+    padding: 0 9px;
     font-size: 11px;
+    margin-left: auto;
+    flex: 0 0 auto;
   }
 
   .screen-play .program-grid,
@@ -3929,11 +3942,17 @@ resetLevel(true)
   .screen-play .play-tools {
     grid-column: auto;
     order: 4;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .screen-play .play-leaderboard-bottom {
     grid-column: auto;
     order: 5;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .screen-play .hud-rail {
