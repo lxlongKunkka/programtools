@@ -284,7 +284,6 @@
         <aside class="hud-rail">
           <button class="rail-btn" @click="leavePlayScreen">←</button>
           <button class="rail-btn" @click="resetLevel(false)">↺</button>
-          <button class="rail-btn muted" @click="openPlayContext">?</button>
         </aside>
 
         <main class="board-stage">
@@ -303,6 +302,11 @@
               </button>
             </div>
           </header>
+
+          <div class="play-context-row">
+            <button class="meta-btn" :disabled="!canEditLevel(currentLevel)" :title="getLevelEditHint(currentLevel)" @click="openEditor(currentLevel)">编辑此关</button>
+            <button class="meta-btn" @click="showPlayLeaderboard = !showPlayLeaderboard">{{ showPlayLeaderboard ? '隐藏排行榜' : '显示排行榜' }}</button>
+          </div>
 
           <div class="scene-frame">
             <div class="status-float">
@@ -329,6 +333,36 @@
               <input v-model="speedValue" type="range" min="1" max="5" step="1">
             </div>
           </footer>
+
+          <section v-if="showPlayLeaderboard" class="play-leaderboard">
+            <div class="play-leaderboard-header">
+              <div>
+                <p class="screen-kicker">Leaderboard</p>
+                <h2>本关排行榜</h2>
+              </div>
+              <span v-if="levelLeaderboard.length">Top {{ levelLeaderboard.length }}</span>
+            </div>
+
+            <div v-if="levelLeaderboard.length" class="lightbot-leaderboard-list compact">
+              <div
+                v-for="(record, index) in levelLeaderboard"
+                :key="`play-${record.userId}-${record.completedAt}`"
+                class="lightbot-leaderboard-item"
+                :class="{ me: record.userId === currentUserId }"
+              >
+                <span class="rank">{{ index + 1 }}</span>
+                <div class="lightbot-leaderboard-copy">
+                  <strong>{{ record.username }}</strong>
+                  <span>总代码 {{ record.totalCommands }} · 执行 {{ record.executionSteps }}</span>
+                </div>
+                <div class="lightbot-leaderboard-meta">
+                  <span>MAIN {{ record.mainLength }}</span>
+                  <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
+                </div>
+              </div>
+            </div>
+            <p v-else class="brief-ranking-empty">还没人通关这关，你可以先拿第一。</p>
+          </section>
 
           <div v-if="showFinishPanel" class="finish-panel">
             <div class="finish-card">
@@ -429,14 +463,14 @@
               ></div>
             </div>
           </section>
-
-          <section class="program-tools">
-            <button class="tool-btn" :disabled="isRunning" @click="undoLastOperation">Undo</button>
-            <button class="tool-btn" :disabled="isRunning" @click="clearActiveProcedure">Clear Active</button>
-            <button class="tool-btn" :disabled="isRunning || !hasCurrentDemo" @click="loadDemoProgram">Load Demo</button>
-            <button class="tool-btn" :disabled="isRunning" @click="resetLevel(true)">Clear All</button>
-          </section>
         </aside>
+
+        <section class="program-tools play-tools">
+          <button class="tool-btn" :disabled="isRunning" @click="undoLastOperation">Undo</button>
+          <button class="tool-btn" :disabled="isRunning" @click="clearActiveProcedure">Clear Active</button>
+          <button class="tool-btn" :disabled="isRunning || !hasCurrentDemo" @click="loadDemoProgram">Load Demo</button>
+          <button class="tool-btn" :disabled="isRunning" @click="resetLevel(true)">Clear All</button>
+        </section>
       </div>
     </section>
   </div>
@@ -1001,6 +1035,7 @@ const speedValue = ref(3)
 const statusText = ref('Ready')
 const statusTone = ref('neutral')
 const showFinishPanel = ref(false)
+const showPlayLeaderboard = ref(true)
 const lastCompletionMetrics = ref(null)
 const briefSceneHost = ref(null)
 const playSceneHost = ref(null)
@@ -1786,15 +1821,6 @@ function leavePlayScreen() {
     return
   }
   goToLevelSelect()
-}
-
-function openPlayContext() {
-  if (isCustomPlaytest.value) {
-    activeCustomLevel.value = null
-    screen.value = 'editor'
-    return
-  }
-  screen.value = 'brief'
 }
 
 function createSceneController(host, options = {}) {
@@ -3023,8 +3049,9 @@ resetLevel(true)
 
 .play-shell {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) 320px;
+  grid-template-columns: 60px minmax(0, 1fr) 392px;
   gap: 18px;
+  align-items: start;
 }
 
 .hud-rail {
@@ -3057,6 +3084,30 @@ resetLevel(true)
 
 .board-topbar {
   margin-bottom: 14px;
+}
+
+.play-context-row,
+.play-leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.play-context-row {
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.meta-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #355067;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .board-topbar-actions {
@@ -3390,6 +3441,23 @@ resetLevel(true)
   background: rgba(255, 255, 255, 0.78);
 }
 
+.play-leaderboard {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.play-leaderboard-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.play-leaderboard-header span {
+  color: #617385;
+  font-size: 13px;
+}
+
 .command-btn {
   width: 54px;
   height: 54px;
@@ -3439,6 +3507,10 @@ resetLevel(true)
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.play-tools {
+  grid-column: 2 / 4;
 }
 
 .program-panel {
@@ -3637,7 +3709,7 @@ resetLevel(true)
   .screen-play .play-shell {
     height: 100%;
     gap: 6px;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
   .screen-play .hud-rail {
@@ -3659,6 +3731,17 @@ resetLevel(true)
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .screen-play .play-context-row {
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+
+  .screen-play .meta-btn {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .screen-play .board-topbar {
@@ -3767,7 +3850,7 @@ resetLevel(true)
   .screen-play .program-sidebar {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(162px, 62vw);
+    grid-auto-columns: minmax(182px, 72vw);
     gap: 6px;
     max-height: min(29dvh, 210px);
     overflow-x: auto;
@@ -3828,17 +3911,36 @@ resetLevel(true)
 
   .screen-play .program-tools {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 5px;
     align-content: start;
     overflow-y: visible;
     padding: 8px;
   }
 
+  .screen-play .play-tools {
+    grid-column: auto;
+  }
+
   .screen-play .program-tools .tool-btn {
     min-height: 32px;
     padding: 0 8px;
     font-size: 11px;
+  }
+
+  .screen-play .play-leaderboard {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 16px;
+  }
+
+  .screen-play .play-leaderboard-header {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .screen-play .play-leaderboard-header h2 {
+    font-size: 16px;
   }
 
   .hero-copy,
@@ -3877,6 +3979,7 @@ resetLevel(true)
   .brief-meta,
   .activity-strip-header,
   .brief-ranking-header,
+  .play-leaderboard-header,
   .program-tools,
   .editor-tool-row,
   .editor-action-row {
