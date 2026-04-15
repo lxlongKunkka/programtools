@@ -3615,36 +3615,36 @@ resetLevel(true)
 
   .screen-play .play-shell {
     height: 100%;
-    gap: 8px;
+    gap: 6px;
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .screen-play .hud-rail {
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
   }
 
   .screen-play .rail-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 16px;
     flex: 0 0 auto;
   }
 
   .screen-play .board-stage {
     min-height: 0;
-    padding: 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
 
   .screen-play .board-topbar {
     margin-bottom: 0;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .screen-play .board-topbar-copy {
@@ -3652,52 +3652,71 @@ resetLevel(true)
   }
 
   .screen-play .board-topbar-copy h1 {
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.05;
   }
 
   .screen-play .screen-kicker,
   .screen-play .board-author {
     margin: 0;
+    font-size: 11px;
   }
 
   .screen-play .board-topbar-actions {
     margin-left: auto;
-    gap: 8px;
+    gap: 6px;
     flex: 0 0 auto;
   }
 
   .screen-play .run-btn,
   .screen-play .reset-btn {
-    width: 54px;
-    height: 42px;
+    width: 46px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .screen-play .run-btn img,
+  .screen-play .reset-btn img,
+  .screen-play .command-btn img,
+  .screen-play .program-slot.filled img {
+    width: 22px;
+    height: 22px;
   }
 
   .screen-play .scene-frame {
     flex: 1 1 auto;
-    min-height: clamp(170px, 28dvh, 240px);
+    min-height: clamp(150px, 24dvh, 210px);
+    border-radius: 20px;
   }
 
   .screen-play .status-float {
-    top: 10px;
-    right: 10px;
-    padding: 6px 8px;
-    gap: 6px;
+    top: 8px;
+    right: 8px;
+    padding: 5px 7px;
+    gap: 5px;
     flex-direction: row;
     align-items: center;
+    border-radius: 12px;
   }
 
   .screen-play .status-float strong {
-    font-size: 16px;
+    font-size: 14px;
+  }
+
+  .screen-play .status-float span,
+  .screen-play .status-float em {
+    font-size: 11px;
   }
 
   .screen-play .command-bar {
     margin-top: 0;
-    padding: 9px;
-    gap: 6px;
+    padding: 7px;
+    gap: 5px;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
+    border-radius: 14px;
   }
 
   .screen-play .command-bar::-webkit-scrollbar {
@@ -3705,29 +3724,31 @@ resetLevel(true)
   }
 
   .screen-play .command-btn {
-    width: 50px;
-    height: 50px;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
     flex: 0 0 auto;
   }
 
   .screen-play .speed-box {
     width: auto;
-    margin-left: 4px;
+    margin-left: 2px;
     flex: 0 0 auto;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: 11px;
+    gap: 5px;
   }
 
   .screen-play .speed-box input {
-    width: 72px;
+    width: 64px;
   }
 
   .screen-play .program-sidebar {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(180px, 68vw);
-    gap: 8px;
-    max-height: min(20dvh, 136px);
+    grid-auto-columns: minmax(162px, 62vw);
+    gap: 6px;
+    max-height: min(29dvh, 210px);
     overflow-x: auto;
     overflow-y: hidden;
     align-items: stretch;
@@ -3748,37 +3769,55 @@ resetLevel(true)
   .screen-play .program-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    padding: 10px;
+    padding: 8px;
     overflow: hidden;
+  }
+
+  .screen-play .program-header {
+    gap: 6px;
+  }
+
+  .screen-play .program-header span {
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .screen-play .tab-btn {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .screen-play .program-grid,
   .screen-play .program-grid.big {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
     min-height: 0;
-    overflow-y: auto;
+    overflow-y: visible;
     align-content: start;
-    padding-right: 2px;
-    scrollbar-width: thin;
+    margin-top: 8px;
+    padding-right: 0;
   }
 
   .screen-play .program-slot {
-    min-height: 44px;
+    min-height: 36px;
+    border-radius: 10px;
+    border-width: 1px;
   }
 
   .screen-play .program-tools {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 5px;
     align-content: start;
-    overflow-y: auto;
+    overflow-y: visible;
+    padding: 8px;
   }
 
   .screen-play .program-tools .tool-btn {
-    min-height: 38px;
-    padding: 0 10px;
-    font-size: 12px;
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 11px;
   }
 
   .hero-copy,
@@ -3846,7 +3885,7 @@ resetLevel(true)
   }
 
   .screen-play .scene-frame {
-    min-height: clamp(250px, 42dvh, 380px);
+    min-height: clamp(150px, 24dvh, 210px);
   }
 
   .tutorial-learn ul {
