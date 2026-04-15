@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import express from 'express'
 import LightbotLevelOverride from '../models/LightbotLevelOverride.js'
+import LightbotResult from '../models/LightbotResult.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { LIGHTBOT_LEVELS, VALID_LEVEL_IDS } from '../../src/data/lightbotLevels.js'
 
@@ -159,6 +160,22 @@ function toClientLevel(doc) {
     deletedByName: doc.deletedByName,
     updatedAt: doc.updatedAt
   }
+}
+
+async function findPlayableLevel(levelId) {
+  const override = await LightbotLevelOverride.findOne({ levelId, isDeleted: false }).lean()
+  if (override) {
+    return toClientLevel(override)
+  }
+
+  const builtInLevel = LIGHTBOT_LEVELS.find((item) => item.id === levelId)
+  return builtInLevel ? { ...builtInLevel, isCustom: false } : null
+}
+
+function normalizePositiveMetric(value) {
+  const numeric = Math.floor(Number(value))
+  if (!Number.isFinite(numeric)) return null
+  return Math.max(0, numeric)
 }
 
 router.get('/levels', authenticateToken, async (req, res) => {
@@ -334,6 +351,133 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Failed to delete Lightbot level override:', error)
     res.status(500).json({ success: false, error: '删除 Lightbot 关卡失败' })
+  }
+})
+
+router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const requestedId = String(req.params.id || '').trim()
+    const playableLevel = await findPlayableLevel(requestedId)
+    if (!playableLevel) {
+      return res.status(404).json({ success: false, error: '关卡不存在' })
+    }
+
+    const totalCommands = normalizePositiveMetric(req.body?.totalCommands)
+    const mainLength = normalizePositiveMetric(req.body?.mainLength)
+    const p1Length = normalizePositiveMetric(req.body?.p1Length)
+    const executionSteps = normalizePositiveMetric(req.body?.executionSteps)
+
+    if (!totalCommands || mainLength == null || p1Length == null || !executionSteps) {
+      return res.status(400).json({ success: false, error: '缺少有效的通关成绩数据' })
+    }
+
+    if (mainLength + p1Length !== totalCommands) {
+      return res.status(400).json({ success: false, error: '程序长度统计不一致' })
+    }
+
+    if (mainLength > Number(playableLevel.mainLimit || 0)) {
+      return res.status(400).json({ success: false, error: 'MAIN 指令数超过当前关卡限制' })
+    }
+
+    const p1Limit = Number(playableLevel.procLimits?.p1 || 0)
+    if (p1Length > p1Limit) {
+      return res.status(400).json({ success: false, error: 'P1 指令数超过当前关卡限制' })
+    }
+
+    const created = await LightbotResult.create({
+      levelId: requestedId,
+      isCustomLevel: Boolean(playableLevel.isCustom),
+      levelTitle: String(playableLevel.title || requestedId).slice(0, 80),
+      userId: Number(req.user.id),
+      username: String(req.user.username || req.user.name || 'unknown').slice(0, 80),
+      totalCommands,
+      mainLength,
+      p1Length,
+      executionSteps,
+      completedAt: new Date()
+    })
+
+    const personalBest = await LightbotResult.findOne({ levelId: requestedId, userId: Number(req.user.id) })
+      .sort({ totalCommands: 1, executionSteps: 1, completedAt: 1 })
+      .lean()
+
+    res.json({
+      success: true,
+      data: {
+        isPersonalBest: String(personalBest?._id) === String(created._id),
+        personalBest: personalBest
+          ? {
+              totalCommands: personalBest.totalCommands,
+              mainLength: personalBest.mainLength,
+              p1Length: personalBest.p1Length,
+              executionSteps: personalBest.executionSteps,
+              completedAt: personalBest.completedAt
+            }
+          : null
+      }
+    })
+  } catch (error) {
+    console.error('Failed to submit Lightbot result:', error)
+    res.status(500).json({ success: false, error: '提交 Lightbot 成绩失败' })
+  }
+})
+
+router.get('/levels/:id/leaderboard', async (req, res) => {
+  try {
+    const requestedId = String(req.params.id || '').trim()
+    const leaderboard = await LightbotResult.aggregate([
+      { $match: { levelId: requestedId } },
+      { $sort: { totalCommands: 1, executionSteps: 1, completedAt: 1 } },
+      {
+        $group: {
+          _id: '$userId',
+          userId: { $first: '$userId' },
+          username: { $first: '$username' },
+          totalCommands: { $first: '$totalCommands' },
+          mainLength: { $first: '$mainLength' },
+          p1Length: { $first: '$p1Length' },
+          executionSteps: { $first: '$executionSteps' },
+          completedAt: { $first: '$completedAt' }
+        }
+      },
+      { $sort: { totalCommands: 1, executionSteps: 1, completedAt: 1 } },
+      { $limit: 10 }
+    ])
+
+    res.json({ success: true, data: leaderboard })
+  } catch (error) {
+    console.error('Failed to fetch Lightbot leaderboard:', error)
+    res.status(500).json({ success: false, error: '读取 Lightbot 排行榜失败' })
+  }
+})
+
+router.get('/activity', async (req, res) => {
+  try {
+    const requestedLimit = normalizePositiveMetric(req.query.limit)
+    const limit = Math.min(Math.max(requestedLimit || 12, 1), 30)
+    const activity = await LightbotResult.find()
+      .sort({ completedAt: -1 })
+      .limit(limit)
+      .lean()
+
+    res.json({
+      success: true,
+      data: activity.map((item) => ({
+        levelId: item.levelId,
+        levelTitle: item.levelTitle,
+        isCustomLevel: Boolean(item.isCustomLevel),
+        userId: item.userId,
+        username: item.username,
+        totalCommands: item.totalCommands,
+        mainLength: item.mainLength,
+        p1Length: item.p1Length,
+        executionSteps: item.executionSteps,
+        completedAt: item.completedAt
+      }))
+    })
+  } catch (error) {
+    console.error('Failed to fetch Lightbot activity:', error)
+    res.status(500).json({ success: false, error: '读取 Lightbot 最近动态失败' })
   }
 })
 

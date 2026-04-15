@@ -14,6 +14,31 @@
         </div>
       </header>
 
+      <section v-if="recentActivity.length" class="activity-strip">
+        <div class="activity-strip-header">
+          <div>
+            <p class="screen-kicker">Community Pulse</p>
+            <h2>最近谁在玩</h2>
+          </div>
+          <span>最新 {{ recentActivity.length }} 条通关</span>
+        </div>
+
+        <div class="activity-strip-list">
+          <article
+            v-for="item in recentActivity"
+            :key="`${item.levelId}-${item.userId}-${item.completedAt}`"
+            class="activity-strip-item"
+          >
+            <div class="activity-strip-top">
+              <strong>{{ item.username }}</strong>
+              <em>{{ formatRelativeTime(item.completedAt) }}</em>
+            </div>
+            <p>{{ item.levelTitle }}</p>
+            <span>总代码 {{ item.totalCommands }} · 执行 {{ item.executionSteps }}</span>
+          </article>
+        </div>
+      </section>
+
       <div class="chapter-groups">
         <section v-for="group in levelGroups" :key="group.id" class="chapter-group">
           <header class="chapter-group-header">
@@ -103,6 +128,36 @@
               <div ref="briefSceneHost" class="three-scene-host preview-scene-host"></div>
             </div>
           </div>
+
+          <section class="brief-ranking">
+            <div class="brief-ranking-header">
+              <div>
+                <p class="screen-kicker">Leaderboard</p>
+                <h2>本关排行榜</h2>
+              </div>
+              <span v-if="levelLeaderboard.length">Top {{ levelLeaderboard.length }}</span>
+            </div>
+
+            <div v-if="levelLeaderboard.length" class="lightbot-leaderboard-list">
+              <div
+                v-for="(record, index) in levelLeaderboard"
+                :key="`${record.userId}-${record.completedAt}`"
+                class="lightbot-leaderboard-item"
+                :class="{ me: record.userId === currentUserId }"
+              >
+                <span class="rank">{{ index + 1 }}</span>
+                <div class="lightbot-leaderboard-copy">
+                  <strong>{{ record.username }}</strong>
+                  <span>总代码 {{ record.totalCommands }} · 执行 {{ record.executionSteps }}</span>
+                </div>
+                <div class="lightbot-leaderboard-meta">
+                  <span>MAIN {{ record.mainLength }}</span>
+                  <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
+                </div>
+              </div>
+            </div>
+            <p v-else class="brief-ranking-empty">还没人通关这关，你可以先拿第一。</p>
+          </section>
         </div>
       </div>
     </section>
@@ -281,6 +336,37 @@
               <p class="screen-kicker">Puzzle Complete</p>
               <h2>{{ currentLevel.title }}</h2>
               <p>所有目标格已经点亮。现在可以继续下一关或返回选关。</p>
+              <div v-if="lastCompletionMetrics" class="finish-stats">
+                <div>
+                  <span>总代码</span>
+                  <strong>{{ lastCompletionMetrics.totalCommands }}</strong>
+                </div>
+                <div>
+                  <span>MAIN / P1</span>
+                  <strong>{{ lastCompletionMetrics.mainLength }} / {{ lastCompletionMetrics.p1Length }}</strong>
+                </div>
+                <div>
+                  <span>执行步数</span>
+                  <strong>{{ lastCompletionMetrics.executionSteps }}</strong>
+                </div>
+              </div>
+              <div v-if="finishLeaderboard.length" class="finish-ranking">
+                <div class="finish-ranking-title">本关前 {{ finishLeaderboard.length }} 名</div>
+                <div class="lightbot-leaderboard-list compact">
+                  <div
+                    v-for="(record, index) in finishLeaderboard"
+                    :key="`finish-${record.userId}-${record.completedAt}`"
+                    class="lightbot-leaderboard-item"
+                    :class="{ me: record.userId === currentUserId }"
+                  >
+                    <span class="rank">{{ index + 1 }}</span>
+                    <div class="lightbot-leaderboard-copy">
+                      <strong>{{ record.username }}</strong>
+                      <span>总代码 {{ record.totalCommands }} · 执行 {{ record.executionSteps }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="finish-actions">
                 <button class="hero-btn primary" @click="goToNextLevel">{{ isCustomPlaytest ? 'Back To Editor' : 'Next Level' }}</button>
                 <button class="hero-btn" @click="resetLevel(false)">Replay</button>
@@ -479,6 +565,23 @@ function getLevelAuthorName(level) {
 
 function getLevelAuthorLabel(level) {
   return `作者：${getLevelAuthorName(level)}`
+}
+
+function formatRelativeTime(value) {
+  const timestamp = new Date(value).getTime()
+  if (!Number.isFinite(timestamp)) return '刚刚'
+
+  const diff = Date.now() - timestamp
+  if (diff < 60 * 1000) return '刚刚'
+
+  const minutes = Math.floor(diff / (60 * 1000))
+  if (minutes < 60) return `${minutes} 分钟前`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+
+  const days = Math.floor(hours / 24)
+  return `${days} 天前`
 }
 
 function findOccupiedBounds(board) {
@@ -823,6 +926,53 @@ async function fetchSharedLevelOverrides() {
   deletedLevelIds.value = normalized.deletedIds
 }
 
+async function fetchLevelLeaderboard(levelId = currentLevel.value.id) {
+  if (!levelId || isCustomPlaytest.value) {
+    levelLeaderboard.value = []
+    return
+  }
+
+  try {
+    const response = await request.get(`/api/lightbot/levels/${encodeURIComponent(levelId)}/leaderboard`)
+    levelLeaderboard.value = Array.isArray(response?.data) ? response.data : []
+  } catch (error) {
+    console.error('Failed to fetch Lightbot leaderboard:', error)
+    levelLeaderboard.value = []
+  }
+}
+
+async function fetchRecentActivity() {
+  try {
+    const response = await request.get('/api/lightbot/activity?limit=10')
+    recentActivity.value = Array.isArray(response?.data) ? response.data : []
+  } catch (error) {
+    console.error('Failed to fetch Lightbot activity:', error)
+    recentActivity.value = []
+  }
+}
+
+async function submitCurrentResult(runToken) {
+  if (isCustomPlaytest.value || !currentLevel.value?.id) {
+    return
+  }
+
+  if (reportedCompletionToken.value === runToken) {
+    return
+  }
+
+  reportedCompletionToken.value = runToken
+
+  try {
+    await request.post(`/api/lightbot/levels/${encodeURIComponent(currentLevel.value.id)}/complete`, lastCompletionMetrics.value || currentProgramMetrics.value)
+    await Promise.all([
+      fetchLevelLeaderboard(currentLevel.value.id),
+      fetchRecentActivity()
+    ])
+  } catch (error) {
+    console.error('Failed to submit Lightbot result:', error)
+  }
+}
+
 function levelGlobalIndex(group, index) {
   return group.startIndex + index
 }
@@ -837,16 +987,22 @@ const activeProcedureKey = ref('main')
 const mainProcedure = ref([])
 const procedures = ref({ p1: [] })
 const completedLevelIds = ref(loadProgress())
+const levelLeaderboard = ref([])
+const recentActivity = ref([])
 const litKeys = ref([])
 const bot = ref(cloneBot((levels.value[0] || LIGHTBOT_LEVELS[0]).start))
 const isRunning = ref(false)
 const runningProcedureKey = ref('')
 const runningOperationIndex = ref(-1)
 const runNonce = ref(0)
+const runExecutionSteps = ref(0)
+const activeRunToken = ref(null)
+const reportedCompletionToken = ref(null)
 const speedValue = ref(3)
 const statusText = ref('Ready')
 const statusTone = ref('neutral')
 const showFinishPanel = ref(false)
+const lastCompletionMetrics = ref(null)
 const briefSceneHost = ref(null)
 const playSceneHost = ref(null)
 const editorSceneHost = ref(null)
@@ -880,9 +1036,20 @@ const hasCurrentDemo = computed(() => {
 const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
+const currentProgramMetrics = computed(() => {
+  const mainLength = mainProcedure.value.length
+  const p1Length = procedures.value.p1.length
+  return {
+    totalCommands: mainLength + p1Length,
+    mainLength,
+    p1Length,
+    executionSteps: runExecutionSteps.value
+  }
+})
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
+const finishLeaderboard = computed(() => levelLeaderboard.value.slice(0, 5))
 const editorCanModifySource = computed(() => {
   if (!editorDraft.sourceLevelId) return true
   if (editorDraft.sourceIsCustom) {
@@ -1346,9 +1513,13 @@ function emptySlots(limit, used) {
 function resetLevel(clearPrograms = false) {
   runNonce.value += 1
   isRunning.value = false
+  activeRunToken.value = null
+  reportedCompletionToken.value = null
+  runExecutionSteps.value = 0
   runningProcedureKey.value = ''
   runningOperationIndex.value = -1
   showFinishPanel.value = false
+  lastCompletionMetrics.value = null
   litKeys.value = []
   bot.value = cloneBot(currentLevel.value.start)
   if (clearPrograms) {
@@ -1491,8 +1662,10 @@ function markFinished() {
   if (!isCustomPlaytest.value && !completedLevelIds.value.includes(currentLevel.value.id)) {
     completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
   }
+  lastCompletionMetrics.value = { ...currentProgramMetrics.value }
   showFinishPanel.value = true
   setStatus('Level complete', 'success')
+  void submitCurrentResult(activeRunToken.value)
   return true
 }
 
@@ -1566,6 +1739,7 @@ async function runProcedure(procKey, operations, nonce, depth = 0) {
     if (nonce !== runNonce.value) return
     runningProcedureKey.value = procKey
     runningOperationIndex.value = index
+    runExecutionSteps.value += 1
     await executeOperation(operations[index], nonce, depth)
     if (markFinished()) return
   }
@@ -1575,6 +1749,7 @@ async function runCode() {
   if (!mainProcedure.value.length || isRunning.value) return
   resetLevel(false)
   const nonce = runNonce.value
+  activeRunToken.value = nonce
   isRunning.value = true
   setStatus('Program running')
 
@@ -2056,10 +2231,26 @@ watch(screen, () => {
   endEditorPaint()
 })
 
+watch(
+  () => [currentLevel.value.id, isCustomPlaytest.value],
+  ([levelId, customPlaytest]) => {
+    if (customPlaytest) {
+      levelLeaderboard.value = []
+      return
+    }
+    void fetchLevelLeaderboard(levelId)
+  },
+  { immediate: true }
+)
+
 onMounted(async () => {
   window.addEventListener('pointerup', endEditorPaint)
   try {
     await fetchSharedLevelOverrides()
+    await Promise.all([
+      fetchLevelLeaderboard(currentLevel.value.id),
+      fetchRecentActivity()
+    ])
     if (!activeCustomLevel.value) {
       bot.value = cloneBot(levels.value[selectedLevelIndex.value].start)
     }
@@ -2318,6 +2509,73 @@ resetLevel(true)
   font-weight: 700;
 }
 
+.activity-strip,
+.brief-ranking {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 16px 32px rgba(103, 126, 157, 0.12);
+}
+
+.activity-strip-header,
+.brief-ranking-header,
+.activity-strip-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.activity-strip-header h2,
+.brief-ranking-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.activity-strip-header span,
+.brief-ranking-header span,
+.activity-strip-item span,
+.brief-ranking-empty {
+  color: #617385;
+  font-size: 13px;
+}
+
+.activity-strip-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.activity-strip-item {
+  min-height: 118px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #eef6fb, #ffffff);
+  display: grid;
+  gap: 8px;
+}
+
+.activity-strip-item p,
+.brief-ranking-empty {
+  margin: 0;
+}
+
+.activity-strip-item strong,
+.lightbot-leaderboard-copy strong {
+  color: #2f4454;
+}
+
+.activity-strip-item em {
+  font-style: normal;
+  color: #7b8d9b;
+  font-size: 12px;
+}
+
 .chapter-groups {
   display: flex;
   flex-direction: column;
@@ -2497,8 +2755,81 @@ resetLevel(true)
 }
 
 .brief-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.brief-ranking {
+  width: 100%;
+}
+
+.lightbot-leaderboard-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lightbot-leaderboard-list.compact {
+  gap: 8px;
+}
+
+.lightbot-leaderboard-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f5f8fb;
+}
+
+.lightbot-leaderboard-item.me {
+  background: linear-gradient(180deg, #e8f6de, #f8fcf5);
+}
+
+.lightbot-leaderboard-item .rank {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: #dfeaf5;
+  color: #46617a;
   display: grid;
   place-items: center;
+  font-weight: 800;
+}
+
+.lightbot-leaderboard-item:nth-child(1) .rank {
+  background: #f7e7a8;
+  color: #735600;
+}
+
+.lightbot-leaderboard-item:nth-child(2) .rank {
+  background: #e4e9ef;
+  color: #526273;
+}
+
+.lightbot-leaderboard-item:nth-child(3) .rank {
+  background: #f0d7b8;
+  color: #7a4f1c;
+}
+
+.lightbot-leaderboard-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.lightbot-leaderboard-copy span,
+.lightbot-leaderboard-meta span {
+  color: #617385;
+  font-size: 13px;
+}
+
+.lightbot-leaderboard-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .editor-screen {
@@ -3192,6 +3523,38 @@ resetLevel(true)
   font-size: 34px;
 }
 
+.finish-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.finish-stats div,
+.finish-ranking {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #f5f8fb;
+}
+
+.finish-stats span,
+.finish-ranking-title {
+  display: block;
+  color: #617385;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.finish-stats strong {
+  color: #2f4454;
+  font-size: 18px;
+}
+
+.finish-ranking {
+  margin-top: 14px;
+  text-align: left;
+}
+
 @keyframes robotBob {
   0%,
   100% {
@@ -3452,6 +3815,8 @@ resetLevel(true)
   .board-topbar,
   .status-float,
   .brief-meta,
+  .activity-strip-header,
+  .brief-ranking-header,
   .program-tools,
   .editor-tool-row,
   .editor-action-row {
@@ -3461,6 +3826,23 @@ resetLevel(true)
 
   .scene-frame {
     min-height: 420px;
+  }
+
+  .activity-strip-list {
+    grid-auto-columns: minmax(220px, 78vw);
+  }
+
+  .lightbot-leaderboard-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .lightbot-leaderboard-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .finish-stats {
+    grid-template-columns: 1fr;
   }
 
   .screen-play .scene-frame {
