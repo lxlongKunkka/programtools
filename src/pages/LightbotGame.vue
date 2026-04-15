@@ -3080,6 +3080,11 @@ resetLevel(true)
 .program-slot.filled img {
   width: 28px;
   height: 28px;
+  display: block;
+  margin: auto;
+  object-fit: contain;
+  justify-self: center;
+  align-self: center;
 }
 
 .reset-btn {
