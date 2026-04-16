@@ -1341,6 +1341,9 @@ const currentDemoFeatureText = computed(() => {
   if ([demo.main, demo.p1, demo.p2].some((list) => list?.some((entry) => isRepeatOperation(entry)))) {
     features.push('重复压缩')
   }
+  if ([demo.main, demo.p1, demo.p2].some((list) => list?.some((entry) => isConditionalOperation(entry)))) {
+    features.push('条件点灯')
+  }
   if (demo.p1?.length) {
     features.push('P1 模板')
   }
@@ -1360,6 +1363,9 @@ const briefTeachingSummary = computed(() => {
   if (goals) {
     summaryParts.push(`它属于本章的 ${goals} 练习段。`)
   }
+  if (currentLevelSupportsIfDark.value) {
+    summaryParts.push('这关开放了 If Dark 条件块，适合把同一段点灯动作安全地重复使用。')
+  }
   if (procedureCount > 0) {
     summaryParts.push(`你已经可以使用 ${procedureCount} 个子程序槽位来整理重复片段。`)
   } else {
@@ -1368,11 +1374,15 @@ const briefTeachingSummary = computed(() => {
   return summaryParts.join(' ')
 })
 const briefFirstMoveTitle = computed(() => {
+  if (currentLevelSupportsIfDark.value) return '先标出会被二次经过的灯'
   if (availableProcedureKeys.value.length >= 2) return '先切块，再决定谁放进 P1 / P2'
   if (availableProcedureKeys.value.length === 1) return '先找会重复出现的动作模板'
   return '先在脑中跑一遍路线'
 })
 const briefFirstMoveCopy = computed(() => {
+  if (currentLevelSupportsIfDark.value) {
+    return '先找出哪些灯会被反复踩到。把 If Dark Light 放在这些位置，你就能复用同一段路线，而不用为“第一次点灯”和“第二次经过”分别写两套程序。'
+  }
   if (availableProcedureKeys.value.length >= 2) {
     return '先把整条路线按“直走段、转角段、跳跃段”分成几块，再判断哪一块最值得交给 P1 或 P2。这样更容易同时压缩总代码和执行结构。'
   }
@@ -1385,6 +1395,9 @@ const briefDemoTitle = computed(() => (hasCurrentDemo.value ? currentDemoFeature
 const briefDemoCopy = computed(() => {
   if (!hasCurrentDemo.value) {
     return '这关暂时没有内置 demo。建议先自己尝试一版，再回来看提示卡片里的解题重点。'
+  }
+  if (currentLevelSupportsIfDark.value) {
+    return '看 demo 时重点盯住每一个 If Dark Light 出现的位置。它们通常都落在“这盏灯会被再次经过”的地方，这正是条件块存在的理由。'
   }
   if (availableProcedureKeys.value.length >= 2) {
     return '观察 demo 里 MAIN 负责串联、P1 / P2 负责复用的边界。真正要学的不是照抄顺序，而是为什么这两段值得单独拆出去。'

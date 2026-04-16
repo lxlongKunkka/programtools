@@ -39,8 +39,12 @@ function isRepeatOperation(operation) {
   return Boolean(operation && typeof operation === 'object' && operation.type === 'repeat')
 }
 
+function isConditionalOperation(operation) {
+  return Boolean(operation && typeof operation === 'object' && operation.type === 'condition')
+}
+
 function cloneOperationEntry(operation) {
-  if (isRepeatOperation(operation)) {
+  if (isRepeatOperation(operation) || isConditionalOperation(operation)) {
     return { ...operation }
   }
   return operation
@@ -85,7 +89,20 @@ function buildTeachingDemo(chapter, solvedDemo) {
   return demo
 }
 
+function createRepeatOperation(body, count) {
+  return { type: 'repeat', body, count }
+}
+
+function createConditionalOperation(body, test = 'dark-target') {
+  return { type: 'condition', body, test }
+}
+
+function ifDark(body = 'light') {
+  return createConditionalOperation(body, 'dark-target')
+}
+
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
+  const commandOptions = { ...(chapter.commandOptions || {}), ...(level.commandOptions || {}) }
   const baseLevel = {
     id: level.id,
     chapterId: chapter.id,
@@ -96,6 +113,7 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     description: level.description,
     goal: level.goal,
     mainLimit: level.mainLimit,
+    commandOptions,
     procLimits: { ...(level.procLimits || {}) },
     tips: (level.tips && level.tips.length ? level.tips : chapter.tips).map((tip) => ({ ...tip })),
     board: buildBoardFromTiles(level.tiles),
@@ -103,7 +121,7 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     order: levelIndex
   }
 
-  const solvedDemo = solveLevelProgram(baseLevel)
+  const solvedDemo = !level.demo && !commandOptions.ifDark ? solveLevelProgram(baseLevel) : null
 
   return {
     ...baseLevel,
@@ -894,6 +912,140 @@ const CAMPAIGN_CHAPTERS = [
           [4, 2, 1], [5, 2, 2, true],
           [2, 2, 1], [1, 2, 2, true]
         ])
+      }
+    ]
+  },
+  {
+    id: 'conditional',
+    title: '条件判断',
+    skill: 'If Dark / Reuse',
+    summary: '引入只包住下一条指令的条件块，让同一段路线模板既能点亮新灯，也不会把已经点亮的灯再关掉。',
+    learningGoals: ['理解 If Dark 语义', '让同一路线可重复复用', '把条件块和 P1 / Repeat 组合起来'],
+    mechanicTags: ['If Dark', 'Reuse', 'P1', 'Repeat'],
+    commandOptions: { ifDark: true },
+    tips: [
+      { title: '条件块只管下一条', copy: 'If Dark 不是整段 if/else，它只决定紧跟在后面的那一条指令要不要执行。' },
+      { title: '最常见写法是 If Dark Light', copy: '当一条路线会反复踩过同一盏灯时，把 Light 包进 If Dark 就能避免二次熄灯。' }
+    ],
+    levels: [
+      {
+        id: 'conditional-1',
+        title: '51. 回程不熄灯',
+        description: '先用最短的走廊解释 If Dark 的作用：回程会再次踩到第一盏灯，但不应该把它关掉。',
+        goal: '点亮两盏灯后沿原路返回。',
+        mainLimit: 10,
+        procLimits: {},
+        tips: [
+          { title: '第一次先正常点亮', copy: '第一次踩上灯块时，If Dark Light 会和普通 Light 一样执行。' },
+          { title: '回程再踩时自动跳过', copy: '第二次回到同一盏灯上时，条件不成立，Light 就不会再触发。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0]], [1, 3]),
+        demo: {
+          main: ['walk', ifDark(), 'walk', 'walk', ifDark(), 'left', 'left', 'walk', 'walk', 'walk'],
+          p1: [],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-2',
+        title: '52. 中心灯只亮一次',
+        description: '把目标格放在路口中心，让玩家看到同一个灯块可以被多次经过，但只需要第一次点亮。',
+        goal: '先点亮中心和上方灯，再回到中心去点亮右侧灯。',
+        mainLimit: 12,
+        procLimits: {},
+        tips: [
+          { title: '中心灯会被反复经过', copy: '这类枢纽图里，最适合被条件块保护的通常就是中心灯。' },
+          { title: '不要把 If Dark 理解成自动寻路', copy: '条件块只负责是否执行下一条，路线和转向仍然要你自己规划。' }
+        ],
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1, 0, true], [2, 1, 0, true], [1, 0, 0, true]
+        ]),
+        demo: {
+          main: ['walk', ifDark(), 'left', 'walk', ifDark(), 'right', 'right', 'walk', ifDark(), 'left', 'walk', ifDark()],
+          p1: [],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-3',
+        title: '53. 条件模板往返',
+        description: '第一次把 If Dark 放进 P1，让同一段两步模板既能负责首次点灯，也能负责回程。',
+        goal: '用一个过程完成走廊往返。',
+        mainLimit: 6,
+        procLimits: { p1: 3 },
+        tips: [
+          { title: '把条件写进模板里', copy: '如果模板本来就会踩灯，那么最稳定的做法通常是把 If Dark Light 直接放进 P1。' },
+          { title: '回程还能继续复用', copy: '同一个 P1 在回程再次经过已点亮的灯时也不会出错，这才是条件模板的价值。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], [1, 3]),
+        demo: {
+          main: ['p1', 'p1', 'left', 'left', 'p1', 'p1'],
+          p1: ['walk', ifDark(), 'walk'],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-4',
+        title: '54. 重复调用条件模板',
+        description: '把条件模板再往前推进一步：MAIN 不再手写三次调用，而是让 Repeat 直接压缩对 P1 的连续调用。',
+        goal: '用 Repeat 压缩往返走廊上的条件模板。',
+        mainLimit: 4,
+        procLimits: { p1: 3 },
+        tips: [
+          { title: 'If Dark 和 Repeat 不冲突', copy: '条件块负责局部安全，Repeat 负责压缩调用节奏，这两层可以同时成立。' },
+          { title: '先有稳定模板，再谈压缩', copy: '只有 P1 已经足够稳定时，MAIN 里的 Repeat 才会真正好用。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [1, 3, 5]),
+        demo: {
+          main: [createRepeatOperation('p1', 3), 'left', 'left', createRepeatOperation('p1', 3)],
+          p1: ['walk', ifDark(), 'walk'],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-5',
+        title: '55. 枢纽三次经过',
+        description: '中心灯会被踩三次，玩家必须接受“同一个 If Dark Light 可以反复写在主程序里”这个思路。',
+        goal: '清理上下支路和右侧出口，同时保持中心灯常亮。',
+        mainLimit: 20,
+        procLimits: {},
+        tips: [
+          { title: '同一盏灯可以被保护很多次', copy: '不是说一盏灯只能配一个条件块，而是每次经过它时都能用 If Dark Light 保证安全。' },
+          { title: '先想经过顺序', copy: '枢纽题先决定先上、先下还是先右，再把条件块插到每次踩灯的位置。' }
+        ],
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1, 0, true], [3, 1], [4, 1, 0, true],
+          [2, 0, 0, true], [2, 2, 0, true]
+        ]),
+        demo: {
+          main: ['walk', 'walk', ifDark(), 'left', 'walk', ifDark(), 'right', 'right', 'walk', ifDark(), 'walk', ifDark(), 'left', 'left', 'walk', ifDark(), 'right', 'walk', 'walk', ifDark()],
+          p1: [],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-6',
+        title: '56. 条件终测',
+        description: '最后一关把 If Dark、P1、P2 和 Repeat 放在一起，要求玩家真正把条件块当成可复用结构的一部分。',
+        goal: '用最整洁的条件模板完成超长走廊往返。',
+        mainLimit: 3,
+        procLimits: { p1: 3, p2: 2 },
+        tips: [
+          { title: 'P1 负责路线模板', copy: '把“走两格，中途如果脚下是暗灯就点亮”这件事交给 P1，MAIN 会非常干净。' },
+          { title: 'P2 只做掉头', copy: '当一个动作只承担单一职责时，就算只有两格也值得拆成独立过程。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]], [1, 3, 5, 7]),
+        demo: {
+          main: [createRepeatOperation('p1', 4), 'p2', createRepeatOperation('p1', 4)],
+          p1: ['walk', ifDark(), 'walk'],
+          p2: ['left', 'left']
+        }
       }
     ]
   }
