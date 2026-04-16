@@ -42,12 +42,21 @@
       <div class="chapter-groups">
         <section v-for="group in levelGroups" :key="group.id" class="chapter-group">
           <header class="chapter-group-header">
-            <div>
+            <div class="chapter-group-copy">
               <p class="screen-kicker">Chapter {{ group.order + 1 }}</p>
               <h2>{{ group.title }}</h2>
+              <p v-if="group.summary" class="chapter-summary">{{ group.summary }}</p>
+              <div v-if="group.learningGoals?.length" class="chapter-goals">
+                <span v-for="goal in group.learningGoals" :key="goal" class="chapter-goal-chip">{{ goal }}</span>
+              </div>
             </div>
-            <div class="chapter-progress">
-              {{ completedCountForGroup(group) }}/{{ group.levels.length }} complete
+            <div class="chapter-group-side">
+              <div class="chapter-progress">
+                {{ completedCountForGroup(group) }}/{{ group.levels.length }} complete
+              </div>
+              <div v-if="group.mechanicTags?.length" class="chapter-mechanics">
+                <span v-for="tag in group.mechanicTags" :key="tag" class="chapter-mechanic-chip">{{ tag }}</span>
+              </div>
             </div>
           </header>
 
@@ -2821,14 +2830,35 @@ resetLevel(true)
 .chapter-group-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.chapter-group-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .chapter-group-header h2 {
   margin: 0;
   font-size: 20px;
+}
+
+.chapter-summary {
+  margin: 0;
+  max-width: 700px;
+  color: #5d7181;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.chapter-group-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .chapter-progress {
@@ -2841,6 +2871,36 @@ resetLevel(true)
   place-items: center;
   font-size: 13px;
   font-weight: 700;
+}
+
+.chapter-goals,
+.chapter-mechanics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chapter-goal-chip,
+.chapter-mechanic-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.chapter-goal-chip {
+  background: rgba(107, 184, 151, 0.14);
+  color: #3d6a5b;
+}
+
+.chapter-mechanic-chip {
+  background: rgba(91, 169, 214, 0.14);
+  color: #3d6078;
 }
 
 .level-grid {

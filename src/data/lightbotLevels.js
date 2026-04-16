@@ -35,6 +35,56 @@ function buildBoardFromTiles(tiles) {
   return board
 }
 
+function isRepeatOperation(operation) {
+  return Boolean(operation && typeof operation === 'object' && operation.type === 'repeat')
+}
+
+function cloneOperationEntry(operation) {
+  if (isRepeatOperation(operation)) {
+    return { ...operation }
+  }
+  return operation
+}
+
+function cloneOperationList(list = []) {
+  return list.map((operation) => cloneOperationEntry(operation))
+}
+
+function expandOperationList(list = []) {
+  const expanded = []
+
+  list.forEach((operation) => {
+    if (isRepeatOperation(operation)) {
+      for (let index = 0; index < operation.count; index += 1) {
+        expanded.push(operation.body)
+      }
+      return
+    }
+
+    expanded.push(cloneOperationEntry(operation))
+  })
+
+  return expanded
+}
+
+function buildTeachingDemo(chapter, solvedDemo) {
+  const demo = {
+    main: cloneOperationList(solvedDemo?.main || []),
+    p1: cloneOperationList(solvedDemo?.p1 || []),
+    p2: cloneOperationList(solvedDemo?.p2 || [])
+  }
+
+  if (['basics', 'routing', 'procedures'].includes(chapter.id)) {
+    return {
+      main: expandOperationList(demo.main),
+      p1: expandOperationList(demo.p1),
+      p2: expandOperationList(demo.p2)
+    }
+  }
+
+  return demo
+}
+
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   const baseLevel = {
     id: level.id,
@@ -59,15 +109,11 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     ...baseLevel,
     demo: level.demo
       ? {
-        main: [...(level.demo.main || [])],
-        p1: [...(level.demo.p1 || [])],
-        p2: [...(level.demo.p2 || [])]
+        main: cloneOperationList(level.demo.main || []),
+        p1: cloneOperationList(level.demo.p1 || []),
+        p2: cloneOperationList(level.demo.p2 || [])
       }
-      : {
-        main: solvedDemo?.solvable ? [...solvedDemo.main] : [],
-        p1: solvedDemo?.solvable ? [...solvedDemo.p1] : [],
-        p2: solvedDemo?.solvable ? [...solvedDemo.p2] : []
-      }
+      : buildTeachingDemo(chapter, solvedDemo?.solvable ? solvedDemo : null)
   }
 }
 
@@ -76,6 +122,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'basics',
     title: '基础动作',
     skill: 'Walk / Turn / Jump / Light',
+    summary: '用最少变量建立空间感，先学会走、转、跳、点，再进入真正的规划。',
+    learningGoals: ['理解朝向', '区分 Walk / Jump', '完成单段路线'],
+    mechanicTags: ['Walk', 'Turn', 'Jump', 'Light'],
     tips: [
       { title: '先看朝向', copy: 'Lightbot 的错误多数不是路径错，而是转向错。每次移动前先看机器人正面。' },
       { title: '区分 Walk 和 Jump', copy: 'Walk 只能走向同高度平台；Jump 可以上升一层，也可以向低处跳。' }
@@ -199,6 +248,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'routing',
     title: '路线规划',
     skill: 'Route Planning',
+    summary: '开始处理多目标、分叉与折返，把会写动作升级成会安排顺序。',
+    learningGoals: ['确定访问顺序', '减少折返', '分段思考路线'],
+    mechanicTags: ['Multi-target', 'Branching', 'Route'],
     tips: [
       { title: '先决定顺序', copy: '多目标关卡里，先后顺序会直接影响需要多少次转向和折返。' },
       { title: '把地图分段', copy: '别把整张图一次想完，先确定第一段路线，再看下一段如何衔接。' }
@@ -341,6 +393,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'procedures',
     title: '过程抽象',
     skill: 'P1',
+    summary: '把重复动作块从 MAIN 提炼出去，让程序第一次具备真正的结构。',
+    learningGoals: ['识别重复模板', '用 P1 压缩 MAIN', '把高度变化也抽成过程'],
+    mechanicTags: ['P1', 'Template', 'Abstraction'],
     tips: [
       { title: '抽动作块', copy: '当同一串动作会完整重复时，把它抽进 P1 比继续堆在 MAIN 更清晰。' },
       { title: '过程不是垃圾桶', copy: 'P1 应该装一段稳定模板，而不是把剩余指令随便塞进去。' }
@@ -480,6 +535,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'compression',
     title: '压缩策略',
     skill: 'Repeat / P1 / P2',
+    summary: '开始同时比较 Repeat、P1 和 P2 三种压缩手段，学会为不同结构分配不同工具。',
+    learningGoals: ['识别可 Repeat 的节奏', '区分 P1 与 P2 职责', '组合多层压缩'],
+    mechanicTags: ['Repeat', 'P1', 'P2'],
     tips: [
       { title: '先看是否能 Repeat', copy: '连续重复同一指令时，Repeat 比新开过程更直接。' },
       { title: 'P1 和 P2 要分工', copy: '当地图里同时出现两类重复结构时，才值得把 P1 和 P2 都用起来。' }
@@ -534,6 +592,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '让同一过程被连续调用四次。',
         mainLimit: 1,
         procLimits: { p1: 3 },
+        tips: [
+          { title: '调用本身也有节奏', copy: '当 MAIN 里只剩一串连续的 P1 调用时，也该考虑用 Repeat 压缩。' },
+          { title: '先稳定过程定义', copy: '只有 P1 足够稳定，MAIN 才会被压成一个干净的调用节奏。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]], [2, 4, 6, 8])
       },
@@ -544,6 +606,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '用两种模板整理平地与高台段。',
         mainLimit: 5,
         procLimits: { p1: 3, p2: 2 },
+        tips: [
+          { title: '两个过程不要做同一件事', copy: 'P1 和 P2 最好分别负责两类结构，而不是相互替代。' },
+          { title: '先判别谁更像模板', copy: '不是所有重复都值得抽过程，先找出现次数更多、边界更清晰的那段。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 1], [4, 0, 0], [5, 0, 0], [6, 0, 0], [7, 0, 1]], [2, 3, 6, 7])
       },
@@ -554,6 +620,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '分别清理上下两条支路上的重复结构。',
         mainLimit: 11,
         procLimits: { p1: 4, p2: 3 },
+        tips: [
+          { title: '共同起点不等于共同模板', copy: '上下两条支路都从主路分出，但真正重复的是各自内部的节奏。' },
+          { title: '第二类重复交给 P2', copy: '当另一种模式也足够稳定时，就应该让 P2 出场，而不是继续往 P1 里硬塞。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: mapTiles([
           [0, 1], [1, 1], [2, 1], [3, 1], [4, 1],
@@ -568,6 +638,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '压缩外圈路径并点亮四盏灯。',
         mainLimit: 8,
         procLimits: { p1: 2, p2: 2 },
+        tips: [
+          { title: '回字先找边段', copy: '面对回字图时，先找哪一条边会反复出现，而不是先看整圈。' },
+          { title: '过程和 Repeat 分层用', copy: '过程负责边段模板，Repeat 负责连续直行，这样程序层次最清楚。' }
+        ],
         start: { x: 0, y: 3, dir: 'forward' },
         tiles: mapTiles([
           [0, 3], [1, 3], [2, 3], [3, 3, 0, true],
@@ -583,6 +657,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '先处理桥面，再分别点亮两座塔。',
         mainLimit: 9,
         procLimits: { p1: 3, p2: 2 },
+        tips: [
+          { title: '先分平地和高台', copy: '桥面与上塔动作节奏完全不同，混到同一个过程里会很难整理。' },
+          { title: '双过程最好有分工', copy: '一个过程处理桥面，一个过程处理上塔，MAIN 只负责安排顺序。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: mapTiles([
           [0, 1], [1, 1], [2, 1], [3, 1, 0, true], [4, 1], [5, 1],
@@ -597,6 +675,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '完成两次近似往返并点亮四盏灯。',
         mainLimit: 8,
         procLimits: { p1: 4, p2: 4 },
+        tips: [
+          { title: '看骨架，不只看高度', copy: '上下平台高度不同，但如果动作骨架一致，仍然可能属于同类模板。' },
+          { title: '过程结束位置要可复用', copy: '往返题里，过程最后停在哪，会决定下一次还能不能继续复用。' }
+        ],
         start: { x: 0, y: 2, dir: 'forward' },
         tiles: mapTiles([
           [0, 2], [1, 2], [2, 2], [3, 2],
@@ -611,6 +693,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '用合适的压缩手段完成整图。',
         mainLimit: 8,
         procLimits: { p1: 4, p2: 2 },
+        tips: [
+          { title: '三种工具先比较', copy: '下手之前先比较这段更适合 Repeat、P1 还是 P2，而不是写到一半再返工。' },
+          { title: '结构清楚比堆最短更重要', copy: '压缩总测考的不只是能过，还考你能否把程序组织得足够整洁。' }
+        ],
         start: { x: 0, y: 4, dir: 'forward' },
         tiles: mapTiles([
           [0, 4], [1, 4], [2, 4], [3, 4, 0, true], [4, 4],
@@ -625,6 +711,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'master',
     title: '综合挑战',
     skill: 'Strategy',
+    summary: '把前四章的路线、过程、Repeat 和双过程真正组合起来，开始按程序结构而不是按单步动作解题。',
+    learningGoals: ['拆复杂图为结构块', '组合 P1 / P2 / Repeat', '兼顾最优与可读性'],
+    mechanicTags: ['Strategy', 'P1', 'P2', 'Repeat'],
     tips: [
       { title: '先拆结构再写程序', copy: '综合关如果直接开始写指令，通常会很快迷路。先把地图拆成若干重复区域。' },
       { title: '允许回头重构', copy: '写到一半发现 MAIN 爆了是正常现象，应该回头重新抽过程，而不是继续硬塞。' }
@@ -688,6 +777,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '点亮上下两层回路中的五盏灯。',
         mainLimit: 15,
         procLimits: { p1: 4, p2: 4 },
+        tips: [
+          { title: '上下两层别混想', copy: '先把平地回路和高台回路分别看懂，再考虑它们如何串起来。' },
+          { title: '双过程适合双层结构', copy: '当两层回路节奏不同，用 P1 和 P2 分层管理通常最稳。' }
+        ],
         start: { x: 0, y: 3, dir: 'forward' },
         tiles: mapTiles([
           [0, 3], [1, 3], [2, 3], [3, 3, 0, true],
@@ -703,6 +796,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '沿三段高差依次点亮四盏灯。',
         mainLimit: 14,
         procLimits: { p1: 4 },
+        tips: [
+          { title: '先标高度节奏', copy: '把整条路按高度变化分成三段，会比直接写动作更容易。' },
+          { title: '同一路也能抽模板', copy: '只要某个升降节奏重复出现，就仍然值得考虑过程。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: pathTiles([[0, 1, 0], [1, 1, 0], [2, 1, 1], [3, 1, 1], [4, 1, 2], [5, 1, 2], [6, 1, 1], [7, 1, 0]], [1, 3, 5, 7])
       },
@@ -713,6 +810,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '从中心出发清理四条支路。',
         mainLimit: 16,
         procLimits: { p1: 4, p2: 4 },
+        tips: [
+          { title: '从中心看四象限', copy: '十字图最怕的是把四条支路混成一团，先把每个方向单独看。' },
+          { title: '相似支路先归类', copy: '如果两条支路动作模式接近，可以考虑让它们共用一个过程。' }
+        ],
         start: { x: 2, y: 2, dir: 'forward' },
         tiles: mapTiles([
           [2, 2],
@@ -729,6 +830,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '在蛇形高桥上点亮四盏灯。',
         mainLimit: 16,
         procLimits: { p1: 4, p2: 3 },
+        tips: [
+          { title: '预演整段转向', copy: '蛇形题真正难的是连续几次转向，建议先在脑中完整走一遍。' },
+          { title: '桥面和高差拆开看', copy: '把平移节奏与升降节奏分开看，程序会更容易整理成两层结构。' }
+        ],
         start: { x: 0, y: 4, dir: 'forward' },
         tiles: pathTiles([[0, 4, 0], [1, 4, 0], [2, 4, 1], [3, 4, 1], [3, 3, 2], [2, 3, 2], [1, 3, 1], [0, 3, 1], [0, 2, 2], [1, 2, 2]], [2, 4, 7, 9])
       },
@@ -739,6 +844,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '在两座塔和中间回路中点亮五盏灯。',
         mainLimit: 17,
         procLimits: { p1: 5, p2: 4 },
+        tips: [
+          { title: '别只盯塔顶', copy: '真正重复的通常不是塔顶动作，而是进塔和出塔的路线框架。' },
+          { title: '回环先看返回点', copy: '如果过程结束后回不到合适位置，后面的复用就会断掉。' }
+        ],
         start: { x: 0, y: 2, dir: 'forward' },
         tiles: mapTiles([
           [0, 2], [1, 2], [2, 2, 0, true], [3, 2], [4, 2, 0, true], [5, 2],
@@ -754,6 +863,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '清理四个区域里的全部灯块。',
         mainLimit: 18,
         procLimits: { p1: 5, p2: 5 },
+        tips: [
+          { title: '先标四个区块', copy: '把整张图按功能区拆开，再决定每个区块由 MAIN 还是过程接管。' },
+          { title: '程序像拼积木', copy: '这一关不是线性写代码，而是把几个可复用模块拼成完整流程。' }
+        ],
         start: { x: 0, y: 4, dir: 'forward' },
         tiles: mapTiles([
           [0, 4], [1, 4], [2, 4, 0, true], [3, 4], [4, 4, 0, true],
@@ -769,6 +882,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '用你认为最整洁的程序完成整个终章。',
         mainLimit: 19,
         procLimits: { p1: 3, p2: 4 },
+        tips: [
+          { title: '先找三类结构', copy: '终章通常至少有直行节奏、台阶节奏和分支节奏三类结构，先把它们找出来。' },
+          { title: '允许最短与可读取舍', copy: '终章更重视你能否清楚组织程序，而不只是机械地把步数压到最低。' }
+        ],
         start: { x: 0, y: 5, dir: 'forward' },
         tiles: mapTiles([
           [0, 5], [1, 5], [2, 5, 0, true], [3, 5], [4, 5, 0, true],
@@ -789,6 +906,9 @@ export const RECONSTRUCTED_LIGHTBOT_LEVELS = CAMPAIGN_CHAPTERS.flatMap((chapter,
 export const LIGHTBOT_LEVEL_GROUPS = CAMPAIGN_CHAPTERS.map((chapter, chapterIndex) => ({
   id: chapter.id,
   title: chapter.title,
+  summary: chapter.summary || '',
+  learningGoals: [...(chapter.learningGoals || [])],
+  mechanicTags: [...(chapter.mechanicTags || [])],
   order: chapterIndex,
   levels: chapter.levels.map((level, levelIndex) => buildCampaignLevel(chapter, level, chapterIndex, levelIndex))
 }))
