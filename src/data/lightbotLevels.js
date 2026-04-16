@@ -2,184 +2,24 @@ export function makeTile(height = 1, target = false) {
   return { h: height, target }
 }
 
-export const BASE_LIGHTBOT_LEVELS = [
-  {
-    id: 'level-1',
-    title: 'Level 1: First Light',
-    skill: 'Sequencing',
-    description: '最基础的关卡。先学会沿着平地前进并打开灯。',
-    goal: '从起始蓝色方块出发，走到右上角点亮目标格。',
-    mainLimit: 6,
-    procLimits: {},
-    tips: [
-      { title: 'Walk', copy: '只有前方存在同高度平台时，Walk 才会生效。' },
-      { title: 'Light', copy: '机器人站在目标格上时，Light 才会切换灯的状态。' }
-    ],
-    board: [
-      [makeTile(2), makeTile(2), makeTile(2, true)],
-      [makeTile(), makeTile(), makeTile()],
-      [makeTile(), makeTile(), null]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['right', 'walk', 'left', 'jump', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-2',
-    title: 'Level 2: Step Up',
-    skill: 'Jump',
-    description: '这一关引入一级高差，用 Jump 上台阶。',
-    goal: '沿着折线路径走到尽头，点亮唯一的目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Bend path', copy: '这一关的地图不再是直线，而是参考项目里的折线小岛。' },
-      { title: 'Turn', copy: '在拐角处先转向，再继续前进。' }
-    ],
-    board: [
-      [makeTile(), makeTile(), makeTile(1, true)],
-      [makeTile(), null, null],
-      [makeTile(), makeTile(), makeTile()]
-    ],
-    start: { x: 2, y: 2, dir: 'backward' },
-    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'right', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-3',
-    title: 'Level 3: Corner Path',
-    skill: 'Turns',
-    description: '转向系统开始生效，路径变成拐角。',
-    goal: '顺着台阶一路跳上去，点亮高处目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Jump up', copy: '这张图来自参考项目的三级关卡，是连续上升的阶梯。' },
-      { title: 'Plan ahead', copy: '每次上升一层都要用 Jump，而不是 Walk。' }
-    ],
-    board: [
-      [makeTile(), makeTile(4, true)],
-      [makeTile(2), makeTile(3)]
-    ],
-    start: { x: 0, y: 0, dir: 'right' },
-    demo: { main: ['jump', 'left', 'jump', 'left', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-4',
-    title: 'Level 4: Procedure',
-    skill: 'Procedures',
-    description: 'MAIN 空间不够了，需要把重复动作塞进 PROC1。',
-    goal: '沿着参考项目的阶梯平台前进到高处，只点亮终点。',
-    mainLimit: 10,
-    procLimits: { p1: 4 },
-    tips: [
-      { title: 'Real map shape', copy: '这一关的地图骨架已经按开源项目的坐标改成阶梯状。' },
-      { title: 'Procedure', copy: '现在仍然保留 PROC1，让后续流程能继续对齐参考项目。' }
-    ],
-    board: [
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3, true)],
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)],
-      [makeTile(), makeTile(2), makeTile(), makeTile(2), makeTile(3)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['p1', 'p1', 'left', 'walk', 'walk', 'light'], p1: ['jump', 'jump'] }
-  },
-  {
-    id: 'level-5',
-    title: 'Level 5: Bridge Loop',
-    skill: 'Procedures + Jump',
-    description: '综合关卡，带跳跃和过程调用。',
-    goal: '对齐参考项目的三目标地图，依次点亮所有目标格。',
-    mainLimit: 8,
-    procLimits: { p1: 3 },
-    tips: [
-      { title: 'Three targets', copy: '这张图改成了参考项目第五关的三目标布局。' },
-      { title: 'Timing', copy: '跨层移动时先确认高度，再决定用 Walk 还是 Jump。' }
-    ],
-    board: [
-      [makeTile(1, true), makeTile(), makeTile(3, true)],
-      [makeTile(), makeTile(), makeTile(2)],
-      [makeTile(), makeTile(2, true), makeTile(2)]
-    ],
-    start: { x: 0, y: 2, dir: 'right' },
-    demo: { main: ['walk', 'p1', 'left', 'light', 'right', 'p1'], p1: ['jump', 'light', 'jump'] }
-  },
-  {
-    id: 'level-6',
-    title: 'Level 6: Twin Lamps',
-    skill: 'Multi-target pathing',
-    description: '开始要求一次路线中依次点亮多个目标格。',
-    goal: '沿着外圈平台前进，点亮顶部左右两端的目标格。',
-    mainLimit: 12,
-    procLimits: {},
-    tips: [
-      { title: 'Route order', copy: '先走到一端点灯，再沿着同一条边回到另一端。' },
-      { title: 'Stay flat', copy: '这一关没有高度变化，重点是路径规划和转向。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2, true)],
-      [makeTile(2), null, makeTile(2)],
-      [makeTile(2), makeTile(2), makeTile(2)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'left', 'walk', 'walk', 'light', 'left', 'walk', 'walk', 'light'], p1: [] }
-  },
-  {
-    id: 'level-7',
-    title: 'Level 7: Double Height',
-    skill: 'Jump chain',
-    description: '把平地转向和连续 Jump 放在同一关里。',
-    goal: '先点亮起点灯，再转向爬上高台，点亮最顶端的目标格。',
-    mainLimit: 8,
-    procLimits: {},
-    tips: [
-      { title: 'Light first', copy: '起点本身就是目标格，别忘了先点亮。' },
-      { title: 'Jump chain', copy: '连续升高的平台只能用 Jump，Walk 无法上台阶。' }
-    ],
-    board: [
-      [makeTile(1), makeTile(2), makeTile(3), makeTile(4, true)],
-      [makeTile(1, true), null, null, null]
-    ],
-    start: { x: 0, y: 1, dir: 'left' },
-    demo: { main: ['light', 'walk', 'right', 'jump', 'jump', 'jump', 'light'], p1: [] }
-  },
-  {
-    id: 'level-8',
-    title: 'Level 8: Procedure Rail',
-    skill: 'Procedure reuse',
-    description: '把重复的“前进一步并点灯”抽成过程调用。',
-    goal: '沿着一条直线连续点亮三个目标格。',
-    mainLimit: 4,
-    procLimits: { p1: 2 },
-    tips: [
-      { title: 'Repeatable chunk', copy: '这关适合把重复动作抽到 PROC1，避免 MAIN 过长。' },
-      { title: 'Final lamp', copy: '最后一个目标格上不需要再移动，只需要补一次 Light。' }
-    ],
-    board: [
-      [makeTile(2, true), makeTile(2), makeTile(2, true), makeTile(2), makeTile(2, true)]
-    ],
-    start: { x: 0, y: 0, dir: 'forward' },
-    demo: { main: ['light', 'p1', 'p1'], p1: ['walk', 'light'] }
-  },
-  {
-    id: 'level-9',
-    title: 'Level 9: Corner Tower',
-    skill: 'Turns + height mix',
-    description: '路径先在平地上横向展开，再在拐角跳上高台。',
-    goal: '先点亮右下角灯，再转向跳上高台，点亮顶部目标格。',
-    mainLimit: 10,
-    procLimits: {},
-    tips: [
-      { title: 'Two phases', copy: '先完成平地部分，再处理拐角后的上台阶动作。' },
-      { title: 'Jump at corner', copy: '拐角后的第一步是升高一层，所以这里必须用 Jump。' }
-    ],
-    board: [
-      [makeTile(1), makeTile(1), makeTile(2), makeTile(2, true)],
-      [makeTile(1), null, null, makeTile(2)],
-      [makeTile(1), makeTile(1), makeTile(1), makeTile(1, true)]
-    ],
-    start: { x: 0, y: 2, dir: 'forward' },
-    demo: { main: ['walk', 'walk', 'walk', 'light', 'left', 'jump', 'walk', 'light'], p1: [] }
-  }
-]
+function mapTiles(entries) {
+  return entries.map(([x, y, z = 0, target = false]) => ({
+    x,
+    y,
+    z,
+    tile: target ? 'L' : 'N'
+  }))
+}
+
+function pathTiles(points, targetIndexes = []) {
+  const targetSet = new Set(targetIndexes)
+  return points.map(([x, y, z = 0], index) => ({
+    x,
+    y,
+    z,
+    tile: targetSet.has(index) ? 'L' : 'N'
+  }))
+}
 
 function buildBoardFromTiles(tiles) {
   const maxX = Math.max(...tiles.map((tile) => tile.x))
@@ -193,252 +33,693 @@ function buildBoardFromTiles(tiles) {
   return board
 }
 
-function chapterMainLimit(chapterId, tileCount) {
-  const base = {
-    base: 10,
-    prog: 14,
-    overload: 16,
-    circle: 16,
-    if: 18,
-    clg: 20
-  }[chapterId] || 12
-
-  return Math.min(base + Math.ceil(tileCount / 4), 28)
-}
-
-function chapterProcLimit(chapterId) {
-  return {
-    base: 0,
-    prog: 4,
-    overload: 5,
-    circle: 5,
-    if: 6,
-    clg: 6
-  }[chapterId] || 0
-}
-
-const DRAFT_DIRECTION_VECTORS = [
-  { dir: 'forward', dx: 1, dy: 0 },
-  { dir: 'right', dx: 0, dy: 1 },
-  { dir: 'backward', dx: -1, dy: 0 },
-  { dir: 'left', dx: 0, dy: -1 }
-]
-
-function draftTileKey(x, y) {
-  return `${x},${y}`
-}
-
-function inferDraftStartDirection(tiles, startTile) {
-  const tileLookup = new Map(tiles.map((tile) => [draftTileKey(tile.x, tile.y), tile]))
-  const targetTiles = tiles.filter((tile) => tile.tile === 'L')
-
-  const scoredDirections = DRAFT_DIRECTION_VECTORS
-    .map(({ dir, dx, dy }) => {
-      const nextTile = tileLookup.get(draftTileKey(startTile.x + dx, startTile.y + dy))
-
-      if (!nextTile) {
-        return { dir, score: Number.NEGATIVE_INFINITY }
-      }
-
-      const heightDiff = nextTile.z - startTile.z
-
-      if (heightDiff > 1) {
-        return { dir, score: Number.NEGATIVE_INFINITY }
-      }
-
-      const nearestTargetDistance = targetTiles.length
-        ? Math.min(...targetTiles.map((tile) => Math.abs(tile.x - nextTile.x) + Math.abs(tile.y - nextTile.y) + Math.abs(tile.z - nextTile.z)))
-        : 0
-
-      let score = 0
-      score += nextTile.tile === 'L' ? 120 : 0
-      score += heightDiff === 0 ? 30 : 0
-      score += heightDiff === 1 ? 18 : 0
-      score += heightDiff < 0 ? 12 : 0
-      score -= nearestTargetDistance * 6
-
-      const straightReach = DRAFT_DIRECTION_VECTORS.reduce((best, candidate) => {
-        if (candidate.dir !== dir) {
-          return best
-        }
-
-        let steps = 0
-        let currentX = startTile.x
-        let currentY = startTile.y
-        let currentZ = startTile.z
-
-        while (true) {
-          currentX += candidate.dx
-          currentY += candidate.dy
-          const chainTile = tileLookup.get(draftTileKey(currentX, currentY))
-          if (!chainTile || chainTile.z - currentZ > 1) {
-            break
-          }
-
-          steps += 1
-          currentZ = chainTile.z
-        }
-
-        return Math.max(best, steps)
-      }, 0)
-
-      score += straightReach * 4
-
-      return { dir, score }
-    })
-    .sort((left, right) => right.score - left.score)
-
-  return scoredDirections[0]?.score > Number.NEGATIVE_INFINITY ? scoredDirections[0].dir : 'forward'
-}
-
-function buildDraftLevel(chapter, level, index) {
-  const startTile = level.tiles.find((tile) => tile.tile === 'S') || level.tiles[0]
-  const targetCount = level.tiles.filter((tile) => tile.tile === 'L').length
-  const procLimit = level.procLimit ?? chapterProcLimit(chapter.id)
-  const startDir = level.startDir || inferDraftStartDirection(level.tiles, startTile)
-  const mainLimit = level.mainLimit ?? chapterMainLimit(chapter.id, level.tiles.length)
-
+function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   return {
     id: level.id,
     chapterId: chapter.id,
     chapterTitle: chapter.title,
-    chapterOrder: index,
-    title: `${chapter.title} ${index + 1}`,
-    skill: chapter.title,
-    description: `${level.summary} 由你提供的坐标草案自动生成。`,
-    goal: targetCount > 1 ? '点亮所有目标格。' : '点亮目标格。',
-    mainLimit,
-    procLimits: procLimit ? { p1: procLimit } : {},
-    tips: [
-      { title: 'Draft Import', copy: '该关卡由章节草案坐标自动生成，可继续在关卡编辑器中微调。' },
-      { title: 'Playtest', copy: '起始朝向未在草案中提供，当前会根据起点邻接平台自动推断。' }
-    ],
+    chapterOrder: chapterIndex,
+    title: level.title,
+    skill: level.skill || chapter.skill,
+    description: level.description,
+    goal: level.goal,
+    mainLimit: level.mainLimit,
+    procLimits: { ...(level.procLimits || {}) },
+    tips: (level.tips && level.tips.length ? level.tips : chapter.tips).map((tip) => ({ ...tip })),
     board: buildBoardFromTiles(level.tiles),
-    start: { x: startTile.x, y: startTile.y, dir: startDir },
-    demo: { main: [], p1: [] }
+    start: { ...level.start },
+    demo: {
+      main: [...(level.demo?.main || [])],
+      p1: [...(level.demo?.p1 || [])],
+      p2: [...(level.demo?.p2 || [])]
+    },
+    order: levelIndex
   }
 }
 
-const RECONSTRUCTED_LIGHTBOT_CHAPTERS = [
+const CAMPAIGN_CHAPTERS = [
   {
-    id: 'base',
-    title: '基本',
+    id: 'basics',
+    title: '基础动作',
+    skill: 'Walk / Turn / Jump / Light',
+    tips: [
+      { title: '先看朝向', copy: 'Lightbot 的错误多数不是路径错，而是转向错。每次移动前先看机器人正面。' },
+      { title: '区分 Walk 和 Jump', copy: 'Walk 只能走向同高度平台；Jump 可以上升一层，也可以向低处跳。' }
+    ],
     levels: [
       {
-        id: 'base-0',
-        summary: '截图复刻：两步直行后点亮终点。',
+        id: 'basics-1',
+        title: '1. 直线点灯',
+        description: '第一关只保留最基本的前进与点灯，让玩家先建立 Walk 后 Light 的顺序感。',
+        goal: '向前走到终点并点亮唯一灯块。',
         mainLimit: 3,
-        startDir: 'forward',
-        tiles: [
-          { x: 0, y: 0, z: 0, tile: 'S' },
-          { x: 1, y: 0, z: 0, tile: 'N' },
-          { x: 2, y: 0, z: 0, tile: 'L' },
-          { x: 0, y: 1, z: 0, tile: 'N' },
-          { x: 1, y: 1, z: 0, tile: 'N' },
-          { x: 2, y: 1, z: 0, tile: 'N' }
-        ]
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0]], [2])
       },
-      { id: 'base-1', summary: '2x2 小平台，单灯入门。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'L' }] },
-      { id: 'base-2', summary: '平面小平台，两端各有目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'L' }] },
-      { id: 'base-3', summary: '低平台接一个 1 层高台。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }] },
-      { id: 'base-4', summary: '一字长桥，中段和末端有目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }] },
-      { id: 'base-5', summary: '阶梯塔，最高点是关键灯块。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 3, y: 0, z: 2, tile: 'L' }] },
-      { id: 'base-6', summary: '小十字平台，中心与分支有目标点。', tiles: [{ x: 1, y: 0, z: 0, tile: 'S' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'N' }] },
-      { id: 'base-7', summary: '外圈低台，右上角高亮目标点。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 0, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'N' }] },
-      { id: 'base-8', summary: '中央高台，周围低平台包裹。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 2, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'L' }] },
-      { id: 'base-9', summary: '中心平台加四向短臂，四灯围绕中心。', mainLimit: 18, tiles: [{ x: 1, y: 1, z: 0, tile: 'S' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'L' }] }
+      {
+        id: 'basics-2',
+        title: '2. 转角入门',
+        description: '玩家第一次在默认流程里遇到拐角，重点是理解转向指令比移动更早发生。',
+        goal: '在小转角后走到灯块并点亮。',
+        mainLimit: 4,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1], [1, 1], [1, 0]], [2])
+      },
+      {
+        id: 'basics-3',
+        title: '3. 一级上台',
+        description: '把第一层高度差单独拿出来，让 Jump 的规则在没有岔路干扰时就被记住。',
+        goal: '跳上一层高台并点亮终点。',
+        mainLimit: 4,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 0], [1, 0, 0], [2, 0, 1]], [2])
+      },
+      {
+        id: 'basics-4',
+        title: '4. 拐弯上台',
+        description: '把转向和 Jump 放进同一条短路径，开始训练连续两步以上的动作规划。',
+        goal: '先转弯再跳上终点平台。',
+        mainLimit: 6,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1, 0], [1, 1, 0], [1, 0, 0], [2, 0, 1]], [3])
+      },
+      {
+        id: 'basics-5',
+        title: '5. 向下跳',
+        description: '很多玩家只记住 Jump 能上台阶，却忘了它也能向低处落下，这关专门校准这一点。',
+        goal: '从高处向下跳到灯块并点亮。',
+        mainLimit: 3,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 2], [1, 0, 1], [2, 0, 0]], [2])
+      },
+      {
+        id: 'basics-6',
+        title: '6. 双灯长桥',
+        description: '开始出现两个目标点，让玩家意识到点灯顺序本身也是解题的一部分。',
+        goal: '沿长桥依次点亮两盏灯。',
+        mainLimit: 6,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], [2, 4])
+      },
+      {
+        id: 'basics-7',
+        title: '7. 小回字',
+        description: '这关第一次让玩家绕一小圈再点第二盏灯，强调转向节奏不要被第一盏灯打断。',
+        goal: '沿拐角路径点亮两个灯块。',
+        mainLimit: 8,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1], [1, 1], [1, 0], [0, 0]], [1, 2])
+      },
+      {
+        id: 'basics-8',
+        title: '8. 连续三级跳',
+        description: '用一条完全由上升台阶组成的短图，让 Jump 链成为一个清晰的动作模板。',
+        goal: '连续跳上三级高台并点亮终点。',
+        mainLimit: 4,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 0], [1, 0, 1], [2, 0, 2], [3, 0, 3]], [3])
+      },
+      {
+        id: 'basics-9',
+        title: '9. U 形回程',
+        description: '玩家需要在 U 形路径上完成往返，第一次练习先去远点还是先去近点的判断。',
+        goal: '沿 U 形平台点亮两盏灯。',
+        mainLimit: 10,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1], [1, 1], [2, 1], [2, 0], [1, 0], [0, 0]], [2, 5])
+      },
+      {
+        id: 'basics-10',
+        title: '10. 基础测验',
+        description: '用一张小而完整的综合图检查前九关是否真的学会了转向、点灯和上台。',
+        goal: '先点亮平地灯，再转向跳上高台点亮终点。',
+        mainLimit: 10,
+        procLimits: {},
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: pathTiles([[0, 2, 0], [1, 2, 0], [2, 2, 0], [2, 1, 1], [2, 0, 1], [3, 0, 2]], [2, 5])
+      }
     ]
   },
   {
-    id: 'prog',
-    title: '程序',
+    id: 'routing',
+    title: '路线规划',
+    skill: 'Route Planning',
+    tips: [
+      { title: '先决定顺序', copy: '多目标关卡里，先后顺序会直接影响需要多少次转向和折返。' },
+      { title: '把地图分段', copy: '别把整张图一次想完，先确定第一段路线，再看下一段如何衔接。' }
+    ],
     levels: [
-      { id: 'prog-1', summary: '细长低平台，重复直行模式。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }] },
-      { id: 'prog-2', summary: '矩形平面，横向多个目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 0, y: 2, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }] },
-      { id: 'prog-3', summary: '长条平面，边线连续点位。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }, { x: 5, y: 0, z: 0, tile: 'N' }, { x: 6, y: 0, z: 0, tile: 'L' }] },
-      { id: 'prog-4', summary: '方环形低平台，中心空心。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'L' }] },
-      { id: 'prog-5', summary: '大矩形边框平台，适合抽边为过程。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 0, y: 3, z: 0, tile: 'N' }, { x: 1, y: 3, z: 0, tile: 'L' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 3, y: 3, z: 0, tile: 'L' }] },
-      { id: 'prog-6', summary: '对称花形平台，适合双过程拆分。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 4, y: 2, z: 0, tile: 'L' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 2, y: 4, z: 0, tile: 'L' }] },
-      { id: 'prog-7', summary: '回字形大地图，内外两圈重复。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 4, y: 2, z: 0, tile: 'L' }, { x: 0, y: 3, z: 0, tile: 'N' }, { x: 4, y: 3, z: 0, tile: 'N' }, { x: 0, y: 4, z: 0, tile: 'L' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 0, tile: 'L' }, { x: 3, y: 4, z: 0, tile: 'N' }, { x: 4, y: 4, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }] },
-      { id: 'prog-8', summary: '左右高台延展，中部过桥。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 2, z: 1, tile: 'L' }, { x: 4, y: 2, z: 0, tile: 'N' }, { x: 5, y: 2, z: 0, tile: 'L' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 2, tile: 'L' }, { x: 4, y: 1, z: 1, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 2, tile: 'L' }, { x: 4, y: 3, z: 1, tile: 'N' }] },
-      { id: 'prog-9', summary: '长条多台阶大地图，上层外缘连续目标。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 3, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'N' }, { x: 5, y: 3, z: 2, tile: 'L' }, { x: 6, y: 3, z: 2, tile: 'N' }, { x: 7, y: 3, z: 2, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 1, tile: 'L' }, { x: 5, y: 2, z: 2, tile: 'N' }, { x: 6, y: 2, z: 2, tile: 'L' }] }
+      {
+        id: 'routing-1',
+        title: '11. T 字分流',
+        description: '第一次在默认关里引入真正的分叉，目标不是操作复杂，而是顺序选择。',
+        goal: '从干道出发，点亮两个支路上的灯。',
+        mainLimit: 9,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1, 0, true], [1, 0, 0, true], [1, 2]
+        ])
+      },
+      {
+        id: 'routing-2',
+        title: '12. 外圈折返',
+        description: '这是一张低复杂度的外圈地图，重点是练习走到尽头后如何无浪费折返。',
+        goal: '沿外圈依次点亮两盏灯。',
+        mainLimit: 10,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1], [2, 0, 0, true], [1, 0], [0, 0, 0, true]
+        ])
+      },
+      {
+        id: 'routing-3',
+        title: '13. 三灯走廊',
+        description: '在一条折线走廊上排三个目标点，训练玩家用最少转向覆盖全部灯块。',
+        goal: '走完整条折线并点亮三盏灯。',
+        mainLimit: 11,
+        procLimits: {},
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: pathTiles([[0, 2], [1, 2], [2, 2], [2, 1], [2, 0], [3, 0], [4, 0]], [2, 4, 6])
+      },
+      {
+        id: 'routing-4',
+        title: '14. 高台支路',
+        description: '高低差开始和路线选择叠加，玩家需要决定先上高台还是先清空平地。',
+        goal: '点亮平地与高台上的两盏灯。',
+        mainLimit: 10,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1, 0, true], [1, 0], [2, 0, 1, true]
+        ])
+      },
+      {
+        id: 'routing-5',
+        title: '15. 小回字',
+        description: '这关用 3x3 外圈制造一个完整环路，让玩家第一次系统处理回字形路径。',
+        goal: '沿外圈点亮三个角上的灯。',
+        mainLimit: 14,
+        procLimits: {},
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2, 0, true],
+          [0, 1], [2, 1],
+          [0, 0, 0, true], [1, 0], [2, 0, 0, true]
+        ])
+      },
+      {
+        id: 'routing-6',
+        title: '16. 十字四灯',
+        description: '十字图很适合训练回到中心再出发的节奏，这比简单直线更接近真实关卡思维。',
+        goal: '以中心平台为中转，点亮四个方向的灯。',
+        mainLimit: 17,
+        procLimits: {},
+        start: { x: 1, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [1, 1], [1, 0, 0, true], [2, 1, 0, true], [1, 2, 0, true], [0, 1, 0, true]
+        ])
+      },
+      {
+        id: 'routing-7',
+        title: '17. 蛇形台阶',
+        description: '路线开始变长，但仍然保持单一主路，重点是规划而不是找路。',
+        goal: '沿蛇形台阶点亮三个灯。',
+        mainLimit: 14,
+        procLimits: {},
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: pathTiles([[0, 2, 0], [1, 2, 0], [2, 2, 1], [2, 1, 1], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1]], [2, 5, 7])
+      },
+      {
+        id: 'routing-8',
+        title: '18. 桥与塔',
+        description: '把长桥、回头和高台串在一起，让玩家开始形成路线分阶段执行的意识。',
+        goal: '先清理桥面灯，再跳上塔顶。',
+        mainLimit: 13,
+        procLimits: {},
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1, 0], [1, 1, 0], [2, 1, 0], [3, 1, 0], [3, 0, 1], [4, 0, 2]], [2, 5])
+      },
+      {
+        id: 'routing-9',
+        title: '19. 双层阳台',
+        description: '玩家需要处理一层与二层之间的切换，同时避免在窄路上无意义来回。',
+        goal: '点亮一层和二层的三个灯块。',
+        mainLimit: 15,
+        procLimits: {},
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2, 0, true], [2, 1, 1], [2, 0, 1, true], [3, 0, 1], [3, 1, 0, true]
+        ])
+      },
+      {
+        id: 'routing-10',
+        title: '20. 路线总测',
+        description: '这是路线规划章节的压轴关，路径不难看懂，但顺序错了就会多出很多转向。',
+        goal: '完成外圈、支路和高台三个区域的清理。',
+        mainLimit: 18,
+        procLimits: {},
+        start: { x: 0, y: 3, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 3], [1, 3], [2, 3, 0, true], [3, 3],
+          [3, 2, 1], [3, 1, 1, true],
+          [2, 1], [1, 1, 0, true], [0, 1],
+          [0, 2], [1, 2]
+        ])
+      }
     ]
   },
   {
-    id: 'overload',
-    title: '过载',
+    id: 'procedures',
+    title: '过程抽象',
+    skill: 'P1',
+    tips: [
+      { title: '抽动作块', copy: '当同一串动作会完整重复时，把它抽进 P1 比继续堆在 MAIN 更清晰。' },
+      { title: '过程不是垃圾桶', copy: 'P1 应该装一段稳定模板，而不是把剩余指令随便塞进去。' }
+    ],
     levels: [
-      { id: 'overload-1', summary: '短楼梯地形，相似动作不同落点。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 2, tile: 'L' }] },
-      { id: 'overload-2', summary: '折返多层阶梯群，变体路径明显。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 1, tile: 'L' }, { x: 3, y: 2, z: 2, tile: 'N' }, { x: 2, y: 2, z: 2, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 1, y: 1, z: 2, tile: 'L' }] },
-      { id: 'overload-3', summary: '中心出发的星状高柱组合。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 2, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 2, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 2, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 2, tile: 'L' }] },
-      { id: 'overload-4', summary: '中心隆起，四周支路展开。', tiles: [{ x: 2, y: 2, z: 1, tile: 'S' }, { x: 2, y: 1, z: 2, tile: 'L' }, { x: 2, y: 0, z: 2, tile: 'N' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 2, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 2, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 2, tile: 'L' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'N' }] },
-      { id: 'overload-5', summary: '小型竖向塔台，带跨越段。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'N' }, { x: 3, y: 1, z: 2, tile: 'L' }, { x: 4, y: 1, z: 2, tile: 'N' }, { x: 4, y: 0, z: 2, tile: 'N' }, { x: 5, y: 0, z: 3, tile: 'L' }] },
-      { id: 'overload-6', summary: '多个岛块围绕中心，重复跳跃模板。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }, { x: 0, y: 1, z: 1, tile: 'N' }, { x: 4, y: 1, z: 1, tile: 'N' }, { x: 0, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'N' }] },
-      { id: 'overload-7', summary: '中心模板向外辐射的十字平台。', tiles: [{ x: 2, y: 2, z: 0, tile: 'S' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'L' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 0, y: 2, z: 1, tile: 'L' }, { x: 3, y: 2, z: 1, tile: 'N' }, { x: 4, y: 2, z: 1, tile: 'L' }] },
-      { id: 'overload-8', summary: '高柱串联，重复跨越高点。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 1, tile: 'N' }, { x: 2, y: 3, z: 2, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 2, tile: 'L' }, { x: 5, y: 3, z: 1, tile: 'N' }, { x: 6, y: 3, z: 2, tile: 'L' }] },
-      { id: 'overload-9', summary: '台阶迷宫与桥面混合的综合关。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 3, y: 3, z: 2, tile: 'N' }, { x: 2, y: 3, z: 2, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'N' }, { x: 1, y: 2, z: 1, tile: 'L' }, { x: 2, y: 2, z: 2, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 4, y: 2, z: 1, tile: 'N' }, { x: 5, y: 2, z: 1, tile: 'L' }] }
+      {
+        id: 'procedures-1',
+        title: '21. 双段模板',
+        description: '这是第一张明确要求 P1 的默认关，同一动作块要完整调用两次。',
+        goal: '用一段重复模板点亮两盏灯。',
+        mainLimit: 2,
+        procLimits: { p1: 3 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], [2, 4])
+      },
+      {
+        id: 'procedures-2',
+        title: '22. 三段模板',
+        description: '把上一关的结构扩展成三段，玩家会自然感受到调用过程比抄三遍更稳定。',
+        goal: '重复同一过程三次点亮三盏灯。',
+        mainLimit: 3,
+        procLimits: { p1: 3 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [2, 4, 6])
+      },
+      {
+        id: 'procedures-3',
+        title: '23. 跳跃模板',
+        description: '过程不一定是平地移动，这关把 Jump 与 Light 组成一个可重复的最小模板。',
+        goal: '用同一段跳跃模板依次点亮三个高点。',
+        mainLimit: 3,
+        procLimits: { p1: 2 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 0], [1, 0, 1], [2, 0, 0], [3, 0, 1], [4, 0, 0], [5, 0, 1]], [1, 3, 5])
+      },
+      {
+        id: 'procedures-4',
+        title: '24. 四段模板',
+        description: 'MAIN 空间进一步收紧，玩家必须开始把过程当成正式的组织工具，而不是可选优化。',
+        goal: '重复同一模板四次点亮四盏灯。',
+        mainLimit: 4,
+        procLimits: { p1: 3 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]], [2, 4, 6, 8])
+      },
+      {
+        id: 'procedures-5',
+        title: '25. 双拐角模板',
+        description: '过程开始不再只是直线，玩家要识别转向加前进再点灯也能构成稳定模板。',
+        goal: '利用重复拐角结构点亮两盏灯。',
+        mainLimit: 8,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: pathTiles([[0, 2], [1, 2], [1, 1], [2, 1], [2, 0], [3, 0], [3, 1], [4, 1]], [3, 7])
+      },
+      {
+        id: 'procedures-6',
+        title: '26. 双塔模板',
+        description: '平地和高台组合成两个近似结构，让玩家开始感知模板可以跨高度使用。',
+        goal: '在左右两座塔上各点亮一盏灯。',
+        mainLimit: 7,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1, 0, true], [3, 1], [4, 1],
+          [2, 0, 1], [4, 0, 1, true]
+        ])
+      },
+      {
+        id: 'procedures-7',
+        title: '27. 回字边框',
+        description: '把边框上的同构边段抽成过程，是从局部重复到图形重复的第一步。',
+        goal: '沿外框点亮四个角灯。',
+        mainLimit: 8,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2, 0, true],
+          [0, 1], [2, 1],
+          [0, 0, 0, true], [1, 0], [2, 0, 0, true],
+          [3, 0], [3, 1], [3, 2, 0, true]
+        ])
+      },
+      {
+        id: 'procedures-8',
+        title: '28. 阶梯双段',
+        description: '这关要求玩家把前进再上台的两段组合识别为可复用过程。',
+        goal: '完成两段相似的阶梯点灯。',
+        mainLimit: 6,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1, 0], [1, 1, 0], [2, 1, 1], [3, 1, 1], [4, 1, 2], [5, 1, 2]], [2, 5])
+      },
+      {
+        id: 'procedures-9',
+        title: '29. 双支路回收',
+        description: 'P1 不只用于前进，还可以负责一段出发、点灯、回收位置的结构。',
+        goal: '从主干分别处理上下两条支路。',
+        mainLimit: 7,
+        procLimits: { p1: 5 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1], [3, 1],
+          [2, 0, 0, true], [2, 2, 0, true]
+        ])
+      },
+      {
+        id: 'procedures-10',
+        title: '30. 过程总测',
+        description: '压轴关要求玩家主动在图上寻找模板，而不是等线性长桥把答案塞到脸上。',
+        goal: '用过程整理一张小型综合图。',
+        mainLimit: 8,
+        procLimits: { p1: 5 },
+        start: { x: 0, y: 3, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 3], [1, 3], [2, 3], [3, 3, 0, true],
+          [1, 2], [2, 2, 1], [3, 2, 1, true],
+          [1, 1], [2, 1], [3, 1, 0, true]
+        ])
+      }
     ]
   },
   {
-    id: 'circle',
-    title: '回圈',
+    id: 'compression',
+    title: '压缩策略',
+    skill: 'Repeat / P1 / P2',
+    tips: [
+      { title: '先看是否能 Repeat', copy: '连续重复同一指令时，Repeat 比新开过程更直接。' },
+      { title: 'P1 和 P2 要分工', copy: '当地图里同时出现两类重复结构时，才值得把 P1 和 P2 都用起来。' }
+    ],
     levels: [
-      { id: 'circle-1', summary: '直桥型平台，重复前进加点亮。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 4, y: 0, z: 0, tile: 'N' }, { x: 5, y: 0, z: 0, tile: 'L' }] },
-      { id: 'circle-2', summary: '平面插高柱，固定模式重复访问。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 1, y: 1, z: 1, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'L' }] },
-      { id: 'circle-3', summary: '紧凑多层平台，局部短循环。', tiles: [{ x: 1, y: 2, z: 0, tile: 'S' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'L' }, { x: 1, y: 1, z: 1, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'L' }, { x: 0, y: 2, z: 0, tile: 'N' }] },
-      { id: 'circle-4', summary: '大号方环地图，四边同构。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'L' }, { x: 0, y: 3, z: 0, tile: 'N' }, { x: 1, y: 3, z: 0, tile: 'L' }, { x: 2, y: 3, z: 0, tile: 'N' }, { x: 3, y: 3, z: 0, tile: 'L' }] },
-      { id: 'circle-5', summary: '外围回路加中央高点。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }] },
-      { id: 'circle-6', summary: '共享道路的多个小回路。', tiles: [{ x: 1, y: 2, z: 0, tile: 'S' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'L' }, { x: 1, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'L' }] },
-      { id: 'circle-7', summary: '内外双层环路，分层循环。', tiles: [{ x: 0, y: 0, z: 1, tile: 'S' }, { x: 1, y: 0, z: 1, tile: 'N' }, { x: 2, y: 0, z: 1, tile: 'L' }, { x: 0, y: 1, z: 1, tile: 'N' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 0, y: 2, z: 1, tile: 'L' }, { x: 1, y: 2, z: 1, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 1, y: 1, z: 0, tile: 'L' }] },
-      { id: 'circle-8', summary: '超长单层桥面，纯重复压缩。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }, { x: 5, y: 0, z: 0, tile: 'N' }, { x: 6, y: 0, z: 0, tile: 'L' }, { x: 7, y: 0, z: 0, tile: 'N' }, { x: 8, y: 0, z: 0, tile: 'L' }] },
-      { id: 'circle-9', summary: '复杂多层平台，循环与跳跃结合。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 1, tile: 'N' }, { x: 4, y: 3, z: 2, tile: 'L' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'L' }] }
+      {
+        id: 'compression-1',
+        title: '31. 纯走廊压缩',
+        description: '这关专门让玩家感受 Repeat Walk 的价值，地图很简单，压缩思路才是主角。',
+        goal: '沿超长走廊走到终点并点灯。',
+        mainLimit: 3,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]], [5])
+      },
+      {
+        id: 'compression-2',
+        title: '32. 纯跳台压缩',
+        description: '连续四次 Jump 是最自然的 Repeat 教材，玩家几乎不需要理解额外结构。',
+        goal: '连续跳上四级高台并点亮终点。',
+        mainLimit: 2,
+        procLimits: {},
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 0], [1, 0, 1], [2, 0, 2], [3, 0, 3], [4, 0, 4]], [4])
+      },
+      {
+        id: 'compression-3',
+        title: '33. 重复调用 P1',
+        description: 'MAIN 中不再是简单堆三个过程调用，而是应该看见同一调用也能再次压缩。',
+        goal: '让同一个过程被连续调用三次。',
+        mainLimit: 1,
+        procLimits: { p1: 3 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [2, 4, 6])
+      },
+      {
+        id: 'compression-4',
+        title: '34. 四连调用',
+        description: '把调用次数再拉高一档，明确告诉玩家过程和 Repeat 可以叠加使用。',
+        goal: '让同一过程被连续调用四次。',
+        mainLimit: 1,
+        procLimits: { p1: 3 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]], [2, 4, 6, 8])
+      },
+      {
+        id: 'compression-5',
+        title: '35. 双模板并列',
+        description: '这张图第一次提供两类不同重复，理论上已经值得把 P1 和 P2 分开存放。',
+        goal: '用两种模板整理平地与高台段。',
+        mainLimit: 5,
+        procLimits: { p1: 3, p2: 2 },
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 1], [4, 0, 0], [5, 0, 0], [6, 0, 0], [7, 0, 1]], [2, 3, 6, 7])
+      },
+      {
+        id: 'compression-6',
+        title: '36. 双支路双模板',
+        description: '玩家需要意识到上下两条支路虽然都从主路出发，但适合拆成两个不同过程。',
+        goal: '分别清理上下两条支路上的重复结构。',
+        mainLimit: 11,
+        procLimits: { p1: 4, p2: 3 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1], [3, 1], [4, 1],
+          [2, 0, 1, true], [3, 0, 1], [4, 0, 2, true],
+          [2, 2, 0, true], [3, 2], [4, 2, 0, true]
+        ])
+      },
+      {
+        id: 'compression-7',
+        title: '37. 回字压缩',
+        description: '边框回路天然适合抽模板，再加上长直段的 Repeat，可以形成双层压缩。',
+        goal: '压缩外圈路径并点亮四盏灯。',
+        mainLimit: 8,
+        procLimits: { p1: 2, p2: 2 },
+        start: { x: 0, y: 3, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 3], [1, 3], [2, 3], [3, 3, 0, true],
+          [0, 2], [3, 2],
+          [0, 1, 0, true], [3, 1, 0, true],
+          [0, 0], [1, 0], [2, 0], [3, 0, 0, true]
+        ])
+      },
+      {
+        id: 'compression-8',
+        title: '38. 桥面加双塔',
+        description: '一类模板负责桥面，一类模板负责上塔，这关会自然暴露 P2 的存在意义。',
+        goal: '先处理桥面，再分别点亮两座塔。',
+        mainLimit: 9,
+        procLimits: { p1: 3, p2: 2 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1], [2, 1], [3, 1, 0, true], [4, 1], [5, 1],
+          [2, 0, 1], [3, 0, 2, true],
+          [4, 0, 1], [5, 0, 2, true]
+        ])
+      },
+      {
+        id: 'compression-9',
+        title: '39. 双平台往返',
+        description: '这是一次对压缩策略的中测：同构平台、回收位置和高低差要同时考虑。',
+        goal: '完成两次近似往返并点亮四盏灯。',
+        mainLimit: 8,
+        procLimits: { p1: 4, p2: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2], [3, 2],
+          [1, 1, 1, true], [2, 1], [3, 1, 1, true],
+          [1, 3, 0, true], [2, 3], [3, 3, 0, true]
+        ])
+      },
+      {
+        id: 'compression-10',
+        title: '40. 压缩总测',
+        description: '这一关不再告诉玩家该用什么，只提供一个明显可以被多层压缩的结构。',
+        goal: '用合适的压缩手段完成整图。',
+        mainLimit: 8,
+        procLimits: { p1: 4, p2: 2 },
+        start: { x: 0, y: 4, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 4], [1, 4], [2, 4], [3, 4, 0, true], [4, 4],
+          [2, 3, 1], [3, 3, 1, true], [4, 3, 1],
+          [2, 2], [3, 2, 0, true], [4, 2],
+          [4, 1, 1, true]
+        ])
+      }
     ]
   },
   {
-    id: 'if',
-    title: '条件式',
+    id: 'master',
+    title: '综合挑战',
+    skill: 'Strategy',
+    tips: [
+      { title: '先拆结构再写程序', copy: '综合关如果直接开始写指令，通常会很快迷路。先把地图拆成若干重复区域。' },
+      { title: '允许回头重构', copy: '写到一半发现 MAIN 爆了是正常现象，应该回头重新抽过程，而不是继续硬塞。' }
+    ],
     levels: [
-      { id: 'if-1', summary: '狭长环带平台，条件判断入门。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 3, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 0, y: 1, z: 0, tile: 'L' }] },
-      { id: 'if-2', summary: '小型高低台，颜色判断融入台阶。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 1, tile: 'L' }, { x: 2, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 2, tile: 'L' }] },
-      { id: 'if-3', summary: '较大平面网格，多色点位抽象为目标点。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'N' }, { x: 3, y: 0, z: 0, tile: 'L' }, { x: 0, y: 1, z: 0, tile: 'N' }, { x: 1, y: 1, z: 0, tile: 'N' }, { x: 2, y: 1, z: 0, tile: 'L' }, { x: 3, y: 1, z: 0, tile: 'N' }, { x: 0, y: 2, z: 0, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 0, tile: 'L' }] },
-      { id: 'if-4', summary: '矩形大平台，彩色带交错。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'N' }] },
-      { id: 'if-5', summary: '窄长桥面，条件触发精度测试。', tiles: [{ x: 0, y: 0, z: 0, tile: 'S' }, { x: 1, y: 0, z: 0, tile: 'N' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 3, y: 0, z: 0, tile: 'N' }, { x: 4, y: 0, z: 0, tile: 'L' }, { x: 5, y: 0, z: 0, tile: 'N' }] },
-      { id: 'if-6', summary: '多层小台阶与条件判断结合。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'L' }, { x: 2, y: 2, z: 1, tile: 'N' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 3, y: 1, z: 2, tile: 'N' }, { x: 4, y: 1, z: 1, tile: 'L' }] },
-      { id: 'if-7', summary: '环形高低平台，多色多分支综合。', tiles: [{ x: 0, y: 0, z: 1, tile: 'S' }, { x: 1, y: 0, z: 1, tile: 'L' }, { x: 2, y: 0, z: 1, tile: 'N' }, { x: 3, y: 0, z: 1, tile: 'L' }, { x: 0, y: 1, z: 1, tile: 'N' }, { x: 3, y: 1, z: 1, tile: 'N' }, { x: 0, y: 2, z: 1, tile: 'L' }, { x: 1, y: 2, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'N' }, { x: 3, y: 2, z: 1, tile: 'L' }] }
-    ]
-  },
-  {
-    id: 'clg',
-    title: '挑战等级',
-    levels: [
-      { id: 'clg-1', summary: '多层台阶大块结构，两侧伸出低平台。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 4, y: 4, z: 1, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'N' }, { x: 3, y: 3, z: 2, tile: 'L' }, { x: 4, y: 3, z: 2, tile: 'N' }, { x: 5, y: 3, z: 1, tile: 'L' }, { x: 1, y: 5, z: 0, tile: 'L' }, { x: 4, y: 5, z: 0, tile: 'L' }] },
-      { id: 'clg-2', summary: '超大平面斜向平台，后段抬高。', tiles: [{ x: 0, y: 2, z: 0, tile: 'S' }, { x: 1, y: 2, z: 0, tile: 'N' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 3, y: 2, z: 0, tile: 'N' }, { x: 4, y: 2, z: 0, tile: 'L' }, { x: 5, y: 2, z: 1, tile: 'N' }, { x: 6, y: 2, z: 1, tile: 'L' }, { x: 7, y: 2, z: 2, tile: 'N' }, { x: 8, y: 2, z: 2, tile: 'L' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 5, y: 1, z: 1, tile: 'L' }, { x: 6, y: 1, z: 1, tile: 'N' }] },
-      { id: 'clg-3', summary: '中央高、两侧低的对称阶梯群。', tiles: [{ x: 0, y: 3, z: 0, tile: 'S' }, { x: 1, y: 3, z: 0, tile: 'N' }, { x: 2, y: 3, z: 1, tile: 'L' }, { x: 3, y: 3, z: 2, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'L' }, { x: 5, y: 3, z: 0, tile: 'N' }, { x: 6, y: 3, z: 0, tile: 'L' }, { x: 3, y: 2, z: 2, tile: 'L' }, { x: 3, y: 1, z: 1, tile: 'N' }] },
-      { id: 'clg-4', summary: '彩色大平面地图，有明显主路径。', tiles: [{ x: 0, y: 1, z: 0, tile: 'S' }, { x: 1, y: 1, z: 0, tile: 'L' }, { x: 2, y: 1, z: 0, tile: 'N' }, { x: 3, y: 1, z: 0, tile: 'L' }, { x: 4, y: 1, z: 0, tile: 'N' }, { x: 5, y: 1, z: 0, tile: 'L' }, { x: 2, y: 0, z: 0, tile: 'L' }, { x: 2, y: 2, z: 0, tile: 'L' }, { x: 4, y: 0, z: 0, tile: 'N' }, { x: 4, y: 2, z: 0, tile: 'L' }] },
-      { id: 'clg-5', summary: '大面积灰白阶梯，少量关键目标。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 1, tile: 'L' }, { x: 1, y: 3, z: 1, tile: 'N' }, { x: 2, y: 3, z: 2, tile: 'N' }, { x: 3, y: 3, z: 2, tile: 'N' }, { x: 4, y: 3, z: 1, tile: 'L' }, { x: 2, y: 2, z: 2, tile: 'N' }, { x: 3, y: 2, z: 3, tile: 'L' }] },
-      { id: 'clg-6', summary: '城堡状多层高台，机制综合。', tiles: [{ x: 0, y: 4, z: 0, tile: 'S' }, { x: 1, y: 4, z: 0, tile: 'N' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 2, tile: 'L' }, { x: 4, y: 4, z: 1, tile: 'N' }, { x: 5, y: 4, z: 0, tile: 'L' }, { x: 2, y: 3, z: 2, tile: 'N' }, { x: 3, y: 3, z: 3, tile: 'L' }, { x: 4, y: 3, z: 2, tile: 'N' }, { x: 3, y: 2, z: 3, tile: 'L' }] },
-      { id: 'clg-7', summary: '复杂多色多层地图，中央高台与外围分支并存。', tiles: [{ x: 0, y: 5, z: 0, tile: 'S' }, { x: 1, y: 5, z: 0, tile: 'N' }, { x: 2, y: 5, z: 1, tile: 'L' }, { x: 3, y: 5, z: 1, tile: 'N' }, { x: 4, y: 5, z: 2, tile: 'L' }, { x: 2, y: 4, z: 1, tile: 'N' }, { x: 3, y: 4, z: 2, tile: 'L' }, { x: 4, y: 4, z: 2, tile: 'N' }, { x: 5, y: 4, z: 1, tile: 'L' }, { x: 3, y: 3, z: 3, tile: 'L' }, { x: 2, y: 3, z: 2, tile: 'N' }, { x: 4, y: 3, z: 2, tile: 'N' }] }
+      {
+        id: 'master-1',
+        title: '41. 双回路',
+        description: '第一关综合题先从双回路入手，让玩家用之前的路线与过程经验重新组织地图。',
+        goal: '清理外圈和内侧支路上的四盏灯。',
+        mainLimit: 12,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2], [3, 2, 0, true],
+          [0, 1], [3, 1],
+          [0, 0, 0, true], [1, 0], [2, 0], [3, 0, 0, true],
+          [2, 1, 1, true]
+        ])
+      },
+      {
+        id: 'master-2',
+        title: '42. 螺旋阶梯',
+        description: '玩家会在螺旋上逐步升高，路径可读但转向顺序稍有错误就会乱掉。',
+        goal: '沿螺旋上升并点亮三个关键灯块。',
+        mainLimit: 13,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 3, dir: 'forward' },
+        tiles: pathTiles([[0, 3, 0], [1, 3, 0], [2, 3, 1], [2, 2, 1], [2, 1, 2], [1, 1, 2], [0, 1, 3]], [2, 4, 6])
+      },
+      {
+        id: 'master-3',
+        title: '43. 桥塔交错',
+        description: '综合关开始混合桥面、回收路径和塔台，让单一技巧不再能直接通关。',
+        goal: '先处理桥面，再处理两侧高塔。',
+        mainLimit: 13,
+        procLimits: { p1: 4, p2: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2, 0, true], [3, 2], [4, 2, 0, true], [5, 2],
+          [2, 1, 1], [2, 0, 2, true],
+          [4, 1, 1], [4, 0, 2, true]
+        ])
+      },
+      {
+        id: 'master-4',
+        title: '44. 双层回字',
+        description: '同一个回字形被拆成上下两层，玩家必须区分平地外圈和高台内圈的作用。',
+        goal: '点亮上下两层回路中的五盏灯。',
+        mainLimit: 15,
+        procLimits: { p1: 4, p2: 4 },
+        start: { x: 0, y: 3, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 3], [1, 3], [2, 3], [3, 3, 0, true],
+          [0, 2], [3, 2],
+          [0, 1, 0, true], [1, 1, 1], [2, 1, 1, true], [3, 1, 0, true],
+          [1, 0, 1], [2, 0, 1, true]
+        ])
+      },
+      {
+        id: 'master-5',
+        title: '45. 三段高差',
+        description: '这关的重点不是地图大，而是同一路线上要连续切换平地、一级台和二级台。',
+        goal: '沿三段高差依次点亮四盏灯。',
+        mainLimit: 14,
+        procLimits: { p1: 4 },
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: pathTiles([[0, 1, 0], [1, 1, 0], [2, 1, 1], [3, 1, 1], [4, 1, 2], [5, 1, 2], [6, 1, 1], [7, 1, 0]], [1, 3, 5, 7])
+      },
+      {
+        id: 'master-6',
+        title: '46. 十字城门',
+        description: '十字平台在综合章节里再次出现，但这次每条支路都带有不同的高度负担。',
+        goal: '从中心出发清理四条支路。',
+        mainLimit: 16,
+        procLimits: { p1: 4, p2: 4 },
+        start: { x: 2, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [2, 2],
+          [2, 1, 1, true], [2, 0, 2, true],
+          [3, 2, 0, true], [4, 2, 0, true],
+          [2, 3, 1, true], [2, 4, 1, true],
+          [1, 2, 0, true], [0, 2, 0, true]
+        ])
+      },
+      {
+        id: 'master-7',
+        title: '47. 蛇形高桥',
+        description: '蛇形和高差叠加后，玩家必须在脑中预演一整段路线，不能靠试错硬撞。',
+        goal: '在蛇形高桥上点亮四盏灯。',
+        mainLimit: 16,
+        procLimits: { p1: 4, p2: 3 },
+        start: { x: 0, y: 4, dir: 'forward' },
+        tiles: pathTiles([[0, 4, 0], [1, 4, 0], [2, 4, 1], [3, 4, 1], [3, 3, 2], [2, 3, 2], [1, 3, 1], [0, 3, 1], [0, 2, 2], [1, 2, 2]], [2, 4, 7, 9])
+      },
+      {
+        id: 'master-8',
+        title: '48. 双塔回环',
+        description: '左右两塔之间存在回环关系，这关考验的是过程设计是否真正能复用。',
+        goal: '在两座塔和中间回路中点亮五盏灯。',
+        mainLimit: 17,
+        procLimits: { p1: 5, p2: 4 },
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2, 0, true], [3, 2], [4, 2, 0, true], [5, 2],
+          [2, 1, 1], [2, 0, 2, true],
+          [4, 1, 1], [4, 0, 2, true],
+          [3, 1, 1, true]
+        ])
+      },
+      {
+        id: 'master-9',
+        title: '49. 四区综合',
+        description: '地图被拆成四个功能区，玩家需要像搭积木一样安排程序结构，而不是只拼最短路径。',
+        goal: '清理四个区域里的全部灯块。',
+        mainLimit: 18,
+        procLimits: { p1: 5, p2: 5 },
+        start: { x: 0, y: 4, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 4], [1, 4], [2, 4, 0, true], [3, 4], [4, 4, 0, true],
+          [1, 3], [2, 3, 1], [3, 3, 1, true], [4, 3],
+          [1, 2, 0, true], [2, 2], [3, 2, 0, true],
+          [4, 2, 1], [5, 2, 2, true]
+        ])
+      },
+      {
+        id: 'master-10',
+        title: '50. 默认终章',
+        description: '最终关不靠纯尺寸压人，而是把前面学过的路线、过程、Repeat 和双过程全都放进同一张结构图。',
+        goal: '用你认为最整洁的程序完成整个终章。',
+        mainLimit: 19,
+        procLimits: { p1: 3, p2: 4 },
+        start: { x: 0, y: 5, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 5], [1, 5], [2, 5, 0, true], [3, 5], [4, 5, 0, true],
+          [2, 4, 1], [3, 4, 1, true], [4, 4, 1],
+          [1, 3, 0, true], [2, 3], [3, 3, 2, true], [4, 3],
+          [4, 2, 1], [5, 2, 2, true],
+          [2, 2, 1], [1, 2, 2, true]
+        ])
+      }
     ]
   }
 ]
 
-export const RECONSTRUCTED_LIGHTBOT_LEVELS = RECONSTRUCTED_LIGHTBOT_CHAPTERS.flatMap((chapter) =>
-  chapter.levels.map((level, index) => buildDraftLevel(chapter, level, index))
+export const RECONSTRUCTED_LIGHTBOT_LEVELS = CAMPAIGN_CHAPTERS.flatMap((chapter, chapterIndex) =>
+  chapter.levels.map((level, levelIndex) => buildCampaignLevel(chapter, level, chapterIndex, levelIndex))
 )
 
-export const LIGHTBOT_LEVEL_GROUPS = RECONSTRUCTED_LIGHTBOT_CHAPTERS.reduce((groups, chapter, chapterIndex) => {
-  const levels = chapter.levels.map((level, levelIndex) => buildDraftLevel(chapter, level, levelIndex))
-
-  groups.push({
-    id: chapter.id,
-    title: chapter.title,
-    order: chapterIndex,
-    levels
-  })
-
-  return groups
-}, [])
+export const LIGHTBOT_LEVEL_GROUPS = CAMPAIGN_CHAPTERS.map((chapter, chapterIndex) => ({
+  id: chapter.id,
+  title: chapter.title,
+  order: chapterIndex,
+  levels: chapter.levels.map((level, levelIndex) => buildCampaignLevel(chapter, level, chapterIndex, levelIndex))
+}))
 
 export const LIGHTBOT_LEVELS = LIGHTBOT_LEVEL_GROUPS.flatMap((group) => group.levels)
+
+export const BASE_LIGHTBOT_LEVELS = LIGHTBOT_LEVEL_GROUPS[0]?.levels || []
 
 export const VALID_LEVEL_IDS = new Set(LIGHTBOT_LEVELS.map((level) => level.id))
