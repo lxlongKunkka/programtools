@@ -234,6 +234,13 @@
                 <span>P2 Slots</span>
                 <input v-model.number="editorDraft.p2Limit" type="number" min="0" max="12">
               </label>
+              <div class="editor-form-toggle full-span">
+                <span>Special Blocks</span>
+                <label class="toggle-check">
+                  <input v-model="editorDraft.enableIfDark" type="checkbox">
+                  <span>启用 If Dark 条件块</span>
+                </label>
+              </div>
               <label>
                 <span>Facing</span>
                 <select v-model="editorDraft.start.dir">
@@ -361,12 +368,18 @@
               v-for="operation in operationPalette"
               :key="operation.id"
               class="command-btn"
-              :class="{ active: isRepeatPaletteOperation(operation) && pendingRepeatCount === operation.count }"
+              :class="{
+                active: (isRepeatPaletteOperation(operation) && pendingRepeatCount === operation.count)
+                  || (isConditionalPaletteOperation(operation) && pendingConditionTest === operation.test)
+              }"
               :disabled="isRunning || (PROCEDURE_KEYS.includes(operation.id) && !availableProcedureKeys.includes(operation.id))"
               @click="appendPaletteOperation(operation)"
             >
               <template v-if="isRepeatPaletteOperation(operation)">
                 <span class="repeat-palette-label">x{{ operation.count }}</span>
+              </template>
+              <template v-else-if="isConditionalPaletteOperation(operation)">
+                <span class="condition-palette-label">IF</span>
               </template>
               <img v-else :src="operationSprite(operation.id)" :alt="operation.label">
             </button>
@@ -447,6 +460,12 @@
                     <span class="repeat-slot-badge">x{{ operation.count }}</span>
                   </div>
                 </template>
+                <template v-else-if="isConditionalOperation(operation)">
+                  <div class="repeat-slot condition-slot">
+                    <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge condition-slot-badge">IF</span>
+                  </div>
+                </template>
                 <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
@@ -487,6 +506,12 @@
                   <div class="repeat-slot">
                     <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
                     <span class="repeat-slot-badge">x{{ operation.count }}</span>
+                  </div>
+                </template>
+                <template v-else-if="isConditionalOperation(operation)">
+                  <div class="repeat-slot condition-slot">
+                    <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge condition-slot-badge">IF</span>
                   </div>
                 </template>
                 <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
@@ -574,6 +599,9 @@ const PROCEDURE_META = {
   p1: { label: 'P1', title: 'PROC1', editorLabel: 'P1 Slots', commandLabel: 'Call P1' },
   p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
 }
+const CONDITION_TEST_META = {
+  'dark-target': { label: 'If Dark', shortLabel: 'IF', description: '仅当脚下是未点亮目标格时执行下一条' }
+}
 const BLOCK_SIZE = 1
 const BLOCK_HEIGHT = 0.5
 const BOARD_GAP = 0.04
@@ -588,7 +616,7 @@ const MATERIAL_COLORS = {
   eye: '#171c22',
   shadow: '#465666'
 }
-const operationPalette = [
+const BASE_OPERATION_PALETTE = [
   { id: 'walk', label: 'Walk' },
   { id: 'light', label: 'Light' },
   { id: 'left', label: 'Turn left' },
@@ -637,8 +665,24 @@ function isRepeatOperation(operation) {
   )
 }
 
+function isConditionalOperation(operation) {
+  return Boolean(
+    operation
+    && typeof operation === 'object'
+    && operation.type === 'condition'
+    && typeof operation.body === 'string'
+    && VALID_OPERATION_IDS.has(operation.body)
+    && typeof operation.test === 'string'
+    && CONDITION_TEST_META[operation.test]
+  )
+}
+
 function isRepeatPaletteOperation(operation) {
   return Boolean(operation?.kind === 'repeat' && Number.isInteger(operation?.count))
+}
+
+function isConditionalPaletteOperation(operation) {
+  return Boolean(operation?.kind === 'condition' && typeof operation?.test === 'string' && CONDITION_TEST_META[operation.test])
 }
 
 function createRepeatOperation(body, count = 2) {
@@ -646,6 +690,14 @@ function createRepeatOperation(body, count = 2) {
     type: 'repeat',
     body,
     count: Math.max(2, Math.min(9, Number(count) || 2))
+  }
+}
+
+function createConditionalOperation(body, test = 'dark-target') {
+  return {
+    type: 'condition',
+    body,
+    test: CONDITION_TEST_META[test] ? test : 'dark-target'
   }
 }
 
@@ -659,10 +711,21 @@ function normalizeOperationEntry(operation) {
     return createRepeatOperation(operation.body, operation.count)
   }
 
+  if (isConditionalOperation(operation)) {
+    return createConditionalOperation(operation.body, operation.test)
+  }
+
   if (operation && typeof operation === 'object' && operation.type === 'repeat') {
     const body = typeof operation.body === 'string' ? operation.body.trim() : ''
     if (!VALID_OPERATION_IDS.has(body)) return null
     return createRepeatOperation(body, operation.count)
+  }
+
+  if (operation && typeof operation === 'object' && operation.type === 'condition') {
+    const body = typeof operation.body === 'string' ? operation.body.trim() : ''
+    const test = typeof operation.test === 'string' ? operation.test.trim() : ''
+    if (!VALID_OPERATION_IDS.has(body) || !CONDITION_TEST_META[test]) return null
+    return createConditionalOperation(body, test)
   }
 
   return null
@@ -729,6 +792,7 @@ function cloneBoard(board) {
 function cloneLevelDefinition(level) {
   return {
     ...level,
+    commandOptions: { ...(level.commandOptions || {}) },
     procLimits: { ...(level.procLimits || {}) },
     tips: (level.tips || []).map((tip) => ({ ...tip })),
     board: cloneBoard(level.board),
@@ -877,6 +941,7 @@ function createDefaultEditorDraft() {
     mainLimit: 8,
     p1Limit: 0,
     p2Limit: 0,
+    enableIfDark: false,
     demo: { main: [], p1: [], p2: [] },
     start: { x: 0, y: 0, dir: 'forward' },
     board
@@ -903,6 +968,7 @@ function serializeEditorDraft(draft) {
     mainLimit: Number(draft.mainLimit) || 8,
     p1Limit: Number(draft.p1Limit) || 0,
     p2Limit: Number(draft.p2Limit) || 0,
+    enableIfDark: Boolean(draft.enableIfDark),
     start: { ...draft.start },
     board: cloneBoard(draft.board)
   }
@@ -937,6 +1003,7 @@ function loadSavedEditorDraft() {
       mainLimit: Number(parsed.mainLimit) || 8,
       p1Limit: Number(parsed.p1Limit) || 0,
       p2Limit: Number(parsed.p2Limit) || 0,
+      enableIfDark: Boolean(parsed.enableIfDark || parsed.commandOptions?.ifDark),
       start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
       board: normalized.board
     }
@@ -968,6 +1035,7 @@ function createEditorDraftFromLevel(level) {
     mainLimit: Number(level.mainLimit) || 8,
     p1Limit: Number(level.procLimits?.p1) || 0,
     p2Limit: Number(level.procLimits?.p2) || 0,
+    enableIfDark: Boolean(level.commandOptions?.ifDark),
     start,
     board: normalized.board
   }
@@ -998,6 +1066,9 @@ function buildCustomLevel(draft) {
     procLimits: {
       ...(Number(draft.p1Limit) > 0 ? { p1: Number(draft.p1Limit) } : {}),
       ...(Number(draft.p2Limit) > 0 ? { p2: Number(draft.p2Limit) } : {})
+    },
+    commandOptions: {
+      ...(draft.enableIfDark ? { ifDark: true } : {})
     },
     tips: [
       { title: 'Editor', copy: '这是当前编辑器生成的预览关卡。' },
@@ -1213,6 +1284,7 @@ const runExecutionSteps = ref(0)
 const activeRunToken = ref(null)
 const reportedCompletionToken = ref(null)
 const pendingRepeatCount = ref(null)
+const pendingConditionTest = ref(null)
 const speedValue = ref(3)
 const statusText = ref('Ready')
 const statusTone = ref('neutral')
@@ -1239,6 +1311,14 @@ let playSceneController = null
 let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
+const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.commandOptions?.ifDark))
+const operationPalette = computed(() => {
+  const palette = [...BASE_OPERATION_PALETTE]
+  if (currentLevelSupportsIfDark.value) {
+    palette.splice(7, 0, { id: 'if-dark', label: 'If Dark', kind: 'condition', test: 'dark-target' })
+  }
+  return palette
+})
 const currentLevelGroup = computed(() => findGroupForLevel(currentLevel.value.id))
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
 const currentUserId = computed(() => {
@@ -1692,6 +1772,16 @@ function verifyEditorLevelForPublish() {
   }
 
   const level = editorLevelPreview.value
+  if (level.commandOptions?.ifDark) {
+    editorVerification.value = {
+      solvable: true,
+      signature: editorSignature.value,
+      program: null,
+      message: '已通过基础校验：含条件块的关卡暂不支持自动求解，可手动保存并进入试玩验证'
+    }
+    setStatus('Conditional level verified for manual publish', 'success')
+    return
+  }
   const solveResult = solveLevelProgram(level)
   if (!solveResult.solvable) {
     editorVerification.value = {
@@ -1784,6 +1874,10 @@ function operationLabel(operationId) {
     return `Repeat x${operationId.count} ${operationLabel(operationId.body)}`
   }
 
+  if (isConditionalOperation(operationId)) {
+    return `${CONDITION_TEST_META[operationId.test]?.label || 'If'} ${operationLabel(operationId.body)}`
+  }
+
   if (PROCEDURE_META[operationId]) {
     return PROCEDURE_META[operationId].label
   }
@@ -1799,6 +1893,10 @@ function operationLabel(operationId) {
 
 function operationSprite(operationId) {
   if (isRepeatOperation(operationId)) {
+    return operationSprite(operationId.body)
+  }
+
+  if (isConditionalOperation(operationId)) {
     return operationSprite(operationId.body)
   }
 
@@ -1825,6 +1923,7 @@ function resetLevel(clearPrograms = false) {
   activeRunToken.value = null
   reportedCompletionToken.value = null
   pendingRepeatCount.value = null
+  pendingConditionTest.value = null
   runExecutionSteps.value = 0
   runningProcedureKey.value = ''
   runningOperationIndex.value = -1
@@ -1872,6 +1971,7 @@ function loadDemoProgram() {
     return
   }
   pendingRepeatCount.value = null
+  pendingConditionTest.value = null
   mainProcedure.value = cloneOperationList(currentLevel.value.demo.main)
   procedures.value = cloneProcedureMap(currentLevel.value.demo)
   setStatus('Demo loaded')
@@ -1884,8 +1984,16 @@ function loadDemoAndStart() {
 
 function appendPaletteOperation(operation) {
   if (isRepeatPaletteOperation(operation)) {
+    pendingConditionTest.value = null
     pendingRepeatCount.value = pendingRepeatCount.value === operation.count ? null : operation.count
     setStatus(pendingRepeatCount.value ? `Repeat x${operation.count}: choose next instruction` : 'Repeat cancelled')
+    return
+  }
+
+  if (isConditionalPaletteOperation(operation)) {
+    pendingRepeatCount.value = null
+    pendingConditionTest.value = pendingConditionTest.value === operation.test ? null : operation.test
+    setStatus(pendingConditionTest.value ? `${CONDITION_TEST_META[operation.test].label}: choose next instruction` : 'Condition cancelled')
     return
   }
 
@@ -1900,6 +2008,7 @@ function appendOperation(operationId) {
   const normalizedOperationId = normalizeOperationEntry(operationId)
   if (!normalizedOperationId || typeof normalizedOperationId !== 'string') {
     pendingRepeatCount.value = null
+    pendingConditionTest.value = null
     return
   }
 
@@ -1913,8 +2022,9 @@ function appendOperation(operationId) {
 
   const operationToStore = pendingRepeatCount.value
     ? createRepeatOperation(normalizedOperationId, pendingRepeatCount.value)
-    : normalizedOperationId
+    : (pendingConditionTest.value ? createConditionalOperation(normalizedOperationId, pendingConditionTest.value) : normalizedOperationId)
   pendingRepeatCount.value = null
+  pendingConditionTest.value = null
 
   if (isMain) {
     mainProcedure.value = [...mainProcedure.value, cloneOperation(operationToStore)]
@@ -2014,6 +2124,14 @@ function markFinished() {
   return true
 }
 
+function conditionPasses(test) {
+  if (test === 'dark-target') {
+    const key = platformKey(bot.value.x, bot.value.y)
+    return targetKeys.value.includes(key) && !litKeys.value.includes(key)
+  }
+  return false
+}
+
 function waitStep() {
   return new Promise((resolve) => window.setTimeout(resolve, SPEED_MAP[String(speedValue.value)] || SPEED_MAP[3]))
 }
@@ -2033,6 +2151,17 @@ async function executeOperation(operationId, nonce, depth) {
       runExecutionSteps.value += 1
       await executeOperation(normalizedOperation.body, nonce, depth + 1)
       if (markFinished()) return
+    }
+    return
+  }
+
+  if (isConditionalOperation(normalizedOperation)) {
+    if (conditionPasses(normalizedOperation.test)) {
+      runExecutionSteps.value += 1
+      await executeOperation(normalizedOperation.body, nonce, depth + 1)
+      if (markFinished()) return
+    } else {
+      await waitStep()
     }
     return
   }
@@ -3331,6 +3460,37 @@ resetLevel(true)
   grid-column: 1 / -1;
 }
 
+.editor-form-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #556675;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.editor-form-toggle.full-span {
+  grid-column: 1 / -1;
+}
+
+.toggle-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(94, 117, 137, 0.2);
+  background: #f8fbfd;
+  color: #334350;
+  font-weight: 700;
+}
+
+.toggle-check input {
+  width: 16px;
+  height: 16px;
+}
+
 .editor-form-grid input,
 .editor-form-grid select {
   min-height: 42px;
@@ -3904,7 +4064,8 @@ resetLevel(true)
   box-shadow: inset 0 0 0 3px #3f9b57, 0 12px 18px rgba(79, 94, 111, 0.2);
 }
 
-.repeat-palette-label {
+.repeat-palette-label,
+.condition-palette-label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3916,6 +4077,10 @@ resetLevel(true)
   font-size: 14px;
   font-weight: 900;
   line-height: 1;
+}
+
+.condition-palette-label {
+  letter-spacing: 0.08em;
 }
 
 .command-btn:hover:not(:disabled),
@@ -4050,6 +4215,10 @@ resetLevel(true)
   line-height: 18px;
   text-align: center;
   z-index: 1;
+}
+
+.condition-slot-badge {
+  background: #6a5317;
 }
 
 .program-tools {
