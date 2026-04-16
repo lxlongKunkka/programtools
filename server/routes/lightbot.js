@@ -9,7 +9,7 @@ const router = express.Router()
 const CUSTOM_CHAPTER_ID = 'custom-shared'
 const CUSTOM_CHAPTER_TITLE = '自定义关卡'
 const CUSTOM_CHAPTER_ORDER = 999
-const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1'])
+const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1', 'p2'])
 
 function isAdminUser(user) {
   return Boolean(user && (user.role === 'admin' || user.priv === -1))
@@ -146,14 +146,16 @@ function normalizeLightbotLevel(level, options = {}) {
     goal: String(level.goal || baseGoal).trim().slice(0, 240),
     mainLimit: Math.max(1, Math.min(40, Number(level.mainLimit) || baseMainLimit || 8)),
     procLimits: {
-      p1: Math.max(0, Math.min(20, Number(level.procLimits?.p1) || 0))
+      p1: Math.max(0, Math.min(20, Number(level.procLimits?.p1) || 0)),
+      p2: Math.max(0, Math.min(20, Number(level.procLimits?.p2) || 0))
     },
     tips: (Array.isArray(level.tips) ? level.tips : baseTips).map(normalizeTip).filter((tip) => tip.title && tip.copy),
     board,
     start,
     demo: {
       main: normalizeOperationList(level.demo?.main),
-      p1: normalizeOperationList(level.demo?.p1)
+      p1: normalizeOperationList(level.demo?.p1),
+      p2: normalizeOperationList(level.demo?.p2)
     }
   }
 }
@@ -176,7 +178,8 @@ function toClientLevel(doc) {
     start: { ...doc.start },
     demo: {
       main: (doc.demo?.main || []).map(cloneOperationItem).filter(Boolean),
-      p1: (doc.demo?.p1 || []).map(cloneOperationItem).filter(Boolean)
+      p1: (doc.demo?.p1 || []).map(cloneOperationItem).filter(Boolean),
+      p2: (doc.demo?.p2 || []).map(cloneOperationItem).filter(Boolean)
     },
     isDeleted: Boolean(doc.isDeleted),
     createdBy: doc.createdBy,
@@ -336,7 +339,7 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
           tips: existingDoc.tips || [],
           board: existingDoc.board,
           start: existingDoc.start,
-          demo: existingDoc.demo || { main: [], p1: [] },
+          demo: existingDoc.demo || { main: [], p1: [], p2: [] },
           createdBy: existingDoc.createdBy,
           createdByName: existingDoc.createdByName
         }
@@ -361,7 +364,8 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
         start: sourceLevel.start,
         demo: {
           main: normalizeOperationList(sourceLevel.demo?.main),
-          p1: normalizeOperationList(sourceLevel.demo?.p1)
+          p1: normalizeOperationList(sourceLevel.demo?.p1),
+          p2: normalizeOperationList(sourceLevel.demo?.p2)
         },
         createdBy: existingDoc?.createdBy ?? null,
         createdByName: existingDoc?.createdByName ?? null,
@@ -393,13 +397,14 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
     const totalCommands = normalizePositiveMetric(req.body?.totalCommands)
     const mainLength = normalizePositiveMetric(req.body?.mainLength)
     const p1Length = normalizePositiveMetric(req.body?.p1Length)
+    const p2Length = normalizePositiveMetric(req.body?.p2Length)
     const executionSteps = normalizePositiveMetric(req.body?.executionSteps)
 
-    if (!totalCommands || mainLength == null || p1Length == null || !executionSteps) {
+    if (!totalCommands || mainLength == null || p1Length == null || p2Length == null || !executionSteps) {
       return res.status(400).json({ success: false, error: '缺少有效的通关成绩数据' })
     }
 
-    if (mainLength + p1Length !== totalCommands) {
+    if (mainLength + p1Length + p2Length !== totalCommands) {
       return res.status(400).json({ success: false, error: '程序长度统计不一致' })
     }
 
@@ -412,6 +417,11 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'P1 指令数超过当前关卡限制' })
     }
 
+    const p2Limit = Number(playableLevel.procLimits?.p2 || 0)
+    if (p2Length > p2Limit) {
+      return res.status(400).json({ success: false, error: 'P2 指令数超过当前关卡限制' })
+    }
+
     const created = await LightbotResult.create({
       levelId: requestedId,
       isCustomLevel: Boolean(playableLevel.isCustom),
@@ -421,6 +431,7 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
       totalCommands,
       mainLength,
       p1Length,
+      p2Length,
       executionSteps,
       completedAt: new Date()
     })
@@ -438,6 +449,7 @@ router.post('/levels/:id/complete', authenticateToken, async (req, res) => {
               totalCommands: personalBest.totalCommands,
               mainLength: personalBest.mainLength,
               p1Length: personalBest.p1Length,
+              p2Length: personalBest.p2Length,
               executionSteps: personalBest.executionSteps,
               completedAt: personalBest.completedAt
             }
@@ -464,6 +476,7 @@ router.get('/levels/:id/leaderboard', async (req, res) => {
           totalCommands: { $first: '$totalCommands' },
           mainLength: { $first: '$mainLength' },
           p1Length: { $first: '$p1Length' },
+          p2Length: { $first: '$p2Length' },
           executionSteps: { $first: '$executionSteps' },
           completedAt: { $first: '$completedAt' }
         }
@@ -499,6 +512,7 @@ router.get('/activity', async (req, res) => {
         totalCommands: item.totalCommands,
         mainLength: item.mainLength,
         p1Length: item.p1Length,
+        p2Length: item.p2Length,
         executionSteps: item.executionSteps,
         completedAt: item.completedAt
       }))

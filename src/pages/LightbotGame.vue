@@ -69,7 +69,8 @@
               <div class="level-card-foot">
                 <span>Main {{ level.mainLimit }}</span>
                 <span v-if="level.procLimits.p1">P1 {{ level.procLimits.p1 }}</span>
-                <span v-else>No proc</span>
+                <span v-if="level.procLimits.p2">P2 {{ level.procLimits.p2 }}</span>
+                <span v-if="!level.procLimits.p1 && !level.procLimits.p2">No proc</span>
                 <button class="level-brief-btn" :disabled="!canEditLevel(level)" :title="getLevelEditHint(level)" @click.stop="openEditor(level)">编辑</button>
                 <button class="level-brief-btn" @click.stop="openLevelBrief(levelGlobalIndex(group, index))">简介</button>
               </div>
@@ -96,6 +97,10 @@
             <div>
               <span>P1</span>
               <strong>{{ currentLevel.procLimits.p1 || 0 }} slots</strong>
+            </div>
+            <div>
+              <span>P2</span>
+              <strong>{{ currentLevel.procLimits.p2 || 0 }} slots</strong>
             </div>
             <div>
               <span>Skill</span>
@@ -153,6 +158,7 @@
                 <div class="lightbot-leaderboard-meta">
                   <span>MAIN {{ record.mainLength }}</span>
                   <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
+                  <span v-if="record.p2Length">P2 {{ record.p2Length }}</span>
                 </div>
               </div>
             </div>
@@ -195,6 +201,10 @@
               <label>
                 <span>P1 Slots</span>
                 <input v-model.number="editorDraft.p1Limit" type="number" min="0" max="12">
+              </label>
+              <label>
+                <span>P2 Slots</span>
+                <input v-model.number="editorDraft.p2Limit" type="number" min="0" max="12">
               </label>
               <label>
                 <span>Facing</span>
@@ -260,6 +270,7 @@
               <template v-if="editorSolvedProgram">
                 <div class="editor-solution-line">MAIN: {{ formatOps(editorSolvedProgram.main) }}</div>
                 <div v-if="editorSolvedProgram.p1?.length" class="editor-solution-line">P1: {{ formatOps(editorSolvedProgram.p1) }}</div>
+                <div v-if="editorSolvedProgram.p2?.length" class="editor-solution-line">P2: {{ formatOps(editorSolvedProgram.p2) }}</div>
               </template>
             </div>
           </div>
@@ -323,7 +334,7 @@
               :key="operation.id"
               class="command-btn"
               :class="{ active: isRepeatPaletteOperation(operation) && pendingRepeatCount === operation.count }"
-              :disabled="isRunning || (operation.id === 'p1' && !availableProcedureKeys.includes('p1'))"
+              :disabled="isRunning || (PROCEDURE_KEYS.includes(operation.id) && !availableProcedureKeys.includes(operation.id))"
               @click="appendPaletteOperation(operation)"
             >
               <template v-if="isRepeatPaletteOperation(operation)">
@@ -349,8 +360,8 @@
                   <strong>{{ lastCompletionMetrics.totalCommands }}</strong>
                 </div>
                 <div>
-                  <span>MAIN / P1</span>
-                  <strong>{{ lastCompletionMetrics.mainLength }} / {{ lastCompletionMetrics.p1Length }}</strong>
+                  <span>{{ procedureLengthLabel(lastCompletionMetrics) }}</span>
+                  <strong>{{ procedureLengthValue(lastCompletionMetrics) }}</strong>
                 </div>
                 <div>
                   <span>执行步数</span>
@@ -413,26 +424,31 @@
             </div>
           </section>
 
-          <section class="program-panel proc-tone" :class="{ disabled: !availableProcedureKeys.includes('p1'), active: activeProcedureKey === 'p1' }">
+          <section
+            v-for="procKey in PROCEDURE_KEYS"
+            :key="procKey"
+            class="program-panel proc-tone"
+            :class="{ disabled: !availableProcedureKeys.includes(procKey), active: activeProcedureKey === procKey }"
+          >
             <div class="program-header">
-              <span>PROC1</span>
+              <span>{{ PROCEDURE_META[procKey].title }}</span>
               <button
                 class="tab-btn"
-                :class="{ active: activeProcedureKey === 'p1' }"
-                :disabled="!availableProcedureKeys.includes('p1')"
-                @click="activeProcedureKey = 'p1'"
+                :class="{ active: activeProcedureKey === procKey }"
+                :disabled="!availableProcedureKeys.includes(procKey)"
+                @click="activeProcedureKey = procKey"
               >
                 Edit
               </button>
             </div>
             <div class="program-grid">
               <button
-                v-for="(operation, index) in procedures.p1"
-                :key="`p1-${index}`"
+                v-for="(operation, index) in procedures[procKey]"
+                :key="`${procKey}-${index}`"
                 class="program-slot filled"
-                :class="{ active: runningProcedureKey === 'p1' && runningOperationIndex === index }"
-                :disabled="!availableProcedureKeys.includes('p1')"
-                @click="removeOperation('p1', index)"
+                :class="{ active: runningProcedureKey === procKey && runningOperationIndex === index }"
+                :disabled="!availableProcedureKeys.includes(procKey)"
+                @click="removeOperation(procKey, index)"
               >
                 <template v-if="isRepeatOperation(operation)">
                   <div class="repeat-slot">
@@ -443,8 +459,8 @@
                 <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
-                v-for="slot in emptySlots(currentLevel.procLimits.p1 || 0, procedures.p1.length)"
-                :key="`p1-empty-${slot}`"
+                v-for="slot in emptySlots(currentLevel.procLimits[procKey] || 0, procedures[procKey].length)"
+                :key="`${procKey}-empty-${slot}`"
                 class="program-slot"
               ></div>
             </div>
@@ -482,6 +498,7 @@
               <div class="lightbot-leaderboard-meta">
                 <span>MAIN {{ record.mainLength }}</span>
                 <span v-if="record.p1Length">P1 {{ record.p1Length }}</span>
+                <span v-if="record.p2Length">P2 {{ record.p2Length }}</span>
               </div>
             </div>
           </div>
@@ -519,6 +536,11 @@ const DIRECTION_VECTORS = {
   left: { x: 0, y: -1 }
 }
 const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 200, 5: 130 }
+const PROCEDURE_KEYS = ['p1', 'p2']
+const PROCEDURE_META = {
+  p1: { label: 'P1', title: 'PROC1', editorLabel: 'P1 Slots', commandLabel: 'Call P1' },
+  p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
+}
 const BLOCK_SIZE = 1
 const BLOCK_HEIGHT = 0.5
 const BOARD_GAP = 0.04
@@ -540,12 +562,35 @@ const operationPalette = [
   { id: 'right', label: 'Turn right' },
   { id: 'jump', label: 'Jump' },
   { id: 'p1', label: 'Call P1' },
+  { id: 'p2', label: 'Call P2' },
   { id: 'repeat-2', label: 'Repeat x2', kind: 'repeat', count: 2 },
   { id: 'repeat-3', label: 'Repeat x3', kind: 'repeat', count: 3 },
   { id: 'repeat-4', label: 'Repeat x4', kind: 'repeat', count: 4 }
 ]
 
-const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1'])
+const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', ...PROCEDURE_KEYS])
+
+function createEmptyProcedures() {
+  return Object.fromEntries(PROCEDURE_KEYS.map((key) => [key, []]))
+}
+
+function cloneProcedureMap(procedures = {}) {
+  return Object.fromEntries(PROCEDURE_KEYS.map((key) => [key, cloneOperationList(procedures[key] || [])]))
+}
+
+function procedureLengthLabel(metrics) {
+  return [
+    'MAIN',
+    ...PROCEDURE_KEYS
+      .filter((key) => Number(metrics?.[`${key}Length`] || 0) > 0 || Number(currentLevel.value?.procLimits?.[key] || 0) > 0)
+      .map((key) => PROCEDURE_META[key].label)
+  ].join(' / ')
+}
+
+function procedureLengthValue(metrics) {
+  return [metrics?.mainLength || 0, ...PROCEDURE_KEYS.filter((key) => Number(metrics?.[`${key}Length`] || 0) > 0 || Number(currentLevel.value?.procLimits?.[key] || 0) > 0)
+    .map((key) => metrics?.[`${key}Length`] || 0)].join(' / ')
+}
 
 function isRepeatOperation(operation) {
   return Boolean(
@@ -657,7 +702,8 @@ function cloneLevelDefinition(level) {
     start: { ...level.start },
     demo: {
       main: cloneOperationList(level.demo?.main || []),
-      p1: cloneOperationList(level.demo?.p1 || [])
+      p1: cloneOperationList(level.demo?.p1 || []),
+      p2: cloneOperationList(level.demo?.p2 || [])
     }
   }
 }
@@ -797,6 +843,8 @@ function createDefaultEditorDraft() {
     goal: '点亮所有目标格。',
     mainLimit: 8,
     p1Limit: 0,
+    p2Limit: 0,
+    demo: { main: [], p1: [], p2: [] },
     start: { x: 0, y: 0, dir: 'forward' },
     board
   }
@@ -812,7 +860,8 @@ function serializeEditorDraft(draft) {
     chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : null,
     demo: {
       main: cloneOperationList(draft.demo?.main || []),
-      p1: cloneOperationList(draft.demo?.p1 || [])
+      p1: cloneOperationList(draft.demo?.p1 || []),
+      p2: cloneOperationList(draft.demo?.p2 || [])
     },
     title: draft.title,
     skill: draft.skill,
@@ -820,6 +869,7 @@ function serializeEditorDraft(draft) {
     goal: draft.goal,
     mainLimit: Number(draft.mainLimit) || 8,
     p1Limit: Number(draft.p1Limit) || 0,
+    p2Limit: Number(draft.p2Limit) || 0,
     start: { ...draft.start },
     board: cloneBoard(draft.board)
   }
@@ -844,7 +894,8 @@ function loadSavedEditorDraft() {
       chapterOrder: Number.isFinite(parsed.chapterOrder) ? parsed.chapterOrder : null,
       demo: {
         main: cloneOperationList(parsed.demo?.main || []),
-        p1: cloneOperationList(parsed.demo?.p1 || [])
+        p1: cloneOperationList(parsed.demo?.p1 || []),
+        p2: cloneOperationList(parsed.demo?.p2 || [])
       },
       title: typeof parsed.title === 'string' ? parsed.title : 'My Level',
       skill: typeof parsed.skill === 'string' ? parsed.skill : 'Custom',
@@ -852,6 +903,7 @@ function loadSavedEditorDraft() {
       goal: typeof parsed.goal === 'string' ? parsed.goal : '点亮所有目标格。',
       mainLimit: Number(parsed.mainLimit) || 8,
       p1Limit: Number(parsed.p1Limit) || 0,
+      p2Limit: Number(parsed.p2Limit) || 0,
       start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
       board: normalized.board
     }
@@ -873,7 +925,8 @@ function createEditorDraftFromLevel(level) {
     chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : null,
     demo: {
       main: cloneOperationList(level.demo?.main || []),
-      p1: cloneOperationList(level.demo?.p1 || [])
+      p1: cloneOperationList(level.demo?.p1 || []),
+      p2: cloneOperationList(level.demo?.p2 || [])
     },
     title: level.title,
     skill: level.skill,
@@ -881,6 +934,7 @@ function createEditorDraftFromLevel(level) {
     goal: level.goal,
     mainLimit: Number(level.mainLimit) || 8,
     p1Limit: Number(level.procLimits?.p1) || 0,
+    p2Limit: Number(level.procLimits?.p2) || 0,
     start,
     board: normalized.board
   }
@@ -908,7 +962,10 @@ function buildCustomLevel(draft) {
     description: draft.description.trim() || '学员自制关卡。',
     goal: draft.goal.trim() || '点亮所有目标格。',
     mainLimit: Number(draft.mainLimit) || 8,
-    procLimits: Number(draft.p1Limit) > 0 ? { p1: Number(draft.p1Limit) } : {},
+    procLimits: {
+      ...(Number(draft.p1Limit) > 0 ? { p1: Number(draft.p1Limit) } : {}),
+      ...(Number(draft.p2Limit) > 0 ? { p2: Number(draft.p2Limit) } : {})
+    },
     tips: [
       { title: 'Editor', copy: '这是当前编辑器生成的预览关卡。' },
       { title: 'Playtest', copy: '可以直接进入试玩，验证是否能被正常完成。' }
@@ -917,7 +974,8 @@ function buildCustomLevel(draft) {
     start: { ...draft.start },
     demo: {
       main: cloneOperationList(draft.demo?.main || []),
-      p1: cloneOperationList(draft.demo?.p1 || [])
+      p1: cloneOperationList(draft.demo?.p1 || []),
+      p2: cloneOperationList(draft.demo?.p2 || [])
     }
   }
 }
@@ -1093,7 +1151,7 @@ const screen = ref('select')
 const selectedLevelIndex = ref(findRecommendedLevelIndex())
 const activeProcedureKey = ref('main')
 const mainProcedure = ref([])
-const procedures = ref({ p1: [] })
+const procedures = ref(createEmptyProcedures())
 const completedLevelIds = ref(loadProgress())
 const levelLeaderboard = ref([])
 const recentActivity = ref([])
@@ -1140,20 +1198,28 @@ const currentUserId = computed(() => {
 })
 const isAdmin = computed(() => Boolean(currentUser.value && (currentUser.value.role === 'admin' || currentUser.value.priv === -1)))
 const hasCurrentDemo = computed(() => {
-  const demo = currentLevel.value.demo || { main: [], p1: [] }
-  return (demo.main?.length || 0) + (demo.p1?.length || 0) > 0
+  const demo = currentLevel.value.demo || { main: [], p1: [], p2: [] }
+  return [demo.main, ...PROCEDURE_KEYS.map((key) => demo[key])].reduce((sum, list) => sum + (list?.length || 0), 0) > 0
 })
-const availableProcedureKeys = computed(() => Object.keys(currentLevel.value.procLimits || {}))
+const availableProcedureKeys = computed(() => PROCEDURE_KEYS.filter((key) => Number(currentLevel.value.procLimits?.[key] || 0) > 0))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
 const currentProgramMetrics = computed(() => {
   const mainLength = mainProcedure.value.length
-  const p1Length = procedures.value.p1.length
-  return {
-    totalCommands: mainLength + p1Length,
+  const metrics = {
+    totalCommands: mainLength,
     mainLength,
-    p1Length,
     executionSteps: runExecutionSteps.value
+  }
+
+  for (const key of PROCEDURE_KEYS) {
+    const length = procedures.value[key].length
+    metrics[`${key}Length`] = length
+    metrics.totalCommands += length
+  }
+
+  return {
+    ...metrics
   }
 })
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
@@ -1190,7 +1256,7 @@ const editorPublishMessage = computed(() => {
     return editorDraft.sourceIsCustom ? '这个自定义关卡只能由创建者本人或管理员修改。' : '默认关卡只能由管理员修改。'
   }
   if (!editorVerification.value) {
-    return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 槽位限制内通关。'
+    return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 / P2 槽位限制内通关。'
   }
   if (editorVerification.value.signature !== editorSignature.value) {
     return '草稿已经修改，必须重新验证后才能保存到游戏。'
@@ -1330,6 +1396,12 @@ watch(levels, (value) => {
     selectedLevelIndex.value = value.length - 1
   }
 }, { deep: true })
+
+watch(availableProcedureKeys, (value) => {
+  if (activeProcedureKey.value !== 'main' && !value.includes(activeProcedureKey.value)) {
+    activeProcedureKey.value = 'main'
+  }
+})
 
 function setStatus(text, tone = 'neutral') {
   statusText.value = text
@@ -1526,9 +1598,10 @@ function verifyEditorLevelForPublish() {
     signature: editorSignature.value,
     program: {
       main: cloneOperationList(solveResult.main),
-      p1: cloneOperationList(solveResult.p1)
+      p1: cloneOperationList(solveResult.p1),
+      p2: cloneOperationList(solveResult.p2)
     },
-    message: `已验证通过：最短 ${solveResult.rawLength} 步，MAIN ${solveResult.main.length}/${level.mainLimit}${level.procLimits.p1 ? `，P1 ${solveResult.p1.length}/${level.procLimits.p1}` : ''}`
+    message: `已验证通过：最短 ${solveResult.rawLength} 步，MAIN ${solveResult.main.length}/${level.mainLimit}${level.procLimits.p1 ? `，P1 ${solveResult.p1.length}/${level.procLimits.p1}` : ''}${level.procLimits.p2 ? `，P2 ${solveResult.p2.length}/${level.procLimits.p2}` : ''}`
   }
   setStatus('Level verified for publish', 'success')
 }
@@ -1544,12 +1617,13 @@ async function saveEditorLevelToGame() {
     return
   }
 
-  const program = editorSolvedProgram.value || { main: [], p1: [] }
+  const program = editorSolvedProgram.value || { main: [], p1: [], p2: [] }
   const savedLevel = cloneLevelDefinition({
     ...editorLevelPreview.value,
     demo: {
       main: cloneOperationList(program.main),
-      p1: cloneOperationList(program.p1)
+      p1: cloneOperationList(program.p1),
+      p2: cloneOperationList(program.p2)
     }
   })
 
@@ -1571,7 +1645,8 @@ async function saveEditorLevelToGame() {
     }
     editorDraft.demo = {
       main: cloneOperationList(sharedLevel.demo.main),
-      p1: cloneOperationList(sharedLevel.demo.p1)
+      p1: cloneOperationList(sharedLevel.demo.p1),
+      p2: cloneOperationList(sharedLevel.demo.p2)
     }
     editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
@@ -1599,13 +1674,16 @@ function operationLabel(operationId) {
     return `Repeat x${operationId.count} ${operationLabel(operationId.body)}`
   }
 
+  if (PROCEDURE_META[operationId]) {
+    return PROCEDURE_META[operationId].label
+  }
+
   return {
     walk: 'Walk',
     light: 'Light',
     left: 'Left',
     right: 'Right',
-    jump: 'Jump',
-    p1: 'P1'
+    jump: 'Jump'
   }[operationId] || operationId
 }
 
@@ -1614,13 +1692,16 @@ function operationSprite(operationId) {
     return operationSprite(operationId.body)
   }
 
+  if (operationId === 'p1' || operationId === 'p2') {
+    return '/lightbot/operation-proc.png'
+  }
+
   return {
     walk: '/lightbot/operation-move.png',
     light: '/lightbot/operation-lamp.png',
     left: '/lightbot/operation-turn-left.png',
     right: '/lightbot/operation-turn-right.png',
-    jump: '/lightbot/operation-jump.png',
-    p1: '/lightbot/operation-proc.png'
+    jump: '/lightbot/operation-jump.png'
   }[operationId] || '/lightbot/operation-move.png'
 }
 
@@ -1643,7 +1724,7 @@ function resetLevel(clearPrograms = false) {
   bot.value = cloneBot(currentLevel.value.start)
   if (clearPrograms) {
     mainProcedure.value = []
-    procedures.value = { p1: [] }
+    procedures.value = createEmptyProcedures()
     activeProcedureKey.value = 'main'
   }
   setStatus(mainProcedure.value.length ? 'Code reset' : 'Program is empty')
@@ -1681,7 +1762,7 @@ function loadDemoProgram() {
   }
   pendingRepeatCount.value = null
   mainProcedure.value = cloneOperationList(currentLevel.value.demo.main)
-  procedures.value = { p1: cloneOperationList(currentLevel.value.demo.p1 || []) }
+  procedures.value = cloneProcedureMap(currentLevel.value.demo)
   setStatus('Demo loaded')
 }
 
@@ -1701,7 +1782,7 @@ function appendPaletteOperation(operation) {
 }
 
 function appendOperation(operationId) {
-  if (activeProcedureKey.value === 'p1' && !availableProcedureKeys.value.includes('p1')) {
+  if (activeProcedureKey.value !== 'main' && !availableProcedureKeys.value.includes(activeProcedureKey.value)) {
     return
   }
 
@@ -1712,8 +1793,8 @@ function appendOperation(operationId) {
   }
 
   const isMain = activeProcedureKey.value === 'main'
-  const currentList = isMain ? mainProcedure.value : procedures.value.p1
-  const limit = isMain ? currentLevel.value.mainLimit : (currentLevel.value.procLimits.p1 || 0)
+  const currentList = isMain ? mainProcedure.value : procedures.value[activeProcedureKey.value]
+  const limit = isMain ? currentLevel.value.mainLimit : (currentLevel.value.procLimits[activeProcedureKey.value] || 0)
   if (currentList.length >= limit) {
     setStatus('No empty slot left', 'danger')
     return
@@ -1727,7 +1808,7 @@ function appendOperation(operationId) {
   if (isMain) {
     mainProcedure.value = [...mainProcedure.value, cloneOperation(operationToStore)]
   } else {
-    procedures.value = { ...procedures.value, p1: [...procedures.value.p1, cloneOperation(operationToStore)] }
+    procedures.value = { ...procedures.value, [activeProcedureKey.value]: [...procedures.value[activeProcedureKey.value], cloneOperation(operationToStore)] }
   }
 
   setStatus(`${operationLabel(operationToStore)} added`)
@@ -1740,7 +1821,7 @@ function removeOperation(procKey, index) {
   } else {
     procedures.value = {
       ...procedures.value,
-      p1: procedures.value.p1.filter((_, itemIndex) => itemIndex !== index)
+      [procKey]: procedures.value[procKey].filter((_, itemIndex) => itemIndex !== index)
     }
   }
   setStatus('Operation removed')
@@ -1751,7 +1832,7 @@ function undoLastOperation() {
   if (activeProcedureKey.value === 'main') {
     mainProcedure.value = mainProcedure.value.slice(0, -1)
   } else {
-    procedures.value = { ...procedures.value, p1: procedures.value.p1.slice(0, -1) }
+    procedures.value = { ...procedures.value, [activeProcedureKey.value]: procedures.value[activeProcedureKey.value].slice(0, -1) }
   }
   setStatus('Last operation removed')
 }
@@ -1761,7 +1842,7 @@ function clearActiveProcedure() {
   if (activeProcedureKey.value === 'main') {
     mainProcedure.value = []
   } else {
-    procedures.value = { ...procedures.value, p1: [] }
+    procedures.value = { ...procedures.value, [activeProcedureKey.value]: [] }
   }
   setStatus('Procedure cleared')
 }
@@ -1854,8 +1935,8 @@ async function executeOperation(operationId, nonce, depth) {
     return
   }
 
-  if (normalizedOperation === 'p1') {
-    await runProcedure('p1', procedures.value.p1, nonce, depth + 1)
+  if (PROCEDURE_KEYS.includes(normalizedOperation)) {
+    await runProcedure(normalizedOperation, procedures.value[normalizedOperation], nonce, depth + 1)
     return
   }
 

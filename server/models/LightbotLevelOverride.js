@@ -14,7 +14,8 @@ const lightbotStartSchema = new mongoose.Schema({
 
 const lightbotDemoSchema = new mongoose.Schema({
   main: { type: [mongoose.Schema.Types.Mixed], default: [] },
-  p1: { type: [mongoose.Schema.Types.Mixed], default: [] }
+  p1: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  p2: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, { _id: false })
 
 const lightbotLevelOverrideSchema = new mongoose.Schema({
@@ -30,7 +31,8 @@ const lightbotLevelOverrideSchema = new mongoose.Schema({
   mainLimit: { type: Number, required: true, min: 1, max: 40 },
   procLimits: {
     type: new mongoose.Schema({
-      p1: { type: Number, default: 0, min: 0, max: 20 }
+      p1: { type: Number, default: 0, min: 0, max: 20 },
+      p2: { type: Number, default: 0, min: 0, max: 20 }
     }, { _id: false }),
     default: () => ({})
   },

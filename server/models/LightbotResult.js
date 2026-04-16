@@ -10,6 +10,7 @@ const lightbotResultSchema = new mongoose.Schema({
   totalCommands: { type: Number, required: true, min: 1 },
   mainLength: { type: Number, required: true, min: 0 },
   p1Length: { type: Number, default: 0, min: 0 },
+  p2Length: { type: Number, default: 0, min: 0 },
   executionSteps: { type: Number, required: true, min: 1 },
   completedAt: { type: Date, default: Date.now, index: true }
 }, {

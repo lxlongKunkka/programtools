@@ -20,7 +20,8 @@ const DIRECTION_VECTORS = {
 }
 
 const ACTIONS = ['light', 'walk', 'jump', 'left', 'right']
-const REPEATABLE_ACTIONS = new Set(['light', 'walk', 'jump', 'left', 'right', 'p1'])
+const PROCEDURE_KEYS = ['p1', 'p2']
+const REPEATABLE_ACTIONS = new Set(['light', 'walk', 'jump', 'left', 'right', ...PROCEDURE_KEYS])
 const MAX_REPEAT_COUNT = 4
 
 function isRepeatOperation(operation) {
@@ -78,7 +79,7 @@ function compressOperationRuns(sequence) {
 }
 
 function programScore(program) {
-  return program.main.length + program.p1.length
+  return program.main.length + PROCEDURE_KEYS.reduce((sum, key) => sum + (program[key]?.length || 0), 0)
 }
 
 function chooseBetterProgram(currentBest, candidate) {
@@ -95,22 +96,32 @@ function chooseBetterProgram(currentBest, candidate) {
     return candidate.main.length < currentBest.main.length ? candidate : currentBest
   }
 
-  return candidate.p1.length < currentBest.p1.length ? candidate : currentBest
+  for (const key of PROCEDURE_KEYS) {
+    const candidateLength = candidate[key]?.length || 0
+    const currentLength = currentBest[key]?.length || 0
+    if (candidateLength !== currentLength) {
+      return candidateLength < currentLength ? candidate : currentBest
+    }
+  }
+
+  return currentBest
 }
 
-function finalizeProgram(level, mainSequence, p1Sequence = []) {
-  const finalized = {
-    main: compressOperationRuns(mainSequence),
-    p1: compressOperationRuns(p1Sequence)
+function finalizeProgram(level, mainSequence, procedures = {}) {
+  const finalized = { main: compressOperationRuns(mainSequence) }
+  for (const key of PROCEDURE_KEYS) {
+    finalized[key] = compressOperationRuns(procedures[key] || [])
   }
 
   if (finalized.main.length > level.mainLimit) {
     return null
   }
 
-  const p1Limit = level.procLimits?.p1 || 0
-  if (finalized.p1.length > p1Limit) {
-    return null
+  for (const key of PROCEDURE_KEYS) {
+    const limit = level.procLimits?.[key] || 0
+    if (finalized[key].length > limit) {
+      return null
+    }
   }
 
   return finalized
@@ -252,7 +263,7 @@ function matchesAt(sequence, pattern, index) {
   return true
 }
 
-function compressWithPattern(sequence, pattern) {
+function compressWithPatterns(sequence, patterns) {
   const dp = Array(sequence.length + 1).fill(0)
   const choice = Array(sequence.length).fill(null)
 
@@ -260,11 +271,13 @@ function compressWithPattern(sequence, pattern) {
     let bestCost = 1 + dp[index + 1]
     let bestChoice = { type: 'literal', value: sequence[index], nextIndex: index + 1 }
 
-    if (matchesAt(sequence, pattern, index)) {
+    for (const { key, pattern } of patterns) {
+      if (!matchesAt(sequence, pattern, index)) continue
+
       const patternCost = 1 + dp[index + pattern.length]
       if (patternCost < bestCost) {
         bestCost = patternCost
-        bestChoice = { type: 'p1', nextIndex: index + pattern.length }
+        bestChoice = { type: key, nextIndex: index + pattern.length }
       }
     }
 
@@ -273,36 +286,70 @@ function compressWithPattern(sequence, pattern) {
   }
 
   const main = []
+  const callCounts = Object.fromEntries(patterns.map(({ key }) => [key, 0]))
   let index = 0
-  let p1Calls = 0
   while (index < sequence.length) {
     const step = choice[index]
-    if (step.type === 'p1') {
-      main.push('p1')
-      p1Calls += 1
+    if (step.type !== 'literal') {
+      main.push(step.type)
+      callCounts[step.type] += 1
     } else {
       main.push(step.value)
     }
     index = step.nextIndex
   }
 
-  return { main, p1: pattern, p1Calls }
+  return { main, callCounts }
+}
+
+function candidatePatternsFor(sequence, limit) {
+  if (!limit) return []
+  const candidates = []
+  const maxPatternSize = Math.min(sequence.length, limit * MAX_REPEAT_COUNT)
+
+  for (let start = 0; start < sequence.length; start += 1) {
+    for (let size = 1; size <= maxPatternSize && start + size <= sequence.length; size += 1) {
+      candidates.push(sequence.slice(start, start + size))
+    }
+  }
+
+  return candidates
 }
 
 export function buildProgram(level, rawSequence) {
   let best = chooseBetterProgram(null, finalizeProgram(level, rawSequence))
-  const procLimit = level.procLimits?.p1 || 0
-  if (!procLimit) {
+  const availableProcedureKeys = PROCEDURE_KEYS.filter((key) => Number(level.procLimits?.[key] || 0) > 0)
+  if (!availableProcedureKeys.length) {
     return best
   }
 
-  const maxPatternSize = Math.min(rawSequence.length, procLimit * MAX_REPEAT_COUNT)
-  for (let start = 0; start < rawSequence.length; start += 1) {
-    for (let size = 1; size <= maxPatternSize && start + size <= rawSequence.length; size += 1) {
-      const pattern = rawSequence.slice(start, start + size)
-      const compressed = compressWithPattern(rawSequence, pattern)
-      if (compressed.p1Calls < 2) continue
-      best = chooseBetterProgram(best, finalizeProgram(level, compressed.main, compressed.p1))
+  const patternCandidates = Object.fromEntries(
+    availableProcedureKeys.map((key) => [key, candidatePatternsFor(rawSequence, Number(level.procLimits?.[key] || 0))])
+  )
+
+  for (const key of availableProcedureKeys) {
+    for (const pattern of patternCandidates[key]) {
+      const compressed = compressWithPatterns(rawSequence, [{ key, pattern }])
+      if ((compressed.callCounts[key] || 0) < 2) continue
+      best = chooseBetterProgram(best, finalizeProgram(level, compressed.main, { [key]: pattern }))
+    }
+  }
+
+  if (availableProcedureKeys.length >= 2) {
+    const [firstKey, secondKey] = availableProcedureKeys
+    for (const firstPattern of patternCandidates[firstKey]) {
+      for (const secondPattern of patternCandidates[secondKey]) {
+        const compressed = compressWithPatterns(rawSequence, [
+          { key: firstKey, pattern: firstPattern },
+          { key: secondKey, pattern: secondPattern }
+        ])
+        if ((compressed.callCounts[firstKey] || 0) < 2) continue
+        if ((compressed.callCounts[secondKey] || 0) < 2) continue
+        best = chooseBetterProgram(best, finalizeProgram(level, compressed.main, {
+          [firstKey]: firstPattern,
+          [secondKey]: secondPattern
+        }))
+      }
     }
   }
 
@@ -331,7 +378,8 @@ export function solveLevelProgram(level) {
     solvable: true,
     rawLength: raw.sequence.length,
     main: program.main,
-    p1: program.p1
+    p1: program.p1,
+    p2: program.p2
   }
 }
 
