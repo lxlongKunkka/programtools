@@ -54,6 +54,7 @@
               <div class="chapter-progress">
                 {{ completedCountForGroup(group) }}/{{ group.levels.length }} complete
               </div>
+              <p class="chapter-mastery-text">{{ chapterMasteryStatus(group) }}</p>
               <div v-if="group.mechanicTags?.length" class="chapter-mechanics">
                 <span v-for="tag in group.mechanicTags" :key="tag" class="chapter-mechanic-chip">{{ tag }}</span>
               </div>
@@ -119,6 +120,24 @@
               <span>Author</span>
               <strong>{{ getLevelAuthorName(currentLevel) }}</strong>
             </div>
+          </div>
+
+          <div class="brief-teaching-panel">
+            <article>
+              <span class="brief-panel-label">本关聚焦</span>
+              <h2>{{ briefTeachingFocus }}</h2>
+              <p>{{ briefTeachingSummary }}</p>
+            </article>
+            <article>
+              <span class="brief-panel-label">开局建议</span>
+              <h2>{{ briefFirstMoveTitle }}</h2>
+              <p>{{ briefFirstMoveCopy }}</p>
+            </article>
+            <article>
+              <span class="brief-panel-label">Demo 该看什么</span>
+              <h2>{{ briefDemoTitle }}</h2>
+              <p>{{ briefDemoCopy }}</p>
+            </article>
           </div>
 
           <div class="brief-tips">
@@ -376,6 +395,11 @@
                   <span>执行步数</span>
                   <strong>{{ lastCompletionMetrics.executionSteps }}</strong>
                 </div>
+              </div>
+              <div v-if="chapterMasteryUnlocked" class="finish-chapter-unlock">
+                <span class="finish-chapter-label">Chapter Mastery</span>
+                <strong>{{ chapterMasteryUnlocked.title }}</strong>
+                <p>{{ chapterMasteryUnlocked.message }}</p>
               </div>
               <div v-if="finishLeaderboard.length" class="finish-ranking">
                 <div class="finish-ranking-title">本关前 {{ finishLeaderboard.length }} 名</div>
@@ -1156,6 +1180,21 @@ function completedCountForGroup(group) {
   return group.levels.filter((level) => completedLevelIds.value.includes(level.id)).length
 }
 
+function findGroupForLevel(levelId) {
+  return levelGroups.value.find((group) => group.levels.some((level) => level.id === levelId)) || null
+}
+
+function chapterMasteryStatus(group) {
+  const completed = completedCountForGroup(group)
+  const remaining = Math.max(group.levels.length - completed, 0)
+  if (remaining === 0) {
+    return group.learningGoals?.length
+      ? `已掌握：${group.learningGoals.join(' / ')}`
+      : '本章已全部完成'
+  }
+  return remaining === 1 ? '再完成 1 关即可完成本章' : `再完成 ${remaining} 关即可完成本章`
+}
+
 const screen = ref('select')
 const selectedLevelIndex = ref(findRecommendedLevelIndex())
 const activeProcedureKey = ref('main')
@@ -1180,6 +1219,7 @@ const statusTone = ref('neutral')
 const showFinishPanel = ref(false)
 const showPlayLeaderboard = ref(true)
 const lastCompletionMetrics = ref(null)
+const chapterMasteryUnlocked = ref(null)
 const briefSceneHost = ref(null)
 const playSceneHost = ref(null)
 const editorSceneHost = ref(null)
@@ -1199,6 +1239,7 @@ let playSceneController = null
 let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
+const currentLevelGroup = computed(() => findGroupForLevel(currentLevel.value.id))
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
 const currentUserId = computed(() => {
   const raw = currentUser.value?.id ?? currentUser.value?._id
@@ -1213,6 +1254,66 @@ const hasCurrentDemo = computed(() => {
 const availableProcedureKeys = computed(() => PROCEDURE_KEYS.filter((key) => Number(currentLevel.value.procLimits?.[key] || 0) > 0))
 const directionLabel = computed(() => DIRECTION_LABELS[bot.value.dir])
 const robotDirClass = computed(() => `dir-${bot.value.dir}`)
+const currentTargetCount = computed(() => targetKeys.value.length)
+const currentDemoFeatureText = computed(() => {
+  const demo = currentLevel.value.demo || { main: [], p1: [], p2: [] }
+  const features = []
+  if ([demo.main, demo.p1, demo.p2].some((list) => list?.some((entry) => isRepeatOperation(entry)))) {
+    features.push('重复压缩')
+  }
+  if (demo.p1?.length) {
+    features.push('P1 模板')
+  }
+  if (demo.p2?.length) {
+    features.push('P2 分工')
+  }
+  return features.length ? features.join(' + ') : '基础动作顺序'
+})
+const briefTeachingFocus = computed(() => {
+  if (!currentLevelGroup.value) return currentLevel.value.skill
+  return `${currentLevelGroup.value.title} · ${currentLevel.value.skill}`
+})
+const briefTeachingSummary = computed(() => {
+  const goals = currentLevelGroup.value?.learningGoals?.slice(0, 2).join('、')
+  const procedureCount = availableProcedureKeys.value.length
+  const summaryParts = [`这关需要点亮 ${currentTargetCount.value || 0} 个目标格。`]
+  if (goals) {
+    summaryParts.push(`它属于本章的 ${goals} 练习段。`)
+  }
+  if (procedureCount > 0) {
+    summaryParts.push(`你已经可以使用 ${procedureCount} 个子程序槽位来整理重复片段。`)
+  } else {
+    summaryParts.push('先用 MAIN 把路线和转向顺序想清楚。')
+  }
+  return summaryParts.join(' ')
+})
+const briefFirstMoveTitle = computed(() => {
+  if (availableProcedureKeys.value.length >= 2) return '先切块，再决定谁放进 P1 / P2'
+  if (availableProcedureKeys.value.length === 1) return '先找会重复出现的动作模板'
+  return '先在脑中跑一遍路线'
+})
+const briefFirstMoveCopy = computed(() => {
+  if (availableProcedureKeys.value.length >= 2) {
+    return '先把整条路线按“直走段、转角段、跳跃段”分成几块，再判断哪一块最值得交给 P1 或 P2。这样更容易同时压缩总代码和执行结构。'
+  }
+  if (availableProcedureKeys.value.length === 1) {
+    return '先不要急着往 MAIN 里填满。观察是否有两次以上出现的同一段拐弯或跳跃模板，把它抽成 P1，MAIN 只负责调用顺序。'
+  }
+  return '从起点朝向出发，先确定第一段需要前进、转向还是跳跃。前 3 到 5 步想清楚以后，后面的路径通常会自然展开。'
+})
+const briefDemoTitle = computed(() => (hasCurrentDemo.value ? currentDemoFeatureText.value : '先自己试，再决定是否看演示'))
+const briefDemoCopy = computed(() => {
+  if (!hasCurrentDemo.value) {
+    return '这关暂时没有内置 demo。建议先自己尝试一版，再回来看提示卡片里的解题重点。'
+  }
+  if (availableProcedureKeys.value.length >= 2) {
+    return '观察 demo 里 MAIN 负责串联、P1 / P2 负责复用的边界。真正要学的不是照抄顺序，而是为什么这两段值得单独拆出去。'
+  }
+  if (availableProcedureKeys.value.length === 1) {
+    return '看 demo 时重点找“哪一段被重复调用”。如果一眼看不出复用价值，说明你还没有真正抓住本关的压缩点。'
+  }
+  return '看 demo 时先记住机器人前几步的朝向变化，再对照版面理解为什么要先转、再走、最后点灯。'
+})
 const currentProgramMetrics = computed(() => {
   const mainLength = mainProcedure.value.length
   const metrics = {
@@ -1729,6 +1830,7 @@ function resetLevel(clearPrograms = false) {
   runningOperationIndex.value = -1
   showFinishPanel.value = false
   lastCompletionMetrics.value = null
+  chapterMasteryUnlocked.value = null
   litKeys.value = []
   bot.value = cloneBot(currentLevel.value.start)
   if (clearPrograms) {
@@ -1890,9 +1992,21 @@ function markFinished() {
   if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) {
     return false
   }
+  let masteryUnlocked = null
   if (!isCustomPlaytest.value && !completedLevelIds.value.includes(currentLevel.value.id)) {
-    completedLevelIds.value = [...completedLevelIds.value, currentLevel.value.id]
+    const nextCompletedIds = [...completedLevelIds.value, currentLevel.value.id]
+    completedLevelIds.value = nextCompletedIds
+    const group = findGroupForLevel(currentLevel.value.id)
+    if (group && group.levels.every((level) => nextCompletedIds.includes(level.id))) {
+      masteryUnlocked = {
+        title: `${group.title} 已完成`,
+        message: group.learningGoals?.length
+          ? `你已经完成本章全部关卡，并掌握了 ${group.learningGoals.join('、')}。`
+          : '你已经完成本章全部关卡，可以继续挑战下一章。'
+      }
+    }
   }
+  chapterMasteryUnlocked.value = masteryUnlocked
   lastCompletionMetrics.value = { ...currentProgramMetrics.value }
   showFinishPanel.value = true
   setStatus('Level complete', 'success')
@@ -2873,6 +2987,15 @@ resetLevel(true)
   font-weight: 700;
 }
 
+.chapter-mastery-text {
+  margin: 0;
+  max-width: 260px;
+  text-align: right;
+  color: #617385;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .chapter-goals,
 .chapter-mechanics {
   display: flex;
@@ -3024,6 +3147,45 @@ resetLevel(true)
   color: #6b7c88;
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.brief-teaching-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+.brief-teaching-panel article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff6df, #fffdf5);
+  border: 1px solid rgba(210, 184, 120, 0.26);
+}
+
+.brief-panel-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(214, 164, 75, 0.12);
+  color: #8b6220;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.brief-teaching-panel h2 {
+  margin: 12px 0 8px;
+  font-size: 20px;
+}
+
+.brief-teaching-panel p {
+  margin: 0;
+  color: #5e6e79;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .brief-tips {
@@ -3952,6 +4114,37 @@ resetLevel(true)
   font-size: 18px;
 }
 
+.finish-chapter-unlock {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #e9f7eb, #f8fcf7);
+  text-align: left;
+}
+
+.finish-chapter-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #4c7a5a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.finish-chapter-unlock strong {
+  display: block;
+  color: #264535;
+  font-size: 20px;
+}
+
+.finish-chapter-unlock p {
+  margin: 8px 0 0;
+  color: #516662;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .finish-ranking {
   margin-top: 14px;
   text-align: left;
@@ -4319,6 +4512,15 @@ resetLevel(true)
     padding: 12px;
   }
 
+  .chapter-group-side {
+    align-items: flex-start;
+  }
+
+  .chapter-mastery-text {
+    max-width: none;
+    text-align: left;
+  }
+
   .editor-form-grid label.full-span {
     grid-column: auto;
   }
@@ -4355,6 +4557,10 @@ resetLevel(true)
   }
 
   .finish-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .brief-teaching-panel {
     grid-template-columns: 1fr;
   }
 
