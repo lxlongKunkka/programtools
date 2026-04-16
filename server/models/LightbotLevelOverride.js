@@ -13,8 +13,8 @@ const lightbotStartSchema = new mongoose.Schema({
 }, { _id: false })
 
 const lightbotDemoSchema = new mongoose.Schema({
-  main: { type: [String], default: [] },
-  p1: { type: [String], default: [] }
+  main: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  p1: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, { _id: false })
 
 const lightbotLevelOverrideSchema = new mongoose.Schema({

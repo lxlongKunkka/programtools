@@ -20,6 +20,101 @@ const DIRECTION_VECTORS = {
 }
 
 const ACTIONS = ['light', 'walk', 'jump', 'left', 'right']
+const REPEATABLE_ACTIONS = new Set(['light', 'walk', 'jump', 'left', 'right', 'p1'])
+const MAX_REPEAT_COUNT = 4
+
+function isRepeatOperation(operation) {
+  return Boolean(
+    operation
+    && typeof operation === 'object'
+    && operation.type === 'repeat'
+    && typeof operation.body === 'string'
+    && REPEATABLE_ACTIONS.has(operation.body)
+    && Number.isInteger(operation.count)
+    && operation.count > 1
+  )
+}
+
+function createRepeatOperation(body, count) {
+  return {
+    type: 'repeat',
+    body,
+    count
+  }
+}
+
+function compressOperationRuns(sequence) {
+  const compressed = []
+
+  let index = 0
+  while (index < sequence.length) {
+    const operation = sequence[index]
+    if (!REPEATABLE_ACTIONS.has(operation)) {
+      compressed.push(operation)
+      index += 1
+      continue
+    }
+
+    let runLength = 1
+    while (index + runLength < sequence.length && sequence[index + runLength] === operation) {
+      runLength += 1
+    }
+    let remaining = runLength
+
+    while (remaining >= 2) {
+      const chunkSize = Math.min(MAX_REPEAT_COUNT, remaining)
+      compressed.push(createRepeatOperation(operation, chunkSize))
+      remaining -= chunkSize
+    }
+
+    if (remaining === 1) {
+      compressed.push(operation)
+    }
+
+    index += runLength
+  }
+
+  return compressed
+}
+
+function programScore(program) {
+  return program.main.length + program.p1.length
+}
+
+function chooseBetterProgram(currentBest, candidate) {
+  if (!candidate) return currentBest
+  if (!currentBest) return candidate
+
+  const currentScore = programScore(currentBest)
+  const candidateScore = programScore(candidate)
+  if (candidateScore !== currentScore) {
+    return candidateScore < currentScore ? candidate : currentBest
+  }
+
+  if (candidate.main.length !== currentBest.main.length) {
+    return candidate.main.length < currentBest.main.length ? candidate : currentBest
+  }
+
+  return candidate.p1.length < currentBest.p1.length ? candidate : currentBest
+}
+
+function finalizeProgram(level, mainSequence, p1Sequence = []) {
+  const finalized = {
+    main: compressOperationRuns(mainSequence),
+    p1: compressOperationRuns(p1Sequence)
+  }
+
+  if (finalized.main.length > level.mainLimit) {
+    return null
+  }
+
+  const p1Limit = level.procLimits?.p1 || 0
+  if (finalized.p1.length > p1Limit) {
+    return null
+  }
+
+  return finalized
+}
 
 function keyOf(x, y) {
   return `${x},${y}`
@@ -195,34 +290,19 @@ function compressWithPattern(sequence, pattern) {
 }
 
 export function buildProgram(level, rawSequence) {
-  if (rawSequence.length <= level.mainLimit) {
-    return { main: rawSequence, p1: [] }
-  }
-
+  let best = chooseBetterProgram(null, finalizeProgram(level, rawSequence))
   const procLimit = level.procLimits?.p1 || 0
   if (!procLimit) {
-    return null
+    return best
   }
 
-  let best = null
-
+  const maxPatternSize = Math.min(rawSequence.length, procLimit * MAX_REPEAT_COUNT)
   for (let start = 0; start < rawSequence.length; start += 1) {
-    for (let size = 1; size <= procLimit && start + size <= rawSequence.length; size += 1) {
+    for (let size = 1; size <= maxPatternSize && start + size <= rawSequence.length; size += 1) {
       const pattern = rawSequence.slice(start, start + size)
       const compressed = compressWithPattern(rawSequence, pattern)
       if (compressed.p1Calls < 2) continue
-      if (compressed.main.length > level.mainLimit) continue
-
-      if (!best) {
-        best = compressed
-        continue
-      }
-
-      const score = compressed.main.length + compressed.p1.length
-      const bestScore = best.main.length + best.p1.length
-      if (score < bestScore) {
-        best = compressed
-      }
+      best = chooseBetterProgram(best, finalizeProgram(level, compressed.main, compressed.p1))
     }
   }
 
@@ -256,5 +336,10 @@ export function solveLevelProgram(level) {
 }
 
 export function formatOps(sequence = []) {
-  return sequence.join(' ')
+  return sequence.map((operation) => {
+    if (isRepeatOperation(operation)) {
+      return `[x${operation.count} ${operation.body}]`
+    }
+    return operation
+  }).join(' ')
 }

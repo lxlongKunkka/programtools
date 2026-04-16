@@ -322,10 +322,14 @@
               v-for="operation in operationPalette"
               :key="operation.id"
               class="command-btn"
+              :class="{ active: isRepeatPaletteOperation(operation) && pendingRepeatCount === operation.count }"
               :disabled="isRunning || (operation.id === 'p1' && !availableProcedureKeys.includes('p1'))"
-              @click="appendOperation(operation.id)"
+              @click="appendPaletteOperation(operation)"
             >
-              <img :src="operationSprite(operation.id)" :alt="operation.label">
+              <template v-if="isRepeatPaletteOperation(operation)">
+                <span class="repeat-palette-label">x{{ operation.count }}</span>
+              </template>
+              <img v-else :src="operationSprite(operation.id)" :alt="operation.label">
             </button>
 
             <div class="speed-box">
@@ -393,7 +397,13 @@
                 :class="{ active: runningProcedureKey === 'main' && runningOperationIndex === index }"
                 @click="removeOperation('main', index)"
               >
-                <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
+                <template v-if="isRepeatOperation(operation)">
+                  <div class="repeat-slot">
+                    <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge">x{{ operation.count }}</span>
+                  </div>
+                </template>
+                <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
                 v-for="slot in emptySlots(currentLevel.mainLimit, mainProcedure.length)"
@@ -424,7 +434,13 @@
                 :disabled="!availableProcedureKeys.includes('p1')"
                 @click="removeOperation('p1', index)"
               >
-                <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
+                <template v-if="isRepeatOperation(operation)">
+                  <div class="repeat-slot">
+                    <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge">x{{ operation.count }}</span>
+                  </div>
+                </template>
+                <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
                 v-for="slot in emptySlots(currentLevel.procLimits.p1 || 0, procedures.p1.length)"
@@ -523,8 +539,67 @@ const operationPalette = [
   { id: 'left', label: 'Turn left' },
   { id: 'right', label: 'Turn right' },
   { id: 'jump', label: 'Jump' },
-  { id: 'p1', label: 'Call P1' }
+  { id: 'p1', label: 'Call P1' },
+  { id: 'repeat-2', label: 'Repeat x2', kind: 'repeat', count: 2 },
+  { id: 'repeat-3', label: 'Repeat x3', kind: 'repeat', count: 3 },
+  { id: 'repeat-4', label: 'Repeat x4', kind: 'repeat', count: 4 }
 ]
+
+const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1'])
+
+function isRepeatOperation(operation) {
+  return Boolean(
+    operation
+    && typeof operation === 'object'
+    && operation.type === 'repeat'
+    && typeof operation.body === 'string'
+    && VALID_OPERATION_IDS.has(operation.body)
+    && Number.isInteger(operation.count)
+    && operation.count > 1
+  )
+}
+
+function isRepeatPaletteOperation(operation) {
+  return Boolean(operation?.kind === 'repeat' && Number.isInteger(operation?.count))
+}
+
+function createRepeatOperation(body, count = 2) {
+  return {
+    type: 'repeat',
+    body,
+    count: Math.max(2, Math.min(9, Number(count) || 2))
+  }
+}
+
+function normalizeOperationEntry(operation) {
+  if (typeof operation === 'string') {
+    const normalized = operation.trim()
+    return VALID_OPERATION_IDS.has(normalized) ? normalized : null
+  }
+
+  if (isRepeatOperation(operation)) {
+    return createRepeatOperation(operation.body, operation.count)
+  }
+
+  if (operation && typeof operation === 'object' && operation.type === 'repeat') {
+    const body = typeof operation.body === 'string' ? operation.body.trim() : ''
+    if (!VALID_OPERATION_IDS.has(body)) return null
+    return createRepeatOperation(body, operation.count)
+  }
+
+  return null
+}
+
+function cloneOperation(operation) {
+  const normalized = normalizeOperationEntry(operation)
+  if (!normalized) return null
+  return isRepeatOperation(normalized) ? { ...normalized } : normalized
+}
+
+function cloneOperationList(list = []) {
+  if (!Array.isArray(list)) return []
+  return list.map((operation) => cloneOperation(operation)).filter(Boolean)
+}
 
 function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
@@ -581,8 +656,8 @@ function cloneLevelDefinition(level) {
     board: cloneBoard(level.board),
     start: { ...level.start },
     demo: {
-      main: [...(level.demo?.main || [])],
-      p1: [...(level.demo?.p1 || [])]
+      main: cloneOperationList(level.demo?.main || []),
+      p1: cloneOperationList(level.demo?.p1 || [])
     }
   }
 }
@@ -736,8 +811,8 @@ function serializeEditorDraft(draft) {
     chapterTitle: draft.chapterTitle || null,
     chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : null,
     demo: {
-      main: [...(draft.demo?.main || [])],
-      p1: [...(draft.demo?.p1 || [])]
+      main: cloneOperationList(draft.demo?.main || []),
+      p1: cloneOperationList(draft.demo?.p1 || [])
     },
     title: draft.title,
     skill: draft.skill,
@@ -768,8 +843,8 @@ function loadSavedEditorDraft() {
       chapterTitle: typeof parsed.chapterTitle === 'string' ? parsed.chapterTitle : null,
       chapterOrder: Number.isFinite(parsed.chapterOrder) ? parsed.chapterOrder : null,
       demo: {
-        main: [...(parsed.demo?.main || [])],
-        p1: [...(parsed.demo?.p1 || [])]
+        main: cloneOperationList(parsed.demo?.main || []),
+        p1: cloneOperationList(parsed.demo?.p1 || [])
       },
       title: typeof parsed.title === 'string' ? parsed.title : 'My Level',
       skill: typeof parsed.skill === 'string' ? parsed.skill : 'Custom',
@@ -797,8 +872,8 @@ function createEditorDraftFromLevel(level) {
     chapterTitle: level.chapterTitle || null,
     chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : null,
     demo: {
-      main: [...(level.demo?.main || [])],
-      p1: [...(level.demo?.p1 || [])]
+      main: cloneOperationList(level.demo?.main || []),
+      p1: cloneOperationList(level.demo?.p1 || [])
     },
     title: level.title,
     skill: level.skill,
@@ -841,8 +916,8 @@ function buildCustomLevel(draft) {
     board: cloneBoard(draft.board),
     start: { ...draft.start },
     demo: {
-      main: [...(draft.demo?.main || [])],
-      p1: [...(draft.demo?.p1 || [])]
+      main: cloneOperationList(draft.demo?.main || []),
+      p1: cloneOperationList(draft.demo?.p1 || [])
     }
   }
 }
@@ -1031,6 +1106,7 @@ const runNonce = ref(0)
 const runExecutionSteps = ref(0)
 const activeRunToken = ref(null)
 const reportedCompletionToken = ref(null)
+const pendingRepeatCount = ref(null)
 const speedValue = ref(3)
 const statusText = ref('Ready')
 const statusTone = ref('neutral')
@@ -1449,8 +1525,8 @@ function verifyEditorLevelForPublish() {
     solvable: true,
     signature: editorSignature.value,
     program: {
-      main: [...solveResult.main],
-      p1: [...solveResult.p1]
+      main: cloneOperationList(solveResult.main),
+      p1: cloneOperationList(solveResult.p1)
     },
     message: `已验证通过：最短 ${solveResult.rawLength} 步，MAIN ${solveResult.main.length}/${level.mainLimit}${level.procLimits.p1 ? `，P1 ${solveResult.p1.length}/${level.procLimits.p1}` : ''}`
   }
@@ -1472,8 +1548,8 @@ async function saveEditorLevelToGame() {
   const savedLevel = cloneLevelDefinition({
     ...editorLevelPreview.value,
     demo: {
-      main: [...program.main],
-      p1: [...program.p1]
+      main: cloneOperationList(program.main),
+      p1: cloneOperationList(program.p1)
     }
   })
 
@@ -1494,8 +1570,8 @@ async function saveEditorLevelToGame() {
       Object.assign(editorDraft, createEditorDraftFromLevel(sharedLevel))
     }
     editorDraft.demo = {
-      main: [...sharedLevel.demo.main],
-      p1: [...sharedLevel.demo.p1]
+      main: cloneOperationList(sharedLevel.demo.main),
+      p1: cloneOperationList(sharedLevel.demo.p1)
     }
     editorBaseDraft.value = serializeEditorDraft(editorDraft)
 
@@ -1519,6 +1595,10 @@ function startCustomPlaytest() {
 }
 
 function operationLabel(operationId) {
+  if (isRepeatOperation(operationId)) {
+    return `Repeat x${operationId.count} ${operationLabel(operationId.body)}`
+  }
+
   return {
     walk: 'Walk',
     light: 'Light',
@@ -1530,6 +1610,10 @@ function operationLabel(operationId) {
 }
 
 function operationSprite(operationId) {
+  if (isRepeatOperation(operationId)) {
+    return operationSprite(operationId.body)
+  }
+
   return {
     walk: '/lightbot/operation-move.png',
     light: '/lightbot/operation-lamp.png',
@@ -1549,6 +1633,7 @@ function resetLevel(clearPrograms = false) {
   isRunning.value = false
   activeRunToken.value = null
   reportedCompletionToken.value = null
+  pendingRepeatCount.value = null
   runExecutionSteps.value = 0
   runningProcedureKey.value = ''
   runningOperationIndex.value = -1
@@ -1594,8 +1679,9 @@ function loadDemoProgram() {
     setStatus('No demo for this level', 'danger')
     return
   }
-  mainProcedure.value = [...currentLevel.value.demo.main]
-  procedures.value = { p1: [...(currentLevel.value.demo.p1 || [])] }
+  pendingRepeatCount.value = null
+  mainProcedure.value = cloneOperationList(currentLevel.value.demo.main)
+  procedures.value = { p1: cloneOperationList(currentLevel.value.demo.p1 || []) }
   setStatus('Demo loaded')
 }
 
@@ -1604,8 +1690,24 @@ function loadDemoAndStart() {
   startLevel()
 }
 
+function appendPaletteOperation(operation) {
+  if (isRepeatPaletteOperation(operation)) {
+    pendingRepeatCount.value = pendingRepeatCount.value === operation.count ? null : operation.count
+    setStatus(pendingRepeatCount.value ? `Repeat x${operation.count}: choose next instruction` : 'Repeat cancelled')
+    return
+  }
+
+  appendOperation(operation.id)
+}
+
 function appendOperation(operationId) {
   if (activeProcedureKey.value === 'p1' && !availableProcedureKeys.value.includes('p1')) {
+    return
+  }
+
+  const normalizedOperationId = normalizeOperationEntry(operationId)
+  if (!normalizedOperationId || typeof normalizedOperationId !== 'string') {
+    pendingRepeatCount.value = null
     return
   }
 
@@ -1617,13 +1719,18 @@ function appendOperation(operationId) {
     return
   }
 
+  const operationToStore = pendingRepeatCount.value
+    ? createRepeatOperation(normalizedOperationId, pendingRepeatCount.value)
+    : normalizedOperationId
+  pendingRepeatCount.value = null
+
   if (isMain) {
-    mainProcedure.value = [...mainProcedure.value, operationId]
+    mainProcedure.value = [...mainProcedure.value, cloneOperation(operationToStore)]
   } else {
-    procedures.value = { ...procedures.value, p1: [...procedures.value.p1, operationId] }
+    procedures.value = { ...procedures.value, p1: [...procedures.value.p1, cloneOperation(operationToStore)] }
   }
 
-  setStatus(`${operationLabel(operationId)} added`)
+  setStatus(`${operationLabel(operationToStore)} added`)
 }
 
 function removeOperation(procKey, index) {
@@ -1710,19 +1817,35 @@ function waitStep() {
 async function executeOperation(operationId, nonce, depth) {
   if (nonce !== runNonce.value) return
 
-  if (operationId === 'right') {
+  const normalizedOperation = normalizeOperationEntry(operationId)
+  if (!normalizedOperation) {
+    await waitStep()
+    return
+  }
+
+  if (isRepeatOperation(normalizedOperation)) {
+    for (let iteration = 0; iteration < normalizedOperation.count; iteration += 1) {
+      if (nonce !== runNonce.value) return
+      runExecutionSteps.value += 1
+      await executeOperation(normalizedOperation.body, nonce, depth + 1)
+      if (markFinished()) return
+    }
+    return
+  }
+
+  if (normalizedOperation === 'right') {
     rotateRight()
     await waitStep()
     return
   }
 
-  if (operationId === 'left') {
+  if (normalizedOperation === 'left') {
     rotateLeft()
     await waitStep()
     return
   }
 
-  if (operationId === 'light') {
+  if (normalizedOperation === 'light') {
     if (!toggleCurrentTarget()) {
       setStatus('Light ignored: no target here', 'danger')
     }
@@ -1731,7 +1854,7 @@ async function executeOperation(operationId, nonce, depth) {
     return
   }
 
-  if (operationId === 'p1') {
+  if (normalizedOperation === 'p1') {
     await runProcedure('p1', procedures.value.p1, nonce, depth + 1)
     return
   }
@@ -1741,12 +1864,12 @@ async function executeOperation(operationId, nonce, depth) {
   const nextPlatform = platformAt(next.x, next.y)
 
   if (!currentPlatform || !nextPlatform) {
-    setStatus(`${operationLabel(operationId)} ignored`, 'danger')
+    setStatus(`${operationLabel(normalizedOperation)} ignored`, 'danger')
     await waitStep()
     return
   }
 
-  if (operationId === 'walk') {
+  if (normalizedOperation === 'walk') {
     if (currentPlatform.h === nextPlatform.h) {
       bot.value = { ...bot.value, x: next.x, y: next.y }
     } else {
@@ -1756,7 +1879,7 @@ async function executeOperation(operationId, nonce, depth) {
     return
   }
 
-  if (operationId === 'jump') {
+  if (normalizedOperation === 'jump') {
     const heightDiff = nextPlatform.h - currentPlatform.h
     if (heightDiff === 1 || heightDiff < 0) {
       bot.value = { ...bot.value, x: next.x, y: next.y }
@@ -3474,6 +3597,24 @@ resetLevel(true)
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
+.command-btn.active {
+  box-shadow: inset 0 0 0 3px #3f9b57, 0 12px 18px rgba(79, 94, 111, 0.2);
+}
+
+.repeat-palette-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #344454;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .command-btn:hover:not(:disabled),
 .program-slot.filled:hover:not(:disabled) {
   transform: translateY(-2px);
@@ -3583,6 +3724,29 @@ resetLevel(true)
 
 .program-slot.filled.active {
   outline: 3px solid #4ec96b;
+}
+
+.repeat-slot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.repeat-slot-badge {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #2f4355;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  z-index: 1;
 }
 
 .program-tools {

@@ -9,6 +9,7 @@ const router = express.Router()
 const CUSTOM_CHAPTER_ID = 'custom-shared'
 const CUSTOM_CHAPTER_TITLE = '自定义关卡'
 const CUSTOM_CHAPTER_ORDER = 999
+const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1'])
 
 function isAdminUser(user) {
   return Boolean(user && (user.role === 'admin' || user.priv === -1))
@@ -31,9 +32,36 @@ function normalizeTip(tip) {
   }
 }
 
+function normalizeOperationItem(item) {
+  if (typeof item === 'string') {
+    const normalized = item.trim()
+    return VALID_OPERATION_IDS.has(normalized) ? normalized : null
+  }
+
+  if (!item || typeof item !== 'object' || item.type !== 'repeat') {
+    return null
+  }
+
+  const body = typeof item.body === 'string' ? item.body.trim() : ''
+  if (!VALID_OPERATION_IDS.has(body)) {
+    return null
+  }
+
+  return {
+    type: 'repeat',
+    count: Math.max(2, Math.min(9, Math.floor(Number(item.count) || 2))),
+    body
+  }
+}
+
+function cloneOperationItem(item) {
+  if (!item) return null
+  return typeof item === 'string' ? item : { type: item.type, count: item.count, body: item.body }
+}
+
 function normalizeOperationList(list) {
   if (!Array.isArray(list)) return []
-  return list.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 40)
+  return list.map(normalizeOperationItem).filter(Boolean).slice(0, 40)
 }
 
 function normalizeBoard(board) {
@@ -147,8 +175,8 @@ function toClientLevel(doc) {
     board: (doc.board || []).map((row) => row.map((cell) => (cell ? { h: cell.h, target: Boolean(cell.target) } : null))),
     start: { ...doc.start },
     demo: {
-      main: [...(doc.demo?.main || [])],
-      p1: [...(doc.demo?.p1 || [])]
+      main: (doc.demo?.main || []).map(cloneOperationItem).filter(Boolean),
+      p1: (doc.demo?.p1 || []).map(cloneOperationItem).filter(Boolean)
     },
     isDeleted: Boolean(doc.isDeleted),
     createdBy: doc.createdBy,
