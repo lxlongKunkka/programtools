@@ -387,6 +387,12 @@
               <template v-else-if="isConditionalPaletteOperation(operation)">
                 <span class="condition-palette-label">IF</span>
               </template>
+              <template v-else-if="PROCEDURE_META[operation.id]">
+                <div class="proc-slot">
+                  <img :src="operationSprite(operation.id)" :alt="operation.label">
+                  <span class="repeat-slot-badge proc-slot-badge" :class="`proc-slot-badge-${operation.id}`">{{ PROCEDURE_META[operation.id].label }}</span>
+                </div>
+              </template>
               <img v-else :src="operationSprite(operation.id)" :alt="operation.label">
             </button>
 
@@ -472,6 +478,12 @@
                     <span class="repeat-slot-badge condition-slot-badge">IF</span>
                   </div>
                 </template>
+                <template v-else-if="PROCEDURE_META[operation]">
+                  <div class="proc-slot">
+                    <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge proc-slot-badge" :class="`proc-slot-badge-${operation}`">{{ PROCEDURE_META[operation].label }}</span>
+                  </div>
+                </template>
                 <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
               </button>
               <div
@@ -518,6 +530,12 @@
                   <div class="repeat-slot condition-slot">
                     <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
                     <span class="repeat-slot-badge condition-slot-badge">IF</span>
+                  </div>
+                </template>
+                <template v-else-if="PROCEDURE_META[operation]">
+                  <div class="proc-slot">
+                    <img :src="operationSprite(operation)" :alt="operationLabel(operation)">
+                    <span class="repeat-slot-badge proc-slot-badge" :class="`proc-slot-badge-${operation}`">{{ PROCEDURE_META[operation].label }}</span>
                   </div>
                 </template>
                 <img v-else :src="operationSprite(operation)" :alt="operationLabel(operation)">
@@ -4257,6 +4275,12 @@ resetLevel(true)
   height: 100%;
 }
 
+.proc-slot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .repeat-slot-badge {
   position: absolute;
   right: 6px;
@@ -4276,6 +4300,21 @@ resetLevel(true)
 
 .condition-slot-badge {
   background: #6a5317;
+}
+
+.proc-slot-badge {
+  min-width: 28px;
+  background: #39566f;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.proc-slot-badge-p1 {
+  background: #2d6f8e;
+}
+
+.proc-slot-badge-p2 {
+  background: #7a4c2a;
 }
 
 .program-tools {
