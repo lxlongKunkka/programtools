@@ -236,10 +236,16 @@
               </label>
               <div class="editor-form-toggle full-span">
                 <span>Special Blocks</span>
-                <label class="toggle-check">
-                  <input v-model="editorDraft.enableIfDark" type="checkbox">
-                  <span>启用 If Dark 条件块</span>
-                </label>
+                <div class="toggle-check-grid">
+                  <label class="toggle-check">
+                    <input v-model="editorDraft.enableIfDark" type="checkbox">
+                    <span>启用 If Dark 条件块</span>
+                  </label>
+                  <label class="toggle-check">
+                    <input v-model="editorDraft.enableIfForwardClear" type="checkbox">
+                    <span>启用 If Clear 条件块</span>
+                  </label>
+                </div>
               </div>
               <label>
                 <span>Facing</span>
@@ -600,7 +606,8 @@ const PROCEDURE_META = {
   p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
 }
 const CONDITION_TEST_META = {
-  'dark-target': { label: 'If Dark', shortLabel: 'IF', description: '仅当脚下是未点亮目标格时执行下一条' }
+  'dark-target': { label: 'If Dark', shortLabel: 'IF', description: '仅当脚下是未点亮目标格时执行下一条' },
+  'forward-clear': { label: 'If Clear', shortLabel: 'IF', description: '仅当前方存在可合法前进的平台时执行下一条' }
 }
 const BLOCK_SIZE = 1
 const BLOCK_HEIGHT = 0.5
@@ -734,7 +741,7 @@ function normalizeOperationEntry(operation) {
 function cloneOperation(operation) {
   const normalized = normalizeOperationEntry(operation)
   if (!normalized) return null
-  return isRepeatOperation(normalized) ? { ...normalized } : normalized
+  return isRepeatOperation(normalized) || isConditionalOperation(normalized) ? { ...normalized } : normalized
 }
 
 function cloneOperationList(list = []) {
@@ -942,6 +949,7 @@ function createDefaultEditorDraft() {
     p1Limit: 0,
     p2Limit: 0,
     enableIfDark: false,
+    enableIfForwardClear: false,
     demo: { main: [], p1: [], p2: [] },
     start: { x: 0, y: 0, dir: 'forward' },
     board
@@ -969,6 +977,7 @@ function serializeEditorDraft(draft) {
     p1Limit: Number(draft.p1Limit) || 0,
     p2Limit: Number(draft.p2Limit) || 0,
     enableIfDark: Boolean(draft.enableIfDark),
+    enableIfForwardClear: Boolean(draft.enableIfForwardClear),
     start: { ...draft.start },
     board: cloneBoard(draft.board)
   }
@@ -1004,6 +1013,7 @@ function loadSavedEditorDraft() {
       p1Limit: Number(parsed.p1Limit) || 0,
       p2Limit: Number(parsed.p2Limit) || 0,
       enableIfDark: Boolean(parsed.enableIfDark || parsed.commandOptions?.ifDark),
+      enableIfForwardClear: Boolean(parsed.enableIfForwardClear || parsed.commandOptions?.ifForwardClear),
       start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
       board: normalized.board
     }
@@ -1036,6 +1046,7 @@ function createEditorDraftFromLevel(level) {
     p1Limit: Number(level.procLimits?.p1) || 0,
     p2Limit: Number(level.procLimits?.p2) || 0,
     enableIfDark: Boolean(level.commandOptions?.ifDark),
+    enableIfForwardClear: Boolean(level.commandOptions?.ifForwardClear),
     start,
     board: normalized.board
   }
@@ -1068,7 +1079,8 @@ function buildCustomLevel(draft) {
       ...(Number(draft.p2Limit) > 0 ? { p2: Number(draft.p2Limit) } : {})
     },
     commandOptions: {
-      ...(draft.enableIfDark ? { ifDark: true } : {})
+      ...(draft.enableIfDark ? { ifDark: true } : {}),
+      ...(draft.enableIfForwardClear ? { ifForwardClear: true } : {})
     },
     tips: [
       { title: 'Editor', copy: '这是当前编辑器生成的预览关卡。' },
@@ -1312,10 +1324,15 @@ let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
 const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.commandOptions?.ifDark))
+const currentLevelSupportsIfForwardClear = computed(() => Boolean(currentLevel.value.commandOptions?.ifForwardClear))
+const currentLevelHasConditions = computed(() => currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
 const operationPalette = computed(() => {
   const palette = [...BASE_OPERATION_PALETTE]
   if (currentLevelSupportsIfDark.value) {
     palette.splice(7, 0, { id: 'if-dark', label: 'If Dark', kind: 'condition', test: 'dark-target' })
+  }
+  if (currentLevelSupportsIfForwardClear.value) {
+    palette.splice(7 + (currentLevelSupportsIfDark.value ? 1 : 0), 0, { id: 'if-clear', label: 'If Clear', kind: 'condition', test: 'forward-clear' })
   }
   return palette
 })
@@ -1342,7 +1359,7 @@ const currentDemoFeatureText = computed(() => {
     features.push('重复压缩')
   }
   if ([demo.main, demo.p1, demo.p2].some((list) => list?.some((entry) => isConditionalOperation(entry)))) {
-    features.push('条件点灯')
+    features.push('条件判断')
   }
   if (demo.p1?.length) {
     features.push('P1 模板')
@@ -1363,8 +1380,12 @@ const briefTeachingSummary = computed(() => {
   if (goals) {
     summaryParts.push(`它属于本章的 ${goals} 练习段。`)
   }
-  if (currentLevelSupportsIfDark.value) {
-    summaryParts.push('这关开放了 If Dark 条件块，适合把同一段点灯动作安全地重复使用。')
+  if (currentLevelHasConditions.value) {
+    const labels = [
+      ...(currentLevelSupportsIfDark.value ? ['If Dark'] : []),
+      ...(currentLevelSupportsIfForwardClear.value ? ['If Clear'] : [])
+    ]
+    summaryParts.push(`这关开放了 ${labels.join(' / ')} 条件块，适合让同一路线模板按现场状态决定是否执行关键动作。`)
   }
   if (procedureCount > 0) {
     summaryParts.push(`你已经可以使用 ${procedureCount} 个子程序槽位来整理重复片段。`)
@@ -1374,14 +1395,22 @@ const briefTeachingSummary = computed(() => {
   return summaryParts.join(' ')
 })
 const briefFirstMoveTitle = computed(() => {
+  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) return '先标出会二次经过的灯和会被挡住的前方'
   if (currentLevelSupportsIfDark.value) return '先标出会被二次经过的灯'
+  if (currentLevelSupportsIfForwardClear.value) return '先找哪些地方前方有路、哪些地方前方会断'
   if (availableProcedureKeys.value.length >= 2) return '先切块，再决定谁放进 P1 / P2'
   if (availableProcedureKeys.value.length === 1) return '先找会重复出现的动作模板'
   return '先在脑中跑一遍路线'
 })
 const briefFirstMoveCopy = computed(() => {
+  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
+    return '先把地图上“会被重复踩到的灯”和“前方有时能走、有时会断掉的边界”都圈出来。前者适合用 If Dark Light，后者适合用 If Clear 包住前进或跳跃。'
+  }
   if (currentLevelSupportsIfDark.value) {
     return '先找出哪些灯会被反复踩到。把 If Dark Light 放在这些位置，你就能复用同一段路线，而不用为“第一次点灯”和“第二次经过”分别写两套程序。'
+  }
+  if (currentLevelSupportsIfForwardClear.value) {
+    return '先找出哪些位置前方存在平台，哪些位置前方是断边。把 If Clear 包在 Walk 或 Jump 外面，就能让同一条模板在不同地点自动决定要不要继续前进。'
   }
   if (availableProcedureKeys.value.length >= 2) {
     return '先把整条路线按“直走段、转角段、跳跃段”分成几块，再判断哪一块最值得交给 P1 或 P2。这样更容易同时压缩总代码和执行结构。'
@@ -1396,8 +1425,14 @@ const briefDemoCopy = computed(() => {
   if (!hasCurrentDemo.value) {
     return '这关暂时没有内置 demo。建议先自己尝试一版，再回来看提示卡片里的解题重点。'
   }
+  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
+    return '看 demo 时要分清两类条件块分别保护什么：If Dark 负责避免二次熄灯，If Clear 负责让同一段路线在“有路”和“没路”两种现场都能复用。'
+  }
   if (currentLevelSupportsIfDark.value) {
     return '看 demo 时重点盯住每一个 If Dark Light 出现的位置。它们通常都落在“这盏灯会被再次经过”的地方，这正是条件块存在的理由。'
+  }
+  if (currentLevelSupportsIfForwardClear.value) {
+    return '看 demo 时重点看每一个 If Clear 后面包住的是 Walk 还是 Jump。真正要学的是：为什么这一步不能无脑执行，而要等现场确认前方可走。'
   }
   if (availableProcedureKeys.value.length >= 2) {
     return '观察 demo 里 MAIN 负责串联、P1 / P2 负责复用的边界。真正要学的不是照抄顺序，而是为什么这两段值得单独拆出去。'
@@ -1785,7 +1820,7 @@ function verifyEditorLevelForPublish() {
   }
 
   const level = editorLevelPreview.value
-  if (level.commandOptions?.ifDark) {
+  if (level.commandOptions?.ifDark || level.commandOptions?.ifForwardClear) {
     editorVerification.value = {
       solvable: true,
       signature: editorSignature.value,
@@ -2142,6 +2177,15 @@ function conditionPasses(test) {
     const key = platformKey(bot.value.x, bot.value.y)
     return targetKeys.value.includes(key) && !litKeys.value.includes(key)
   }
+
+  if (test === 'forward-clear') {
+    const currentPlatform = platformAt(bot.value.x, bot.value.y)
+    const next = nextPosition()
+    const nextPlatform = platformAt(next.x, next.y)
+    if (!currentPlatform || !nextPlatform) return false
+    return currentPlatform.h === nextPlatform.h || nextPlatform.h - currentPlatform.h === 1 || nextPlatform.h - currentPlatform.h < 0
+  }
+
   return false
 }
 

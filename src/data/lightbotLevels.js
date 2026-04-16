@@ -101,6 +101,10 @@ function ifDark(body = 'light') {
   return createConditionalOperation(body, 'dark-target')
 }
 
+function ifClear(body = 'walk') {
+  return createConditionalOperation(body, 'forward-clear')
+}
+
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   const commandOptions = { ...(chapter.commandOptions || {}), ...(level.commandOptions || {}) }
   const baseLevel = {
@@ -225,7 +229,7 @@ const CAMPAIGN_CHAPTERS = [
         title: '7. 小回字',
         description: '这关第一次让玩家绕一小圈再点第二盏灯，强调转向节奏不要被第一盏灯打断。',
         goal: '沿拐角路径点亮两个灯块。',
-        mainLimit: 8,
+        mainLimit: 9,
         procLimits: {},
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: pathTiles([[0, 1], [1, 1], [1, 0], [0, 0]], [1, 2])
@@ -918,14 +922,14 @@ const CAMPAIGN_CHAPTERS = [
   {
     id: 'conditional',
     title: '条件判断',
-    skill: 'If Dark / Reuse',
-    summary: '引入只包住下一条指令的条件块，让同一段路线模板既能点亮新灯，也不会把已经点亮的灯再关掉。',
-    learningGoals: ['理解 If Dark 语义', '让同一路线可重复复用', '把条件块和 P1 / Repeat 组合起来'],
-    mechanicTags: ['If Dark', 'Reuse', 'P1', 'Repeat'],
-    commandOptions: { ifDark: true },
+    skill: 'If Dark / If Clear / Reuse',
+    summary: '把条件块扩展成两种现场判断：If Dark 保护灯块，If Clear 保护前进，让同一段路线模板能根据现场状态决定是否执行关键动作。',
+    learningGoals: ['理解 If Dark 与 If Clear', '让同一路线可重复复用', '把条件块和 P1 / Repeat 组合起来'],
+    mechanicTags: ['If Dark', 'If Clear', 'Reuse', 'P1', 'Repeat'],
+    commandOptions: { ifDark: true, ifForwardClear: true },
     tips: [
       { title: '条件块只管下一条', copy: 'If Dark 不是整段 if/else，它只决定紧跟在后面的那一条指令要不要执行。' },
-      { title: '最常见写法是 If Dark Light', copy: '当一条路线会反复踩过同一盏灯时，把 Light 包进 If Dark 就能避免二次熄灯。' }
+      { title: '最常见写法是 If Dark Light / If Clear Walk', copy: '前者避免二次熄灯，后者让同一条模板在“前方有路”和“前方没路”两种现场都能安全复用。' }
     ],
     levels: [
       {
@@ -1044,6 +1048,89 @@ const CAMPAIGN_CHAPTERS = [
         demo: {
           main: [createRepeatOperation('p1', 4), 'p2', createRepeatOperation('p1', 4)],
           p1: ['walk', ifDark(), 'walk'],
+          p2: ['left', 'left']
+        }
+      },
+      {
+        id: 'conditional-7',
+        title: '57. 有路才前进',
+        description: '第一次正式引入 If Clear：同一条模板会在某些位置继续前进，在某些位置原地跳过。',
+        goal: '用 If Clear 让同一段程序安全扫过三盏灯。',
+        mainLimit: 9,
+        procLimits: {},
+        tips: [
+          { title: 'If Clear 常包 Walk', copy: '当你不确定前方是不是还有平台，但又想复用同一段模板时，If Clear Walk 是最自然的写法。' },
+          { title: '跳过也是结果', copy: '条件不成立时，不执行下一条本身就是模板的一部分，不需要额外补空操作。' }
+        ],
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 1], [1, 1, 0, true], [2, 1], [3, 1, 0, true], [4, 1],
+          [2, 0], [3, 0, 0, true]
+        ]),
+        demo: {
+          main: ['walk', ifDark(), ifClear(), ifClear(), ifDark(), 'left', ifClear(), ifDark(), 'right'],
+          p1: [],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-8',
+        title: '58. 分叉共用模板',
+        description: '把 If Clear 放进 P1，让同一个“前进两次并在必要时点灯”的模板同时适配长支路和短支路。',
+        goal: '用一个过程吃掉长短不同的两条支路。',
+        mainLimit: 8,
+        procLimits: { p1: 4 },
+        tips: [
+          { title: 'If Clear 负责长度差', copy: '当两条支路节奏类似，只是有一条更短时，最适合用 If Clear 让模板自动适配。' },
+          { title: '模板先写长一点', copy: '让模板按更长的那条支路来写，再让 If Clear 自动跳过多余一步，通常最干净。' }
+        ],
+        start: { x: 0, y: 2, dir: 'forward' },
+        tiles: mapTiles([
+          [0, 2], [1, 2], [2, 2],
+          [2, 1, 0, true], [2, 0, 0, true],
+          [2, 3, 0, true]
+        ]),
+        demo: {
+          main: ['walk', 'walk', 'left', 'p1', 'left', 'left', 'walk', 'walk', 'p1'],
+          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-9',
+        title: '59. 双条件混编',
+        description: 'If Dark 和 If Clear 第一次被压进同一个过程里，让同一段模板同时决定“要不要点灯”和“要不要再前进一步”。',
+        goal: '用一个混合条件模板扫过长走廊上的三盏灯。',
+        mainLimit: 1,
+        procLimits: { p1: 4 },
+        tips: [
+          { title: '先分清谁管灯、谁管路', copy: 'If Dark 保护灯块，If Clear 保护前进。不要让两个条件承担同一类责任。' },
+          { title: '条件顺序要稳定', copy: '一般先前进到位，再判断是否点灯；如果顺序颠倒，模板含义就会变得很乱。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]], [1, 3, 5]),
+        demo: {
+          main: [createRepeatOperation('p1', 3)],
+          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          p2: []
+        }
+      },
+      {
+        id: 'conditional-10',
+        title: '60. 条件章终章',
+        description: '最终关要求玩家把两种条件块和过程压缩一起用起来，不再只是“会写条件”，而是“会用条件组织程序”。',
+        goal: '用两种条件块写出最整洁的综合程序。',
+        mainLimit: 3,
+        procLimits: { p1: 4, p2: 2 },
+        tips: [
+          { title: 'P1 放路线模板，P2 放掉头或切换', copy: '如果 MAIN 还在手写大量局部细节，说明你还没有真正把条件模板抽干净。' },
+          { title: '两种条件不要抢活', copy: 'If Dark 负责避免二次熄灯，If Clear 负责长度适配。把职责分清，程序才会稳定。' }
+        ],
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0]], [1, 3, 5, 7]),
+        demo: {
+          main: [createRepeatOperation('p1', 4), 'p2', createRepeatOperation('p1', 4)],
+          p1: ['walk', ifDark(), ifClear(), ifDark()],
           p2: ['left', 'left']
         }
       }
