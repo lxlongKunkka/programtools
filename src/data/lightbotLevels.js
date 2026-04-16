@@ -1,3 +1,5 @@
+import { solveLevelProgram } from '../utils/lightbotSolver.js'
+
 export function makeTile(height = 1, target = false) {
   return { h: height, target }
 }
@@ -34,7 +36,7 @@ function buildBoardFromTiles(tiles) {
 }
 
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
-  return {
+  const baseLevel = {
     id: level.id,
     chapterId: chapter.id,
     chapterTitle: chapter.title,
@@ -48,12 +50,24 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     tips: (level.tips && level.tips.length ? level.tips : chapter.tips).map((tip) => ({ ...tip })),
     board: buildBoardFromTiles(level.tiles),
     start: { ...level.start },
-    demo: {
-      main: [...(level.demo?.main || [])],
-      p1: [...(level.demo?.p1 || [])],
-      p2: [...(level.demo?.p2 || [])]
-    },
     order: levelIndex
+  }
+
+  const solvedDemo = solveLevelProgram(baseLevel)
+
+  return {
+    ...baseLevel,
+    demo: level.demo
+      ? {
+        main: [...(level.demo.main || [])],
+        p1: [...(level.demo.p1 || [])],
+        p2: [...(level.demo.p2 || [])]
+      }
+      : {
+        main: solvedDemo?.solvable ? [...solvedDemo.main] : [],
+        p1: solvedDemo?.solvable ? [...solvedDemo.p1] : [],
+        p2: solvedDemo?.solvable ? [...solvedDemo.p2] : []
+      }
   }
 }
 
@@ -74,6 +88,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '向前走到终点并点亮唯一灯块。',
         mainLimit: 3,
         procLimits: {},
+        tips: [
+          { title: '先走再亮', copy: '起点不是灯块，不要一上来就按 Light。先走到目标格上。' },
+          { title: '默认 demo 长什么样', copy: '这一关的示范程序只有两段：向前推进，然后点亮。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0]], [2])
       },
@@ -84,6 +102,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '在小转角后走到灯块并点亮。',
         mainLimit: 4,
         procLimits: {},
+        tips: [
+          { title: '转向不位移', copy: 'Left 和 Right 只改变朝向，不会让机器人前进一步。' },
+          { title: '拐角先想脸朝哪', copy: '走到拐角前就要想好下一步该朝哪个方向转。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: pathTiles([[0, 1], [1, 1], [1, 0]], [2])
       },
@@ -94,6 +116,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '跳上一层高台并点亮终点。',
         mainLimit: 4,
         procLimits: {},
+        tips: [
+          { title: 'Jump 只差一层', copy: '向上 Jump 只能跨一层高度差，这也是后面所有台阶题的基础。' },
+          { title: 'Walk 上不去', copy: '当前方台面更高时，Walk 会直接失效。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0, 0], [1, 0, 0], [2, 0, 1]], [2])
       },
@@ -185,6 +211,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '从干道出发，点亮两个支路上的灯。',
         mainLimit: 9,
         procLimits: {},
+        tips: [
+          { title: '先选一边', copy: '分叉题的第一步不是写指令，而是决定先去哪个支路。' },
+          { title: '少折返', copy: '如果能顺路清掉一边，就不要为了近灯先来回折返。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: mapTiles([
           [0, 1], [1, 1], [2, 1, 0, true], [1, 0, 0, true], [1, 2]
@@ -197,6 +227,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '沿外圈依次点亮两盏灯。',
         mainLimit: 10,
         procLimits: {},
+        tips: [
+          { title: '看完整圈', copy: '外圈题不要只看眼前一段，要先把整圈路线在脑中走一遍。' },
+          { title: '折返也要计成本', copy: '每多一次转向和折返，程序都会明显变长。' }
+        ],
         start: { x: 0, y: 1, dir: 'forward' },
         tiles: mapTiles([
           [0, 1], [1, 1], [2, 1], [2, 0, 0, true], [1, 0], [0, 0, 0, true]
@@ -209,6 +243,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '走完整条折线并点亮三盏灯。',
         mainLimit: 11,
         procLimits: {},
+        tips: [
+          { title: '把长路拆段', copy: '这类地图通常可以拆成直线段和拐角段两部分来思考。' },
+          { title: '不要漏中间灯', copy: '长路上常见错误是只盯终点，结果经过中间灯块却忘记点亮。' }
+        ],
         start: { x: 0, y: 2, dir: 'forward' },
         tiles: pathTiles([[0, 2], [1, 2], [2, 2], [2, 1], [2, 0], [3, 0], [4, 0]], [2, 4, 6])
       },
@@ -315,6 +353,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '用一段重复模板点亮两盏灯。',
         mainLimit: 2,
         procLimits: { p1: 3 },
+        tips: [
+          { title: '先找重复块', copy: '看到两段完全一样的动作时，不要先写 MAIN，先把模板抽出来。' },
+          { title: 'MAIN 只保留调用', copy: '这一章开始，MAIN 更像调度器，而不是装所有动作的地方。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], [2, 4])
       },
@@ -325,6 +367,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '重复同一过程三次点亮三盏灯。',
         mainLimit: 3,
         procLimits: { p1: 3 },
+        tips: [
+          { title: '三次比两次更明显', copy: '重复次数一多，是否抽过程会立刻体现在 MAIN 长度上。' },
+          { title: 'P1 要完整', copy: '只有当整段动作都稳定复现时，抽成过程才真正划算。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [2, 4, 6])
       },
@@ -335,6 +381,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '用同一段跳跃模板依次点亮三个高点。',
         mainLimit: 3,
         procLimits: { p1: 2 },
+        tips: [
+          { title: '过程也能装 Jump', copy: 'P1 并不关心动作类型，只关心这段序列会不会重复。' },
+          { title: '模板越小越稳', copy: '刚开始学过程时，先抽短模板，比一上来抽很长更容易对。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0, 0], [1, 0, 1], [2, 0, 0], [3, 0, 1], [4, 0, 0], [5, 0, 1]], [1, 3, 5])
       },
@@ -351,25 +401,26 @@ const CAMPAIGN_CHAPTERS = [
       {
         id: 'procedures-5',
         title: '25. 双拐角模板',
-        description: '过程开始不再只是直线，玩家要识别转向加前进再点灯也能构成稳定模板。',
-        goal: '利用重复拐角结构点亮两盏灯。',
-        mainLimit: 8,
+        description: '这关把同一个拐角模板连续复现两次，要求玩家第一次把转向模板稳定塞进 P1。',
+        goal: '把两段完全一致的拐角点灯动作抽成一个过程。',
+        mainLimit: 2,
         procLimits: { p1: 4 },
-        start: { x: 0, y: 2, dir: 'forward' },
-        tiles: pathTiles([[0, 2], [1, 2], [1, 1], [2, 1], [2, 0], [3, 0], [3, 1], [4, 1]], [3, 7])
+        start: { x: 0, y: 0, dir: 'forward' },
+        tiles: pathTiles([[0, 0], [1, 0], [1, 1], [1, 2], [0, 2]], [2, 4])
       },
       {
         id: 'procedures-6',
         title: '26. 双塔模板',
-        description: '平地和高台组合成两个近似结构，让玩家开始感知模板可以跨高度使用。',
-        goal: '在左右两座塔上各点亮一盏灯。',
-        mainLimit: 7,
-        procLimits: { p1: 4 },
+        description: '同一段跳起、走一步、点灯的动作会出现两次，这一关把过程从平地模板升级到高差模板。',
+        goal: '用一个跳跃过程依次点亮两座高台。',
+        mainLimit: 2,
+        procLimits: { p1: 3 },
         start: { x: 0, y: 1, dir: 'forward' },
-        tiles: mapTiles([
-          [0, 1], [1, 1], [2, 1, 0, true], [3, 1], [4, 1],
-          [2, 0, 1], [4, 0, 1, true]
-        ])
+        tips: [
+          { title: '先识别重复跳段', copy: '如果你看见两次完全一样的 Jump 加 Walk 组合，就该想到过程。' },
+          { title: 'MAIN 只需要调用', copy: '当过程定义稳定后，MAIN 最好只剩少量调用。' }
+        ],
+        tiles: pathTiles([[0, 1, 0], [1, 1, 1], [2, 1, 1], [3, 1, 2], [4, 1, 2]], [2, 4])
       },
       {
         id: 'procedures-7',
@@ -441,6 +492,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '沿超长走廊走到终点并点灯。',
         mainLimit: 3,
         procLimits: {},
+        tips: [
+          { title: '连续同动作就想 Repeat', copy: '如果你看到同一个动作要连按很多次，先看它是不是能直接压成 Repeat。' },
+          { title: '不要过度设计', copy: '这类关卡用过程往往反而更绕，直接 Repeat 最干净。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]], [5])
       },
@@ -451,6 +506,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '连续跳上四级高台并点亮终点。',
         mainLimit: 2,
         procLimits: {},
+        tips: [
+          { title: 'Repeat 不只给 Walk', copy: 'Jump、Left、Right 这些动作在连续出现时也都能被压缩。' },
+          { title: '先看节奏是否单一', copy: '只有节奏完全一致时，Repeat 才会是最优选择。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0, 0], [1, 0, 1], [2, 0, 2], [3, 0, 3], [4, 0, 4]], [4])
       },
@@ -461,6 +520,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '让同一个过程被连续调用三次。',
         mainLimit: 1,
         procLimits: { p1: 3 },
+        tips: [
+          { title: '过程也能被 Repeat', copy: '当调用本身重复时，MAIN 里同样可以继续做压缩。' },
+          { title: '两层抽象', copy: '先定义 P1，再决定如何安排 MAIN，这就是压缩章的核心。' }
+        ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [2, 4, 6])
       },
@@ -574,6 +637,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '清理外圈和内侧支路上的四盏灯。',
         mainLimit: 12,
         procLimits: { p1: 4 },
+        tips: [
+          { title: '先分区', copy: '综合关不要一上来写指令，先把地图分成外圈和内侧两个任务区。' },
+          { title: '局部重复优先', copy: '就算整图很复杂，局部往往仍然有能抽模板的重复块。' }
+        ],
         start: { x: 0, y: 2, dir: 'forward' },
         tiles: mapTiles([
           [0, 2], [1, 2], [2, 2], [3, 2, 0, true],
@@ -589,6 +656,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '沿螺旋上升并点亮三个关键灯块。',
         mainLimit: 13,
         procLimits: { p1: 4 },
+        tips: [
+          { title: '先画旋转节奏', copy: '螺旋图的难点不在跳跃，而在每一层之后都要立刻换方向。' },
+          { title: '不要怕回头改结构', copy: '如果写到一半发现顺序很乱，通常说明你还没真正理解地图的旋转节奏。' }
+        ],
         start: { x: 0, y: 3, dir: 'forward' },
         tiles: pathTiles([[0, 3, 0], [1, 3, 0], [2, 3, 1], [2, 2, 1], [2, 1, 2], [1, 1, 2], [0, 1, 3]], [2, 4, 6])
       },
@@ -599,6 +670,10 @@ const CAMPAIGN_CHAPTERS = [
         goal: '先处理桥面，再处理两侧高塔。',
         mainLimit: 13,
         procLimits: { p1: 4, p2: 4 },
+        tips: [
+          { title: '开始分工 P1 和 P2', copy: '如果桥面和塔台动作明显不同，就应该考虑把两类模板拆给两个过程。' },
+          { title: '综合关也要分层', copy: '先处理平地结构，再处理高差结构，程序会清楚很多。' }
+        ],
         start: { x: 0, y: 2, dir: 'forward' },
         tiles: mapTiles([
           [0, 2], [1, 2], [2, 2, 0, true], [3, 2], [4, 2, 0, true], [5, 2],
