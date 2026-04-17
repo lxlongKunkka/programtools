@@ -75,6 +75,7 @@
               </div>
               <strong>{{ level.title }}</strong>
               <p>{{ level.goal }}</p>
+              <div class="level-requirement-chip" :class="requirementBadgeClass(level)">{{ conditionRequirementLabel(level) }}</div>
               <p class="level-card-author">{{ getLevelAuthorLabel(level) }}</p>
               <div class="level-card-foot">
                 <span>Main {{ level.mainLimit }}</span>
@@ -98,6 +99,7 @@
           <h1>{{ currentLevel.title }}</h1>
           <p class="brief-summary">{{ currentLevel.description }}</p>
           <p class="brief-goal">{{ currentLevel.goal }}</p>
+          <div class="brief-requirement-chip" :class="currentLevelRequirementClass">{{ currentLevelRequirementLabel }}</div>
 
           <div class="brief-meta">
             <div>
@@ -410,6 +412,7 @@
               <p class="screen-kicker">Puzzle Complete</p>
               <h2>{{ currentLevel.title }}</h2>
               <p>所有目标格已经点亮。现在可以继续下一关或返回选关。</p>
+              <div class="finish-requirement-chip" :class="currentLevelRequirementClass">{{ currentLevelRequirementLabel }}</div>
               <div v-if="lastCompletionMetrics" class="finish-stats">
                 <div>
                   <span>总代码</span>
@@ -1300,6 +1303,19 @@ function chapterMasteryStatus(group) {
   return remaining === 1 ? '再完成 1 关即可完成本章' : `再完成 ${remaining} 关即可完成本章`
 }
 
+function conditionRequirementLabel(level) {
+  const minConditionExecutions = Math.max(Number(level?.completionRequirements?.minConditionExecutions) || 0, 0)
+  return minConditionExecutions > 0
+    ? `要求 if × ${minConditionExecutions}`
+    : '本关不要求 if'
+}
+
+function requirementBadgeClass(level) {
+  return (Number(level?.completionRequirements?.minConditionExecutions) || 0) > 0
+    ? 'requires-if'
+    : 'no-if-required'
+}
+
 const screen = ref('select')
 const selectedLevelIndex = ref(findRecommendedLevelIndex())
 const activeProcedureKey = ref('main')
@@ -1350,6 +1366,8 @@ const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.com
 const currentLevelSupportsIfForwardClear = computed(() => Boolean(currentLevel.value.commandOptions?.ifForwardClear))
 const currentLevelHasConditions = computed(() => currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
 const currentLevelMinConditionExecutions = computed(() => Math.max(Number(currentLevel.value.completionRequirements?.minConditionExecutions) || 0, 0))
+const currentLevelRequirementLabel = computed(() => conditionRequirementLabel(currentLevel.value))
+const currentLevelRequirementClass = computed(() => requirementBadgeClass(currentLevel.value))
 const operationPalette = computed(() => {
   const palette = [...BASE_OPERATION_PALETTE]
   if (currentLevelSupportsIfDark.value) {
@@ -4402,6 +4420,39 @@ resetLevel(true)
 .finish-card h2 {
   margin: 0;
   font-size: 34px;
+}
+
+.level-requirement-chip,
+.brief-requirement-chip,
+.finish-requirement-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.level-requirement-chip {
+  margin-top: 8px;
+}
+
+.brief-requirement-chip,
+.finish-requirement-chip {
+  margin-top: 10px;
+}
+
+.requires-if {
+  background: linear-gradient(180deg, #fff1cb, #f3d57b);
+  color: #6c5414;
+}
+
+.no-if-required {
+  background: linear-gradient(180deg, #e6eff8, #cddceb);
+  color: #39556f;
 }
 
 .finish-stats {
