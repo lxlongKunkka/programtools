@@ -821,6 +821,7 @@ function cloneLevelDefinition(level) {
   return {
     ...level,
     commandOptions: { ...(level.commandOptions || {}) },
+    completionRequirements: { ...(level.completionRequirements || {}) },
     procLimits: { ...(level.procLimits || {}) },
     tips: (level.tips || []).map((tip) => ({ ...tip })),
     board: cloneBoard(level.board),
@@ -1314,6 +1315,7 @@ const runningProcedureKey = ref('')
 const runningOperationIndex = ref(-1)
 const runNonce = ref(0)
 const runExecutionSteps = ref(0)
+const runConditionEvaluations = ref(0)
 const activeRunToken = ref(null)
 const reportedCompletionToken = ref(null)
 const pendingRepeatCount = ref(null)
@@ -1347,6 +1349,7 @@ const currentLevel = computed(() => activeCustomLevel.value || levels.value[sele
 const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.commandOptions?.ifDark))
 const currentLevelSupportsIfForwardClear = computed(() => Boolean(currentLevel.value.commandOptions?.ifForwardClear))
 const currentLevelHasConditions = computed(() => currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
+const currentLevelMinConditionExecutions = computed(() => Math.max(Number(currentLevel.value.completionRequirements?.minConditionExecutions) || 0, 0))
 const operationPalette = computed(() => {
   const palette = [...BASE_OPERATION_PALETTE]
   if (currentLevelSupportsIfDark.value) {
@@ -1407,6 +1410,9 @@ const briefTeachingSummary = computed(() => {
       ...(currentLevelSupportsIfForwardClear.value ? ['If Clear'] : [])
     ]
     summaryParts.push(`这关开放了 ${labels.join(' / ')} 条件块，适合让同一路线模板按现场状态决定是否执行关键动作。`)
+    if (currentLevelMinConditionExecutions.value > 0) {
+      summaryParts.push(`过关时还必须实际执行至少 ${currentLevelMinConditionExecutions.value} 次条件判断。`)
+    }
   }
   if (procedureCount > 0) {
     summaryParts.push(`你已经可以使用 ${procedureCount} 个子程序槽位来整理重复片段。`)
@@ -1468,7 +1474,8 @@ const currentProgramMetrics = computed(() => {
   const metrics = {
     totalCommands: mainLength,
     mainLength,
-    executionSteps: runExecutionSteps.value
+    executionSteps: runExecutionSteps.value,
+    conditionEvaluations: runConditionEvaluations.value
   }
 
   for (const key of PROCEDURE_KEYS) {
@@ -1994,6 +2001,7 @@ function resetLevel(clearPrograms = false) {
   pendingRepeatCount.value = null
   pendingConditionTest.value = null
   runExecutionSteps.value = 0
+  runConditionEvaluations.value = 0
   runningProcedureKey.value = ''
   runningOperationIndex.value = -1
   showFinishPanel.value = false
@@ -2171,6 +2179,10 @@ function markFinished() {
   if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) {
     return false
   }
+  if (currentLevelMinConditionExecutions.value > 0 && runConditionEvaluations.value < currentLevelMinConditionExecutions.value) {
+    setStatus(`本关要求至少执行 ${currentLevelMinConditionExecutions.value} 次条件判断，当前只执行了 ${runConditionEvaluations.value} 次。`, 'danger')
+    return false
+  }
   let masteryUnlocked = null
   if (!isCustomPlaytest.value && !completedLevelIds.value.includes(currentLevel.value.id)) {
     const nextCompletedIds = [...completedLevelIds.value, currentLevel.value.id]
@@ -2234,6 +2246,7 @@ async function executeOperation(operationId, nonce, depth) {
   }
 
   if (isConditionalOperation(normalizedOperation)) {
+    runConditionEvaluations.value += 1
     if (conditionPasses(normalizedOperation.test)) {
       runExecutionSteps.value += 1
       await executeOperation(normalizedOperation.body, nonce, depth + 1)
@@ -2323,7 +2336,7 @@ async function runCode() {
 
   try {
     await runProcedure('main', mainProcedure.value, nonce)
-    if (nonce === runNonce.value && !markFinished()) {
+    if (nonce === runNonce.value && !showFinishPanel.value && statusText.value === 'Program running') {
       setStatus('Program finished', 'neutral')
     }
   } finally {

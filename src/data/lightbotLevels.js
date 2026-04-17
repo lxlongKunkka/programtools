@@ -105,8 +105,36 @@ function ifClear(body = 'walk') {
   return createConditionalOperation(body, 'forward-clear')
 }
 
+function countConditionExecutionsForOperation(operation, procedures, depth = 0) {
+  if (depth > 8) return 0
+
+  if (isConditionalOperation(operation)) {
+    return 1
+  }
+
+  if (isRepeatOperation(operation)) {
+    return countConditionExecutionsForOperation(operation.body, procedures, depth + 1) * operation.count
+  }
+
+  if (typeof operation === 'string' && ['p1', 'p2'].includes(operation)) {
+    return countConditionExecutionsForList(procedures[operation] || [], procedures, depth + 1)
+  }
+
+  return 0
+}
+
+function countConditionExecutionsForList(list = [], procedures, depth = 0) {
+  if (depth > 8) return 0
+  return list.reduce((sum, operation) => sum + countConditionExecutionsForOperation(operation, procedures, depth), 0)
+}
+
+function countConditionExecutionsForProgram(program = {}) {
+  return countConditionExecutionsForList(program.main || [], program)
+}
+
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   const commandOptions = { ...(chapter.commandOptions || {}), ...(level.commandOptions || {}) }
+  const completionRequirements = { ...(chapter.completionRequirements || {}), ...(level.completionRequirements || {}) }
   const baseLevel = {
     id: level.id,
     chapterId: chapter.id,
@@ -118,6 +146,7 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     goal: level.goal,
     mainLimit: level.mainLimit,
     commandOptions,
+    completionRequirements,
     procLimits: { ...(level.procLimits || {}) },
     tips: (level.tips && level.tips.length ? level.tips : chapter.tips).map((tip) => ({ ...tip })),
     board: buildBoardFromTiles(level.tiles),
@@ -126,16 +155,25 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   }
 
   const solvedDemo = !level.demo && !commandOptions.ifDark ? solveLevelProgram(baseLevel) : null
+  const demo = level.demo
+    ? {
+      main: cloneOperationList(level.demo.main || []),
+      p1: cloneOperationList(level.demo.p1 || []),
+      p2: cloneOperationList(level.demo.p2 || [])
+    }
+    : buildTeachingDemo(chapter, solvedDemo?.solvable ? solvedDemo : null)
+
+  if ((commandOptions.ifDark || commandOptions.ifForwardClear) && !completionRequirements.minConditionExecutions) {
+    const minConditionExecutions = countConditionExecutionsForProgram(demo)
+    if (minConditionExecutions > 0) {
+      completionRequirements.minConditionExecutions = minConditionExecutions
+    }
+  }
 
   return {
     ...baseLevel,
-    demo: level.demo
-      ? {
-        main: cloneOperationList(level.demo.main || []),
-        p1: cloneOperationList(level.demo.p1 || []),
-        p2: cloneOperationList(level.demo.p2 || [])
-      }
-      : buildTeachingDemo(chapter, solvedDemo?.solvable ? solvedDemo : null)
+    demo,
+    completionRequirements: Object.keys(completionRequirements).length ? completionRequirements : {}
   }
 }
 
@@ -963,18 +1001,18 @@ const CAMPAIGN_CHAPTERS = [
       {
         id: 'conditional-1',
         title: '41. 回程不熄灯',
-        description: '先用最短的走廊解释 If Dark 的作用：回程会再次踩到第一盏灯，但不应该把它关掉。',
-        goal: '点亮两盏灯后沿原路返回。',
-        mainLimit: 10,
+        description: '先用最短的双灯走廊解释 If Dark 的价值：先点亮近灯，再继续前进去点亮远灯。',
+        goal: '沿直线点亮两盏灯，并在程序里实际用到 If Dark。',
+        mainLimit: 5,
         procLimits: {},
         tips: [
-          { title: '第一次先正常点亮', copy: '第一次踩上灯块时，If Dark Light 会和普通 Light 一样执行。' },
-          { title: '回程再踩时自动跳过', copy: '第二次回到同一盏灯上时，条件不成立，Light 就不会再触发。' }
+          { title: '先把近灯也写成条件点亮', copy: '这关虽然路很直，但系统会检查你有没有真正使用 If Dark，而不是只用普通 Light 硬过。' },
+          { title: 'If Dark 仍然等价于第一次点亮', copy: '第一次踩上目标格时，If Dark Light 会像普通 Light 一样生效。' }
         ],
         start: { x: 0, y: 0, dir: 'forward' },
         tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0]], [1, 3]),
         demo: {
-          main: ['walk', ifDark(), 'walk', 'walk', ifDark(), 'left', 'left', 'walk', 'walk', 'walk'],
+          main: ['walk', ifDark(), 'walk', 'walk', ifDark()],
           p1: [],
           p2: []
         }
