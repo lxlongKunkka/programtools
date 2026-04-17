@@ -139,6 +139,33 @@ function buildColorBranchProcedure() {
   ]
 }
 
+function countConditionExecutionsForOperation(operation, procedures, depth = 0) {
+  if (depth > 8) return 0
+
+  if (operation && typeof operation === 'object' && operation.type === 'condition') {
+    return 1
+  }
+
+  if (operation && typeof operation === 'object' && operation.type === 'repeat') {
+    return countConditionExecutionsForOperation(operation.body, procedures, depth + 1) * operation.count
+  }
+
+  if (typeof operation === 'string' && ['p1', 'p2'].includes(operation)) {
+    return countConditionExecutionsForList(procedures[operation] || [], procedures, depth + 1)
+  }
+
+  return 0
+}
+
+function countConditionExecutionsForList(list = [], procedures, depth = 0) {
+  if (depth > 8) return 0
+  return list.reduce((sum, operation) => sum + countConditionExecutionsForOperation(operation, procedures, depth), 0)
+}
+
+function countConditionExecutionsForProgram(program = {}) {
+  return countConditionExecutionsForList(program.main || [], program)
+}
+
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
   const commandOptions = { ...(chapter.commandOptions || {}), ...(level.commandOptions || {}) }
   const completionRequirements = { ...(chapter.completionRequirements || {}), ...(level.completionRequirements || {}) }
@@ -171,6 +198,13 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
       p2: cloneOperationList(level.demo.p2 || [])
     }
     : buildTeachingDemo(chapter, solvedDemo?.solvable ? solvedDemo : null)
+
+  if ((commandOptions.ifGreen || commandOptions.ifRed || commandOptions.ifDark || commandOptions.ifForwardClear) && !completionRequirements.minConditionExecutions) {
+    const minConditionExecutions = countConditionExecutionsForProgram(demo)
+    if (minConditionExecutions > 0) {
+      completionRequirements.minConditionExecutions = minConditionExecutions
+    }
+  }
 
   return {
     ...baseLevel,
