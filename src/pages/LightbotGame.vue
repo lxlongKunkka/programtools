@@ -240,6 +240,14 @@
                 <span>Special Blocks</span>
                 <div class="toggle-check-grid">
                   <label class="toggle-check">
+                    <input v-model="editorDraft.enableIfGreen" type="checkbox">
+                    <span>启用 If Green 条件块</span>
+                  </label>
+                  <label class="toggle-check">
+                    <input v-model="editorDraft.enableIfRed" type="checkbox">
+                    <span>启用 If Red 条件块</span>
+                  </label>
+                  <label class="toggle-check">
                     <input v-model="editorDraft.enableIfDark" type="checkbox">
                     <span>启用 If Dark 条件块</span>
                   </label>
@@ -270,6 +278,8 @@
             <div class="editor-tool-row">
               <button class="tool-btn" :class="{ selected: editorTool === 'platform' }" @click="editorTool = 'platform'">Platform</button>
               <button class="tool-btn" :class="{ selected: editorTool === 'target' }" @click="editorTool = 'target'">Target</button>
+              <button class="tool-btn" :class="{ selected: editorTool === 'green' }" @click="editorTool = 'green'">Green</button>
+              <button class="tool-btn" :class="{ selected: editorTool === 'red' }" @click="editorTool = 'red'">Red</button>
               <button class="tool-btn" :class="{ selected: editorTool === 'start' }" @click="editorTool = 'start'">Start</button>
               <button class="tool-btn" :class="{ selected: editorTool === 'erase' }" @click="editorTool = 'erase'">Erase</button>
             </div>
@@ -294,6 +304,10 @@
                   <span v-if="editorCellAt(x, y)" class="cell-height">{{ editorCellAt(x, y).h }}</span>
                   <span v-if="editorDraft.start.x === x && editorDraft.start.y === y" class="cell-start">S</span>
                   <span v-else-if="editorCellAt(x, y)?.target" class="cell-target">T</span>
+                  <span v-if="editorDraft.start.x !== x || editorDraft.start.y !== y">
+                    <span v-if="editorCellAt(x, y)?.floorColor === 'green'" class="cell-color">G</span>
+                    <span v-else-if="editorCellAt(x, y)?.floorColor === 'red'" class="cell-color">R</span>
+                  </span>
                 </button>
               </div>
             </div>
@@ -630,6 +644,8 @@ const PROCEDURE_META = {
   p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
 }
 const CONDITION_TEST_META = {
+  'green-floor': { label: 'If Green', shortLabel: 'GREEN', slotLabel: 'IF-G', description: '仅当脚下是绿色地板时执行下一条' },
+  'red-floor': { label: 'If Red', shortLabel: 'RED', slotLabel: 'IF-R', description: '仅当脚下是红色地板时执行下一条' },
   'dark-target': { label: 'If Dark', shortLabel: 'DARK', slotLabel: 'IF-D', description: '仅当脚下是未点亮目标格时执行下一条' },
   'forward-clear': { label: 'If Clear', shortLabel: 'CLEAR', slotLabel: 'IF-C', description: '仅当前方存在可合法前进的平台时执行下一条' }
 }
@@ -639,6 +655,8 @@ const BOARD_GAP = 0.04
 const MATERIAL_COLORS = {
   topNormal: '#565e68',
   topTarget: '#1e4d6f',
+  topGreen: '#64b55f',
+  topRed: '#cc6a59',
   topLit: '#fffd00',
   side: '#646a71',
   line: '#2e3438',
@@ -728,7 +746,7 @@ function createConditionalOperation(body, test = 'dark-target') {
   return {
     type: 'condition',
     body,
-    test: CONDITION_TEST_META[test] ? test : 'dark-target'
+    test: CONDITION_TEST_META[test] ? test : 'green-floor'
   }
 }
 
@@ -973,6 +991,8 @@ function createDefaultEditorDraft() {
     mainLimit: 8,
     p1Limit: 0,
     p2Limit: 0,
+    enableIfGreen: false,
+    enableIfRed: false,
     enableIfDark: false,
     enableIfForwardClear: false,
     demo: { main: [], p1: [], p2: [] },
@@ -1001,6 +1021,8 @@ function serializeEditorDraft(draft) {
     mainLimit: Number(draft.mainLimit) || 8,
     p1Limit: Number(draft.p1Limit) || 0,
     p2Limit: Number(draft.p2Limit) || 0,
+    enableIfGreen: Boolean(draft.enableIfGreen),
+    enableIfRed: Boolean(draft.enableIfRed),
     enableIfDark: Boolean(draft.enableIfDark),
     enableIfForwardClear: Boolean(draft.enableIfForwardClear),
     start: { ...draft.start },
@@ -1037,6 +1059,8 @@ function loadSavedEditorDraft() {
       mainLimit: Number(parsed.mainLimit) || 8,
       p1Limit: Number(parsed.p1Limit) || 0,
       p2Limit: Number(parsed.p2Limit) || 0,
+      enableIfGreen: Boolean(parsed.enableIfGreen || parsed.commandOptions?.ifGreen),
+      enableIfRed: Boolean(parsed.enableIfRed || parsed.commandOptions?.ifRed),
       enableIfDark: Boolean(parsed.enableIfDark || parsed.commandOptions?.ifDark),
       enableIfForwardClear: Boolean(parsed.enableIfForwardClear || parsed.commandOptions?.ifForwardClear),
       start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
@@ -1070,6 +1094,8 @@ function createEditorDraftFromLevel(level) {
     mainLimit: Number(level.mainLimit) || 8,
     p1Limit: Number(level.procLimits?.p1) || 0,
     p2Limit: Number(level.procLimits?.p2) || 0,
+    enableIfGreen: Boolean(level.commandOptions?.ifGreen),
+    enableIfRed: Boolean(level.commandOptions?.ifRed),
     enableIfDark: Boolean(level.commandOptions?.ifDark),
     enableIfForwardClear: Boolean(level.commandOptions?.ifForwardClear),
     start,
@@ -1104,6 +1130,8 @@ function buildCustomLevel(draft) {
       ...(Number(draft.p2Limit) > 0 ? { p2: Number(draft.p2Limit) } : {})
     },
     commandOptions: {
+      ...(draft.enableIfGreen ? { ifGreen: true } : {}),
+      ...(draft.enableIfRed ? { ifRed: true } : {}),
       ...(draft.enableIfDark ? { ifDark: true } : {}),
       ...(draft.enableIfForwardClear ? { ifForwardClear: true } : {})
     },
@@ -1305,7 +1333,7 @@ function chapterMasteryStatus(group) {
 
 function conditionRequirementLabel(level) {
   const minConditionExecutions = Math.max(Number(level?.completionRequirements?.minConditionExecutions) || 0, 0)
-  const hasConditionTools = Boolean(level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
+  const hasConditionTools = Boolean(level?.commandOptions?.ifGreen || level?.commandOptions?.ifRed || level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
   return minConditionExecutions > 0
     ? `要求 if × ${minConditionExecutions}`
     : (hasConditionTools ? '可用 if，不强制' : '本关不要求 if')
@@ -1314,7 +1342,7 @@ function conditionRequirementLabel(level) {
 function requirementBadgeClass(level) {
   const minConditionExecutions = Number(level?.completionRequirements?.minConditionExecutions) || 0
   if (minConditionExecutions > 0) return 'requires-if'
-  return (level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
+  return (level?.commandOptions?.ifGreen || level?.commandOptions?.ifRed || level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
     ? 'if-optional'
     : 'no-if-required'
 }
@@ -1365,19 +1393,33 @@ let playSceneController = null
 let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
+const currentLevelSupportsIfGreen = computed(() => Boolean(currentLevel.value.commandOptions?.ifGreen))
+const currentLevelSupportsIfRed = computed(() => Boolean(currentLevel.value.commandOptions?.ifRed))
 const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.commandOptions?.ifDark))
 const currentLevelSupportsIfForwardClear = computed(() => Boolean(currentLevel.value.commandOptions?.ifForwardClear))
-const currentLevelHasConditions = computed(() => currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
+const currentLevelHasConditions = computed(() => currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value || currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
 const currentLevelMinConditionExecutions = computed(() => Math.max(Number(currentLevel.value.completionRequirements?.minConditionExecutions) || 0, 0))
 const currentLevelRequirementLabel = computed(() => conditionRequirementLabel(currentLevel.value))
 const currentLevelRequirementClass = computed(() => requirementBadgeClass(currentLevel.value))
+const currentLevelConditionLabels = computed(() => [
+  ...(currentLevelSupportsIfGreen.value ? ['If Green'] : []),
+  ...(currentLevelSupportsIfRed.value ? ['If Red'] : []),
+  ...(currentLevelSupportsIfDark.value ? ['If Dark'] : []),
+  ...(currentLevelSupportsIfForwardClear.value ? ['If Clear'] : [])
+])
 const operationPalette = computed(() => {
   const palette = [...BASE_OPERATION_PALETTE]
+  if (currentLevelSupportsIfGreen.value) {
+    palette.splice(7, 0, { id: 'if-green', label: 'If Green', kind: 'condition', test: 'green-floor' })
+  }
+  if (currentLevelSupportsIfRed.value) {
+    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0), 0, { id: 'if-red', label: 'If Red', kind: 'condition', test: 'red-floor' })
+  }
   if (currentLevelSupportsIfDark.value) {
-    palette.splice(7, 0, { id: 'if-dark', label: 'If Dark', kind: 'condition', test: 'dark-target' })
+    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0) + (currentLevelSupportsIfRed.value ? 1 : 0), 0, { id: 'if-dark', label: 'If Dark', kind: 'condition', test: 'dark-target' })
   }
   if (currentLevelSupportsIfForwardClear.value) {
-    palette.splice(7 + (currentLevelSupportsIfDark.value ? 1 : 0), 0, { id: 'if-clear', label: 'If Clear', kind: 'condition', test: 'forward-clear' })
+    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0) + (currentLevelSupportsIfRed.value ? 1 : 0) + (currentLevelSupportsIfDark.value ? 1 : 0), 0, { id: 'if-clear', label: 'If Clear', kind: 'condition', test: 'forward-clear' })
   }
   return palette
 })
@@ -1426,11 +1468,7 @@ const briefTeachingSummary = computed(() => {
     summaryParts.push(`它属于本章的 ${goals} 练习段。`)
   }
   if (currentLevelHasConditions.value) {
-    const labels = [
-      ...(currentLevelSupportsIfDark.value ? ['If Dark'] : []),
-      ...(currentLevelSupportsIfForwardClear.value ? ['If Clear'] : [])
-    ]
-    summaryParts.push(`这关开放了 ${labels.join(' / ')} 条件块，适合让同一路线模板按现场状态决定是否执行关键动作。`)
+    summaryParts.push(`这关开放了 ${currentLevelConditionLabels.value.join(' / ')} 条件块，适合让同一路线模板按现场状态决定是否执行关键动作。`)
     if (currentLevelMinConditionExecutions.value > 0) {
       summaryParts.push(`过关时还必须实际执行至少 ${currentLevelMinConditionExecutions.value} 次条件判断。`)
     }
@@ -1443,6 +1481,7 @@ const briefTeachingSummary = computed(() => {
   return summaryParts.join(' ')
 })
 const briefFirstMoveTitle = computed(() => {
+  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) return '先标出每块颜色地板会把你送向哪一边'
   if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) return '先标出会二次经过的灯和会被挡住的前方'
   if (currentLevelSupportsIfDark.value) return '先标出会被二次经过的灯'
   if (currentLevelSupportsIfForwardClear.value) return '先找哪些地方前方有路、哪些地方前方会断'
@@ -1451,6 +1490,9 @@ const briefFirstMoveTitle = computed(() => {
   return '先在脑中跑一遍路线'
 })
 const briefFirstMoveCopy = computed(() => {
+  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) {
+    return '先把绿色地板和红色地板逐个标出来，再想清楚每一次循环结束后会不会正好落到下一块决策地板上。颜色条件最怕的不是不会转向，而是循环结束后没有回到主路。'
+  }
   if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
     return '先把地图上“会被重复踩到的灯”和“前方有时能走、有时会断掉的边界”都圈出来。前者适合用 If Dark Light，后者适合用 If Clear 包住前进或跳跃。'
   }
@@ -1472,6 +1514,9 @@ const briefDemoTitle = computed(() => (hasCurrentDemo.value ? currentDemoFeature
 const briefDemoCopy = computed(() => {
   if (!hasCurrentDemo.value) {
     return '这关暂时没有内置 demo。建议先自己尝试一版，再回来看提示卡片里的解题重点。'
+  }
+  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) {
+    return '看 demo 时重点盯住每一轮循环是如何读取脚下颜色的。真正要学的不是单次左转或右转，而是同一套模板怎样在绿地板和红地板上走出不同分支。'
   }
   if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
     return '看 demo 时要分清两类条件块分别保护什么：If Dark 负责避免二次熄灯，If Clear 负责让同一段路线在“有路”和“没路”两种现场都能复用。'
@@ -1704,6 +1749,8 @@ function editorCellClass(x, y) {
   return {
     filled: Boolean(cell),
     target: Boolean(cell?.target),
+    green: cell?.floorColor === 'green',
+    red: cell?.floorColor === 'red',
     start: editorDraft.start.x === x && editorDraft.start.y === y,
     empty: !cell
   }
@@ -1812,7 +1859,16 @@ function applyEditorCell(x, y) {
     }
     nextStart = { ...nextStart, x, y }
   } else {
-    board[y][x] = makeTile(editorHeight.value, editorTool.value === 'target')
+    const nextHeight = ['platform', 'target'].includes(editorTool.value)
+      ? editorHeight.value
+      : (currentCell?.h || editorHeight.value)
+    const nextTarget = editorTool.value === 'target' ? true : Boolean(currentCell?.target)
+    const nextFloorColor = editorTool.value === 'green'
+      ? 'green'
+      : editorTool.value === 'red'
+        ? 'red'
+        : (currentCell?.floorColor || 'neutral')
+    board[y][x] = makeTile(nextHeight, nextTarget, nextFloorColor)
   }
 
   const normalized = normalizeEditorState(board, nextStart)
@@ -1869,7 +1925,7 @@ function verifyEditorLevelForPublish() {
   }
 
   const level = editorLevelPreview.value
-  if (level.commandOptions?.ifDark || level.commandOptions?.ifForwardClear) {
+  if (level.commandOptions?.ifGreen || level.commandOptions?.ifRed || level.commandOptions?.ifDark || level.commandOptions?.ifForwardClear) {
     editorVerification.value = {
       solvable: true,
       signature: editorSignature.value,
@@ -2227,6 +2283,14 @@ function markFinished() {
 }
 
 function conditionPasses(test) {
+  if (test === 'green-floor') {
+    return platformAt(bot.value.x, bot.value.y)?.floorColor === 'green'
+  }
+
+  if (test === 'red-floor') {
+    return platformAt(bot.value.x, bot.value.y)?.floorColor === 'red'
+  }
+
   if (test === 'dark-target') {
     const key = platformKey(bot.value.x, bot.value.y)
     return targetKeys.value.includes(key) && !litKeys.value.includes(key)
@@ -2433,6 +2497,8 @@ function createSceneController(host, options = {}) {
   const sharedMaterials = {
     topNormal: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topNormal }),
     topTarget: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topTarget }),
+    topGreen: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topGreen }),
+    topRed: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topRed }),
     topLit: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topLit }),
     side: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.side }),
     line: new THREE.LineBasicMaterial({ color: MATERIAL_COLORS.line }),
@@ -2556,8 +2622,13 @@ function createSceneController(host, options = {}) {
       for (let layer = 0; layer < item.cell.h; layer += 1) {
         const isTop = layer === item.cell.h - 1
         const isLit = isTop && litSet.has(platformKey(item.x, item.y))
+        const floorTopMaterial = item.cell.floorColor === 'green'
+          ? sharedMaterials.topGreen
+          : item.cell.floorColor === 'red'
+            ? sharedMaterials.topRed
+            : (item.cell.target ? sharedMaterials.topTarget : sharedMaterials.topNormal)
         const topMaterial = isTop
-          ? (isLit ? sharedMaterials.topLit : item.cell.target ? sharedMaterials.topTarget : sharedMaterials.topNormal)
+          ? (isLit ? sharedMaterials.topLit : floorTopMaterial)
           : sharedMaterials.side
         const materials = [sharedMaterials.side, sharedMaterials.side, topMaterial, sharedMaterials.side, sharedMaterials.side, sharedMaterials.side]
         const block = new THREE.Mesh(blockGeometry, materials)
@@ -3698,6 +3769,16 @@ resetLevel(true)
   background: linear-gradient(180deg, #246591, #1e4d6f);
 }
 
+.editor-grid-cell.green {
+  background: linear-gradient(180deg, #7fce79, #4e9f56);
+  color: #153319;
+}
+
+.editor-grid-cell.red {
+  background: linear-gradient(180deg, #e38a7a, #be5f4d);
+  color: #341713;
+}
+
 .editor-grid-cell.start {
   box-shadow: inset 0 0 0 3px #5ccf7a;
 }
@@ -3707,11 +3788,20 @@ resetLevel(true)
 }
 
 .editor-grid-cell .cell-start,
-.editor-grid-cell .cell-target {
+.editor-grid-cell .cell-target,
+.editor-grid-cell .cell-color {
   position: absolute;
-  right: 8px;
   bottom: 6px;
   font-size: 12px;
+}
+
+.editor-grid-cell .cell-start,
+.editor-grid-cell .cell-target {
+  right: 8px;
+}
+
+.editor-grid-cell .cell-color {
+  left: 8px;
 }
 
 .editor-preview-hint {
@@ -4213,6 +4303,16 @@ resetLevel(true)
   letter-spacing: 0.05em;
 }
 
+.condition-palette-label-green-floor {
+  background: linear-gradient(180deg, #eefada, #99d67e);
+  color: #285126;
+}
+
+.condition-palette-label-red-floor {
+  background: linear-gradient(180deg, #ffe5df, #e89987);
+  color: #6b2a21;
+}
+
 .condition-palette-label-dark-target {
   background: linear-gradient(180deg, #fff8d9, #efd98a);
   color: #6b5515;
@@ -4365,6 +4465,14 @@ resetLevel(true)
 
 .condition-slot-badge {
   background: #6a5317;
+}
+
+.condition-slot-badge-green-floor {
+  background: #3c8441;
+}
+
+.condition-slot-badge-red-floor {
+  background: #9a463c;
 }
 
 .condition-slot-badge-dark-target {

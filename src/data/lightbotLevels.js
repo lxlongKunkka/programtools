@@ -1,15 +1,20 @@
 import { solveLevelProgram } from '../utils/lightbotSolver.js'
 
-export function makeTile(height = 1, target = false) {
-  return { h: height, target }
+function normalizeFloorColor(color = 'neutral') {
+  return ['neutral', 'green', 'red'].includes(color) ? color : 'neutral'
+}
+
+export function makeTile(height = 1, target = false, floorColor = 'neutral') {
+  return { h: height, target, floorColor: normalizeFloorColor(floorColor) }
 }
 
 function mapTiles(entries) {
-  return entries.map(([x, y, z = 0, target = false]) => ({
+  return entries.map(([x, y, z = 0, target = false, color = 'neutral']) => ({
     x,
     y,
     z,
-    tile: target ? 'L' : 'N'
+    tile: target ? 'L' : 'N',
+    color: normalizeFloorColor(color)
   }))
 }
 
@@ -19,8 +24,20 @@ function pathTiles(points, targetIndexes = []) {
     x,
     y,
     z,
-    tile: targetSet.has(index) ? 'L' : 'N'
+    tile: targetSet.has(index) ? 'L' : 'N',
+    color: 'neutral'
   }))
+}
+
+function branchTiles(pattern = []) {
+  const entries = []
+  pattern.forEach((color, index) => {
+    const floorColor = normalizeFloorColor(color)
+    entries.push([index, 1, 0, false, floorColor])
+    entries.push([index, floorColor === 'green' ? 0 : 2, 0, true, floorColor])
+  })
+  entries.push([pattern.length, 1, 0, false, 'neutral'])
+  return mapTiles(entries)
 }
 
 function buildBoardFromTiles(tiles) {
@@ -29,7 +46,7 @@ function buildBoardFromTiles(tiles) {
   const board = Array.from({ length: maxY + 1 }, () => Array.from({ length: maxX + 1 }, () => null))
 
   tiles.forEach((tile) => {
-    board[tile.y][tile.x] = makeTile(tile.z + 1, tile.tile === 'L')
+    board[tile.y][tile.x] = makeTile(tile.z + 1, tile.tile === 'L', tile.color || 'neutral')
   })
 
   return board
@@ -105,31 +122,21 @@ function ifClear(body = 'walk') {
   return createConditionalOperation(body, 'forward-clear')
 }
 
-function countConditionExecutionsForOperation(operation, procedures, depth = 0) {
-  if (depth > 8) return 0
-
-  if (isConditionalOperation(operation)) {
-    return 1
-  }
-
-  if (isRepeatOperation(operation)) {
-    return countConditionExecutionsForOperation(operation.body, procedures, depth + 1) * operation.count
-  }
-
-  if (typeof operation === 'string' && ['p1', 'p2'].includes(operation)) {
-    return countConditionExecutionsForList(procedures[operation] || [], procedures, depth + 1)
-  }
-
-  return 0
+function ifGreen(body = 'left') {
+  return createConditionalOperation(body, 'green-floor')
 }
 
-function countConditionExecutionsForList(list = [], procedures, depth = 0) {
-  if (depth > 8) return 0
-  return list.reduce((sum, operation) => sum + countConditionExecutionsForOperation(operation, procedures, depth), 0)
+function ifRed(body = 'right') {
+  return createConditionalOperation(body, 'red-floor')
 }
 
-function countConditionExecutionsForProgram(program = {}) {
-  return countConditionExecutionsForList(program.main || [], program)
+function buildColorBranchProcedure() {
+  return [
+    ifGreen('left'), ifRed('right'), 'walk', 'light',
+    ifGreen('right'), ifRed('left'),
+    ifGreen('right'), ifRed('left'), 'walk',
+    ifGreen('left'), ifRed('right'), 'walk'
+  ]
 }
 
 function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
@@ -154,7 +161,9 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
     order: levelIndex
   }
 
-  const solvedDemo = !level.demo && !commandOptions.ifDark ? solveLevelProgram(baseLevel) : null
+  const solvedDemo = !level.demo && !(commandOptions.ifGreen || commandOptions.ifRed || commandOptions.ifDark || commandOptions.ifForwardClear)
+    ? solveLevelProgram(baseLevel)
+    : null
   const demo = level.demo
     ? {
       main: cloneOperationList(level.demo.main || []),
@@ -162,13 +171,6 @@ function buildCampaignLevel(chapter, level, chapterIndex, levelIndex) {
       p2: cloneOperationList(level.demo.p2 || [])
     }
     : buildTeachingDemo(chapter, solvedDemo?.solvable ? solvedDemo : null)
-
-  if ((commandOptions.ifDark || commandOptions.ifForwardClear) && !completionRequirements.minConditionExecutions) {
-    const minConditionExecutions = countConditionExecutionsForProgram(demo)
-    if (minConditionExecutions > 0) {
-      completionRequirements.minConditionExecutions = minConditionExecutions
-    }
-  }
 
   return {
     ...baseLevel,
@@ -885,319 +887,287 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-7',
-        title: '57. 条件双枝',
-        description: '综合挑战从这里开始正式吸收 if：同一套出枝与回枝模板要同时处理长支路、短支路和中心回收。',
-        goal: '用 if 模板清理两条不同长度的支路。',
-        mainLimit: 5,
-        commandOptions: { ifDark: true, ifForwardClear: true },
-        procLimits: { p1: 4, p2: 8 },
+        title: '57. 双色双枝',
+        description: '综合章节后半段改用颜色地板来分流：绿色脚下走左枝，红色脚下走右枝，同一套模板负责出枝、回枝和前推。',
+        goal: '用颜色分支模板清理两条支路。',
+        mainLimit: 2,
+        commandOptions: { ifGreen: true, ifRed: true },
+        procLimits: { p1: 12 },
         tips: [
-          { title: 'P1 负责出枝', copy: '先走到第一盏灯，再用 If Clear 决定还要不要继续向支路深处推进。' },
-          { title: 'P2 负责回收', copy: '回到中心时也会踩到已点亮格，所以回程模板里同样要保留 If Dark。' }
+          { title: '把颜色当路标', copy: '绿色地板代表这一轮要向左出枝，红色地板代表向右出枝。' },
+          { title: '先把循环写进 P1', copy: 'P1 最好一次完成出枝、点灯、回到主路，再向前推进一格。' }
         ],
-        start: { x: 2, y: 4, dir: 'forward' },
-        tiles: mapTiles([
-          [2, 4, 0, true],
-          [3, 4, 0, true], [4, 4, 0, true],
-          [2, 3, 0, true]
-        ]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red']),
         demo: {
-          main: ['p1', 'p2', 'right', 'p1', 'p2'],
-          p1: ['walk', ifDark(), ifClear(), ifDark()],
-          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark()]
+          main: ['p1', 'p1'],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       },
       {
         id: 'master-8',
-        title: '58. 三向条件枢纽',
-        description: '加入第三条支路后，重点不再是单次往返，而是让同一套条件模板稳定地轮流接管三个方向。',
-        goal: '复用同一对过程清理三条方向不同的支路。',
-        mainLimit: 8,
-        commandOptions: { ifDark: true, ifForwardClear: true },
-        procLimits: { p1: 4, p2: 8 },
+        title: '58. 三枝配色走廊',
+        description: '继续把颜色分支模板拉长到三枝，让 MAIN 开始从手写调用转向压缩调用。',
+        goal: '复用同一套颜色模板清理三条支路。',
+        mainLimit: 3,
+        commandOptions: { ifGreen: true, ifRed: true },
+        procLimits: { p1: 12 },
         tips: [
-          { title: '方向不同，模板相同', copy: '综合题里的 if 价值不在少写一个 Light，而在于让同一段模板可以接管不同朝向的支路。' },
-          { title: '把中心当作公共接口', copy: '每次回到中心后，下一步只做转向切换，不要把额外细节塞进 MAIN。' }
+          { title: '颜色决定第一拍', copy: '模板第一拍只负责看脚下颜色并决定左转还是右转。' },
+          { title: '返回主路后立刻前推', copy: '如果回到主路后没有马上向前推进一格，下一次循环就会卡在原地。' }
         ],
-        start: { x: 2, y: 2, dir: 'forward' },
-        tiles: mapTiles([
-          [2, 2, 0, true],
-          [3, 2, 0, true], [4, 2, 0, true],
-          [2, 1, 0, true],
-          [1, 2, 0, true], [0, 2, 0, true]
-        ]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'green']),
         demo: {
-          main: ['p1', 'p2', 'right', 'p1', 'p2', 'right', 'p1', 'p2'],
-          p1: ['walk', ifDark(), ifClear(), ifDark()],
-          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark()]
+          main: ['p1', 'p1', 'p1'],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       },
       {
         id: 'master-9',
-        title: '59. 三向条件循环',
-        description: '这一关开始要求你把“出枝、回收、切向下一枝”打包成完整循环，让 MAIN 只保留 Repeat。',
-        goal: '把三向枢纽压缩成自动循环的条件模板。',
+        title: '59. 颜色循环',
+        description: '当颜色模板已经稳定后，MAIN 应该只剩下 Repeat。',
+        goal: '把三枝走廊压缩成自动循环的颜色模板。',
         mainLimit: 1,
-        commandOptions: { ifDark: true, ifForwardClear: true },
-        procLimits: { p1: 5, p2: 7 },
+        commandOptions: { ifGreen: true, ifRed: true },
+        procLimits: { p1: 12 },
         tips: [
-          { title: '让 P1 变成完整循环', copy: '当一次调用已经能完成“出发、点亮、返回、转向”时，Repeat 才有真正的价值。' },
-          { title: '三向是四向前的桥', copy: '先在三向枢纽上练熟完整循环，再进入四向总终章，结构会稳很多。' }
+          { title: 'Repeat 只压完整循环', copy: '如果 P1 还不能独立完成一次出枝与回收，就不应该过早上 Repeat。' },
+          { title: '先确认每次调用都会前进', copy: '颜色循环的关键不是能点亮一枝，而是每次调用后都能落到下一块决策地板上。' }
         ],
-        start: { x: 2, y: 2, dir: 'forward' },
-        tiles: mapTiles([
-          [2, 2, 0, true],
-          [3, 2, 0, true], [4, 2, 0, true],
-          [2, 1, 0, true],
-          [1, 2, 0, true], [0, 2, 0, true]
-        ]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'green']),
         demo: {
-          main: [createRepeatOperation('p1', 3)],
-          p1: ['walk', ifDark(), ifClear(), ifDark(), 'p2'],
-          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark(), 'right']
+          main: [createRepeatOperation('p1', 5)],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       },
       {
         id: 'master-10',
-        title: '60. 条件总终章',
-        description: '最后一关把四向枢纽、If Dark、If Clear、P1、P2 和 Repeat 压进同一套结构里，要求你真正把条件块当作终章工具。',
-        goal: '用 Repeat 驱动整套条件终章模板。',
+        title: '60. 颜色总终章',
+        description: '终章改成整条颜色走廊：脚下颜色决定左右分支，P1 负责完整循环，MAIN 只负责驱动。',
+        goal: '用 Repeat 驱动整套颜色分支终章模板。',
         mainLimit: 1,
-        commandOptions: { ifDark: true, ifForwardClear: true },
-        procLimits: { p1: 5, p2: 9 },
+        commandOptions: { ifGreen: true, ifRed: true },
+        procLimits: { p1: 12 },
         tips: [
-          { title: '让 P1 成为完整分支循环', copy: '如果一个分支的出发、清理、返回、转向都能打包进 P1，MAIN 就只需要负责 Repeat。' },
-          { title: 'P2 只做回收和切向', copy: '把掉头、回中心和转向下一枝的工作固定在 P2，整个终章结构会非常稳定。' }
+          { title: '颜色是条件，P1 是结构', copy: '别把左右路线分别写死在 MAIN 里，让脚下颜色去决定这次该走哪一枝。' },
+          { title: '终章看的是抽象能力', copy: '真正的终章程序应该只保留“循环一个分支模板”这层结构。' }
         ],
-        start: { x: 2, y: 2, dir: 'forward' },
-        tiles: mapTiles([
-          [2, 2, 0, true],
-          [3, 2, 0, true], [4, 2, 0, true],
-          [2, 1, 0, true], [2, 0, 0, true],
-          [1, 2, 0, true], [0, 2, 0, true],
-          [2, 3, 0, true], [2, 4, 0, true]
-        ]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'red', 'green', 'red', 'green']),
         demo: {
-          main: [createRepeatOperation('p1', 4)],
-          p1: ['walk', ifDark(), ifClear(), ifDark(), 'p2'],
-          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark(), 'right']
+          main: [createRepeatOperation('p1', 6)],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       }
     ]
   },
   {
     id: 'conditional',
-    title: '条件判断',
-    skill: 'If Dark / If Clear / Reuse',
-    summary: '把条件块扩展成两种现场判断：If Dark 保护灯块，If Clear 保护前进，让同一段路线模板能根据现场状态决定是否执行关键动作。',
-    learningGoals: ['理解 If Dark 与 If Clear', '让同一路线可重复复用', '把条件块和 P1 / Repeat 组合起来'],
-    mechanicTags: ['If Dark', 'If Clear', 'Reuse', 'P1', 'Repeat'],
-    commandOptions: { ifDark: true, ifForwardClear: true },
+    title: '颜色分支',
+    skill: 'If Green / If Red / Brush Logic',
+    summary: '脚下绿色就走左枝，脚下红色就走右枝。条件块不再只是“看灯”或“看前方”，而是正式绑定到地板颜色。',
+    learningGoals: ['理解地板颜色决定分支', '学会把颜色判断写进模板', '把颜色条件和 P1 / Repeat 组合起来'],
+    mechanicTags: ['If Green', 'If Red', 'Floor Color', 'P1', 'Repeat'],
+    commandOptions: { ifGreen: true, ifRed: true },
     tips: [
-      { title: '条件块只管下一条', copy: 'If Dark 不是整段 if/else，它只决定紧跟在后面的那一条指令要不要执行。' },
-      { title: '最常见写法是 If Dark Light / If Clear Walk', copy: '前者避免二次熄灯，后者让同一条模板在“前方有路”和“前方没路”两种现场都能安全复用。' }
+      { title: '条件块仍然只管下一条', copy: 'If Green 和 If Red 也不是整段 if/else，它们只决定下一条指令要不要执行。' },
+      { title: '把颜色当地板路标', copy: '绿色地板一般配左转，红色地板一般配右转，这样同一套模板就能读懂不同分支。' }
     ],
     levels: [
       {
         id: 'conditional-1',
-        title: '41. 回程不熄灯',
-        description: '先用最短的双灯走廊解释 If Dark 的价值：先点亮近灯，再继续前进去点亮远灯。',
-        goal: '沿直线点亮两盏灯，并在程序里实际用到 If Dark。',
-        mainLimit: 5,
+        title: '41. 绿地板向左',
+        description: '第一关只教一件事：踩到绿色地板时，让程序向左拐。',
+        goal: '用 If Green 走上左侧灯块。',
+        mainLimit: 3,
         procLimits: {},
         tips: [
-          { title: '先把近灯也写成条件点亮', copy: '这关虽然路很直，但系统会检查你有没有真正使用 If Dark，而不是只用普通 Light 硬过。' },
-          { title: 'If Dark 仍然等价于第一次点亮', copy: '第一次踩上目标格时，If Dark Light 会像普通 Light 一样生效。' }
+          { title: '先看脚下颜色', copy: '这关起点脚下就是绿色，所以第一拍就应该由 If Green 来决定转向。' },
+          { title: '颜色条件只触发一次', copy: 'If Green 只影响紧跟着的那条指令，不会把后面的 Walk 一起包进去。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0]], [1, 3]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green']),
         demo: {
-          main: ['walk', ifDark(), 'walk', 'walk', ifDark()],
+          main: [ifGreen('left'), 'walk', 'light'],
           p1: [],
           p2: []
         }
       },
       {
         id: 'conditional-2',
-        title: '42. 中心灯只亮一次',
-        description: '把目标格放在路口中心，让玩家看到同一个灯块可以被多次经过，但只需要第一次点亮。',
-        goal: '先点亮中心和上方灯，再回到中心去点亮右侧灯。',
-        mainLimit: 12,
+        title: '42. 红地板向右',
+        description: '第二关只换一种颜色：踩到红色地板时，要向右拐。',
+        goal: '用 If Red 走上右侧灯块。',
+        mainLimit: 3,
         procLimits: {},
         tips: [
-          { title: '中心灯会被反复经过', copy: '这类枢纽图里，最适合被条件块保护的通常就是中心灯。' },
-          { title: '不要把 If Dark 理解成自动寻路', copy: '条件块只负责是否执行下一条，路线和转向仍然要你自己规划。' }
+          { title: '红色和绿色各管一边', copy: '之后的主线会把这两种颜色混起来，所以现在先把红色分支记牢。' },
+          { title: '右转仍然是普通动作', copy: '真正执行右转的仍然是 Turn Right，只是这次由 If Red 来决定是否触发。' }
         ],
         start: { x: 0, y: 1, dir: 'forward' },
-        tiles: mapTiles([
-          [0, 1], [1, 1, 0, true], [2, 1, 0, true], [1, 0, 0, true]
-        ]),
+        tiles: branchTiles(['red']),
         demo: {
-          main: ['walk', ifDark(), 'left', 'walk', ifDark(), 'right', 'right', 'walk', ifDark(), 'left', 'walk', ifDark()],
+          main: [ifRed('right'), 'walk', 'light'],
           p1: [],
           p2: []
         }
       },
       {
         id: 'conditional-3',
-        title: '43. 条件模板往返',
-        description: '第一次把 If Dark 放进 P1，让同一段两步模板既能负责首次点灯，也能负责回程。',
-        goal: '用一个过程完成走廊往返。',
-        mainLimit: 6,
-        procLimits: { p1: 3 },
+        title: '43. 绿色完整循环',
+        description: '开始把颜色条件扩成完整循环：出枝、点灯、回主路、再向前推进。',
+        goal: '用 If Green 完成一整次左枝循环。',
+        mainLimit: 8,
+        procLimits: {},
         tips: [
-          { title: '把条件写进模板里', copy: '如果模板本来就会踩灯，那么最稳定的做法通常是把 If Dark Light 直接放进 P1。' },
-          { title: '回程还能继续复用', copy: '同一个 P1 在回程再次经过已点亮的灯时也不会出错，这才是条件模板的价值。' }
+          { title: '完整循环有三段', copy: '先出枝，再回到主路，最后向前推进到下一块地板。' },
+          { title: '转回主路需要两次转向', copy: '从分支灯块回到主路时，不是一拍就能掉头，要先转回主路方向。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], [1, 3]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green']),
         demo: {
-          main: ['p1', 'p1', 'left', 'left', 'p1', 'p1'],
-          p1: ['walk', ifDark(), 'walk'],
+          main: [ifGreen('left'), 'walk', 'light', ifGreen('right'), ifGreen('right'), 'walk', ifGreen('left'), 'walk'],
+          p1: [],
           p2: []
         }
       },
       {
         id: 'conditional-4',
-        title: '44. 重复调用条件模板',
-        description: '把条件模板再往前推进一步：MAIN 不再手写三次调用，而是让 Repeat 直接压缩对 P1 的连续调用。',
-        goal: '用 Repeat 压缩往返走廊上的条件模板。',
-        mainLimit: 4,
-        procLimits: { p1: 3 },
+        title: '44. 红色完整循环',
+        description: '把同样的完整循环搬到右枝，确认红色版本也能独立成立。',
+        goal: '用 If Red 完成一整次右枝循环。',
+        mainLimit: 8,
+        procLimits: {},
         tips: [
-          { title: 'If Dark 和 Repeat 不冲突', copy: '条件块负责局部安全，Repeat 负责压缩调用节奏，这两层可以同时成立。' },
-          { title: '先有稳定模板，再谈压缩', copy: '只有 P1 已经足够稳定时，MAIN 里的 Repeat 才会真正好用。' }
+          { title: '红色循环和绿色是镜像', copy: '如果你已经理解了绿色版本，这关只是在练习镜像思维。' },
+          { title: '镜像不等于乱写', copy: '先明确每一次转向后朝向是什么，再决定下一拍。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]], [1, 3, 5]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['red']),
         demo: {
-          main: [createRepeatOperation('p1', 3), 'left', 'left', createRepeatOperation('p1', 3)],
-          p1: ['walk', ifDark(), 'walk'],
+          main: [ifRed('right'), 'walk', 'light', ifRed('left'), ifRed('left'), 'walk', ifRed('right'), 'walk'],
+          p1: [],
           p2: []
         }
       },
       {
         id: 'conditional-5',
-        title: '45. 枢纽三次经过',
-        description: '中心灯会被踩三次，玩家必须接受“同一个 If Dark Light 可以反复写在主程序里”这个思路。',
-        goal: '清理上下支路和右侧出口，同时保持中心灯常亮。',
-        mainLimit: 20,
+        title: '45. 双色手写双循环',
+        description: '第一次把绿色和红色放进同一关，但还不做过程压缩，先把完整节奏手写出来。',
+        goal: '手写完成一绿一红两次循环。',
+        mainLimit: 24,
         procLimits: {},
         tips: [
-          { title: '同一盏灯可以被保护很多次', copy: '不是说一盏灯只能配一个条件块，而是每次经过它时都能用 If Dark Light 保证安全。' },
-          { title: '先想经过顺序', copy: '枢纽题先决定先上、先下还是先右，再把条件块插到每次踩灯的位置。' }
+          { title: '先别急着抽过程', copy: '手写一遍完整循环，才能看清以后该把哪一段抽成模板。' },
+          { title: '两种颜色共用结构', copy: '虽然左右方向不同，但结构其实完全一样。' }
         ],
         start: { x: 0, y: 1, dir: 'forward' },
-        tiles: mapTiles([
-          [0, 1], [1, 1], [2, 1, 0, true], [3, 1], [4, 1, 0, true],
-          [2, 0, 0, true], [2, 2, 0, true]
-        ]),
+        tiles: branchTiles(['green', 'red']),
         demo: {
-          main: ['walk', 'walk', ifDark(), 'left', 'walk', ifDark(), 'right', 'right', 'walk', ifDark(), 'walk', ifDark(), 'left', 'left', 'walk', ifDark(), 'right', 'walk', 'walk', ifDark()],
+          main: [...buildColorBranchProcedure(), ...buildColorBranchProcedure()],
           p1: [],
           p2: []
         }
       },
       {
         id: 'conditional-6',
-        title: '46. 条件终测',
-        description: '最后一关把 If Dark、P1、P2 和 Repeat 放在一起，要求玩家真正把条件块当成可复用结构的一部分。',
-        goal: '用最整洁的条件模板完成超长走廊往返。',
-        mainLimit: 3,
-        procLimits: { p1: 3, p2: 2 },
+        title: '46. 把循环装进 P1',
+        description: '现在把完整颜色循环抽进 P1，让 MAIN 只保留调用顺序。',
+        goal: '用 P1 连续处理两块不同颜色地板。',
+        mainLimit: 2,
+        procLimits: { p1: 12 },
         tips: [
-          { title: 'P1 负责路线模板', copy: '把“走两格，中途如果脚下是暗灯就点亮”这件事交给 P1，MAIN 会非常干净。' },
-          { title: 'P2 只做掉头', copy: '当一个动作只承担单一职责时，就算只有两格也值得拆成独立过程。' }
+          { title: 'P1 里要有颜色判断', copy: '不要把 If Green / If Red 留在 MAIN 里，P1 才是循环模板真正该待的地方。' },
+          { title: 'MAIN 只负责次数', copy: '当循环模板写稳后，MAIN 就不该再关心左枝还是右枝。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]], [1, 3, 5, 7]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red']),
         demo: {
-          main: [createRepeatOperation('p1', 4), 'p2', createRepeatOperation('p1', 4)],
-          p1: ['walk', ifDark(), 'walk'],
-          p2: ['left', 'left']
+          main: ['p1', 'p1'],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       },
       {
         id: 'conditional-7',
-        title: '47. 有路才前进',
-        description: '第一次正式引入 If Clear：同一条模板会在某些位置继续前进，在某些位置原地跳过。',
-        goal: '用 If Clear 让同一段程序安全扫过三盏灯。',
-        mainLimit: 9,
-        procLimits: {},
+        title: '47. Repeat 三枝',
+        description: '颜色循环稳定后，Repeat 就能正式上场。',
+        goal: '用 Repeat 驱动三次颜色循环。',
+        mainLimit: 1,
+        procLimits: { p1: 12 },
         tips: [
-          { title: 'If Clear 常包 Walk', copy: '当你不确定前方是不是还有平台，但又想复用同一段模板时，If Clear Walk 是最自然的写法。' },
-          { title: '跳过也是结果', copy: '条件不成立时，不执行下一条本身就是模板的一部分，不需要额外补空操作。' }
+          { title: 'Repeat 压的是循环，不是局部动作', copy: '如果 P1 每次都能从一块决策地板走到下一块，才适合交给 Repeat。' },
+          { title: '三枝是第一次真正自动化', copy: '从这关开始，MAIN 可以完全不关心每次踩到的是绿地板还是红地板。' }
         ],
         start: { x: 0, y: 1, dir: 'forward' },
-        tiles: mapTiles([
-          [0, 1], [1, 1, 0, true], [2, 1], [3, 1, 0, true], [4, 1],
-          [2, 0], [3, 0, 0, true]
-        ]),
+        tiles: branchTiles(['green', 'red', 'green']),
         demo: {
-          main: ['walk', ifDark(), ifClear(), ifClear(), ifDark(), 'left', ifClear(), ifDark(), 'right'],
-          p1: [],
+          main: [createRepeatOperation('p1', 3)],
+          p1: buildColorBranchProcedure(),
           p2: []
         }
       },
       {
         id: 'conditional-8',
-        title: '48. 分叉共用模板',
-        description: '把 If Clear 放进 P1，让同一个“前进两次并在必要时点灯”的模板同时适配长支路和短支路。',
-        goal: '用一个过程吃掉长短不同的两条支路。',
-        mainLimit: 8,
-        procLimits: { p1: 4 },
+        title: '48. Repeat 四枝',
+        description: '把同一套颜色循环继续拉长到四枝，确认模板没有写死在某一种颜色上。',
+        goal: '用一套模板扫完四块决策地板。',
+        mainLimit: 1,
+        procLimits: { p1: 12 },
         tips: [
-          { title: 'If Clear 负责长度差', copy: '当两条支路节奏类似，只是有一条更短时，最适合用 If Clear 让模板自动适配。' },
-          { title: '模板先写长一点', copy: '让模板按更长的那条支路来写，再让 If Clear 自动跳过多余一步，通常最干净。' }
+          { title: '看的是模板的泛化能力', copy: '如果只在一两块颜色地板上生效，那还不算真正的模板。' },
+          { title: '重复越多，越能暴露结构问题', copy: '一旦某次循环回不到主路，后面的 Repeat 会立刻全部错位。' }
         ],
-        start: { x: 0, y: 2, dir: 'forward' },
-        tiles: mapTiles([
-          [0, 2], [1, 2], [2, 2],
-          [2, 1, 0, true], [2, 0, 0, true],
-          [2, 3, 0, true]
-        ]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'red', 'green']),
         demo: {
-          main: ['walk', 'walk', 'left', 'p1', 'left', 'left', 'walk', 'walk', 'p1'],
-          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          main: [createRepeatOperation('p1', 4)],
+          p1: buildColorBranchProcedure(),
           p2: []
         }
       },
       {
         id: 'conditional-9',
-        title: '49. 双条件混编',
-        description: 'If Dark 和 If Clear 第一次被压进同一个过程里，让同一段模板同时决定“要不要点灯”和“要不要再前进一步”。',
-        goal: '用一个混合条件模板扫过长走廊上的三盏灯。',
+        title: '49. 五枝颜色循环',
+        description: '这里开始真的依赖颜色判断了：主程序只有一个 Repeat，剩下都交给颜色模板。',
+        goal: '用一个颜色模板扫完五块决策地板。',
         mainLimit: 1,
-        procLimits: { p1: 4 },
+        procLimits: { p1: 12 },
         tips: [
-          { title: '先分清谁管灯、谁管路', copy: 'If Dark 保护灯块，If Clear 保护前进。不要让两个条件承担同一类责任。' },
-          { title: '条件顺序要稳定', copy: '一般先前进到位，再判断是否点灯；如果顺序颠倒，模板含义就会变得很乱。' }
+          { title: 'MAIN 里只剩一个节拍', copy: '当 MAIN 只剩 Repeat 时，说明你已经把分支逻辑真正抽进模板里了。' },
+          { title: '颜色是必须信息', copy: '如果没有颜色判断，同一套模板根本不知道这一次该向左还是向右。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]], [1, 3, 5]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'green', 'red', 'red']),
         demo: {
-          main: [createRepeatOperation('p1', 3)],
-          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          main: [createRepeatOperation('p1', 5)],
+          p1: buildColorBranchProcedure(),
           p2: []
         }
       },
       {
         id: 'conditional-10',
-        title: '50. 条件章终章',
-        description: '最终关要求玩家把两种条件块和过程压缩一起用起来，不再只是“会写条件”，而是“会用条件组织程序”。',
-        goal: '用两种条件块写出最整洁的综合程序。',
-        mainLimit: 3,
-        procLimits: { p1: 4, p2: 2 },
+        title: '50. 颜色章终章',
+        description: '条件章终章彻底切到颜色逻辑：脚下颜色决定分支，P1 是唯一模板，MAIN 是唯一调度。',
+        goal: '用 Repeat 驱动六次颜色循环。',
+        mainLimit: 1,
+        procLimits: { p1: 12 },
         tips: [
-          { title: 'P1 放路线模板，P2 放掉头或切换', copy: '如果 MAIN 还在手写大量局部细节，说明你还没有真正把条件模板抽干净。' },
-          { title: '两种条件不要抢活', copy: 'If Dark 负责避免二次熄灯，If Clear 负责长度适配。把职责分清，程序才会稳定。' }
+          { title: '终章程序应该非常短', copy: '真正抽象完之后，MAIN 不需要知道任何局部分支细节。' },
+          { title: '观察颜色序列而不是单个转向', copy: '你不再是逐拍写左右，而是在设计一个能读懂整条颜色序列的模板。' }
         ],
-        start: { x: 0, y: 0, dir: 'forward' },
-        tiles: pathTiles([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0]], [1, 3, 5, 7]),
+        start: { x: 0, y: 1, dir: 'forward' },
+        tiles: branchTiles(['green', 'red', 'red', 'green', 'red', 'green']),
         demo: {
-          main: [createRepeatOperation('p1', 4), 'p2', createRepeatOperation('p1', 4)],
-          p1: ['walk', ifDark(), ifClear(), ifDark()],
-          p2: ['left', 'left']
+          main: [createRepeatOperation('p1', 6)],
+          p1: buildColorBranchProcedure(),
+          p2: []
         }
       }
     ]
