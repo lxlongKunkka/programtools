@@ -1305,14 +1305,17 @@ function chapterMasteryStatus(group) {
 
 function conditionRequirementLabel(level) {
   const minConditionExecutions = Math.max(Number(level?.completionRequirements?.minConditionExecutions) || 0, 0)
+  const hasConditionTools = Boolean(level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
   return minConditionExecutions > 0
     ? `要求 if × ${minConditionExecutions}`
-    : '本关不要求 if'
+    : (hasConditionTools ? '可用 if，不强制' : '本关不要求 if')
 }
 
 function requirementBadgeClass(level) {
-  return (Number(level?.completionRequirements?.minConditionExecutions) || 0) > 0
-    ? 'requires-if'
+  const minConditionExecutions = Number(level?.completionRequirements?.minConditionExecutions) || 0
+  if (minConditionExecutions > 0) return 'requires-if'
+  return (level?.commandOptions?.ifDark || level?.commandOptions?.ifForwardClear)
+    ? 'if-optional'
     : 'no-if-required'
 }
 
@@ -4448,6 +4451,11 @@ resetLevel(true)
 .requires-if {
   background: linear-gradient(180deg, #fff1cb, #f3d57b);
   color: #6c5414;
+}
+
+.if-optional {
+  background: linear-gradient(180deg, #e8f8ea, #c7ebce);
+  color: #2d6a40;
 }
 
 .no-if-required {
