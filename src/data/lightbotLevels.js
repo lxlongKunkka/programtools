@@ -743,7 +743,7 @@ const CAMPAIGN_CHAPTERS = [
     levels: [
       {
         id: 'master-1',
-        title: '41. 双回路',
+        title: '51. 双回路',
         description: '第一关综合题先从双回路入手，让玩家用之前的路线与过程经验重新组织地图。',
         goal: '清理外圈和内侧支路上的四盏灯。',
         mainLimit: 12,
@@ -762,7 +762,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-2',
-        title: '42. 螺旋阶梯',
+        title: '52. 螺旋阶梯',
         description: '玩家会在螺旋上逐步升高，路径可读但转向顺序稍有错误就会乱掉。',
         goal: '沿螺旋上升并点亮三个关键灯块。',
         mainLimit: 13,
@@ -776,7 +776,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-3',
-        title: '43. 桥塔交错',
+        title: '53. 桥塔交错',
         description: '综合关开始混合桥面、回收路径和塔台，让单一技巧不再能直接通关。',
         goal: '先处理桥面，再处理两侧高塔。',
         mainLimit: 13,
@@ -794,7 +794,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-4',
-        title: '44. 双层回字',
+        title: '54. 双层回字',
         description: '同一个回字形被拆成上下两层，玩家必须区分平地外圈和高台内圈的作用。',
         goal: '点亮上下两层回路中的五盏灯。',
         mainLimit: 15,
@@ -813,7 +813,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-5',
-        title: '45. 三段高差',
+        title: '55. 三段高差',
         description: '这关的重点不是地图大，而是同一路线上要连续切换平地、一级台和二级台。',
         goal: '沿三段高差依次点亮四盏灯。',
         mainLimit: 14,
@@ -827,7 +827,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-6',
-        title: '46. 十字城门',
+        title: '56. 十字城门',
         description: '十字平台在综合章节里再次出现，但这次每条支路都带有不同的高度负担。',
         goal: '从中心出发清理四条支路。',
         mainLimit: 16,
@@ -847,7 +847,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-7',
-        title: '47. 蛇形高桥',
+        title: '57. 蛇形高桥',
         description: '蛇形和高差叠加后，玩家必须在脑中预演一整段路线，不能靠试错硬撞。',
         goal: '在蛇形高桥上点亮四盏灯。',
         mainLimit: 16,
@@ -861,7 +861,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-8',
-        title: '48. 双塔回环',
+        title: '58. 双塔回环',
         description: '左右两塔之间存在回环关系，这关考验的是过程设计是否真正能复用。',
         goal: '在两座塔和中间回路中点亮五盏灯。',
         mainLimit: 17,
@@ -880,7 +880,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-9',
-        title: '49. 四区综合',
+        title: '59. 四区综合',
         description: '地图被拆成四个功能区，玩家需要像搭积木一样安排程序结构，而不是只拼最短路径。',
         goal: '清理四个区域里的全部灯块。',
         mainLimit: 18,
@@ -899,7 +899,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-10',
-        title: '50. 默认终章',
+        title: '60. 默认终章',
         description: '最终关不靠纯尺寸压人，而是把前面学过的路线、过程、Repeat 和双过程全都放进同一张结构图。',
         goal: '用你认为最整洁的程序完成整个终章。',
         mainLimit: 19,
@@ -934,7 +934,7 @@ const CAMPAIGN_CHAPTERS = [
     levels: [
       {
         id: 'conditional-1',
-        title: '51. 回程不熄灯',
+        title: '41. 回程不熄灯',
         description: '先用最短的走廊解释 If Dark 的作用：回程会再次踩到第一盏灯，但不应该把它关掉。',
         goal: '点亮两盏灯后沿原路返回。',
         mainLimit: 10,
@@ -953,7 +953,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-2',
-        title: '52. 中心灯只亮一次',
+        title: '42. 中心灯只亮一次',
         description: '把目标格放在路口中心，让玩家看到同一个灯块可以被多次经过，但只需要第一次点亮。',
         goal: '先点亮中心和上方灯，再回到中心去点亮右侧灯。',
         mainLimit: 12,
@@ -974,7 +974,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-3',
-        title: '53. 条件模板往返',
+        title: '43. 条件模板往返',
         description: '第一次把 If Dark 放进 P1，让同一段两步模板既能负责首次点灯，也能负责回程。',
         goal: '用一个过程完成走廊往返。',
         mainLimit: 6,
@@ -993,7 +993,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-4',
-        title: '54. 重复调用条件模板',
+        title: '44. 重复调用条件模板',
         description: '把条件模板再往前推进一步：MAIN 不再手写三次调用，而是让 Repeat 直接压缩对 P1 的连续调用。',
         goal: '用 Repeat 压缩往返走廊上的条件模板。',
         mainLimit: 4,
@@ -1012,7 +1012,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-5',
-        title: '55. 枢纽三次经过',
+        title: '45. 枢纽三次经过',
         description: '中心灯会被踩三次，玩家必须接受“同一个 If Dark Light 可以反复写在主程序里”这个思路。',
         goal: '清理上下支路和右侧出口，同时保持中心灯常亮。',
         mainLimit: 20,
@@ -1034,7 +1034,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-6',
-        title: '56. 条件终测',
+        title: '46. 条件终测',
         description: '最后一关把 If Dark、P1、P2 和 Repeat 放在一起，要求玩家真正把条件块当成可复用结构的一部分。',
         goal: '用最整洁的条件模板完成超长走廊往返。',
         mainLimit: 3,
@@ -1053,7 +1053,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-7',
-        title: '57. 有路才前进',
+        title: '47. 有路才前进',
         description: '第一次正式引入 If Clear：同一条模板会在某些位置继续前进，在某些位置原地跳过。',
         goal: '用 If Clear 让同一段程序安全扫过三盏灯。',
         mainLimit: 9,
@@ -1075,7 +1075,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-8',
-        title: '58. 分叉共用模板',
+        title: '48. 分叉共用模板',
         description: '把 If Clear 放进 P1，让同一个“前进两次并在必要时点灯”的模板同时适配长支路和短支路。',
         goal: '用一个过程吃掉长短不同的两条支路。',
         mainLimit: 8,
@@ -1098,7 +1098,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-9',
-        title: '59. 双条件混编',
+        title: '49. 双条件混编',
         description: 'If Dark 和 If Clear 第一次被压进同一个过程里，让同一段模板同时决定“要不要点灯”和“要不要再前进一步”。',
         goal: '用一个混合条件模板扫过长走廊上的三盏灯。',
         mainLimit: 1,
@@ -1117,7 +1117,7 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'conditional-10',
-        title: '60. 条件章终章',
+        title: '50. 条件章终章',
         description: '最终关要求玩家把两种条件块和过程压缩一起用起来，不再只是“会写条件”，而是“会用条件组织程序”。',
         goal: '用两种条件块写出最整洁的综合程序。',
         mainLimit: 3,
@@ -1138,11 +1138,17 @@ const CAMPAIGN_CHAPTERS = [
   }
 ]
 
-export const RECONSTRUCTED_LIGHTBOT_LEVELS = CAMPAIGN_CHAPTERS.flatMap((chapter, chapterIndex) =>
+const CHAPTER_DISPLAY_ORDER = ['basics', 'routing', 'procedures', 'compression', 'conditional', 'master']
+
+const ORDERED_CAMPAIGN_CHAPTERS = CHAPTER_DISPLAY_ORDER
+  .map((chapterId) => CAMPAIGN_CHAPTERS.find((chapter) => chapter.id === chapterId))
+  .filter(Boolean)
+
+export const RECONSTRUCTED_LIGHTBOT_LEVELS = ORDERED_CAMPAIGN_CHAPTERS.flatMap((chapter, chapterIndex) =>
   chapter.levels.map((level, levelIndex) => buildCampaignLevel(chapter, level, chapterIndex, levelIndex))
 )
 
-export const LIGHTBOT_LEVEL_GROUPS = CAMPAIGN_CHAPTERS.map((chapter, chapterIndex) => ({
+export const LIGHTBOT_LEVEL_GROUPS = ORDERED_CAMPAIGN_CHAPTERS.map((chapter, chapterIndex) => ({
   id: chapter.id,
   title: chapter.title,
   summary: chapter.summary || '',
