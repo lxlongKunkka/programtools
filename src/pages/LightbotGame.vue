@@ -385,7 +385,10 @@
                 <span class="repeat-palette-label">x{{ operation.count }}</span>
               </template>
               <template v-else-if="isConditionalPaletteOperation(operation)">
-                <span class="condition-palette-label">IF</span>
+                <span class="condition-palette-label" :class="`condition-palette-label-${operation.test}`">
+                  <span class="condition-palette-prefix">IF</span>
+                  <span class="condition-palette-key">{{ CONDITION_TEST_META[operation.test]?.shortLabel || 'IF' }}</span>
+                </span>
               </template>
               <template v-else-if="PROCEDURE_META[operation.id]">
                 <div class="proc-slot">
@@ -475,7 +478,7 @@
                 <template v-else-if="isConditionalOperation(operation)">
                   <div class="repeat-slot condition-slot">
                     <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
-                    <span class="repeat-slot-badge condition-slot-badge">IF</span>
+                    <span class="repeat-slot-badge condition-slot-badge" :class="`condition-slot-badge-${operation.test}`">{{ CONDITION_TEST_META[operation.test]?.slotLabel || 'IF' }}</span>
                   </div>
                 </template>
                 <template v-else-if="PROCEDURE_META[operation]">
@@ -529,7 +532,7 @@
                 <template v-else-if="isConditionalOperation(operation)">
                   <div class="repeat-slot condition-slot">
                     <img :src="operationSprite(operation.body)" :alt="operationLabel(operation)">
-                    <span class="repeat-slot-badge condition-slot-badge">IF</span>
+                    <span class="repeat-slot-badge condition-slot-badge" :class="`condition-slot-badge-${operation.test}`">{{ CONDITION_TEST_META[operation.test]?.slotLabel || 'IF' }}</span>
                   </div>
                 </template>
                 <template v-else-if="PROCEDURE_META[operation]">
@@ -624,8 +627,8 @@ const PROCEDURE_META = {
   p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
 }
 const CONDITION_TEST_META = {
-  'dark-target': { label: 'If Dark', shortLabel: 'IF', description: '仅当脚下是未点亮目标格时执行下一条' },
-  'forward-clear': { label: 'If Clear', shortLabel: 'IF', description: '仅当前方存在可合法前进的平台时执行下一条' }
+  'dark-target': { label: 'If Dark', shortLabel: 'DARK', slotLabel: 'IF-D', description: '仅当脚下是未点亮目标格时执行下一条' },
+  'forward-clear': { label: 'If Clear', shortLabel: 'CLEAR', slotLabel: 'IF-C', description: '仅当前方存在可合法前进的平台时执行下一条' }
 }
 const BLOCK_SIZE = 1
 const BLOCK_HEIGHT = 0.5
@@ -4155,7 +4158,35 @@ resetLevel(true)
 }
 
 .condition-palette-label {
-  letter-spacing: 0.08em;
+  width: 38px;
+  height: 38px;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid rgba(47, 67, 85, 0.14);
+  border-radius: 12px;
+  line-height: 1;
+}
+
+.condition-palette-prefix {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.condition-palette-key {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.condition-palette-label-dark-target {
+  background: linear-gradient(180deg, #fff8d9, #efd98a);
+  color: #6b5515;
+}
+
+.condition-palette-label-forward-clear {
+  background: linear-gradient(180deg, #e0fbef, #9ad8b4);
+  color: #1c6842;
 }
 
 .command-btn:hover:not(:disabled),
@@ -4300,6 +4331,14 @@ resetLevel(true)
 
 .condition-slot-badge {
   background: #6a5317;
+}
+
+.condition-slot-badge-dark-target {
+  background: #7a6116;
+}
+
+.condition-slot-badge-forward-clear {
+  background: #2e7a54;
 }
 
 .proc-slot-badge {
