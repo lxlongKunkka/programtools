@@ -733,9 +733,9 @@ const CAMPAIGN_CHAPTERS = [
     id: 'master',
     title: '综合挑战',
     skill: 'Strategy',
-    summary: '把前四章的路线、过程、Repeat 和双过程真正组合起来，开始按程序结构而不是按单步动作解题。',
-    learningGoals: ['拆复杂图为结构块', '组合 P1 / P2 / Repeat', '兼顾最优与可读性'],
-    mechanicTags: ['Strategy', 'P1', 'P2', 'Repeat'],
+    summary: '把前面学过的路线、过程、Repeat 与条件块真正组合起来。前半章练结构拆分，后半章练把 If Dark / If Clear 并入终章程序。',
+    learningGoals: ['拆复杂图为结构块', '组合 P1 / P2 / Repeat', '在终章里合并 If Dark / If Clear'],
+    mechanicTags: ['Strategy', 'P1', 'P2', 'Repeat', 'If Dark', 'If Clear'],
     tips: [
       { title: '先拆结构再写程序', copy: '综合关如果直接开始写指令，通常会很快迷路。先把地图拆成若干重复区域。' },
       { title: '允许回头重构', copy: '写到一半发现 MAIN 爆了是正常现象，应该回头重新抽过程，而不是继续硬塞。' }
@@ -847,75 +847,103 @@ const CAMPAIGN_CHAPTERS = [
       },
       {
         id: 'master-7',
-        title: '57. 蛇形高桥',
-        description: '蛇形和高差叠加后，玩家必须在脑中预演一整段路线，不能靠试错硬撞。',
-        goal: '在蛇形高桥上点亮四盏灯。',
-        mainLimit: 16,
-        procLimits: { p1: 4, p2: 3 },
+        title: '57. 条件双枝',
+        description: '综合挑战从这里开始正式吸收 if：同一套出枝与回枝模板要同时处理长支路、短支路和中心回收。',
+        goal: '用 if 模板清理两条不同长度的支路。',
+        mainLimit: 5,
+        commandOptions: { ifDark: true, ifForwardClear: true },
+        procLimits: { p1: 4, p2: 8 },
         tips: [
-          { title: '预演整段转向', copy: '蛇形题真正难的是连续几次转向，建议先在脑中完整走一遍。' },
-          { title: '桥面和高差拆开看', copy: '把平移节奏与升降节奏分开看，程序会更容易整理成两层结构。' }
+          { title: 'P1 负责出枝', copy: '先走到第一盏灯，再用 If Clear 决定还要不要继续向支路深处推进。' },
+          { title: 'P2 负责回收', copy: '回到中心时也会踩到已点亮格，所以回程模板里同样要保留 If Dark。' }
         ],
-        start: { x: 0, y: 4, dir: 'forward' },
-        tiles: pathTiles([[0, 4, 0], [1, 4, 0], [2, 4, 1], [3, 4, 1], [3, 3, 2], [2, 3, 2], [1, 3, 1], [0, 3, 1], [0, 2, 2], [1, 2, 2]], [2, 4, 7, 9])
+        start: { x: 2, y: 4, dir: 'forward' },
+        tiles: mapTiles([
+          [2, 4, 0, true],
+          [3, 4, 0, true], [4, 4, 0, true],
+          [2, 3, 0, true]
+        ]),
+        demo: {
+          main: ['p1', 'p2', 'right', 'p1', 'p2'],
+          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark()]
+        }
       },
       {
         id: 'master-8',
-        title: '58. 双塔回环',
-        description: '左右两塔之间存在回环关系，这关考验的是过程设计是否真正能复用。',
-        goal: '在两座塔和中间回路中点亮五盏灯。',
-        mainLimit: 17,
-        procLimits: { p1: 5, p2: 4 },
+        title: '58. 三向条件枢纽',
+        description: '加入第三条支路后，重点不再是单次往返，而是让同一套条件模板稳定地轮流接管三个方向。',
+        goal: '复用同一对过程清理三条方向不同的支路。',
+        mainLimit: 8,
+        commandOptions: { ifDark: true, ifForwardClear: true },
+        procLimits: { p1: 4, p2: 8 },
         tips: [
-          { title: '别只盯塔顶', copy: '真正重复的通常不是塔顶动作，而是进塔和出塔的路线框架。' },
-          { title: '回环先看返回点', copy: '如果过程结束后回不到合适位置，后面的复用就会断掉。' }
+          { title: '方向不同，模板相同', copy: '综合题里的 if 价值不在少写一个 Light，而在于让同一段模板可以接管不同朝向的支路。' },
+          { title: '把中心当作公共接口', copy: '每次回到中心后，下一步只做转向切换，不要把额外细节塞进 MAIN。' }
         ],
-        start: { x: 0, y: 2, dir: 'forward' },
+        start: { x: 2, y: 2, dir: 'forward' },
         tiles: mapTiles([
-          [0, 2], [1, 2], [2, 2, 0, true], [3, 2], [4, 2, 0, true], [5, 2],
-          [2, 1, 1], [2, 0, 2, true],
-          [4, 1, 1], [4, 0, 2, true],
-          [3, 1, 1, true]
-        ])
+          [2, 2, 0, true],
+          [3, 2, 0, true], [4, 2, 0, true],
+          [2, 1, 0, true],
+          [1, 2, 0, true], [0, 2, 0, true]
+        ]),
+        demo: {
+          main: ['p1', 'p2', 'right', 'p1', 'p2', 'right', 'p1', 'p2'],
+          p1: ['walk', ifDark(), ifClear(), ifDark()],
+          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark()]
+        }
       },
       {
         id: 'master-9',
-        title: '59. 四区综合',
-        description: '地图被拆成四个功能区，玩家需要像搭积木一样安排程序结构，而不是只拼最短路径。',
-        goal: '清理四个区域里的全部灯块。',
-        mainLimit: 18,
-        procLimits: { p1: 5, p2: 5 },
+        title: '59. 三向条件循环',
+        description: '这一关开始要求你把“出枝、回收、切向下一枝”打包成完整循环，让 MAIN 只保留 Repeat。',
+        goal: '把三向枢纽压缩成自动循环的条件模板。',
+        mainLimit: 1,
+        commandOptions: { ifDark: true, ifForwardClear: true },
+        procLimits: { p1: 5, p2: 7 },
         tips: [
-          { title: '先标四个区块', copy: '把整张图按功能区拆开，再决定每个区块由 MAIN 还是过程接管。' },
-          { title: '程序像拼积木', copy: '这一关不是线性写代码，而是把几个可复用模块拼成完整流程。' }
+          { title: '让 P1 变成完整循环', copy: '当一次调用已经能完成“出发、点亮、返回、转向”时，Repeat 才有真正的价值。' },
+          { title: '三向是四向前的桥', copy: '先在三向枢纽上练熟完整循环，再进入四向总终章，结构会稳很多。' }
         ],
-        start: { x: 0, y: 4, dir: 'forward' },
+        start: { x: 2, y: 2, dir: 'forward' },
         tiles: mapTiles([
-          [0, 4], [1, 4], [2, 4, 0, true], [3, 4], [4, 4, 0, true],
-          [1, 3], [2, 3, 1], [3, 3, 1, true], [4, 3],
-          [1, 2, 0, true], [2, 2], [3, 2, 0, true],
-          [4, 2, 1], [5, 2, 2, true]
-        ])
+          [2, 2, 0, true],
+          [3, 2, 0, true], [4, 2, 0, true],
+          [2, 1, 0, true],
+          [1, 2, 0, true], [0, 2, 0, true]
+        ]),
+        demo: {
+          main: [createRepeatOperation('p1', 3)],
+          p1: ['walk', ifDark(), ifClear(), ifDark(), 'p2'],
+          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark(), 'right']
+        }
       },
       {
         id: 'master-10',
-        title: '60. 默认终章',
-        description: '最终关不靠纯尺寸压人，而是把前面学过的路线、过程、Repeat 和双过程全都放进同一张结构图。',
-        goal: '用你认为最整洁的程序完成整个终章。',
-        mainLimit: 19,
-        procLimits: { p1: 3, p2: 4 },
+        title: '60. 条件总终章',
+        description: '最后一关把四向枢纽、If Dark、If Clear、P1、P2 和 Repeat 压进同一套结构里，要求你真正把条件块当作终章工具。',
+        goal: '用 Repeat 驱动整套条件终章模板。',
+        mainLimit: 1,
+        commandOptions: { ifDark: true, ifForwardClear: true },
+        procLimits: { p1: 5, p2: 9 },
         tips: [
-          { title: '先找三类结构', copy: '终章通常至少有直行节奏、台阶节奏和分支节奏三类结构，先把它们找出来。' },
-          { title: '允许最短与可读取舍', copy: '终章更重视你能否清楚组织程序，而不只是机械地把步数压到最低。' }
+          { title: '让 P1 成为完整分支循环', copy: '如果一个分支的出发、清理、返回、转向都能打包进 P1，MAIN 就只需要负责 Repeat。' },
+          { title: 'P2 只做回收和切向', copy: '把掉头、回中心和转向下一枝的工作固定在 P2，整个终章结构会非常稳定。' }
         ],
-        start: { x: 0, y: 5, dir: 'forward' },
+        start: { x: 2, y: 2, dir: 'forward' },
         tiles: mapTiles([
-          [0, 5], [1, 5], [2, 5, 0, true], [3, 5], [4, 5, 0, true],
-          [2, 4, 1], [3, 4, 1, true], [4, 4, 1],
-          [1, 3, 0, true], [2, 3], [3, 3, 2, true], [4, 3],
-          [4, 2, 1], [5, 2, 2, true],
-          [2, 2, 1], [1, 2, 2, true]
-        ])
+          [2, 2, 0, true],
+          [3, 2, 0, true], [4, 2, 0, true],
+          [2, 1, 0, true], [2, 0, 0, true],
+          [1, 2, 0, true], [0, 2, 0, true],
+          [2, 3, 0, true], [2, 4, 0, true]
+        ]),
+        demo: {
+          main: [createRepeatOperation('p1', 4)],
+          p1: ['walk', ifDark(), ifClear(), ifDark(), 'p2'],
+          p2: ['left', 'left', ifClear(), ifDark(), ifClear(), ifDark(), 'right']
+        }
       }
     ]
   },
