@@ -156,6 +156,18 @@ import {
   isExplicitEditor as _isExplicitEditor,
   isExplicitLevelEditor as _isExplicitLevelEditor
 } from '../../utils/permissionUtils'
+import {
+  addChapterToZip as _addChapterToZip,
+  buildContestLinks,
+  buildProblemLinks,
+  computeDisplayGroups,
+  findTopicInTree as _findTopicInTree,
+  resolveResourceFetchUrl,
+  resourceUrlToExtension,
+  sanitizeFileName as _sanitizeFileName,
+  triggerDownload as _triggerDownload,
+  updateChapterInTree as _updateChapterInTree
+} from './utils/courseHelpers.js'
 
 export default {
   name: 'CourseEditorPanel',
@@ -228,100 +240,19 @@ export default {
   },
   computed: {
     problemLinks() {
-        if (!this.editingChapter || !this.editingChapter.problemIdsStr) return []
-        return this.editingChapter.problemIdsStr.split(/[,，]/).map(s => {
-            s = s.trim()
-            if (!s) return null
-            let domain = 'system'
-            let pid = s
-            if (s.includes(':')) {
-                [domain, pid] = s.split(':')
-            }
-            const title = this.problemTitles[s]
-            return {
-                text: title ? `${domain}:${pid}: ${title}` : s,
-                url: `https://acjudge.com/d/${domain}/p/${pid}`
-            }
-        }).filter(Boolean)
+      return this.editingChapter ? buildProblemLinks(this.editingChapter.problemIdsStr, this.problemTitles) : []
     },
     optionalProblemLinks() {
-        if (!this.editingChapter || !this.editingChapter.optionalProblemIdsStr) return []
-        return this.editingChapter.optionalProblemIdsStr.split(/[,，]/).map(s => {
-            s = s.trim()
-            if (!s) return null
-            let domain = 'system'
-            let pid = s
-            if (s.includes(':')) {
-                [domain, pid] = s.split(':')
-            }
-            const title = this.problemTitles[s]
-            return {
-                text: title ? `${domain}:${pid}: ${title}` : s,
-                url: `https://acjudge.com/d/${domain}/p/${pid}`
-            }
-        }).filter(Boolean)
+      return this.editingChapter ? buildProblemLinks(this.editingChapter.optionalProblemIdsStr, this.problemTitles) : []
     },
     homeworkLinks() {
-        if (!this.editingChapter || !this.editingChapter.homeworkIdsStr) return []
-        return this.editingChapter.homeworkIdsStr.split(/[,，]/).map(s => {
-            s = s.trim()
-            if (!s) return null
-            let domain = 'system'
-            let cid = s
-            if (s.includes(':')) {
-                [domain, cid] = s.split(':')
-            }
-            const title = this.contestTitles[s]
-            return {
-                text: title ? `${domain}: ${title}` : s,
-                url: `https://acjudge.com/d/${domain}/homework/${cid}`
-            }
-        }).filter(Boolean)
+      return this.editingChapter ? buildContestLinks(this.editingChapter.homeworkIdsStr, this.contestTitles, 'homework') : []
     },
     examLinks() {
-        if (!this.editingChapter || !this.editingChapter.examIdsStr) return []
-        return this.editingChapter.examIdsStr.split(/[,，]/).map(s => {
-            s = s.trim()
-            if (!s) return null
-            let domain = 'system'
-            let cid = s
-            if (s.includes(':')) {
-                [domain, cid] = s.split(':')
-            }
-            const title = this.contestTitles[s]
-            return {
-                text: title ? `${domain}: ${title}` : s,
-                url: `https://acjudge.com/d/${domain}/contest/${cid}`
-            }
-        }).filter(Boolean)
+      return this.editingChapter ? buildContestLinks(this.editingChapter.examIdsStr, this.contestTitles, 'contest') : []
     },
     displayGroups() {
-        // 1. Start with DB groups
-        const result = [...this.groups]
-        const dbGroupNames = new Set(this.groups.map(g => g.name))
-        
-        // 2. Find orphaned groups from levels
-        const orphanedNames = new Set()
-        if (this.levels) {
-            this.levels.forEach(l => {
-                if (l.group && !dbGroupNames.has(l.group)) {
-                    orphanedNames.add(l.group)
-                }
-            })
-        }
-        
-        // 3. Add virtual groups for orphans
-        orphanedNames.forEach(name => {
-            result.push({
-                _id: null, // Virtual
-                name: name,
-                title: name,
-                order: 999,
-                collapsed: false // Default expanded?
-            })
-        })
-        
-        return result.sort((a, b) => (a.order || 0) - (b.order || 0))
+      return computeDisplayGroups(this.groups, this.levels)
     },
     // user() computed property removed, now a data property
     isPremium() {
@@ -1238,82 +1169,15 @@ export default {
       }
     },
     sanitizeFileName(str) {
-      return (str || '').replace(/[^a-zA-Z0-9_\u4e00-\u9fa5-]/g, '_')
+      return _sanitizeFileName(str)
     },
 
     triggerDownload(blob, filename) {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      _triggerDownload(blob, filename)
     },
 
     async addChapterToZip(zip, folderPath, chapter) {
-      const safeTitle = this.sanitizeFileName(chapter.title)
-      
-      // 1. Always try to get Markdown content (Text Lesson Plan)
-      let content = chapter.content
-      if (!content) {
-          try {
-              const chId = chapter.id || chapter._id
-              if (chId) {
-                  const res = await request(`/api/course/chapter/${chId}`)
-                  if (res && res.content) {
-                      content = res.content
-                      chapter.content = content // Cache it
-                  }
-              }
-          } catch (e) {
-              console.error(`Failed to fetch content for ${chapter.title}`, e)
-          }
-      }
-
-      if (content) {
-        zip.file(`${folderPath}/${safeTitle}.md`, content)
-      }
-
-      // 2. If it has a resource URL (usually contentType='html'), download that too
-      if (chapter.contentType === 'html' && chapter.resourceUrl) {
-          try {
-            let fetchUrl = chapter.resourceUrl
-            const headers = {}
-            const token = localStorage.getItem('auth_token')
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`
-            }
-
-            if (fetchUrl.startsWith('http')) {
-                fetchUrl = `/api/course/proxy?url=${encodeURIComponent(fetchUrl)}`
-            } else if (fetchUrl.indexOf('public/courseware') !== -1) {
-              if (fetchUrl.startsWith('/public/')) fetchUrl = '/api' + fetchUrl
-              else if (fetchUrl.startsWith('public/')) fetchUrl = '/api/' + fetchUrl
-              if (token) {
-                const separator = fetchUrl.includes('?') ? '&' : '?'
-                fetchUrl = `${fetchUrl}${separator}token=${token}`
-              }
-            }
-
-            const response = await fetch(fetchUrl, { headers })
-            if (response.ok) {
-              const blob = await response.blob()
-              let extension = 'html'
-              const lowerUrl = chapter.resourceUrl.toLowerCase()
-              if (lowerUrl.endsWith('.ppt')) extension = 'ppt'
-              else if (lowerUrl.endsWith('.pptx')) extension = 'pptx'
-              else if (lowerUrl.endsWith('.pdf')) extension = 'pdf'
-              else if (lowerUrl.endsWith('.doc')) extension = 'doc'
-              else if (lowerUrl.endsWith('.docx')) extension = 'docx'
-              
-              zip.file(`${folderPath}/${safeTitle}.${extension}`, blob)
-            }
-          } catch (e) {
-            console.error(`Failed to download HTML for ${chapter.title}`, e)
-          }
-      }
+      return _addChapterToZip(zip, folderPath, chapter, { request })
     },
 
     async downloadTopicMaterials() {
@@ -1393,34 +1257,14 @@ export default {
       } else if (chapter.contentType === 'html') {
         if (!chapter.resourceUrl) return this.showToastMessage('没有资源链接')
         try {
-          let fetchUrl = chapter.resourceUrl
-          const headers = {}
           const token = localStorage.getItem('auth_token')
-          if (token) {
-              headers['Authorization'] = `Bearer ${token}`
-          }
-
-          if (fetchUrl.startsWith('http')) {
-             fetchUrl = `/api/course/proxy?url=${encodeURIComponent(fetchUrl)}`
-          } else if (fetchUrl.indexOf('public/courseware') !== -1) {
-            if (fetchUrl.startsWith('/public/')) fetchUrl = '/api' + fetchUrl
-            else if (fetchUrl.startsWith('public/')) fetchUrl = '/api/' + fetchUrl
-            if (token) {
-              const separator = fetchUrl.includes('?') ? '&' : '?'
-              fetchUrl = `${fetchUrl}${separator}token=${token}`
-            }
-          }
+          const headers = {}
+          if (token) headers['Authorization'] = `Bearer ${token}`
+          const fetchUrl = resolveResourceFetchUrl(chapter.resourceUrl, token)
           const response = await fetch(fetchUrl, { headers })
           if (response.ok) {
             const blob = await response.blob()
-            let extension = 'html'
-            const lowerUrl = chapter.resourceUrl.toLowerCase()
-            if (lowerUrl.endsWith('.ppt')) extension = 'ppt'
-            else if (lowerUrl.endsWith('.pptx')) extension = 'pptx'
-            else if (lowerUrl.endsWith('.pdf')) extension = 'pdf'
-            else if (lowerUrl.endsWith('.doc')) extension = 'doc'
-            else if (lowerUrl.endsWith('.docx')) extension = 'docx'
-
+            const extension = resourceUrlToExtension(chapter.resourceUrl)
             const filename = `${safeTitle}.${extension}`
             this.triggerDownload(blob, filename)
           } else {
@@ -2652,43 +2496,11 @@ export default {
     },
 
     findTopicInTree(topicId) {
-      if (this.levels) {
-        for (const level of this.levels) {
-            if (level.topics) {
-                const topic = level.topics.find(t => t._id === topicId || t.id === topicId)
-                if (topic) return topic
-            }
-        }
-      }
-      return null
+      return _findTopicInTree(this.levels, topicId)
     },
 
     updateChapterInTree(chapterId, updates) {
-      // Try to find in current context first (fastest)
-      if (this.editingTopicForChapter && this.editingTopicForChapter.chapters) {
-          const chapter = this.editingTopicForChapter.chapters.find(c => c.id === chapterId || c._id === chapterId)
-          if (chapter) {
-              Object.assign(chapter, updates)
-              return
-          }
-      }
-      
-      // Fallback: Search entire tree
-      if (this.levels) {
-        for (const level of this.levels) {
-            if (level.topics) {
-                for (const topic of level.topics) {
-                    if (topic.chapters) {
-                        const chapter = topic.chapters.find(c => c.id === chapterId || c._id === chapterId)
-                        if (chapter) {
-                            Object.assign(chapter, updates)
-                            return
-                        }
-                    }
-                }
-            }
-        }
-      }
+      _updateChapterInTree(this.levels, this.editingTopicForChapter, chapterId, updates)
     },
 
     resetAiStatus() {
