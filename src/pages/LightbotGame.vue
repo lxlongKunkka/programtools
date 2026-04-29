@@ -613,80 +613,62 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import * as THREE from 'three'
 import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
 import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
 import request from '../utils/request'
-
-const STORAGE_KEY = 'programtools-lightbot-progress-v5'
-const EDITOR_DRAFT_STORAGE_KEY = 'programtools-lightbot-editor-draft-v1'
-const EDITOR_GRID_SIZE = 6
-const TILE_WIDTH = 96
-const TILE_HEIGHT = 48
-const TILE_DEPTH = 22
-const DIRECTION_ORDER = ['forward', 'right', 'backward', 'left']
-const DIRECTION_LABELS = {
-  forward: 'Facing east',
-  right: 'Facing south',
-  backward: 'Facing west',
-  left: 'Facing north'
-}
-const DIRECTION_VECTORS = {
-  forward: { x: 1, y: 0 },
-  right: { x: 0, y: 1 },
-  backward: { x: -1, y: 0 },
-  left: { x: 0, y: -1 }
-}
-const SPEED_MAP = { 1: 560, 2: 420, 3: 300, 4: 200, 5: 130 }
-const PROCEDURE_KEYS = ['p1', 'p2']
-const PROCEDURE_META = {
-  p1: { label: 'P1', title: 'PROC1', editorLabel: 'P1 Slots', commandLabel: 'Call P1' },
-  p2: { label: 'P2', title: 'PROC2', editorLabel: 'P2 Slots', commandLabel: 'Call P2' }
-}
-const CONDITION_TEST_META = {
-  'green-floor': { label: 'If Green', shortLabel: 'GREEN', slotLabel: 'IF-G', description: '仅当脚下是绿色地板时执行下一条' },
-  'red-floor': { label: 'If Red', shortLabel: 'RED', slotLabel: 'IF-R', description: '仅当脚下是红色地板时执行下一条' },
-  'dark-target': { label: 'If Dark', shortLabel: 'DARK', slotLabel: 'IF-D', description: '仅当脚下是未点亮目标格时执行下一条' },
-  'forward-clear': { label: 'If Clear', shortLabel: 'CLEAR', slotLabel: 'IF-C', description: '仅当前方存在可合法前进的平台时执行下一条' }
-}
-const BLOCK_SIZE = 1
-const BLOCK_HEIGHT = 0.5
-const BOARD_GAP = 0.04
-const MATERIAL_COLORS = {
-  topNormal: '#565e68',
-  topTarget: '#1e4d6f',
-  topGreen: '#64b55f',
-  topRed: '#cc6a59',
-  topLit: '#fffd00',
-  side: '#646a71',
-  line: '#2e3438',
-  player: '#38ff00',
-  antenna: '#d8a8ff',
-  eye: '#171c22',
-  shadow: '#465666'
-}
-const BASE_OPERATION_PALETTE = [
-  { id: 'walk', label: 'Walk' },
-  { id: 'light', label: 'Light' },
-  { id: 'left', label: 'Turn left' },
-  { id: 'right', label: 'Turn right' },
-  { id: 'jump', label: 'Jump' },
-  { id: 'p1', label: 'Call P1' },
-  { id: 'p2', label: 'Call P2' },
-  { id: 'repeat-2', label: 'Repeat x2', kind: 'repeat', count: 2 },
-  { id: 'repeat-3', label: 'Repeat x3', kind: 'repeat', count: 3 },
-  { id: 'repeat-4', label: 'Repeat x4', kind: 'repeat', count: 4 }
-]
-
-const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', ...PROCEDURE_KEYS])
-
-function createEmptyProcedures() {
-  return Object.fromEntries(PROCEDURE_KEYS.map((key) => [key, []]))
-}
-
-function cloneProcedureMap(procedures = {}) {
-  return Object.fromEntries(PROCEDURE_KEYS.map((key) => [key, cloneOperationList(procedures[key] || [])]))
-}
+import {
+  BASE_OPERATION_PALETTE,
+  CONDITION_TEST_META,
+  DIRECTION_LABELS,
+  DIRECTION_ORDER,
+  DIRECTION_VECTORS,
+  EDITOR_DRAFT_STORAGE_KEY,
+  PROCEDURE_KEYS,
+  PROCEDURE_META,
+  SPEED_MAP,
+  STORAGE_KEY,
+  TILE_DEPTH,
+  TILE_HEIGHT,
+  TILE_WIDTH,
+  VALID_OPERATION_IDS
+} from '../utils/lightbot/constants.js'
+import {
+  cloneOperation,
+  cloneOperationList,
+  cloneProcedureMap,
+  createConditionalOperation,
+  createEmptyProcedures,
+  createRepeatOperation,
+  isConditionalOperation,
+  isConditionalPaletteOperation,
+  isRepeatOperation,
+  isRepeatPaletteOperation,
+  normalizeOperationEntry
+} from '../utils/lightbot/operations.js'
+import {
+  cloneBoard,
+  cloneBot,
+  cloneLevelDefinition,
+  formatRelativeTime,
+  getLevelAuthorLabel,
+  getLevelAuthorName,
+  isCustomLevel,
+  platformKey
+} from '../utils/lightbot/level.js'
+import {
+  buildCustomLevel,
+  createDefaultEditorDraft,
+  createEditorDraftFromLevel,
+  loadSavedEditorDraft,
+  serializeEditorDraft
+} from '../utils/lightbot/editorDraft.js'
+import {
+  getStoredLightbotUser,
+  readLightbotStorage,
+  removeLightbotStorage,
+  writeLightbotStorage
+} from '../utils/lightbot/storage.js'
+import { createSceneController } from '../utils/lightbot/sceneController.js'
 
 function procedureLengthLabel(metrics) {
   return [
@@ -702,407 +684,6 @@ function procedureLengthValue(metrics) {
     .map((key) => metrics?.[`${key}Length`] || 0)].join(' / ')
 }
 
-function isRepeatOperation(operation) {
-  return Boolean(
-    operation
-    && typeof operation === 'object'
-    && operation.type === 'repeat'
-    && typeof operation.body === 'string'
-    && VALID_OPERATION_IDS.has(operation.body)
-    && Number.isInteger(operation.count)
-    && operation.count > 1
-  )
-}
-
-function isConditionalOperation(operation) {
-  return Boolean(
-    operation
-    && typeof operation === 'object'
-    && operation.type === 'condition'
-    && typeof operation.body === 'string'
-    && VALID_OPERATION_IDS.has(operation.body)
-    && typeof operation.test === 'string'
-    && CONDITION_TEST_META[operation.test]
-  )
-}
-
-function isRepeatPaletteOperation(operation) {
-  return Boolean(operation?.kind === 'repeat' && Number.isInteger(operation?.count))
-}
-
-function isConditionalPaletteOperation(operation) {
-  return Boolean(operation?.kind === 'condition' && typeof operation?.test === 'string' && CONDITION_TEST_META[operation.test])
-}
-
-function createRepeatOperation(body, count = 2) {
-  return {
-    type: 'repeat',
-    body,
-    count: Math.max(2, Math.min(9, Number(count) || 2))
-  }
-}
-
-function createConditionalOperation(body, test = 'dark-target') {
-  return {
-    type: 'condition',
-    body,
-    test: CONDITION_TEST_META[test] ? test : 'green-floor'
-  }
-}
-
-function normalizeOperationEntry(operation) {
-  if (typeof operation === 'string') {
-    const normalized = operation.trim()
-    return VALID_OPERATION_IDS.has(normalized) ? normalized : null
-  }
-
-  if (isRepeatOperation(operation)) {
-    return createRepeatOperation(operation.body, operation.count)
-  }
-
-  if (isConditionalOperation(operation)) {
-    return createConditionalOperation(operation.body, operation.test)
-  }
-
-  if (operation && typeof operation === 'object' && operation.type === 'repeat') {
-    const body = typeof operation.body === 'string' ? operation.body.trim() : ''
-    if (!VALID_OPERATION_IDS.has(body)) return null
-    return createRepeatOperation(body, operation.count)
-  }
-
-  if (operation && typeof operation === 'object' && operation.type === 'condition') {
-    const body = typeof operation.body === 'string' ? operation.body.trim() : ''
-    const test = typeof operation.test === 'string' ? operation.test.trim() : ''
-    if (!VALID_OPERATION_IDS.has(body) || !CONDITION_TEST_META[test]) return null
-    return createConditionalOperation(body, test)
-  }
-
-  return null
-}
-
-function cloneOperation(operation) {
-  const normalized = normalizeOperationEntry(operation)
-  if (!normalized) return null
-  return isRepeatOperation(normalized) || isConditionalOperation(normalized) ? { ...normalized } : normalized
-}
-
-function cloneOperationList(list = []) {
-  if (!Array.isArray(list)) return []
-  return list.map((operation) => cloneOperation(operation)).filter(Boolean)
-}
-
-function createEmptyEditorBoard(size = EDITOR_GRID_SIZE) {
-  return Array.from({ length: size }, () => Array.from({ length: size }, () => null))
-}
-
-function getStoredLightbotUser() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem('user_info') || 'null')
-    return parsed && typeof parsed === 'object' ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-function getLightbotStorageKey(baseKey) {
-  const user = getStoredLightbotUser()
-  const userKey = user?.id || user?._id || user?.username || 'guest'
-  return `${baseKey}:${String(userKey)}`
-}
-
-function readLightbotStorage(baseKey) {
-  const scopedKey = getLightbotStorageKey(baseKey)
-  const scopedValue = localStorage.getItem(scopedKey)
-  if (scopedValue !== null) {
-    return scopedValue
-  }
-
-  const legacyValue = localStorage.getItem(baseKey)
-  if (legacyValue !== null) {
-    localStorage.setItem(scopedKey, legacyValue)
-    return legacyValue
-  }
-
-  return null
-}
-
-function writeLightbotStorage(baseKey, value) {
-  localStorage.setItem(getLightbotStorageKey(baseKey), value)
-}
-
-function removeLightbotStorage(baseKey) {
-  localStorage.removeItem(getLightbotStorageKey(baseKey))
-}
-
-function cloneBoard(board) {
-  return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)))
-}
-
-function cloneLevelDefinition(level) {
-  return {
-    ...level,
-    commandOptions: { ...(level.commandOptions || {}) },
-    completionRequirements: { ...(level.completionRequirements || {}) },
-    procLimits: { ...(level.procLimits || {}) },
-    tips: (level.tips || []).map((tip) => ({ ...tip })),
-    board: cloneBoard(level.board),
-    start: { ...level.start },
-    demo: {
-      main: cloneOperationList(level.demo?.main || []),
-      p1: cloneOperationList(level.demo?.p1 || []),
-      p2: cloneOperationList(level.demo?.p2 || [])
-    }
-  }
-}
-
-function isCustomLevel(level) {
-  return Boolean(level?.isCustom)
-}
-
-function getLevelAuthorName(level) {
-  if (!level) return '系统默认'
-  return String(level.createdByName || level.updatedByName || (isCustomLevel(level) ? '未知作者' : '系统默认')).trim() || '系统默认'
-}
-
-function getLevelAuthorLabel(level) {
-  return `作者：${getLevelAuthorName(level)}`
-}
-
-function formatRelativeTime(value) {
-  const timestamp = new Date(value).getTime()
-  if (!Number.isFinite(timestamp)) return '刚刚'
-
-  const diff = Date.now() - timestamp
-  if (diff < 60 * 1000) return '刚刚'
-
-  const minutes = Math.floor(diff / (60 * 1000))
-  if (minutes < 60) return `${minutes} 分钟前`
-
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-
-  const days = Math.floor(hours / 24)
-  return `${days} 天前`
-}
-
-function findOccupiedBounds(board) {
-  let minX = Number.POSITIVE_INFINITY
-  let minY = Number.POSITIVE_INFINITY
-  let maxX = Number.NEGATIVE_INFINITY
-  let maxY = Number.NEGATIVE_INFINITY
-
-  board.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      if (!cell) return
-      minX = Math.min(minX, x)
-      minY = Math.min(minY, y)
-      maxX = Math.max(maxX, x)
-      maxY = Math.max(maxY, y)
-    })
-  })
-
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
-    return null
-  }
-
-  return { minX, minY, maxX, maxY }
-}
-
-function normalizeEditorBoard(board, minimumSize = EDITOR_GRID_SIZE) {
-  const bounds = findOccupiedBounds(board)
-  if (!bounds) {
-    return {
-      board: createEmptyEditorBoard(minimumSize),
-      remapPoint(point) {
-        return { ...point }
-      }
-    }
-  }
-
-  const contentWidth = bounds.maxX - bounds.minX + 1
-  const contentHeight = bounds.maxY - bounds.minY + 1
-  const width = Math.max(minimumSize, contentWidth + 2)
-  const height = Math.max(minimumSize, contentHeight + 2)
-  const offsetX = Math.floor((width - contentWidth) / 2)
-  const offsetY = Math.floor((height - contentHeight) / 2)
-  const normalized = Array.from({ length: height }, () => Array.from({ length: width }, () => null))
-
-  for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
-    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
-      const cell = board[y]?.[x] || null
-      if (!cell) continue
-      normalized[offsetY + y - bounds.minY][offsetX + x - bounds.minX] = { ...cell }
-    }
-  }
-
-  return {
-    board: normalized,
-    remapPoint(point) {
-      return {
-        ...point,
-        x: offsetX + point.x - bounds.minX,
-        y: offsetY + point.y - bounds.minY
-      }
-    }
-  }
-}
-
-function normalizeEditorState(board, start) {
-  const normalized = normalizeEditorBoard(board)
-  const remappedStart = normalized.remapPoint(start)
-  const fallbackStart = findFirstPlatform(normalized.board) || { x: 0, y: 0 }
-  const nextStart = normalized.board[remappedStart.y]?.[remappedStart.x]
-    ? remappedStart
-    : fallbackStart
-
-  return {
-    board: normalized.board,
-    start: {
-      ...start,
-      x: nextStart.x,
-      y: nextStart.y
-    }
-  }
-}
-
-function findFirstPlatform(board) {
-  for (let y = 0; y < board.length; y += 1) {
-    for (let x = 0; x < board[y].length; x += 1) {
-      if (board[y][x]) {
-        return { x, y }
-      }
-    }
-  }
-  return null
-}
-
-function createDefaultEditorDraft() {
-  const board = createEmptyEditorBoard()
-  board[0][0] = makeTile(1)
-  board[0][1] = makeTile(1, true)
-  return {
-    sourceLevelId: null,
-    sourceIsCustom: false,
-    sourceCreatedBy: null,
-    title: 'My Level',
-    skill: 'Custom',
-    description: '学员自制关卡。',
-    goal: '点亮所有目标格。',
-    mainLimit: 8,
-    p1Limit: 0,
-    p2Limit: 0,
-    enableIfGreen: false,
-    enableIfRed: false,
-    enableIfDark: false,
-    enableIfForwardClear: false,
-    demo: { main: [], p1: [], p2: [] },
-    start: { x: 0, y: 0, dir: 'forward' },
-    board
-  }
-}
-
-function serializeEditorDraft(draft) {
-  return {
-    sourceLevelId: draft.sourceLevelId || null,
-    sourceIsCustom: Boolean(draft.sourceIsCustom),
-    sourceCreatedBy: Number.isFinite(Number(draft.sourceCreatedBy)) ? Number(draft.sourceCreatedBy) : null,
-    chapterId: draft.chapterId || null,
-    chapterTitle: draft.chapterTitle || null,
-    chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : null,
-    demo: {
-      main: cloneOperationList(draft.demo?.main || []),
-      p1: cloneOperationList(draft.demo?.p1 || []),
-      p2: cloneOperationList(draft.demo?.p2 || [])
-    },
-    title: draft.title,
-    skill: draft.skill,
-    description: draft.description,
-    goal: draft.goal,
-    mainLimit: Number(draft.mainLimit) || 8,
-    p1Limit: Number(draft.p1Limit) || 0,
-    p2Limit: Number(draft.p2Limit) || 0,
-    enableIfGreen: Boolean(draft.enableIfGreen),
-    enableIfRed: Boolean(draft.enableIfRed),
-    enableIfDark: Boolean(draft.enableIfDark),
-    enableIfForwardClear: Boolean(draft.enableIfForwardClear),
-    start: { ...draft.start },
-    board: cloneBoard(draft.board)
-  }
-}
-
-function loadSavedEditorDraft() {
-  try {
-    const raw = readLightbotStorage(EDITOR_DRAFT_STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (!parsed || !Array.isArray(parsed.board)) return null
-
-    const normalized = normalizeEditorState(parsed.board, parsed.start || { x: 0, y: 0, dir: 'forward' })
-    return {
-      sourceLevelId: typeof parsed.sourceLevelId === 'string' ? parsed.sourceLevelId : null,
-      sourceIsCustom: typeof parsed.sourceLevelId === 'string'
-        ? (typeof parsed.sourceIsCustom === 'boolean' ? parsed.sourceIsCustom : !VALID_LEVEL_IDS.has(parsed.sourceLevelId))
-        : false,
-      sourceCreatedBy: Number.isFinite(Number(parsed.sourceCreatedBy)) ? Number(parsed.sourceCreatedBy) : null,
-      chapterId: typeof parsed.chapterId === 'string' ? parsed.chapterId : null,
-      chapterTitle: typeof parsed.chapterTitle === 'string' ? parsed.chapterTitle : null,
-      chapterOrder: Number.isFinite(parsed.chapterOrder) ? parsed.chapterOrder : null,
-      demo: {
-        main: cloneOperationList(parsed.demo?.main || []),
-        p1: cloneOperationList(parsed.demo?.p1 || []),
-        p2: cloneOperationList(parsed.demo?.p2 || [])
-      },
-      title: typeof parsed.title === 'string' ? parsed.title : 'My Level',
-      skill: typeof parsed.skill === 'string' ? parsed.skill : 'Custom',
-      description: typeof parsed.description === 'string' ? parsed.description : '学员自制关卡。',
-      goal: typeof parsed.goal === 'string' ? parsed.goal : '点亮所有目标格。',
-      mainLimit: Number(parsed.mainLimit) || 8,
-      p1Limit: Number(parsed.p1Limit) || 0,
-      p2Limit: Number(parsed.p2Limit) || 0,
-      enableIfGreen: Boolean(parsed.enableIfGreen || parsed.commandOptions?.ifGreen),
-      enableIfRed: Boolean(parsed.enableIfRed || parsed.commandOptions?.ifRed),
-      enableIfDark: Boolean(parsed.enableIfDark || parsed.commandOptions?.ifDark),
-      enableIfForwardClear: Boolean(parsed.enableIfForwardClear || parsed.commandOptions?.ifForwardClear),
-      start: { ...normalized.start, dir: parsed.start?.dir || 'forward' },
-      board: normalized.board
-    }
-  } catch {
-    return null
-  }
-}
-
-function createEditorDraftFromLevel(level) {
-  const normalized = normalizeEditorBoard(level.board)
-  const start = normalized.remapPoint(level.start)
-
-  return {
-    sourceLevelId: level.id,
-    sourceIsCustom: Boolean(level.isCustom),
-    sourceCreatedBy: Number.isFinite(Number(level.createdBy)) ? Number(level.createdBy) : null,
-    chapterId: level.chapterId || null,
-    chapterTitle: level.chapterTitle || null,
-    chapterOrder: Number.isFinite(level.chapterOrder) ? level.chapterOrder : null,
-    demo: {
-      main: cloneOperationList(level.demo?.main || []),
-      p1: cloneOperationList(level.demo?.p1 || []),
-      p2: cloneOperationList(level.demo?.p2 || [])
-    },
-    title: level.title,
-    skill: level.skill,
-    description: level.description,
-    goal: level.goal,
-    mainLimit: Number(level.mainLimit) || 8,
-    p1Limit: Number(level.procLimits?.p1) || 0,
-    p2Limit: Number(level.procLimits?.p2) || 0,
-    enableIfGreen: Boolean(level.commandOptions?.ifGreen),
-    enableIfRed: Boolean(level.commandOptions?.ifRed),
-    enableIfDark: Boolean(level.commandOptions?.ifDark),
-    enableIfForwardClear: Boolean(level.commandOptions?.ifForwardClear),
-    start,
-    board: normalized.board
-  }
-}
-
 function applyDraftToEditor(draft) {
   Object.assign(editorDraft, {
     ...draft,
@@ -1112,41 +693,6 @@ function applyDraftToEditor(draft) {
   editorVerification.value = null
   editorTool.value = 'platform'
   editorHeight.value = 1
-}
-
-function buildCustomLevel(draft) {
-  return {
-    id: draft.sourceLevelId || 'custom-level',
-    chapterId: draft.chapterId || 'custom',
-    chapterTitle: draft.chapterTitle || '自定义',
-    chapterOrder: Number.isFinite(draft.chapterOrder) ? draft.chapterOrder : -1,
-    title: draft.title.trim() || 'My Level',
-    skill: draft.skill.trim() || 'Custom',
-    description: draft.description.trim() || '学员自制关卡。',
-    goal: draft.goal.trim() || '点亮所有目标格。',
-    mainLimit: Number(draft.mainLimit) || 8,
-    procLimits: {
-      ...(Number(draft.p1Limit) > 0 ? { p1: Number(draft.p1Limit) } : {}),
-      ...(Number(draft.p2Limit) > 0 ? { p2: Number(draft.p2Limit) } : {})
-    },
-    commandOptions: {
-      ...(draft.enableIfGreen ? { ifGreen: true } : {}),
-      ...(draft.enableIfRed ? { ifRed: true } : {}),
-      ...(draft.enableIfDark ? { ifDark: true } : {}),
-      ...(draft.enableIfForwardClear ? { ifForwardClear: true } : {})
-    },
-    tips: [
-      { title: 'Editor', copy: '这是当前编辑器生成的预览关卡。' },
-      { title: 'Playtest', copy: '可以直接进入试玩，验证是否能被正常完成。' }
-    ],
-    board: cloneBoard(draft.board),
-    start: { ...draft.start },
-    demo: {
-      main: cloneOperationList(draft.demo?.main || []),
-      p1: cloneOperationList(draft.demo?.p1 || []),
-      p2: cloneOperationList(draft.demo?.p2 || [])
-    }
-  }
 }
 
 const deletedLevelIds = ref([])
@@ -1192,14 +738,6 @@ const levelGroups = computed(() => {
     }
   ]
 })
-
-function platformKey(x, y) {
-  return `${x},${y}`
-}
-
-function cloneBot(start) {
-  return { x: start.x, y: start.y, dir: start.dir }
-}
 
 function loadProgress() {
   try {
@@ -2455,381 +1993,6 @@ function leavePlayScreen() {
   goToLevelSelect()
 }
 
-function createSceneController(host, options = {}) {
-  if (!host) return null
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-  renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.shadowMap.enabled = false
-  host.innerHTML = ''
-  host.appendChild(renderer.domElement)
-
-  const scene = new THREE.Scene()
-  const camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.1, 100)
-  const boardGroup = new THREE.Group()
-  const robotGroup = new THREE.Group()
-  const raycaster = new THREE.Raycaster()
-  const pointer = new THREE.Vector2()
-  const interactiveTargets = []
-
-  scene.add(boardGroup)
-  scene.add(robotGroup)
-
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1.9)
-  const keyLight = new THREE.DirectionalLight(0xf7fbff, 1.35)
-  const fillLight = new THREE.DirectionalLight(0xd8f0ff, 0.55)
-  keyLight.position.set(8, 14, 10)
-  fillLight.position.set(-6, 9, -8)
-  scene.add(ambientLight, keyLight, fillLight)
-
-  let currentViewSize = 3.55
-  let currentMaxHeight = 1
-
-  const shadowPlane = new THREE.Mesh(
-    new THREE.CircleGeometry(4.8, 40),
-    new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.shadow, transparent: true, opacity: 0.2 })
-  )
-  shadowPlane.rotation.x = -Math.PI / 2
-  shadowPlane.position.y = -0.6
-  scene.add(shadowPlane)
-
-  const sharedMaterials = {
-    topNormal: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topNormal }),
-    topTarget: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topTarget }),
-    topGreen: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topGreen }),
-    topRed: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topRed }),
-    topLit: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.topLit }),
-    side: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.side }),
-    line: new THREE.LineBasicMaterial({ color: MATERIAL_COLORS.line }),
-    player: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.player }),
-    antenna: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.antenna }),
-    eye: new THREE.MeshLambertMaterial({ color: MATERIAL_COLORS.eye }),
-    targetRing: new THREE.MeshBasicMaterial({ color: 0xf3fbff }),
-    targetCore: new THREE.MeshBasicMaterial({ color: MATERIAL_COLORS.topLit }),
-    editorGhost: new THREE.MeshBasicMaterial({ color: 0x8fb0c4, transparent: true, opacity: 0.18 }),
-    editorGhostLine: new THREE.LineBasicMaterial({ color: 0x8ea7bb, transparent: true, opacity: 0.4 }),
-    hitArea: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
-  }
-
-  const blockGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_HEIGHT, BLOCK_SIZE)
-  const outlineGeometry = new THREE.EdgesGeometry(blockGeometry)
-  const editorGhostGeometry = new THREE.BoxGeometry(BLOCK_SIZE * 0.94, 0.02, BLOCK_SIZE * 0.94)
-  const editorGhostOutline = new THREE.EdgesGeometry(editorGhostGeometry)
-  const hitPlaneGeometry = new THREE.PlaneGeometry(BLOCK_SIZE * 0.94, BLOCK_SIZE * 0.94)
-
-  function resize() {
-    const width = Math.max(host.clientWidth, 1)
-    const height = Math.max(host.clientHeight, 1)
-    const aspect = width / height
-    camera.left = -currentViewSize * aspect
-    camera.right = currentViewSize * aspect
-    camera.top = currentViewSize
-    camera.bottom = -currentViewSize
-    camera.updateProjectionMatrix()
-    renderer.setSize(width, height, false)
-    render()
-  }
-
-  function clearGroup(group) {
-    if (group === boardGroup) {
-      interactiveTargets.length = 0
-    }
-    group.children.slice().forEach((child) => {
-      child.traverse?.((node) => {
-        if (!node.geometry) return
-        if (
-          node.geometry !== blockGeometry &&
-          node.geometry !== outlineGeometry &&
-          node.geometry !== editorGhostGeometry &&
-          node.geometry !== editorGhostOutline &&
-          node.geometry !== hitPlaneGeometry
-        ) {
-          node.geometry.dispose()
-        }
-      })
-      group.remove(child)
-    })
-  }
-
-  function buildBoard(level, litKeyList) {
-    clearGroup(boardGroup)
-    const litSet = new Set(litKeyList)
-    const tiles = []
-    const boardHeight = level.board.length
-    const boardWidth = Math.max(...level.board.map((row) => row.length), 0)
-
-    level.board.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (!cell) return
-        tiles.push({ x, y, cell })
-      })
-    })
-
-    if (!tiles.length && !options.onCellSelect) {
-      render()
-      return
-    }
-
-    const layoutCells = options.onCellSelect
-      ? Array.from({ length: boardHeight }, (_, y) => Array.from({ length: boardWidth }, (_, x) => ({ x, y }))).flat()
-      : tiles
-
-    const xs = layoutCells.map((item) => item.x * (BLOCK_SIZE + BOARD_GAP))
-    const zs = layoutCells.map((item) => item.y * (BLOCK_SIZE + BOARD_GAP))
-    const heights = tiles.map((item) => item.cell.h)
-    const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
-    const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2
-    const spanX = Math.max(...xs) - Math.min(...xs) + BLOCK_SIZE
-    const spanZ = Math.max(...zs) - Math.min(...zs) + BLOCK_SIZE
-    currentMaxHeight = Math.max(...heights, 1)
-    currentViewSize = Math.max(2.15, Math.min(3.55, Math.max(spanX, spanZ) * 0.56 + currentMaxHeight * 0.18))
-    boardGroup.position.set(-centerX, 0, -centerZ)
-    shadowPlane.position.x = -centerX
-    shadowPlane.position.z = -centerZ
-    shadowPlane.scale.setScalar(Math.max(spanX, spanZ) / 2.8)
-
-    if (options.onCellSelect) {
-      for (let y = 0; y < boardHeight; y += 1) {
-        for (let x = 0; x < boardWidth; x += 1) {
-          const existingCell = level.board[y]?.[x] || null
-          const hitY = (existingCell?.h || 0) * BLOCK_HEIGHT + 0.03
-
-          if (!existingCell) {
-            const ghost = new THREE.Mesh(editorGhostGeometry, sharedMaterials.editorGhost)
-            ghost.position.set(x * (BLOCK_SIZE + BOARD_GAP), 0.01, y * (BLOCK_SIZE + BOARD_GAP))
-            boardGroup.add(ghost)
-
-            const ghostOutline = new THREE.LineSegments(editorGhostOutline, sharedMaterials.editorGhostLine)
-            ghostOutline.position.copy(ghost.position)
-            boardGroup.add(ghostOutline)
-          }
-
-          const hitArea = new THREE.Mesh(hitPlaneGeometry, sharedMaterials.hitArea)
-          hitArea.rotation.x = -Math.PI / 2
-          hitArea.position.set(x * (BLOCK_SIZE + BOARD_GAP), hitY, y * (BLOCK_SIZE + BOARD_GAP))
-          hitArea.userData.editorCell = { x, y }
-          boardGroup.add(hitArea)
-          interactiveTargets.push(hitArea)
-        }
-      }
-    }
-
-    tiles.forEach((item) => {
-      const tileGroup = new THREE.Group()
-      tileGroup.position.set(item.x * (BLOCK_SIZE + BOARD_GAP), 0, item.y * (BLOCK_SIZE + BOARD_GAP))
-
-      for (let layer = 0; layer < item.cell.h; layer += 1) {
-        const isTop = layer === item.cell.h - 1
-        const isLit = isTop && litSet.has(platformKey(item.x, item.y))
-        const floorTopMaterial = item.cell.floorColor === 'green'
-          ? sharedMaterials.topGreen
-          : item.cell.floorColor === 'red'
-            ? sharedMaterials.topRed
-            : (item.cell.target ? sharedMaterials.topTarget : sharedMaterials.topNormal)
-        const topMaterial = isTop
-          ? (isLit ? sharedMaterials.topLit : floorTopMaterial)
-          : sharedMaterials.side
-        const materials = [sharedMaterials.side, sharedMaterials.side, topMaterial, sharedMaterials.side, sharedMaterials.side, sharedMaterials.side]
-        const block = new THREE.Mesh(blockGeometry, materials)
-        block.position.y = (layer + 0.5) * BLOCK_HEIGHT
-        block.userData.editorCell = { x: item.x, y: item.y }
-        tileGroup.add(block)
-        interactiveTargets.push(block)
-
-        const outline = new THREE.LineSegments(outlineGeometry, sharedMaterials.line)
-        outline.position.copy(block.position)
-        tileGroup.add(outline)
-      }
-
-      if (item.cell.target) {
-        const topY = item.cell.h * BLOCK_HEIGHT + 0.03
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 12, 32), sharedMaterials.targetRing)
-        ring.rotation.x = Math.PI / 2
-        ring.position.set(0, topY, 0)
-        tileGroup.add(ring)
-
-        const core = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 24), sharedMaterials.targetCore)
-        core.position.set(0, topY, 0)
-        tileGroup.add(core)
-      }
-
-      boardGroup.add(tileGroup)
-    })
-
-    render()
-  }
-
-  function updateRobot(level, robotState) {
-    clearGroup(robotGroup)
-    const cell = level.board[robotState.y]?.[robotState.x]
-    if (!cell) {
-      render()
-      return
-    }
-
-    const robotBase = new THREE.Group()
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.44), sharedMaterials.player)
-    body.position.y = 0.56
-    robotBase.add(body)
-
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.2, 0.32), sharedMaterials.player)
-    head.position.y = 0.96
-    robotBase.add(head)
-
-    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.24, 12), sharedMaterials.antenna)
-    antenna.position.y = 1.18
-    robotBase.add(antenna)
-
-    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), sharedMaterials.antenna)
-    antennaTip.position.y = 1.34
-    robotBase.add(antennaTip)
-
-    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), sharedMaterials.eye)
-    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), sharedMaterials.eye)
-    eyeLeft.position.set(-0.075, 0.985, 0.172)
-    eyeRight.position.set(0.075, 0.985, 0.172)
-    robotBase.add(eyeLeft, eyeRight)
-
-    const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.03), sharedMaterials.eye)
-    facePlate.position.set(0, 0.85, 0.225)
-    robotBase.add(facePlate)
-
-    const browPlate = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.035, 0.04), sharedMaterials.antenna)
-    browPlate.position.set(0, 1.055, 0.18)
-    robotBase.add(browPlate)
-
-    const frontNose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.06), sharedMaterials.antenna)
-    frontNose.position.set(0, 0.86, 0.26)
-    robotBase.add(frontNose)
-
-    const chestPanel = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.03), sharedMaterials.eye)
-    chestPanel.position.set(0, 0.57, 0.235)
-    robotBase.add(chestPanel)
-
-    const footLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
-    const footRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), sharedMaterials.side)
-    footLeft.position.set(-0.1, 0.14, 0)
-    footRight.position.set(0.1, 0.14, 0)
-    robotBase.add(footLeft, footRight)
-
-    const dirRotation = {
-      forward: Math.PI / 2,
-      right: 0,
-      backward: -Math.PI / 2,
-      left: Math.PI
-    }
-
-    robotBase.rotation.y = dirRotation[robotState.dir] || 0
-    robotGroup.position.set(
-      robotState.x * (BLOCK_SIZE + BOARD_GAP) + boardGroup.position.x,
-      cell.h * BLOCK_HEIGHT,
-      robotState.y * (BLOCK_SIZE + BOARD_GAP) + boardGroup.position.z
-    )
-    robotGroup.add(robotBase)
-    render()
-  }
-
-  function update(level, robotState, litKeyList) {
-    buildBoard(level, litKeyList)
-    updateRobot(level, robotState)
-    resize()
-
-    camera.position.set(5.6, 6.5 + currentMaxHeight * 0.44, 5.6)
-    camera.lookAt(0, currentMaxHeight * BLOCK_HEIGHT * 0.58, 0)
-    render()
-  }
-
-  function render() {
-    renderer.render(scene, camera)
-  }
-
-  function pickEditorCell(event) {
-    if (!options.onCellSelect) return null
-
-    if (!options.onCellSelect) return
-
-    const rect = renderer.domElement.getBoundingClientRect()
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-    raycaster.setFromCamera(pointer, camera)
-
-    const hit = raycaster.intersectObjects(interactiveTargets, false).find((entry) => entry.object.userData?.editorCell)
-    return hit?.object.userData?.editorCell || null
-  }
-
-  function handleScenePointerDown(event) {
-    if (!options.onCellSelect) return
-
-    const cell = pickEditorCell(event)
-    if (!cell) return
-
-    renderer.domElement.setPointerCapture?.(event.pointerId)
-    options.onPaintStart?.(cell.x, cell.y)
-  }
-
-  function handleScenePointerMove(event) {
-    if (!options.onCellSelect || !editorPaintActive) return
-
-    const cell = pickEditorCell(event)
-    if (!cell) return
-
-    options.onPaintMove?.(cell.x, cell.y)
-  }
-
-  function handleScenePointerUp(event) {
-    if (!options.onCellSelect) return
-
-    renderer.domElement.releasePointerCapture?.(event.pointerId)
-    options.onPaintEnd?.()
-  }
-
-  function handleScenePointerCancel(event) {
-    if (!options.onCellSelect) return
-
-    renderer.domElement.releasePointerCapture?.(event.pointerId)
-    options.onPaintEnd?.()
-  }
-
-  const resizeObserver = typeof ResizeObserver !== 'undefined'
-    ? new ResizeObserver(() => resize())
-    : null
-
-  if (resizeObserver) {
-    resizeObserver.observe(host)
-  }
-  if (options.onCellSelect) {
-    renderer.domElement.addEventListener('pointerdown', handleScenePointerDown)
-    renderer.domElement.addEventListener('pointermove', handleScenePointerMove)
-    renderer.domElement.addEventListener('pointerup', handleScenePointerUp)
-    renderer.domElement.addEventListener('pointercancel', handleScenePointerCancel)
-  }
-  resize()
-
-  return {
-    host,
-    update,
-    resize,
-    dispose() {
-      resizeObserver?.disconnect()
-      if (options.onCellSelect) {
-        renderer.domElement.removeEventListener('pointerdown', handleScenePointerDown)
-        renderer.domElement.removeEventListener('pointermove', handleScenePointerMove)
-        renderer.domElement.removeEventListener('pointerup', handleScenePointerUp)
-        renderer.domElement.removeEventListener('pointercancel', handleScenePointerCancel)
-      }
-      renderer.dispose()
-      blockGeometry.dispose()
-      outlineGeometry.dispose()
-      editorGhostGeometry.dispose()
-      editorGhostOutline.dispose()
-      hitPlaneGeometry.dispose()
-      Object.values(sharedMaterials).forEach((material) => material.dispose())
-      host.innerHTML = ''
-    }
-  }
-}
-
 function syncSceneControllers() {
   if (screen.value === 'brief' && briefSceneHost.value) {
     if (!briefSceneController) {
@@ -2857,7 +2020,8 @@ function syncSceneControllers() {
         onCellSelect: applyEditorCell,
         onPaintStart: beginEditorPaint,
         onPaintMove: continueEditorPaint,
-        onPaintEnd: endEditorPaint
+        onPaintEnd: endEditorPaint,
+        isPaintActive: () => editorPaintActive
       })
     }
     editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
