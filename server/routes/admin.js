@@ -166,7 +166,10 @@ router.get('/settings', async (req, res) => {
   try {
     const settings = await AppSetting.findById('global').lean()
     // 未找到时返回默认值，不写入 DB（避免 GET 有写入副作用）
-    res.json({ gamesEnabled: settings ? settings.gamesEnabled !== false : true })
+    res.json({
+      gamesEnabled: settings ? settings.gamesEnabled !== false : true,
+      lightbotEnabled: settings ? settings.lightbotEnabled !== false : true
+    })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -175,16 +178,30 @@ router.get('/settings', async (req, res) => {
 // Update app settings (admin)
 router.post('/settings', async (req, res) => {
   try {
-    const { gamesEnabled } = req.body || {}
-    if (typeof gamesEnabled !== 'boolean') {
-      return res.status(400).json({ error: 'gamesEnabled must be boolean' })
+    const { gamesEnabled, lightbotEnabled } = req.body || {}
+    const update = { updatedAt: new Date() }
+
+    if (typeof gamesEnabled === 'boolean') {
+      update.gamesEnabled = gamesEnabled
     }
+
+    if (typeof lightbotEnabled === 'boolean') {
+      update.lightbotEnabled = lightbotEnabled
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(update, 'gamesEnabled') && !Object.prototype.hasOwnProperty.call(update, 'lightbotEnabled')) {
+      return res.status(400).json({ error: 'gamesEnabled or lightbotEnabled must be boolean' })
+    }
+
     const settings = await AppSetting.findByIdAndUpdate(
       'global',
-      { gamesEnabled, updatedAt: new Date() },
+      update,
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean()
-    res.json({ gamesEnabled: settings.gamesEnabled !== false })
+    res.json({
+      gamesEnabled: settings.gamesEnabled !== false,
+      lightbotEnabled: settings.lightbotEnabled !== false
+    })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

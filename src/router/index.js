@@ -64,7 +64,11 @@ const router = createRouter({
   routes
 })
 
-const GAME_PATHS = new Set(['/sudoku', '/sokoban', '/lightbot'])
+const GAME_SETTINGS_BY_PATH = {
+  '/sudoku': { key: 'gamesEnabled', message: '课堂游戏已被管理员关闭' },
+  '/sokoban': { key: 'gamesEnabled', message: '课堂游戏已被管理员关闭' },
+  '/lightbot': { key: 'lightbotEnabled', message: 'Lightbot 已被管理员关闭' }
+}
 let cachedSettings = null
 let settingsPromise = null
 let settingsFetchedAt = 0
@@ -77,13 +81,16 @@ async function getSettings() {
 
   settingsPromise = request('/api/settings')
     .then((data) => {
-      cachedSettings = { gamesEnabled: data?.gamesEnabled !== false }
+      cachedSettings = {
+        gamesEnabled: data?.gamesEnabled !== false,
+        lightbotEnabled: data?.lightbotEnabled !== false
+      }
       settingsFetchedAt = Date.now()
       return cachedSettings
     })
     .catch((e) => {
       console.warn('Failed to load settings:', e)
-      return { gamesEnabled: true }
+      return { gamesEnabled: true, lightbotEnabled: true }
     })
     .finally(() => {
       settingsPromise = null
@@ -126,12 +133,13 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  if (GAME_PATHS.has(to.path)) {
+  if (Object.prototype.hasOwnProperty.call(GAME_SETTINGS_BY_PATH, to.path)) {
     const isStaff = user && (user.role === 'admin' || user.role === 'teacher' || user.priv === -1)
     if (!isStaff) {
       const settings = await getSettings()
-      if (settings && settings.gamesEnabled === false) {
-        alert('游戏已被管理员关闭')
+      const guard = GAME_SETTINGS_BY_PATH[to.path]
+      if (settings && settings[guard.key] === false) {
+        alert(guard.message)
         return next('/')
       }
     }

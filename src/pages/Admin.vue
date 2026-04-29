@@ -99,6 +99,21 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-title">Lightbot 开关</div>
+              <div class="setting-desc">关闭后，普通用户无法进入 Lightbot；不影响数独 / 推箱子。</div>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                :checked="lightbotEnabled"
+                :disabled="settingsLoading || settingsSaving"
+                @change="toggleLightbot"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <div class="tool-group">
           <button @click="sendTestEmail" class="btn-tool">发送测试邮件</button>
@@ -139,6 +154,7 @@ export default {
       isInitialLoad: true,
 
       gamesEnabled: true,
+      lightbotEnabled: true,
       settingsLoading: false,
       settingsSaving: false
     }
@@ -273,6 +289,7 @@ export default {
       try {
         const data = await request('/api/admin/settings')
         this.gamesEnabled = data?.gamesEnabled !== false
+        this.lightbotEnabled = data?.lightbotEnabled !== false
       } catch (e) {
         this.showToastMessage('加载设置失败: ' + e.message)
       } finally {
@@ -288,7 +305,25 @@ export default {
           body: JSON.stringify({ gamesEnabled: nextValue })
         })
         this.gamesEnabled = data?.gamesEnabled !== false
+        this.lightbotEnabled = data?.lightbotEnabled !== false
         this.showToastMessage(this.gamesEnabled ? '已开启游戏入口' : '已关闭游戏入口')
+      } catch (e) {
+        this.showToastMessage('更新失败: ' + e.message)
+      } finally {
+        this.settingsSaving = false
+      }
+    },
+    async toggleLightbot() {
+      const nextValue = !this.lightbotEnabled
+      this.settingsSaving = true
+      try {
+        const data = await request('/api/admin/settings', {
+          method: 'POST',
+          body: JSON.stringify({ lightbotEnabled: nextValue })
+        })
+        this.gamesEnabled = data?.gamesEnabled !== false
+        this.lightbotEnabled = data?.lightbotEnabled !== false
+        this.showToastMessage(this.lightbotEnabled ? '已开启 Lightbot' : '已关闭 Lightbot')
       } catch (e) {
         this.showToastMessage('更新失败: ' + e.message)
       } finally {
