@@ -670,6 +670,7 @@ import {
   writeLightbotStorage
 } from '../utils/lightbot/storage.js'
 import { createSceneController } from '../utils/lightbot/sceneController.js'
+import { pickDemoCopy, pickFirstMove } from '../utils/lightbot/briefCopyRules.js'
 
 function procedureLengthLabel(metrics) {
   return [
@@ -751,8 +752,7 @@ function loadProgress() {
   }
 }
 
-function findRecommendedLevelIndex() {
-  const completedIds = loadProgress()
+function findRecommendedLevelIndex(completedIds = loadProgress()) {
   const nextIndex = levels.value.findIndex((level) => !completedIds.includes(level.id))
   return nextIndex >= 0 ? nextIndex : 0
 }
@@ -887,11 +887,12 @@ function requirementBadgeClass(level) {
 }
 
 const screen = ref('select')
-const selectedLevelIndex = ref(findRecommendedLevelIndex())
+const initialCompletedLevelIds = loadProgress()
+const selectedLevelIndex = ref(findRecommendedLevelIndex(initialCompletedLevelIds))
 const activeProcedureKey = ref('main')
 const mainProcedure = ref([])
 const procedures = ref(createEmptyProcedures())
-const completedLevelIds = ref(loadProgress())
+const completedLevelIds = ref(initialCompletedLevelIds)
 const levelLeaderboard = ref([])
 const recentActivity = ref([])
 const litKeys = ref([])
@@ -932,16 +933,13 @@ let playSceneController = null
 let editorSceneController = null
 
 const currentLevel = computed(() => activeCustomLevel.value || levels.value[selectedLevelIndex.value] || levels.value[0] || LIGHTBOT_LEVELS[0])
-const currentLevelSupportsIfGreen = computed(() => Boolean(currentLevel.value.commandOptions?.ifGreen))
-const currentLevelSupportsIfRed = computed(() => Boolean(currentLevel.value.commandOptions?.ifRed))
-const currentLevelSupportsIfDark = computed(() => Boolean(currentLevel.value.commandOptions?.ifDark))
-const currentLevelSupportsIfForwardClear = computed(() => Boolean(currentLevel.value.commandOptions?.ifForwardClear))
-const currentLevelHasConditions = computed(() => currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value || currentLevelSupportsIfDark.value || currentLevelSupportsIfForwardClear.value)
+const currentLevelCommandOptions = computed(() => currentLevel.value.commandOptions || {})
+const currentLevelHasConditions = computed(() => CONDITION_PALETTE_SPECS.some((spec) => currentLevelCommandOptions.value[spec.flag]))
 const currentLevelMinConditionExecutions = computed(() => Math.max(Number(currentLevel.value.completionRequirements?.minConditionExecutions) || 0, 0))
 const currentLevelRequirementLabel = computed(() => conditionRequirementLabel(currentLevel.value))
 const currentLevelRequirementClass = computed(() => requirementBadgeClass(currentLevel.value))
 const enabledConditionSpecs = computed(() => {
-  const opts = currentLevel.value.commandOptions || {}
+  const opts = currentLevelCommandOptions.value
   return CONDITION_PALETTE_SPECS.filter((spec) => opts[spec.flag])
 })
 const currentLevelConditionLabels = computed(() => enabledConditionSpecs.value.map((spec) => spec.shortLabel))
@@ -1006,61 +1004,15 @@ const briefTeachingSummary = computed(() => {
   }
   return summaryParts.join(' ')
 })
-const briefFirstMoveTitle = computed(() => {
-  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) return '先标出每块颜色地板会把你送向哪一边'
-  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) return '先标出会二次经过的灯和会被挡住的前方'
-  if (currentLevelSupportsIfDark.value) return '先标出会被二次经过的灯'
-  if (currentLevelSupportsIfForwardClear.value) return '先找哪些地方前方有路、哪些地方前方会断'
-  if (availableProcedureKeys.value.length >= 2) return '先切块，再决定谁放进 P1 / P2'
-  if (availableProcedureKeys.value.length === 1) return '先找会重复出现的动作模板'
-  return '先在脑中跑一遍路线'
-})
-const briefFirstMoveCopy = computed(() => {
-  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) {
-    return '先把绿色地板和红色地板逐个标出来，再想清楚每一次循环结束后会不会正好落到下一块决策地板上。颜色条件最怕的不是不会转向，而是循环结束后没有回到主路。'
-  }
-  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
-    return '先把地图上“会被重复踩到的灯”和“前方有时能走、有时会断掉的边界”都圈出来。前者适合用 If Dark Light，后者适合用 If Clear 包住前进或跳跃。'
-  }
-  if (currentLevelSupportsIfDark.value) {
-    return '先找出哪些灯会被反复踩到。把 If Dark Light 放在这些位置，你就能复用同一段路线，而不用为“第一次点灯”和“第二次经过”分别写两套程序。'
-  }
-  if (currentLevelSupportsIfForwardClear.value) {
-    return '先找出哪些位置前方存在平台，哪些位置前方是断边。把 If Clear 包在 Walk 或 Jump 外面，就能让同一条模板在不同地点自动决定要不要继续前进。'
-  }
-  if (availableProcedureKeys.value.length >= 2) {
-    return '先把整条路线按“直走段、转角段、跳跃段”分成几块，再判断哪一块最值得交给 P1 或 P2。这样更容易同时压缩总代码和执行结构。'
-  }
-  if (availableProcedureKeys.value.length === 1) {
-    return '先不要急着往 MAIN 里填满。观察是否有两次以上出现的同一段拐弯或跳跃模板，把它抽成 P1，MAIN 只负责调用顺序。'
-  }
-  return '从起点朝向出发，先确定第一段需要前进、转向还是跳跃。前 3 到 5 步想清楚以后，后面的路径通常会自然展开。'
-})
+const briefCopyContext = computed(() => ({
+  opts: currentLevelCommandOptions.value,
+  procCount: availableProcedureKeys.value.length,
+  hasDemo: hasCurrentDemo.value
+}))
+const briefFirstMoveTitle = computed(() => pickFirstMove(briefCopyContext.value).title)
+const briefFirstMoveCopy = computed(() => pickFirstMove(briefCopyContext.value).copy)
 const briefDemoTitle = computed(() => (hasCurrentDemo.value ? currentDemoFeatureText.value : '先自己试，再决定是否看演示'))
-const briefDemoCopy = computed(() => {
-  if (!hasCurrentDemo.value) {
-    return '这关暂时没有内置 demo。建议先自己尝试一版，再回来看提示卡片里的解题重点。'
-  }
-  if (currentLevelSupportsIfGreen.value || currentLevelSupportsIfRed.value) {
-    return '看 demo 时重点盯住每一轮循环是如何读取脚下颜色的。真正要学的不是单次左转或右转，而是同一套模板怎样在绿地板和红地板上走出不同分支。'
-  }
-  if (currentLevelSupportsIfDark.value && currentLevelSupportsIfForwardClear.value) {
-    return '看 demo 时要分清两类条件块分别保护什么：If Dark 负责避免二次熄灯，If Clear 负责让同一段路线在“有路”和“没路”两种现场都能复用。'
-  }
-  if (currentLevelSupportsIfDark.value) {
-    return '看 demo 时重点盯住每一个 If Dark Light 出现的位置。它们通常都落在“这盏灯会被再次经过”的地方，这正是条件块存在的理由。'
-  }
-  if (currentLevelSupportsIfForwardClear.value) {
-    return '看 demo 时重点看每一个 If Clear 后面包住的是 Walk 还是 Jump。真正要学的是：为什么这一步不能无脑执行，而要等现场确认前方可走。'
-  }
-  if (availableProcedureKeys.value.length >= 2) {
-    return '观察 demo 里 MAIN 负责串联、P1 / P2 负责复用的边界。真正要学的不是照抄顺序，而是为什么这两段值得单独拆出去。'
-  }
-  if (availableProcedureKeys.value.length === 1) {
-    return '看 demo 时重点找“哪一段被重复调用”。如果一眼看不出复用价值，说明你还没有真正抓住本关的压缩点。'
-  }
-  return '看 demo 时先记住机器人前几步的朝向变化，再对照版面理解为什么要先转、再走、最后点灯。'
-})
+const briefDemoCopy = computed(() => pickDemoCopy(briefCopyContext.value))
 const currentProgramMetrics = computed(() => {
   const mainLength = mainProcedure.value.length
   const metrics = {
@@ -2050,7 +2002,7 @@ watch(
 )
 
 watch(
-  () => [currentLevel.value.id, bot.value.x, bot.value.y, bot.value.dir, litKeys.value.join('|')],
+  () => [currentLevel.value.id, bot.value.x, bot.value.y, bot.value.dir, litKeys.value.length, litKeys.value[litKeys.value.length - 1] || ''],
   () => {
     playSceneController?.update(currentLevel.value, bot.value, litKeys.value)
     briefSceneController?.update(currentLevel.value, currentLevel.value.start, [])
@@ -2108,6 +2060,7 @@ onBeforeUnmount(() => {
   editorSceneController = null
 })
 
+// 初始化默认关卡的清空状态（机器人复位、指令列清空、状态栏设为 Program is empty）
 resetLevel(true)
 </script>
 
