@@ -39,6 +39,14 @@ export const CONDITION_TEST_META = {
   'forward-clear': { label: 'If Clear', shortLabel: 'CLEAR', slotLabel: 'IF-C', description: '仅当前方存在可合法前进的平台时执行下一条' }
 }
 
+// 调色板里条件块的展示顺序与对应的 commandOptions flag。新增条件类型时只需在此追加一项。
+export const CONDITION_PALETTE_SPECS = [
+  { flag: 'ifGreen', id: 'if-green', label: 'If Green', shortLabel: 'If Green', test: 'green-floor' },
+  { flag: 'ifRed', id: 'if-red', label: 'If Red', shortLabel: 'If Red', test: 'red-floor' },
+  { flag: 'ifDark', id: 'if-dark', label: 'If Dark', shortLabel: 'If Dark', test: 'dark-target' },
+  { flag: 'ifForwardClear', id: 'if-clear', label: 'If Clear', shortLabel: 'If Clear', test: 'forward-clear' }
+]
+
 export const BLOCK_SIZE = 1
 export const BLOCK_HEIGHT = 0.5
 export const BOARD_GAP = 0.04

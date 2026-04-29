@@ -615,9 +615,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { LIGHTBOT_LEVEL_GROUPS, LIGHTBOT_LEVELS, VALID_LEVEL_IDS, makeTile } from '../data/lightbotLevels'
 import { formatOps, solveLevelProgram } from '../utils/lightbotSolver'
-import request from '../utils/request'
+import { lightbotApi } from '../utils/lightbot/api.js'
 import {
   BASE_OPERATION_PALETTE,
+  CONDITION_PALETTE_SPECS,
   CONDITION_TEST_META,
   DIRECTION_LABELS,
   DIRECTION_ORDER,
@@ -792,7 +793,7 @@ function normalizeServerLevelOverrides(items) {
 }
 
 async function fetchSharedLevelOverrides() {
-  const response = await request.get('/api/lightbot/levels')
+  const response = await lightbotApi.listLevels()
   const normalized = normalizeServerLevelOverrides(response?.data)
   levelOverrides.value = normalized.overrides
   customLevels.value = normalized.customLevels
@@ -806,7 +807,7 @@ async function fetchLevelLeaderboard(levelId = currentLevel.value.id) {
   }
 
   try {
-    const response = await request.get(`/api/lightbot/levels/${encodeURIComponent(levelId)}/leaderboard`)
+    const response = await lightbotApi.getLeaderboard(levelId)
     levelLeaderboard.value = Array.isArray(response?.data) ? response.data : []
   } catch (error) {
     console.error('Failed to fetch Lightbot leaderboard:', error)
@@ -816,7 +817,7 @@ async function fetchLevelLeaderboard(levelId = currentLevel.value.id) {
 
 async function fetchRecentActivity() {
   try {
-    const response = await request.get('/api/lightbot/activity?limit=10')
+    const response = await lightbotApi.recentActivity(10)
     recentActivity.value = Array.isArray(response?.data) ? response.data : []
   } catch (error) {
     console.error('Failed to fetch Lightbot activity:', error)
@@ -836,7 +837,7 @@ async function submitCurrentResult(runToken) {
   reportedCompletionToken.value = runToken
 
   try {
-    await request.post(`/api/lightbot/levels/${encodeURIComponent(currentLevel.value.id)}/complete`, lastCompletionMetrics.value || currentProgramMetrics.value)
+    await lightbotApi.reportComplete(currentLevel.value.id, lastCompletionMetrics.value || currentProgramMetrics.value)
     await Promise.all([
       fetchLevelLeaderboard(currentLevel.value.id),
       fetchRecentActivity()
@@ -939,27 +940,14 @@ const currentLevelHasConditions = computed(() => currentLevelSupportsIfGreen.val
 const currentLevelMinConditionExecutions = computed(() => Math.max(Number(currentLevel.value.completionRequirements?.minConditionExecutions) || 0, 0))
 const currentLevelRequirementLabel = computed(() => conditionRequirementLabel(currentLevel.value))
 const currentLevelRequirementClass = computed(() => requirementBadgeClass(currentLevel.value))
-const currentLevelConditionLabels = computed(() => [
-  ...(currentLevelSupportsIfGreen.value ? ['If Green'] : []),
-  ...(currentLevelSupportsIfRed.value ? ['If Red'] : []),
-  ...(currentLevelSupportsIfDark.value ? ['If Dark'] : []),
-  ...(currentLevelSupportsIfForwardClear.value ? ['If Clear'] : [])
-])
+const enabledConditionSpecs = computed(() => {
+  const opts = currentLevel.value.commandOptions || {}
+  return CONDITION_PALETTE_SPECS.filter((spec) => opts[spec.flag])
+})
+const currentLevelConditionLabels = computed(() => enabledConditionSpecs.value.map((spec) => spec.shortLabel))
 const operationPalette = computed(() => {
-  const palette = [...BASE_OPERATION_PALETTE]
-  if (currentLevelSupportsIfGreen.value) {
-    palette.splice(7, 0, { id: 'if-green', label: 'If Green', kind: 'condition', test: 'green-floor' })
-  }
-  if (currentLevelSupportsIfRed.value) {
-    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0), 0, { id: 'if-red', label: 'If Red', kind: 'condition', test: 'red-floor' })
-  }
-  if (currentLevelSupportsIfDark.value) {
-    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0) + (currentLevelSupportsIfRed.value ? 1 : 0), 0, { id: 'if-dark', label: 'If Dark', kind: 'condition', test: 'dark-target' })
-  }
-  if (currentLevelSupportsIfForwardClear.value) {
-    palette.splice(7 + (currentLevelSupportsIfGreen.value ? 1 : 0) + (currentLevelSupportsIfRed.value ? 1 : 0) + (currentLevelSupportsIfDark.value ? 1 : 0), 0, { id: 'if-clear', label: 'If Clear', kind: 'condition', test: 'forward-clear' })
-  }
-  return palette
+  const conds = enabledConditionSpecs.value.map(({ id, label, test }) => ({ id, label, kind: 'condition', test }))
+  return [...BASE_OPERATION_PALETTE.slice(0, 7), ...conds, ...BASE_OPERATION_PALETTE.slice(7)]
 })
 const currentLevelGroup = computed(() => findGroupForLevel(currentLevel.value.id))
 const isCustomPlaytest = computed(() => Boolean(activeCustomLevel.value))
@@ -1355,7 +1343,7 @@ async function deleteEditorData() {
 
   try {
     const deletedLevelId = editorDraft.sourceLevelId
-    await request.delete(`/api/lightbot/levels/${encodeURIComponent(deletedLevelId)}`)
+    await lightbotApi.deleteLevel(deletedLevelId)
 
     const nextOverrides = { ...levelOverrides.value }
     delete nextOverrides[deletedLevelId]
@@ -1466,11 +1454,12 @@ function verifyEditorLevelForPublish() {
   if (level.commandOptions?.ifGreen || level.commandOptions?.ifRed || level.commandOptions?.ifDark || level.commandOptions?.ifForwardClear) {
     editorVerification.value = {
       solvable: true,
+      requiresManualVerification: true,
       signature: editorSignature.value,
       program: null,
-      message: '已通过基础校验：含条件块的关卡暂不支持自动求解，可手动保存并进入试玩验证'
+      message: '含条件块的关卡暂不支持自动求解：请在保存前先进入试玩手动验证可过关'
     }
-    setStatus('Conditional level verified for manual publish', 'success')
+    setStatus('含条件关卡需手动试玩验证', 'pending')
     return
   }
   const solveResult = solveLevelProgram(level)
@@ -1520,8 +1509,8 @@ async function saveEditorLevelToGame() {
 
   try {
     const response = editorDraft.sourceLevelId
-      ? await request.put(`/api/lightbot/levels/${encodeURIComponent(savedLevel.id)}`, { level: savedLevel })
-      : await request.post('/api/lightbot/levels', { level: savedLevel })
+      ? await lightbotApi.updateLevel(savedLevel)
+      : await lightbotApi.createLevel(savedLevel)
     const sharedLevel = cloneLevelDefinition(response?.data || savedLevel)
     if (sharedLevel.isCustom) {
       customLevels.value = [...customLevels.value.filter((level) => level.id !== sharedLevel.id), sharedLevel]
@@ -1791,11 +1780,11 @@ function toggleCurrentTarget() {
 }
 
 function markFinished() {
+  if (showFinishPanel.value) return true
   if (!targetKeys.value.length || !targetKeys.value.every((key) => litKeys.value.includes(key))) {
     return false
   }
   if (currentLevelMinConditionExecutions.value > 0 && runConditionEvaluations.value < currentLevelMinConditionExecutions.value) {
-    setStatus(`本关要求至少执行 ${currentLevelMinConditionExecutions.value} 次条件判断，当前只执行了 ${runConditionEvaluations.value} 次。`, 'danger')
     return false
   }
   let masteryUnlocked = null
@@ -1938,7 +1927,12 @@ async function executeOperation(operationId, nonce, depth) {
 }
 
 async function runProcedure(procKey, operations, nonce, depth = 0) {
-  if (depth > 8 || nonce !== runNonce.value) return
+  if (nonce !== runNonce.value) return
+  if (depth > 8) {
+    setStatus('递归层级过深（> 8），已中断运行：请检查 P1/P2 是否互相调用', 'danger')
+    runNonce.value += 1
+    return
+  }
   for (let index = 0; index < operations.length; index += 1) {
     if (nonce !== runNonce.value) return
     runningProcedureKey.value = procKey
@@ -1960,7 +1954,11 @@ async function runCode() {
   try {
     await runProcedure('main', mainProcedure.value, nonce)
     if (nonce === runNonce.value && !showFinishPanel.value && statusText.value === 'Program running') {
-      setStatus('Program finished', 'neutral')
+      if (currentLevelMinConditionExecutions.value > 0 && runConditionEvaluations.value < currentLevelMinConditionExecutions.value) {
+        setStatus(`本关要求至少执行 ${currentLevelMinConditionExecutions.value} 次条件判断，当前只执行了 ${runConditionEvaluations.value} 次。`, 'danger')
+      } else {
+        setStatus('Program finished', 'neutral')
+      }
     }
   } finally {
     if (nonce === runNonce.value) {
@@ -1993,42 +1991,53 @@ function leavePlayScreen() {
   goToLevelSelect()
 }
 
+function syncOneSceneController(visible, hostRef, getCtrl, setCtrl, factory, applyUpdate) {
+  let ctrl = getCtrl()
+  if (visible && hostRef.value) {
+    if (!ctrl) {
+      ctrl = factory(hostRef.value)
+      setCtrl(ctrl)
+    }
+    applyUpdate(ctrl)
+  } else if (ctrl) {
+    ctrl.dispose()
+    setCtrl(null)
+  }
+}
+
 function syncSceneControllers() {
-  if (screen.value === 'brief' && briefSceneHost.value) {
-    if (!briefSceneController) {
-      briefSceneController = createSceneController(briefSceneHost.value)
-    }
-    briefSceneController?.update(currentLevel.value, currentLevel.value.start, [])
-  } else if (briefSceneController) {
-    briefSceneController.dispose()
-    briefSceneController = null
-  }
+  syncOneSceneController(
+    screen.value === 'brief',
+    briefSceneHost,
+    () => briefSceneController,
+    (c) => { briefSceneController = c },
+    (host) => createSceneController(host),
+    (c) => c.update(currentLevel.value, currentLevel.value.start, [])
+  )
 
-  if (screen.value === 'play' && playSceneHost.value) {
-    if (!playSceneController) {
-      playSceneController = createSceneController(playSceneHost.value)
-    }
-    playSceneController?.update(currentLevel.value, bot.value, litKeys.value)
-  } else if (playSceneController) {
-    playSceneController.dispose()
-    playSceneController = null
-  }
+  syncOneSceneController(
+    screen.value === 'play',
+    playSceneHost,
+    () => playSceneController,
+    (c) => { playSceneController = c },
+    (host) => createSceneController(host),
+    (c) => c.update(currentLevel.value, bot.value, litKeys.value)
+  )
 
-  if (screen.value === 'editor' && editorSceneHost.value) {
-    if (!editorSceneController) {
-      editorSceneController = createSceneController(editorSceneHost.value, {
-        onCellSelect: applyEditorCell,
-        onPaintStart: beginEditorPaint,
-        onPaintMove: continueEditorPaint,
-        onPaintEnd: endEditorPaint,
-        isPaintActive: () => editorPaintActive
-      })
-    }
-    editorSceneController?.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
-  } else if (editorSceneController) {
-    editorSceneController.dispose()
-    editorSceneController = null
-  }
+  syncOneSceneController(
+    screen.value === 'editor',
+    editorSceneHost,
+    () => editorSceneController,
+    (c) => { editorSceneController = c },
+    (host) => createSceneController(host, {
+      onCellSelect: applyEditorCell,
+      onPaintStart: beginEditorPaint,
+      onPaintMove: continueEditorPaint,
+      onPaintEnd: endEditorPaint,
+      isPaintActive: () => editorPaintActive
+    }),
+    (c) => c.update(editorLevelPreview.value, editorLevelPreview.value.start, [])
+  )
 }
 
 watch(
