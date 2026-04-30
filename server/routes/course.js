@@ -74,12 +74,13 @@ async function resolveProblemIds(problemIdStrings) {
 
 function buildTopicChapterIdRemap(level) {
   const chapterIdRemap = new Map()
+  const prefix = getCourseSubjectIdPrefix(level)
 
   for (let topicIndex = 0; topicIndex < (level?.topics || []).length; topicIndex++) {
     const topic = level.topics[topicIndex]
     for (let chapterIndex = 0; chapterIndex < (topic?.chapters || []).length; chapterIndex++) {
       const chapter = topic.chapters[chapterIndex]
-      const nextId = `${level.level}-${topicIndex + 1}-${chapterIndex + 1}`
+      const nextId = `${prefix}-${level.level}-${topicIndex + 1}-${chapterIndex + 1}`
       const prevId = String(chapter?.id || '')
       if (prevId && prevId !== nextId) {
         chapterIdRemap.set(prevId, nextId)
@@ -313,6 +314,15 @@ function normalizeCourseSubjectLabel(subject) {
   if (text === 'C++' || text.includes('C++')) return 'C++'
   if (text === 'Python' || text.includes('Python')) return 'Python'
   return text
+}
+
+function getCourseSubjectIdPrefix(level) {
+  const subject = normalizeCourseSubjectLabel(level?.subject || '')
+  if (subject === 'Python') return 'py'
+  if (subject === 'C++') return 'cpp'
+  // Fallback: lowercase alphanumerics from raw subject, default to 'cpp'.
+  const fallback = String(subject || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return fallback || 'cpp'
 }
 
 function getCourseSubjectSortRank(subject) {
@@ -3609,17 +3619,13 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
       topic.chapters.push(newChapter)
     }
 
-    // Auto-renumber chapters
-    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
-    if (topicIndex !== -1) {
-        const prefix = `${level.level}-${topicIndex + 1}`
-        level.topics[topicIndex].chapters.forEach((ch, idx) => {
-            ch.id = `${prefix}-${idx + 1}`
-        })
-        level.markModified('topics');
-    }
-
+    // Renumber + collect prev->next remap (with subject prefix)
+    const chapterIdRemap = buildTopicChapterIdRemap(level)
+    const chapterUidIdMap = buildChapterUidIdMap(level)
+    level.markModified('topics')
     await level.save()
+    await migrateChapterIdReferences(chapterIdRemap)
+    await reconcileCourseActivityChapterIds(chapterUidIdMap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -3871,9 +3877,10 @@ router.post('/levels/:id/chapters', authenticateToken, requireRole(['admin', 'te
       level.chapters.push(newChapter)
     }
 
-    // Auto-renumber chapters to keep IDs consistent (e.g. 1-1, 1-2, 1-3)
+    // Auto-renumber chapters to keep IDs consistent (e.g. cpp-1-1, cpp-1-2, ...)
+    const subjectPrefix = getCourseSubjectIdPrefix(level)
     level.chapters.forEach((ch, index) => {
-      ch.id = `${level.level}-${index + 1}`
+      ch.id = `${subjectPrefix}-${level.level}-${index + 1}`
     })
 
     await level.save()
@@ -3937,10 +3944,11 @@ router.delete('/levels/:id/chapters/:chapterId', authenticateToken, requireRole(
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
     level.chapters = level.chapters.filter(c => c.id !== req.params.chapterId)
-    
-    // Auto-renumber chapters after deletion
+
+    // Auto-renumber chapters after deletion (with subject prefix)
+    const subjectPrefix = getCourseSubjectIdPrefix(level)
     level.chapters.forEach((ch, index) => {
-      ch.id = `${level.level}-${index + 1}`
+      ch.id = `${subjectPrefix}-${level.level}-${index + 1}`
     })
 
     await level.save()
