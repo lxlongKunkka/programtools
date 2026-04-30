@@ -36,9 +36,19 @@ async function main() {
   const CourseLevel = appConn.model('CourseLevel', courseLevelSchema)
   await appConn.asPromise()
 
-  const levels = await CourseLevel.find({ level: 2, subject: { $in: ['C++', null, undefined] } }).lean()
-  // pick the C++ doc (group includes "C++")
-  const cppLevel = levels.find(l => /C\+\+/.test(l.group || '') || (l.subject || 'C++') === 'C++')
+  const levels = await CourseLevel.find({ level: 2 }).lean()
+  // pick the C++ doc (group includes "C++" 或 subject 为 'C++'，排除 Python)
+  const cppLevel = levels.find(l => {
+    const g = l.group || ''
+    const s = l.subject || ''
+    if (/Python/i.test(g) || /Python/i.test(s)) return false
+    return /C\+\+/.test(g) || s === 'C++' || (!s && !g)
+  })
+  if (!cppLevel) {
+    console.error('No C++ Level 2 doc found. Levels found:', levels.map(l => ({ id: l._id, group: l.group, subject: l.subject })))
+    process.exit(1)
+  }
+  console.log(`Found C++ L2 doc: group="${cppLevel.group}" subject="${cppLevel.subject}" topics=${(cppLevel.topics || []).length}`)
   const usedSet = new Map() // pid -> {chapterId, kind}
   for (const t of cppLevel?.topics || []) {
     for (const c of t.chapters || []) {
