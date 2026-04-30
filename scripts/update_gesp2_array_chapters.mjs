@@ -57,8 +57,6 @@ const courseLevelSchema = new mongoose.Schema({}, { strict: false, collection: '
 const CourseLevel = mongoose.model('CourseLevel', courseLevelSchema);
 
 await mongoose.connect(MONGO);
-const courseLevelSchema2 = new mongoose.Schema({}, { strict: false, collection: 'courselevels' });
-const CourseLevel = mongoose.models.CourseLevel || mongoose.model('CourseLevel', courseLevelSchema2);
 const levels = await CourseLevel.find({ level: COURSE_LEVEL });
 const doc = levels.find(l => /C\+\+/.test(l.group || '') && !/Python/i.test(l.group || ''));
 if (!doc) { console.error('no course level'); process.exit(1); }
