@@ -70,16 +70,17 @@ async function main() {
     if (ac < 0.15) continue // 过难
     for (const ch of CHAPTERS) {
       if (tags.some(t => ch.tagRe.test(t))) {
-        // 三级目标：偏好 gesp3 / Level2 / 一维数组 / 字符串等
-        const isPreferred = tags.some(t => /(gesp3|gesp2|Level2|Level3|位运算|进制|枚举|模拟|二维数组|矩阵|字符串)/.test(t))
-        if (!isPreferred) continue
-        // 章节特化过滤
-        if (ch.id === 'cpp-3-3-3' && !tags.some(t => /(原码|反码|补码|二进制)/.test(t))) continue
-        if (ch.id.startsWith('cpp-3-4') && !tags.some(t => /(位运算|按位|异或|移位|左移|右移|XOR)/i.test(t))) continue
+        // 章节特化过滤（精确把关，不依赖 isPreferred）
+        if (ch.id === 'cpp-3-3-3' && !tags.some(t => /(原码|反码|补码|二进制|进制)/.test(t))) continue
+        if (ch.id.startsWith('cpp-3-4') && !tags.some(t => /(位运算|按位|异或|移位|左移|右移|XOR|bit)/i.test(t))) continue
+        if (ch.id === 'cpp-3-5-1' && !tags.some(t => /(枚举|暴力|循环嵌套|多重循环)/.test(t))) continue
         if (ch.id === 'cpp-3-5-2' && !tags.some(t => /(子集|状态压缩|位运算)/.test(t))) continue
-        if (ch.id === 'cpp-3-5-3' && !tags.some(t => /(剪枝|搜索)/.test(t))) continue
+        if (ch.id === 'cpp-3-5-3' && !tags.some(t => /(剪枝|搜索|枚举)/.test(t))) continue
         if (ch.id === 'cpp-3-6-2' && !tags.some(t => /(矩阵|二维数组|方格)/.test(t))) continue
         if (ch.id === 'cpp-3-6-3' && !tags.some(t => /(字符串)/.test(t))) continue
+        // 三级范围限制：避免 gesp4+ 难题
+        const isAdvanced = tags.some(t => /(gesp[5-9]|NOIP|提高组|动态规划|DP|图论|最短路|线段树|并查集|二分图|网络流)/i.test(t))
+        if (isAdvanced) continue
         buckets[ch.id].push({ pid, title: doc.title, tags, ac: Number(ac.toFixed(3)), nSubmit: doc.nSubmit })
       }
     }
