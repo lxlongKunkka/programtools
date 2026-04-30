@@ -22,7 +22,6 @@ const PLAN = {
       'atcoder:1086', // 1-2-4 Test 三道题二进制状态表示得分
       'atcoder:630',  // 异或运算求 C
       'atcoder:1178', // 两人组队解决所有问题（OR 思想）
-      'atcoder:1549', // CTZ 二进制末尾零计数（涉及 & 1 / 移位）
     ],
     optional: [],
   },
