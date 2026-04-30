@@ -1,0 +1,546 @@
+{
+  "generatedAt": "2026-04-30T14:34:27.753Z",
+  "target": {
+    "level": 1,
+    "group": "GESP C++ 认证课程"
+  },
+  "source": "atcoder domain (tag includes gesp1)",
+  "selectionRules": [
+    "排除当前 Level1 已使用题目",
+    "优先 acRate 在 0.55~0.75 的入门题",
+    "按章节知识点匹配：条件/循环/数学基础"
+  ],
+  "chapters": [
+    {
+      "chapterId": "1-1-6",
+      "chapterTitle": "代码的注释 (//)",
+      "status": "skip",
+      "reason": "概念性章节，不建议用 OJ 题承载；建议课堂内代码阅读+找错练习。",
+      "required": [],
+      "optional": []
+    },
+    {
+      "chapterId": "1-2-2",
+      "chapterTitle": "复合赋值和自增自减 (+=, -=, ++, --)",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:357",
+          "title": "[ABC169A] Multiplication 1 两数相乘",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.7294
+        },
+        {
+          "problemId": "atcoder:459",
+          "title": "[ABC186A] Brick 卡车装载砖块数量",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.7294
+        },
+        {
+          "problemId": "atcoder:604",
+          "title": "[ABC209A] Counting 统计区间内整数数量",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.5588
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:29",
+          "title": "[ABC107A] Train 火车车厢从尾部开始的编号",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6228
+        },
+        {
+          "problemId": "atcoder:285",
+          "title": "[ABC157A] Duplex Printing 双面打印所需纸张数",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6875
+        }
+      ]
+    },
+    {
+      "chapterId": "1-3-6",
+      "chapterTitle": "scanf 和 printf",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:958",
+          "title": "[ABC254A] Last Two Digits 求整数N的末两位数字",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.5461
+        },
+        {
+          "problemId": "atcoder:183",
+          "title": "[ABC140A] Password 三位密码组合计数",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.7449
+        },
+        {
+          "problemId": "atcoder:147",
+          "title": "[ABC134A] Dodecagon 正十二边形面积",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6667
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:2",
+          "title": "[ABC099B] Stone Monument  计算积雪深度",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.573
+        },
+        {
+          "problemId": "atcoder:453",
+          "title": "[ABC185A] ABC Preparation 最多可举办比赛场次",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6701
+        }
+      ]
+    },
+    {
+      "chapterId": "1-3-7",
+      "chapterTitle": "顺序结构强化练习",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:231",
+          "title": "[ABC148A] Round One 三选一排除法",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.656
+        },
+        {
+          "problemId": "atcoder:79",
+          "title": "[ABC121A] White Cells 网格涂色剩余白色单元格",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.557
+        },
+        {
+          "problemId": "atcoder:25",
+          "title": "[ABC106A] Garden 花园道路分割面积",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.5342
+        },
+        {
+          "problemId": "atcoder:1054",
+          "title": "[ABC266A] Middle  Letter 查找奇数长度字符串的中心字符",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6327
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:285",
+          "title": "[ABC157A] Duplex Printing 双面打印所需纸张数",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.6875
+        },
+        {
+          "problemId": "atcoder:604",
+          "title": "[ABC209A] Counting 统计区间内整数数量",
+          "tags": [
+            "gesp1",
+            "数学基础"
+          ],
+          "acRate": 0.5588
+        }
+      ]
+    },
+    {
+      "chapterId": "1-4-7",
+      "chapterTitle": "switch-case 语句",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:55",
+          "title": "[ABC115A] Christmas Eve Eve Eve 圣诞节日期判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6489
+        },
+        {
+          "problemId": "atcoder:387",
+          "title": "[ABC174A] Air Conditioner 室温判断空调开关",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6699
+        },
+        {
+          "problemId": "atcoder:507",
+          "title": "[ABC194A] I Scream 冰淇淋分类判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6186
+        },
+        {
+          "problemId": "atcoder:51",
+          "title": "[ABC114A] 753 七五三年龄判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.5871
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:441",
+          "title": "[ABC183A] ReLU ReLU函数计算",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6585
+        },
+        {
+          "problemId": "atcoder:123",
+          "title": "[ABC130A] Rounding 条件判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6124
+        }
+      ]
+    },
+    {
+      "chapterId": "1-4-8",
+      "chapterTitle": "条件结构综合例题",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:327",
+          "title": "[ABC164A] Sheep and Wolves 羊群安全判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6852
+        },
+        {
+          "problemId": "atcoder:83",
+          "title": "[ABC122A] Double Helix 碱基配对",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6
+        },
+        {
+          "problemId": "atcoder:638",
+          "title": "[ABC214A] New Generation ABC ABC比赛问题数",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.5971
+        },
+        {
+          "problemId": "atcoder:1660",
+          "title": "[ABC352A] AtCoder Line 列车停靠站判断",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.59
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:171",
+          "title": "[ABC138A] Red or Not 条件判断输出字符串",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.5566
+        },
+        {
+          "problemId": "atcoder:369",
+          "title": "[ABC171A] αlphabet 判断字母大小写",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6421
+        },
+        {
+          "problemId": "atcoder:1387",
+          "title": "[ABC312A] Chord 判断特定字符串",
+          "tags": [
+            "gesp1",
+            "条件结构"
+          ],
+          "acRate": 0.6486
+        }
+      ]
+    },
+    {
+      "chapterId": "1-5-5",
+      "chapterTitle": "循环结构强化练习",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:1177",
+          "title": "[ABC282A] Generalized ABC 打印前K个大写字母",
+          "tags": [
+            "gesp1",
+            "循环结构"
+          ],
+          "acRate": 0.6027
+        },
+        {
+          "problemId": "atcoder:1548",
+          "title": "[ABC336A] Long Loong 生成龙之字符串",
+          "tags": [
+            "gesp1",
+            "循环结构"
+          ],
+          "acRate": 0.6296
+        },
+        {
+          "problemId": "atcoder:1527",
+          "title": "[ABC333A] Three Threes 数字N重复N次",
+          "tags": [
+            "gesp1",
+            "循环结构"
+          ],
+          "acRate": 0.8462
+        },
+        {
+          "problemId": "atcoder:1102",
+          "title": "[ABC272A] Integer Sum N个整数求和",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "数学基础"
+          ],
+          "acRate": 0.6822
+        },
+        {
+          "problemId": "atcoder:1576",
+          "title": "[ABC340A] Arithmetic Progression 等差数列打印",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "数学基础"
+          ],
+          "acRate": 0.6875
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:1492",
+          "title": "[ABC328A] Not Too Hard 筛选分数并求和",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.6338
+        },
+        {
+          "problemId": "atcoder:1506",
+          "title": "[ABC330A] Counting Passes 统计及格人数",
+          "tags": [
+            "gesp1",
+            "条件结构",
+            "循环结构"
+          ],
+          "acRate": 0.6588
+        },
+        {
+          "problemId": "atcoder:1520",
+          "title": "[ABC332A] Online Shopping 计算商品总价与运费",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.7015
+        },
+        {
+          "problemId": "atcoder:1192",
+          "title": "[ABC284B] Multi Test Cases 统计奇数个数",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.65
+        }
+      ]
+    },
+    {
+      "chapterId": "1-6-1",
+      "chapterTitle": "gesp1 编程题",
+      "status": "add",
+      "required": [
+        {
+          "problemId": "atcoder:1492",
+          "title": "[ABC328A] Not Too Hard 筛选分数并求和",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.6338
+        },
+        {
+          "problemId": "atcoder:1506",
+          "title": "[ABC330A] Counting Passes 统计及格人数",
+          "tags": [
+            "gesp1",
+            "条件结构",
+            "循环结构"
+          ],
+          "acRate": 0.6588
+        },
+        {
+          "problemId": "atcoder:1520",
+          "title": "[ABC332A] Online Shopping 计算商品总价与运费",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.7015
+        },
+        {
+          "problemId": "atcoder:1192",
+          "title": "[ABC284B] Multi Test Cases 统计奇数个数",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.65
+        },
+        {
+          "problemId": "atcoder:1625",
+          "title": "[ABC347A] Divisible 筛选K的倍数并求商",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "数学基础"
+          ],
+          "acRate": 0.6207
+        },
+        {
+          "problemId": "atcoder:1303",
+          "title": "[ABC300A] N-choice question 计算和并查找选项索引",
+          "tags": [
+            "gesp1",
+            "数学基础",
+            "循环结构"
+          ],
+          "acRate": 0.6446
+        }
+      ],
+      "optional": [
+        {
+          "problemId": "atcoder:1234",
+          "title": "[ABC290B] Qual B 选手晋级决赛筛选",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.6786
+        },
+        {
+          "problemId": "atcoder:1261",
+          "title": "[ABC294A] Filter 筛选偶数",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.6792
+        },
+        {
+          "problemId": "atcoder:1968",
+          "title": "AT_abc396_a-Triple Four 序列连续相同元素判断",
+          "tags": [
+            "gesp1",
+            "循环结构",
+            "条件结构"
+          ],
+          "acRate": 0.6667
+        }
+      ]
+    },
+    {
+      "chapterId": "1-6-2",
+      "chapterTitle": "gesp1 客观题",
+      "status": "skip",
+      "reason": "AtCoder 仅编程题，不适配客观题章节。建议单独维护选择/判断题题库。",
+      "required": [],
+      "optional": []
+    }
+  ],
+  "summary": {
+    "chapterCovered": 7,
+    "totalAdded": 47,
+    "skipped": [
+      {
+        "chapterId": "1-1-6",
+        "reason": "概念性章节，不建议用 OJ 题承载；建议课堂内代码阅读+找错练习。"
+      },
+      {
+        "chapterId": "1-6-2",
+        "reason": "AtCoder 仅编程题，不适配客观题章节。建议单独维护选择/判断题题库。"
+      }
+    ]
+  }
+}

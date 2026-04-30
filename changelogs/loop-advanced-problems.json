@@ -1,0 +1,621 @@
+[
+  {
+    "pid": "gesp2:56",
+    "title": "金币",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "### 【题目描述】\r\n\r\n国王将金币作为工资，发放给忠诚的骑士。第1天，骑士收到一枚金币；之后两天(第2天和第3天)里，每天收到两枚金币；之后三天(第4、5、6天)里，每天收到三枚金币；之后四天(第7、8、9、10天)里，每天收到四枚金币"
+  },
+  {
+    "pid": "gesp2:57",
+    "title": "球弹跳高度的计算",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"### 【题目描述】\\n\\n一球从某一高度h落下(单位米)，每次落地后反跳回原来高度的一半，再落下。编程计算球在第10次落地时，共经过多少米? 第10次反弹多高？\\n\\n输出包含两行，第1行：到球第10次落地时，一共经过的米数"
+  },
+  {
+    "pid": "gesp2:58",
+    "title": "角谷猜想",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"### 【题目描述】\\n\\n谓角谷猜想，是指对于任意一个正整数，如果是奇数，则乘3加1，如果是偶数，则除以2，得到的结果再按照上述规则重复处理，最终总能够得到1。如，假定初始整数为5，计算过程分别为16、8、4、2、1。程序要"
+  },
+  {
+    "pid": "gesp2:59",
+    "title": "【入门】求分数前n项和",
+    "tags": [
+      "函数问题"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"<h2>说明</h2>\\n\\n求$1/1+1/2+2/3+3/5+5/8+8/13+13/21+21/34……$的前n项的和\\n<h2>输入格式</h2>\\n\\n第1行：一个整数$n（1\\\\leqslant n \\\\leqsl"
+  },
+  {
+    "pid": "gesp2:60",
+    "title": "【基础】小青蛙",
+    "tags": [
+      "需要找规律的循环"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"## 说明\\n\\n关于小青蛙爬井的故事，你应该早就听过了：井深10尺，小青蛙从井底向上爬，每个白天向上爬3尺，每个晚上又滑下来2尺，然后问你第几天它能爬上来。答案是第8天。 现在，那只著名的小青蛙又回来了，它现在每个白天已经可"
+  },
+  {
+    "pid": "gesp2:61",
+    "title": "正常血压",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "### 【题目描述】\r\n\r\n监护室每小时测量一次病人的血压，若收缩压在90-140之间并且舒张压在60-90之间(包含端点值)则称之为正常，现给出某病人若干次测量的血压值，计算病人保持正常血压的最长小时数。\r\n\r\n### 【输入】\r\n\r\n第"
+  },
+  {
+    "pid": "gesp2:62",
+    "title": "[ABC438A] 年初赛日 跨年比赛日计算",
+    "tags": [
+      "Level1",
+      "数学1",
+      "gesp2",
+      "数学基础",
+      "模拟"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# First Competition Day of the Next Year\\n\\n## Background\\n\\nOn a certain planet, a year has $D$ days, and a comp"
+  },
+  {
+    "pid": "gesp2:54",
+    "title": "判断一个数是否是水仙花数",
+    "tags": [
+      "拆解位数"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 0,
+    "content": "{\"zh\":\"# 水仙花数判定\\n\\n## 题目背景\\n\\n大魏在数学课上学习了一种有趣的数字，叫做“水仙花数”。他想编写一个程序，能够快速判断一个三位数是否具有这种神奇的性质。\\n\\n## 题目描述\\n\\n输入一个三位正整数 $n$，判断"
+  },
+  {
+    "pid": "gesp2:51",
+    "title": "分离整数的各个数",
+    "tags": [
+      "gesp2",
+      "模拟"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n给定一个整数n(1≤n≤100000000)，要求从个位开始分离出它的每一位数字。从个位开始按照从低位到高位的顺序依次输出每一位数字。\r\n\r\n### 【输入】\r\n\r\n输入一个整数，整数在1到100000000之间"
+  },
+  {
+    "pid": "gesp2:55",
+    "title": "三位数反向输出",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 0,
+    "content": "{\"zh\":\"### 【题目描述】\\n\\n将一个三位数反向输出，例如输入358，反向输出853。\\n\\n### 【输入】\\n\\n一个三位数n。\\n\\n### 【输出】\\n\\n反向输出n。\\n\\n### 【输入样例】\\n\\n```\\n100\\"
+  },
+  {
+    "pid": "gesp2:16",
+    "title": "含k个3的数",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n输入两个正整数m和k，其中`1<m<100000，1<k<5` ，判断m 能否被19整除，且恰好含有k个3，如果满足条件，则输出YES，否则，输出NO。 例如，输入：43833 3，满足条件，输出YES。如果输入"
+  },
+  {
+    "pid": "gesp2:17",
+    "title": "与7无关的数",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n一个正整数，如果它能被7整除，或者它的十进制表示法中某一位上的数字为7，则称其为与7相关的数。现求所有小于等于n(n<100)与7无关的正整数的平方和。\r\n\r\n### 【输入】\r\n\r\n输入为一行,正整数n(n <"
+  },
+  {
+    "pid": "gesp2:18",
+    "title": "数1的个数",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n给定一个十进制正整数n(1≤n≤10000)，写下从1到n的所有整数，然后数一下其中出现的数字“1”的个数。\r\n\r\n   例如当n=2时，写下1,2。这样只出现了1个“1”；当n=12时，写下1，2，3，4，5，"
+  },
+  {
+    "pid": "gesp2:19",
+    "title": "数字统计",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n请统计某个给定范围[L, R]的所有整数中，数字2出现的次数。\r\n\r\n比如给定范围[2, 22]，数字2在数2中出现了1次，在数12中出现1次，在数20中出现1次，在数21中出现1次，在数22中出现2次，所以数字"
+  },
+  {
+    "pid": "gesp2:20",
+    "title": "统计满足条件的4位数",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "### 【题目描述】\r\n\r\n给定若干个四位数，求出其中满足以下条件的数的个数：个位数上的数字减去千位数上的数字，再减去百位数上的数字，再减去十位数上的数字的结果大于零。\r\n\r\n### 【输入】\r\n\r\n输入为两行，第一行为四位数的个数n，第二"
+  },
+  {
+    "pid": "gesp2:21",
+    "title": "数字统计",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "{\"zh\":\"<h2>说明</h2>\\n\\n请统计某个给定范围 [$L$&#44;$R$] 的所有整数中，数字 $7$ 出现的次数。<br />\\n比如给定范围 [$60$&#44;$80$] 中，$7$一共出现$12$次。分别是$67$&"
+  },
+  {
+    "pid": "gesp2:44",
+    "title": "数位之和",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 1,
+    "nSubmit": 1,
+    "acRate": 100,
+    "difficulty": 5,
+    "content": "{\"en\":\"原题链接：https://atcoder.jp/contests/abc444/tasks/abc444_b\\n\\n# Digit Sum\\n\\n## Background\\n\\nDawei is exploring the "
+  },
+  {
+    "pid": "gesp2:53",
+    "title": "“倒”数",
+    "tags": [
+      "gesp2",
+      "模拟"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "<h2>说明</h2>\r\n\r\n输入一个正整数N（ 0 &lt; N &lt; 2147483647 ），将这个数倒着合成一个新数后输出。<br />\r\n比如：543，倒过来是345（请注意：34500，倒过来是543，不是00543）！ <"
+  },
+  {
+    "pid": "gesp2:38",
+    "title": "数字反转",
+    "tags": [
+      "gesp2",
+      "模拟"
+    ],
+    "nAccept": 1,
+    "nSubmit": 1,
+    "acRate": 100,
+    "difficulty": 5,
+    "content": "{\"zh\":\"### 【题目描述】\\n\\n给定一个整数，请将该数各个位上数字反转得到一个新数。新数也应满足整数的常见形式，即除非给定的原数为零，否则反转后得到的新数的最高位数字不应为零，例如输入-380，反转后得到的新数为-83。\\n\\n#"
+  },
+  {
+    "pid": "gesp2:52",
+    "title": "数位积",
+    "tags": [
+      "gesp2",
+      "模拟"
+    ],
+    "nAccept": 1,
+    "nSubmit": 1,
+    "acRate": 100,
+    "difficulty": 5,
+    "content": "{\"zh\":\"<h2>说明</h2>\\n\\n給出一个非负整数$n$&#44;请求出$n$中各个数位上的数字之积。\\n\\n<h2>输入格式</h2>\\n\\n一开始有一个整数 $T$($1≤T≤100$)，表示共有几组测试数据。接下来有$T$个"
+  },
+  {
+    "pid": "gesp2:31",
+    "title": "棋盘字符计数",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": 5,
+    "content": "{\"en\":\"# Counting Pieces on a Grid\\n\\n## Background\\n\\nOn a mysterious grid, some special pieces are scattered. Congcong"
+  },
+  {
+    "pid": "gesp2:39",
+    "title": "网格方块调整与求和",
+    "tags": [
+      "gesp2",
+      "循环嵌套"
+    ],
+    "nAccept": 1,
+    "nSubmit": 1,
+    "acRate": 100,
+    "difficulty": 5,
+    "content": "{\"en\":\"# Blocks on Grid\\n\\n## Background\\n\\nIn an $H \\times W$ grid, each cell contains a certain number of blocks. The "
+  },
+  {
+    "pid": "gesp2:71",
+    "title": "练36.2 不定方程求解",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n给定正整数$a$，$b$，$c$。求不定方程 $ax+by=c$ 关于未知数$x$和$y$的所有非负整数解组数。\n<h2>输入格式</h2>\n\n一行，包含三个正整数$a$，$b$，$c$，两个整数之间用单个空格隔开"
+  },
+  {
+    "pid": "gesp2:72",
+    "title": "【例36.1】 计算矩阵边缘元素之和",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n输入一个整数矩阵，计算位于矩阵边缘的元素之和。所谓矩阵边缘的元素，就是第一行和最后一行的元素以及第一列和最后一列的元素。\n<h2>输入格式</h2>\n\n第一行分别为矩阵的行数 $m$ 和列数 $n$（$m < 10"
+  },
+  {
+    "pid": "gesp2:73",
+    "title": "练36.1 矩阵对角线元素之和",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n给定一个 $3×3$ 的矩阵，请你求出对角线元素之和。\n<h2>输入格式</h2>\n\n按照行优先顺序输入一个 $3×3$ 矩阵，每个矩阵元素均为整数且取值范围为 [$1$&#44;$9$]。\r\n\n<h2>输出格式<"
+  },
+  {
+    "pid": "gesp2:74",
+    "title": "稀疏矩阵简记",
+    "tags": [
+      "Level2",
+      "二维数组",
+      "模拟2"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"# 稀疏矩阵简记\\n\\n## 题目背景\\n\\n很多情况下，大规模矩阵中大部分元素为 0，称为稀疏矩阵。直接存储会浪费大量空间，因此可以将其以三元组形式记录，只存储非零元素的位置和数值，从而节省空间。\\n\\n## 题目描述\\n\\"
+  },
+  {
+    "pid": "gesp2:63",
+    "title": "【例38.2】 图形输出",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n打印下面两种图形的其中一种：正方形、菱形。\n<h2>输入格式</h2>\n\n第一行一个大写字母，表示输出图形的类型，'$Z$'表示正方形，'$L$'表示菱形；<br>第二行一个正整数$x$ ($1≤x≤100$)，表"
+  },
+  {
+    "pid": "gesp2:64",
+    "title": "【例38.3】 X战警",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n一个三阶 $X$ 标志为：<br />\r\n<pre>X X\r\n X\r\nX X</pre>\r\n<br />\r\n一个五阶 $X$ 标志为：<br />\r\n<pre>X &nbsp; X\r\n X X\r\n &nbsp;X\r"
+  },
+  {
+    "pid": "gesp2:65",
+    "title": "练38.1 宇宙大爆炸",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n现在宇宙从第 $0$ 秒开始膨胀，每秒会膨胀一圈。<br />\r\n第 $1$ 秒时，宇宙的形状为<br />\r\n<table>\r\n\t<tbody>\r\n\t\t<tr>\r\n\t\t\t<td>\r\n<pre>*</pre>\r\n\t"
+  },
+  {
+    "pid": "gesp2:66",
+    "title": "练38.2 大写字母 Y",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n自从小蓝学会编程之后&#44;他酷爱用编程的方式写字母。你能帮助他写出字母 \"$Y$\" 吗？\n<h2>输入格式</h2>\n\n一行一个整数 $n$($1< n < 50$)。\r\n\n<h2>输出格式</h2>\n\n输出高"
+  },
+  {
+    "pid": "gesp2:67",
+    "title": "练38.3 空心菱形",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\n\n输入一个整数 $n$，输出一个空心菱形，其中每个边由 $n$ 个'$*$'组成。\n<h2>输入格式</h2>\n\n一行一个整数 $n$($1< n < 20$)。\r\n\n<h2>输出格式</h2>\n\n输出一个空心菱形，"
+  },
+  {
+    "pid": "gesp2:68",
+    "title": "练38.4 金字塔",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"<h2>说明</h2>\\n\\n输入一个正整数$n$，生成一个层数为$n$的金字塔。详细图形请看样例。注意$n=1$时就没有地板了。\\n\\n<h2>输入格式</h2>\\n\\n第一行一个整数$n$($1≤n≤100$)，表示层数。"
+  },
+  {
+    "pid": "gesp2:69",
+    "title": "字符三角形",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"## 题面背景\\n\\n你一定学习过字符三角形对吧~\\n\\n## 题目描述\\n\\n给你一个整数 $n$, 你需要画出如下的星型直角三角形\\n\\n$4$ 的字符三角形是\\n\\n```\\n****\\n ***\\n  **\\n   *"
+  },
+  {
+    "pid": "gesp2:70",
+    "title": "画矩形",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "### 【题目描述】\r\n\r\n根据参数，画出矩形。输入四个参数：前两个参数为整数，依次代表矩形的高和宽（高不少于3行不多于10行，宽不少于5列不多于10列）；第三个参数是一个字符，表示用来画图的矩形符号；第四个参数为1或0，0代表空心，1代表"
+  },
+  {
+    "pid": "gesp2:75",
+    "title": "最长平台",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "### 【题目描述】\r\n\r\n已知一个已经从小到大排序的数组，这个数组的一个平台（Plateau）就是连续的一串值相同的元素，并且这一串元素不能再延伸。例如，在 1，2，2，3，3，3，4，5，5，6中1，2-2，3-3-3，4，5-5，6都"
+  },
+  {
+    "pid": "gesp2:76",
+    "title": "[ABC307A] Weekly Records 计算每周步数总和",
+    "tags": [
+      "gesp2",
+      "循环嵌套",
+      "数学基础"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Sum of Weekly Steps\\n\\n## Background\\n\\nCongcong recorded his daily steps, and now he wants to know the total s"
+  },
+  {
+    "pid": "gesp2:77",
+    "title": "[ABC326B] 326-like Numbers 寻找最小类326数",
+    "tags": [
+      "暴力枚举",
+      "二分",
+      "gesp2",
+      "模拟"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Find 326-like Number\\n\\n## Background\\nDawei is currently studying some interesting number properties. He disco"
+  },
+  {
+    "pid": "gesp2:78",
+    "title": "[ABC328A] Not Too Hard 筛选分数并求和",
+    "tags": [
+      "gesp1",
+      "循环结构",
+      "条件结构"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Calculate Total Score of Qualified Problems\\n\\n## Background\\nCongcong participated in a programming contest. T"
+  },
+  {
+    "pid": "gesp2:79",
+    "title": "[ABC330A] Counting Passes 统计及格人数",
+    "tags": [
+      "gesp1",
+      "条件结构",
+      "循环结构"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Count Passing Candidates\\n\\n## Background\\n\\nDawei organized an important exam to evaluate the students' learni"
+  },
+  {
+    "pid": "gesp2:80",
+    "title": "[ABC138B] Resistors in Parallel 并联电阻总阻计算",
+    "tags": [
+      "gesp1",
+      "循环结构",
+      "数学基础"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Parallel Resistor Calculation\\n\\n## Background\\nIn physics, when multiple resistors are connected in parallel, "
+  },
+  {
+    "pid": "gesp2:81",
+    "title": "AT_abc387_b-9x9 Sum 9x9乘法表排除X求和",
+    "tags": [
+      "gesp2",
+      "循环嵌套",
+      "条件结构"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Sum of Non-X in 9x9 Multiplication Table\\n\\n## Background\\n\\nIn a world full of numerical mysteries, there is a"
+  },
+  {
+    "pid": "gesp2:82",
+    "title": "[ABC440B] 赛马前三 赛马成绩排序取前三名",
+    "tags": [
+      "gesp4",
+      "排序",
+      "Level2",
+      "数组",
+      "模拟2",
+      "结构体"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Top Three Race Horses\\n\\n## Background\\nIn an intense horse race, $N$ horses start simultaneously. Their finish"
+  },
+  {
+    "pid": "gesp2:83",
+    "title": "[ABC110B] 1 Dimensional World s Tale 一维世界边界点判定",
+    "tags": [
+      "gesp1",
+      "循环结构",
+      "条件结构"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# 1 Dimensional World's Tale\\n\\n## Background\\n\\nOur world is one-dimensional, ruled by two empires, Empire A and"
+  },
+  {
+    "pid": "gesp2:84",
+    "title": "小玉在游泳",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "## 题目描述\n小玉开心的在游泳，可是她很快难过的发现，自己的力气不够，游泳好累哦。已知小玉第一步能游 $2$ 米，可是随着越来越累，力气越来越小，她接下来的每一步都只能游出上一步距离的 $98\\%$。现在小玉想知道，如果要游到距离 $s$"
+  },
+  {
+    "pid": "gesp2:85",
+    "title": "【深基4.例6】数字直角三角形",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "## 题目描述\n给出 $n$，请输出一个直角边长度是 $n$ 的数字直角三角形。所有数字都是 $2$ 位组成的，如果没有 $2$ 位则加上前导 $0$。\n\n## 输入格式\n输入一个正整数 $n$。\n\n## 输出格式\n输出如题目要求的数字直角"
+  },
+  {
+    "pid": "gesp2:86",
+    "title": "[ABC227A] Last Card 循环派发卡片",
+    "tags": [
+      "gesp1",
+      "数学基础"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Cyclic Card Distribution\\n\\n## Background\\nDawei is organizing a game and needs to distribute cards to the part"
+  },
+  {
+    "pid": "gesp2:87",
+    "title": "200天纪念",
+    "tags": [],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"# 200天纪念\\n\\n## 题目描述\\n\\n2023年11月20日，距离2024年高考还有200天。小雅打算纪念下这个特殊的日子。\\n\\n小雅给你一个整数 N。需要你对它执行下列操作 K 次，并输出。\\n\\n- 如果 N 是"
+  },
+  {
+    "pid": "gesp2:88",
+    "title": "[ABC122B] ATCoder 最长ACGT子串长度",
+    "tags": [
+      "gesp1",
+      "循环结构",
+      "条件结构",
+      "暴力枚举",
+      "字符串"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"en\":\"# Longest ACGT Substring\\n\\n## Background\\n\\nIn gene sequence analysis, researchers often need to identify specif"
+  },
+  {
+    "pid": "gesp2:89",
+    "title": "[NOIP2013 普及组] 计数问题",
+    "tags": [
+      "模拟",
+      "字符串",
+      "2013",
+      "NOIp 普及组"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "## 题目背景\nNOIP2013 普及组 T1\n\n## 题目描述\n试计算在区间 $1$ 到 $n$ 的所有整数中，数字 $x$（$0\\le x\\le9$）共出现了多少次？例如，在 $1$ 到 $11$ 中，即在 $1,2,3,4,5,6,7"
+  },
+  {
+    "pid": "gesp2:90",
+    "title": "【基础】连胜王",
+    "tags": [
+      "数组问题"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "{\"zh\":\"<h2>说明</h2>\\n\\n在篮球比赛中，连胜是一件让球迷非常兴奋的事情。现给出n场比赛的获胜队伍编号，请求出哪个队伍连胜的场次最多？本题的输入确保获得连胜场次最多的球队，只有1个。<br />\\n比如，输入6场比赛获胜队伍"
+  },
+  {
+    "pid": "gesp2:91",
+    "title": "【基础】温度统计员",
+    "tags": [
+      "数组问题"
+    ],
+    "nAccept": 0,
+    "nSubmit": 0,
+    "acRate": null,
+    "difficulty": null,
+    "content": "<h2>说明</h2>\r\n\r\n炎热的夏日，KC非常的不爽。他宁可忍受北极的寒冷，也不愿忍受厦门的夏天。最近，他开始研究天气的变化。他希望用研究的结果预测未来的天气。<br />\r\n经历千辛万苦，他收集了连续N（1&lt;=N&lt;=100"
+  }
+]

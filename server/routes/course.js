@@ -196,6 +196,8 @@ async function reconcileCourseActivityChapterIds(chapterUidIdMap) {
     groupedActivities.get(groupKey).docs.push(activity)
   }
 
+  const pendingUpdates = []
+
   for (const { targetChapterId, docs } of groupedActivities.values()) {
     if (!docs.length) continue
 
@@ -209,10 +211,31 @@ async function reconcileCourseActivityChapterIds(chapterUidIdMap) {
     }
 
     if (String(primary.chapterId) !== targetChapterId) {
-      primary.chapterId = targetChapterId
-      await primary.save()
+      pendingUpdates.push({ id: primary._id, targetChapterId })
     }
   }
+
+  if (!pendingUpdates.length) return
+
+  // Two-phase update to avoid unique-index collisions when chapter IDs are
+  // swapped (e.g. moving a chapter up/down causes A<->B id exchange).
+  // Phase 1: park each affected doc on a unique placeholder chapterId.
+  const parkOps = pendingUpdates.map(item => ({
+    updateOne: {
+      filter: { _id: item.id },
+      update: { $set: { chapterId: `__migrating__:${item.id}` } }
+    }
+  }))
+  await CourseActivity.bulkWrite(parkOps, { ordered: false })
+
+  // Phase 2: assign the final chapterId.
+  const finalOps = pendingUpdates.map(item => ({
+    updateOne: {
+      filter: { _id: item.id },
+      update: { $set: { chapterId: item.targetChapterId } }
+    }
+  }))
+  await CourseActivity.bulkWrite(finalOps, { ordered: false })
 }
 
 function normalizeSubjectLevels(progress) {
@@ -3782,17 +3805,14 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateT
       }
     }
 
-    // Auto-renumber chapters
-    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
-    if (topicIndex !== -1) {
-        const prefix = `${level.level}-${topicIndex + 1}`
-        topic.chapters.forEach((ch, idx) => {
-            ch.id = `${prefix}-${idx + 1}`
-        })
-        level.markModified('topics');
-    }
-
+    // buildTopicChapterIdRemap walks the whole level and reassigns ch.id
+    // while collecting prev->next remaps for downstream migration helpers.
+    const chapterIdRemap = buildTopicChapterIdRemap(level)
+    const chapterUidIdMap = buildChapterUidIdMap(level)
+    level.markModified('topics')
     await level.save()
+    await migrateChapterIdReferences(chapterIdRemap)
+    await reconcileCourseActivityChapterIds(chapterUidIdMap)
     res.json(level)
   } catch (e) {
     res.status(500).json({ error: e.message })
