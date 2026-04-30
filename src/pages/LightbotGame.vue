@@ -1034,6 +1034,9 @@ const currentProgramMetrics = computed(() => {
 })
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
+const isVerificationFresh = computed(() => Boolean(
+  editorVerification.value && editorVerification.value.signature === editorSignature.value
+))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
 const finishLeaderboard = computed(() => levelLeaderboard.value.slice(0, 5))
 const editorCanModifySource = computed(() => {
@@ -1048,18 +1051,23 @@ const editorCanModifySource = computed(() => {
 const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId) && editorCanModifySource.value)
 const editorDeleteLabel = computed(() => (editorDraft.sourceIsCustom ? '删除自定义关卡' : '删除默认关卡'))
 const canSaveEditorLevel = computed(() => {
-  return editorCanModifySource.value && Boolean(editorVerification.value?.solvable) && editorVerification.value.signature === editorSignature.value
+  return editorCanModifySource.value && Boolean(editorVerification.value?.solvable) && isVerificationFresh.value
 })
 const editorPublishToneClass = computed(() => {
   if (!editorCanModifySource.value) return 'danger'
   if (!editorVerification.value) return 'pending'
-  return editorVerification.value.solvable ? 'success' : 'danger'
+  if (!editorVerification.value.solvable) return 'danger'
+  // 含条件块关卡未过自动求解，需手动试玩验证后才可保存。标为 pending。
+  if (editorVerification.value.requiresManualVerification) return 'pending'
+  return 'success'
 })
 const editorPublishTitle = computed(() => {
   if (!editorCanModifySource.value) return '无权修改此关卡'
   if (!editorVerification.value) return '保存前验证'
-  if (!editorDraft.sourceLevelId) return editorVerification.value.solvable ? '可新建关卡' : '当前是新建草稿'
-  return editorVerification.value.solvable ? '可保存到游戏' : '验证未通过'
+  if (!editorVerification.value.solvable) return '验证未通过'
+  if (editorVerification.value.requiresManualVerification) return '需试玩验证'
+  if (!editorDraft.sourceLevelId) return '可新建关卡'
+  return '可保存到游戏'
 })
 const editorPublishMessage = computed(() => {
   if (!editorCanModifySource.value) {
@@ -1068,7 +1076,7 @@ const editorPublishMessage = computed(() => {
   if (!editorVerification.value) {
     return '保存到游戏前需要先验证当前草稿能在现有 MAIN / P1 / P2 槽位限制内通关。'
   }
-  if (editorVerification.value.signature !== editorSignature.value) {
+  if (!isVerificationFresh.value) {
     return '草稿已经修改，必须重新验证后才能保存到游戏。'
   }
   if (!editorDraft.sourceLevelId) {
@@ -2835,6 +2843,11 @@ resetLevel(true)
   border-color: rgba(216, 89, 89, 0.26);
 }
 
+.editor-publish-card.pending {
+  background: #fff8e6;
+  border-color: rgba(214, 158, 46, 0.32);
+}
+
 .editor-publish-card strong {
   display: block;
   margin-bottom: 6px;
@@ -3129,6 +3142,10 @@ resetLevel(true)
 
 .status-float em.danger {
   color: #d6605c;
+}
+
+.status-float em.pending {
+  color: #c98a14;
 }
 
 .scene-viewport {
