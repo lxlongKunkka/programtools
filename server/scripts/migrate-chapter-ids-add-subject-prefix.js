@@ -35,6 +35,19 @@ function isAlreadyPrefixed(id) {
 async function main() {
   console.log(`[migrate] mode=${APPLY ? 'APPLY' : 'DRY-RUN'}`)
 
+  // Cleanup: any CourseActivity rows left in the __migrating__ placeholder
+  // state from a previous failed run must be deleted (they no longer have a
+  // valid chapterId, and chapterUid still points at the chapter so the
+  // proper record can be regenerated naturally).
+  const stuckCount = await CourseActivity.countDocuments({ chapterId: /^__migrating__:/ })
+  if (stuckCount > 0) {
+    console.log(`[migrate] found ${stuckCount} stuck __migrating__ rows from prior run`)
+    if (APPLY) {
+      const r = await CourseActivity.deleteMany({ chapterId: /^__migrating__:/ })
+      console.log(`[migrate] deleted ${r.deletedCount} stuck rows`)
+    }
+  }
+
   const levels = await CourseLevel.find({}).lean(false)
   console.log(`[migrate] found ${levels.length} CourseLevel docs`)
 
@@ -96,62 +109,88 @@ async function main() {
   console.log(`[migrate] uid->newId map size: ${uidToNewId.size}`)
 
   // Phase 2: rewrite CourseActivity.chapterId based on chapterUid.
-  const activitiesToUpdate = []
   const allActivities = await CourseActivity.find({
     chapterUid: { $exists: true, $ne: null }
-  }).select('_id userId chapterId chapterUid action sessionDate').lean()
+  }).select('_id userId chapterId chapterUid action sessionDate lastActiveAt').lean()
   console.log(`[migrate] found ${allActivities.length} CourseActivity docs with chapterUid`)
 
+  // Group by destination (userId, newId, action, sessionDate). Multiple
+  // source rows mapping to the same destination must be collapsed first
+  // (keep the most recently active one, delete the rest).
+  const destBuckets = new Map()
+  let activitiesSkipped = 0
   for (const act of allActivities) {
     const uid = String(act.chapterUid || '')
     const newId = uidToNewId.get(uid)
-    if (!newId) continue
-    if (String(act.chapterId) === newId) continue
-    activitiesToUpdate.push({
-      _id: act._id,
-      userId: act.userId,
-      action: act.action,
-      sessionDate: act.sessionDate,
-      newId
-    })
+    if (!newId) { activitiesSkipped++; continue }
+    const key = `${act.userId}::${newId}::${act.action}::${act.sessionDate}`
+    if (!destBuckets.has(key)) destBuckets.set(key, [])
+    destBuckets.get(key).push({ ...act, newId })
   }
-  console.log(`[migrate] phase 2: ${activitiesToUpdate.length} CourseActivity rows need chapterId rewrite`)
 
-  if (APPLY && activitiesToUpdate.length) {
-    // Two-phase to avoid unique index collisions.
-    const parkOps = activitiesToUpdate.map(item => ({
-      updateOne: {
-        filter: { _id: item._id },
-        update: { $set: { chapterId: `__migrating__:${item._id}` } }
+  const activitiesToUpdate = []
+  const activitiesToDelete = []
+  for (const docs of destBuckets.values()) {
+    if (docs.length === 1) {
+      const a = docs[0]
+      if (String(a.chapterId) !== a.newId) {
+        activitiesToUpdate.push(a)
       }
-    }))
-    await CourseActivity.bulkWrite(parkOps, { ordered: false })
-
-    // Drop stale records that would block phase 2.
-    const updateIds = new Set(activitiesToUpdate.map(item => String(item._id)))
-    let staleDeletes = 0
-    for (const item of activitiesToUpdate) {
-      const conflicts = await CourseActivity.find({
-        userId: item.userId,
-        chapterId: item.newId,
-        action: item.action,
-        sessionDate: item.sessionDate
-      }).select('_id').lean()
-      const stale = conflicts.map(d => d._id).filter(id => !updateIds.has(String(id)))
-      if (stale.length) {
-        await CourseActivity.deleteMany({ _id: { $in: stale } })
-        staleDeletes += stale.length
-      }
+      continue
     }
-    if (staleDeletes) console.log(`[migrate] phase 2: deleted ${staleDeletes} stale CourseActivity rows blocking new chapterId`)
+    // Multiple sources collapsing into one destination -> keep latest, delete rest.
+    docs.sort((a, b) => {
+      const at = new Date(a.lastActiveAt || 0).getTime()
+      const bt = new Date(b.lastActiveAt || 0).getTime()
+      return bt - at
+    })
+    const keeper = docs[0]
+    if (String(keeper.chapterId) !== keeper.newId) activitiesToUpdate.push(keeper)
+    for (let i = 1; i < docs.length; i++) activitiesToDelete.push(docs[i]._id)
+  }
 
-    const finalOps = activitiesToUpdate.map(item => ({
-      updateOne: {
-        filter: { _id: item._id },
-        update: { $set: { chapterId: item.newId } }
+  console.log(`[migrate] phase 2: ${activitiesToUpdate.length} rows need chapterId rewrite, ${activitiesToDelete.length} duplicate rows will be deleted, ${activitiesSkipped} skipped (uid not in map)`)
+
+  if (APPLY) {
+    if (activitiesToDelete.length) {
+      await CourseActivity.deleteMany({ _id: { $in: activitiesToDelete } })
+    }
+    if (activitiesToUpdate.length) {
+      // Two-phase to avoid unique index collisions.
+      const parkOps = activitiesToUpdate.map(item => ({
+        updateOne: {
+          filter: { _id: item._id },
+          update: { $set: { chapterId: `__migrating__:${item._id}` } }
+        }
+      }))
+      await CourseActivity.bulkWrite(parkOps, { ordered: false })
+
+      // Drop stale records that would block phase 2.
+      const updateIds = new Set(activitiesToUpdate.map(item => String(item._id)))
+      let staleDeletes = 0
+      for (const item of activitiesToUpdate) {
+        const conflicts = await CourseActivity.find({
+          userId: item.userId,
+          chapterId: item.newId,
+          action: item.action,
+          sessionDate: item.sessionDate
+        }).select('_id').lean()
+        const stale = conflicts.map(d => d._id).filter(id => !updateIds.has(String(id)))
+        if (stale.length) {
+          await CourseActivity.deleteMany({ _id: { $in: stale } })
+          staleDeletes += stale.length
+        }
       }
-    }))
-    await CourseActivity.bulkWrite(finalOps, { ordered: false })
+      if (staleDeletes) console.log(`[migrate] phase 2: deleted ${staleDeletes} stale CourseActivity rows blocking new chapterId`)
+
+      const finalOps = activitiesToUpdate.map(item => ({
+        updateOne: {
+          filter: { _id: item._id },
+          update: { $set: { chapterId: item.newId } }
+        }
+      }))
+      await CourseActivity.bulkWrite(finalOps, { ordered: false })
+    }
   }
 
   // Phase 3: rewrite UserProgress unlocked/completed/chapterProgress.
