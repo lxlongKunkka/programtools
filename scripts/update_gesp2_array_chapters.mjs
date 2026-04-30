@@ -1,7 +1,13 @@
 // 重排 GESP 二级 cpp-2-6-1/2/3 一维数组入门章节的题目（基于人工读题判断）
+import dotenv from 'dotenv';
+import path from 'path';
 import mongoose from 'mongoose';
+import { fileURLToPath } from 'url';
 
-const MONGO = process.env.MONGO_URL || 'mongodb://localhost:27017/programtools';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '../server/.env') });
+
+const MONGO = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools';
 const APPLY = process.argv.includes('--apply');
 
 const PLAN = {
