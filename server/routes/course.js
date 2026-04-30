@@ -211,7 +211,13 @@ async function reconcileCourseActivityChapterIds(chapterUidIdMap) {
     }
 
     if (String(primary.chapterId) !== targetChapterId) {
-      pendingUpdates.push({ id: primary._id, targetChapterId })
+      pendingUpdates.push({
+        id: primary._id,
+        targetChapterId,
+        userId: primary.userId,
+        action: primary.action,
+        sessionDate: primary.sessionDate
+      })
     }
   }
 
@@ -227,6 +233,25 @@ async function reconcileCourseActivityChapterIds(chapterUidIdMap) {
     }
   }))
   await CourseActivity.bulkWrite(parkOps, { ordered: false })
+
+  // Before phase 2, clear any stale records (chapterUid not in current map,
+  // i.e. pointing to deleted/orphaned chapters) that still occupy the
+  // (userId, chapterId, action, sessionDate) slot we are about to write.
+  const updateIds = new Set(pendingUpdates.map(item => String(item.id)))
+  for (const item of pendingUpdates) {
+    const conflicts = await CourseActivity.find({
+      userId: item.userId,
+      chapterId: item.targetChapterId,
+      action: item.action,
+      sessionDate: item.sessionDate
+    }).select('_id')
+    const staleIds = conflicts
+      .map(doc => doc._id)
+      .filter(id => !updateIds.has(String(id)))
+    if (staleIds.length) {
+      await CourseActivity.deleteMany({ _id: { $in: staleIds } })
+    }
+  }
 
   // Phase 2: assign the final chapterId.
   const finalOps = pendingUpdates.map(item => ({
