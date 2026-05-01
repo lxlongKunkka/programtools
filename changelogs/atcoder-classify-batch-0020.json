@@ -26,7 +26,7 @@
     { "pid": "atcoder:601", "chapterId": "cpp-8-4-1",  "title": "ABC208D Shortest Path Queries 2","reason": "Floyd k 阶段动态累加" },
     { "pid": "atcoder:602", "chapterId": "cpp-9-4-3",  "title": "ABC208E Digit Products",       "reason": "数位 DP + 数字乘积状态" },
     { "pid": "atcoder:603", "chapterId": "cpp-7-3-2",  "title": "ABC208F Cumulative Sum",       "reason": "拉格朗日插值 / 矩阵快速幂多项式" },
-    { "pid": "atcoder:604", "chapterId": "cpp-1-2-1",  "title": "ABC209A Counting",             "reason": "max(0, B-A+1)" },
+    { "pid": "atcoder:604", "chapterId": "cpp-1-4-2",  "title": "ABC209A Counting",             "reason": "max(0, B-A+1)，需要最值比较" },
     { "pid": "atcoder:605", "chapterId": "cpp-1-3-3",  "title": "ABC209B Can you buy them all?","reason": "求和并对偶数索引减一" },
     { "pid": "atcoder:606", "chapterId": "cpp-5-8-1",  "title": "ABC209C Not Equal",            "reason": "排序后乘积 ∏(C_i - i + 1)" },
     { "pid": "atcoder:607", "chapterId": "cpp-7-4-1",  "title": "ABC209D Collision",            "reason": "倍增 LCA 求路径长度奇偶" },
