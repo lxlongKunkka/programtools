@@ -9,18 +9,18 @@
     { "pid": "atcoder:554", "chapterId": "cpp-8-10-1", "title": "ABC201F Insertion Sort",         "reason": "DP + 树状数组维护后缀最值" },
     { "pid": "atcoder:555", "chapterId": "cpp-1-2-1",  "title": "ABC202A Three Dice",             "reason": "21 - a - b - c" },
     { "pid": "atcoder:556", "chapterId": "cpp-3-2-1",  "title": "ABC202B 180°",                  "reason": "字符串反转 + 字符映射" },
-    { "pid": "atcoder:557", "chapterId": "cpp-1-3-3",  "title": "ABC202C Made Up",                "reason": "桶计数 + 求和" },
+    { "pid": "atcoder:557", "chapterId": "cpp-3-1-5",  "title": "ABC202C Made Up",                "reason": "桶计数 C[A[i]] 求和，需要数组+循环" },
     { "pid": "atcoder:558", "chapterId": "cpp-5-3-6",  "title": "ABC202D aab aba baa",            "reason": "组合数贪心定位字典序第 K 个" },
     { "pid": "atcoder:559", "chapterId": "cpp-6-9-1",  "title": "ABC202E Count Descendants",      "reason": "DFS 序 + 按深度二分" },
     { "pid": "atcoder:560", "chapterId": "cpp-9-10-3", "title": "ABC202F Integer Convex Hull",   "reason": "计算几何 + 凸包面积奇偶性枚举" },
     { "pid": "atcoder:561", "chapterId": "cpp-1-4-5",  "title": "ABC203A Chinchirorin",          "reason": "三数比较分支" },
-    { "pid": "atcoder:562", "chapterId": "cpp-1-3-3",  "title": "ABC203B AtCoder Condominium",   "reason": "二重循环求和" },
+    { "pid": "atcoder:562", "chapterId": "cpp-2-1-2",  "title": "ABC203B AtCoder Condominium",   "reason": "二重循环生成房间号求和，需要嵌套循环" },
     { "pid": "atcoder:563", "chapterId": "cpp-4-6-7",  "title": "ABC203C Friends and Travel costs","reason": "按位置排序 + 模拟前进" },
     { "pid": "atcoder:564", "chapterId": "cpp-5-5-3",  "title": "ABC203D Pond",                  "reason": "二分答案 + 二维前缀和判定" },
     { "pid": "atcoder:565", "chapterId": "cpp-5-2-3",  "title": "ABC203E White Pawn",            "reason": "按行扫描 + set 维护可达列" },
     { "pid": "atcoder:566", "chapterId": "cpp-5-8-1",  "title": "ABC203F Weed",                  "reason": "排序后贪心 + 折半删除模拟" },
     { "pid": "atcoder:567", "chapterId": "cpp-1-4-5",  "title": "ABC204A Rock-paper-scissors",   "reason": "三人猜拳手势分支" },
-    { "pid": "atcoder:568", "chapterId": "cpp-1-3-3",  "title": "ABC204B Nuts",                  "reason": "循环累加超过 10 部分" },
+    { "pid": "atcoder:568", "chapterId": "cpp-1-5-3",  "title": "ABC204B Nuts",                  "reason": "循环累加 max(0, A_i-10)，需要循环" },
     { "pid": "atcoder:569", "chapterId": "cpp-9-8-1",  "title": "ABC204C Tour",                  "reason": "SCC 缩点后求各 SCC 可达对" },
     { "pid": "atcoder:570", "chapterId": "cpp-6-11-1", "title": "ABC204D Cooking",               "reason": "0-1 背包子集和分割（最接近一半）" },
     { "pid": "atcoder:571", "chapterId": "cpp-8-5-1",  "title": "ABC204E Rush Hour 2",           "reason": "Dijkstra 含等待时间松弛" },
@@ -32,6 +32,6 @@
     { "pid": "atcoder:577", "chapterId": "cpp-5-3-6",  "title": "ABC205E White and Black Balls", "reason": "卡特兰数 / 组合数差" },
     { "pid": "atcoder:578", "chapterId": "cpp-9-9-2",  "title": "ABC205F Grid and Tokens",       "reason": "二分图最大匹配 / Dinic 最大流建模" },
     { "pid": "atcoder:579", "chapterId": "cpp-1-4-5",  "title": "ABC206A Maxi-Buying",           "reason": "税后比较三向输出" },
-    { "pid": "atcoder:580", "chapterId": "cpp-1-2-1",  "title": "ABC206B Savings",               "reason": "等差数列前 n 项和反推 N" }
+    { "pid": "atcoder:580", "chapterId": "cpp-1-5-2",  "title": "ABC206B Savings",               "reason": "while 累加至前 n 项和 \u2265 N，需要 while 循环" }
   ]
 }

@@ -13,7 +13,7 @@
     { "pid": "atcoder:193", "chapterId": "cpp-9-1-2", "title": "ABC141E Who Says a Pun?",          "reason": "后缀数组/二分+哈希求最长不重叠重复子串" },
     { "pid": "atcoder:194", "chapterId": "cpp-9-4-2", "title": "ABC141F Xor Sum 3",                "reason": "线性基：固定位上选最大异或" },
     { "pid": "atcoder:195", "chapterId": "cpp-1-2-1", "title": "ABC142A Odds of Oddness",          "reason": "(N+1)/2 / N" },
-    { "pid": "atcoder:196", "chapterId": "cpp-1-3-2", "title": "ABC142B Roller Coaster",            "reason": "数组遍历计数 h>=K" },
+    { "pid": "atcoder:196", "chapterId": "cpp-1-5-3", "title": "ABC142B Roller Coaster",            "reason": "数组遍历计数 h>=K，需要循环" },
     { "pid": "atcoder:197", "chapterId": "cpp-3-2-1", "title": "ABC142C Go to School",              "reason": "按 A 数组排序得到学号顺序" },
     { "pid": "atcoder:198", "chapterId": "cpp-5-3-4", "title": "ABC142D Disjoint Set of Common Divisors","reason": "gcd(A,B) 的不同质因子数 +1" },
     { "pid": "atcoder:199", "chapterId": "cpp-8-9-1", "title": "ABC142E Get Everything",            "reason": "状压 DP：钥匙覆盖位掩码" },

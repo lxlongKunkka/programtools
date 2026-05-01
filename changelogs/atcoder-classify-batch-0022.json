@@ -6,7 +6,7 @@
     { "pid": "atcoder:644", "chapterId": "cpp-8-1-3",  "title": "ABC214G Three Permutations",     "reason": "容斥原理 + 计数 DP" },
     { "pid": "atcoder:645", "chapterId": "cpp-9-9-4",  "title": "ABC214H Collecting",            "reason": "缩点 + 网络流（最小费用最大流）建模" },
     { "pid": "atcoder:646", "chapterId": "cpp-3-2-1",  "title": "ABC215A Your First Judge",      "reason": "字符串完全匹配判定" },
-    { "pid": "atcoder:647", "chapterId": "cpp-1-3-3",  "title": "ABC215B log2(N)",                "reason": "循环找最大 2^k ≤ N" },
+    { "pid": "atcoder:647", "chapterId": "cpp-1-5-2",  "title": "ABC215B log2(N)",                "reason": "while 2^k ≤ N，需要 while 循环" },
     { "pid": "atcoder:648", "chapterId": "cpp-3-2-2",  "title": "ABC215C One More aab aba baa",  "reason": "string + next_permutation 求第K排列" },
     { "pid": "atcoder:649", "chapterId": "cpp-5-3-4",  "title": "ABC215D Coprime 2",              "reason": "线性筛 + 标记倍数排除互质" },
     { "pid": "atcoder:650", "chapterId": "cpp-9-4-1",  "title": "ABC215E Chain Contestant",       "reason": "状压 DP（已选类型集合 + 末类型）" },

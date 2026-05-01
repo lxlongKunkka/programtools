@@ -6,7 +6,7 @@
     { "pid": "atcoder:827", "chapterId": "cpp-9-9-1",  "title": "ABC237Ex Hakata",                "reason": "回文子串集合最大反链 → 二分图最大独立集（匈牙利）" },
     { "pid": "atcoder:828", "chapterId": "cpp-9-5-4",  "title": "ABC237F |LIS|=3",                "reason": "计数 DP（按 LIS 三元状态转移）" },
     { "pid": "atcoder:829", "chapterId": "cpp-8-11-2", "title": "ABC237G Range Sort Query",       "reason": "0/1 化 + 线段树区间赋值（懒标记）" },
-    { "pid": "atcoder:830", "chapterId": "cpp-1-3-1",  "title": "ABC238A Exponential or Quadratic","reason": "小 n 直接比较，大 n 用 double 判定" },
+    { "pid": "atcoder:830", "chapterId": "cpp-1-4-5",  "title": "ABC238A Exponential or Quadratic","reason": "按 n 大小分段判断，需要 if-else if 多分支" },
     { "pid": "atcoder:831", "chapterId": "cpp-4-6-4",  "title": "ABC238B Pizza",                  "reason": "对累计角度排序后取最大相邻间隔" },
     { "pid": "atcoder:832", "chapterId": "cpp-9-4-3",  "title": "ABC238C digitnum",               "reason": "按位数分段累加（数位 DP 风格）" },
     { "pid": "atcoder:833", "chapterId": "cpp-3-4-1",  "title": "ABC238D AND and SUM",            "reason": "x+y = (x^y) + 2(x&y) 位运算等式判定" },

@@ -3,7 +3,7 @@
   "range": "atcoder:611-643",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:611", "chapterId": "cpp-1-3-3",  "title": "ABC210B Bouzu Mekuri",        "reason": "找首个 '1' 的位置奇偶判定" },
+    { "pid": "atcoder:611", "chapterId": "cpp-1-5-3",  "title": "ABC210B Bouzu Mekuri",        "reason": "找首个 '1' 的位置奇偶判定，需要循环" },
     { "pid": "atcoder:612", "chapterId": "cpp-5-2-3",  "title": "ABC210C Colorful Candies",    "reason": "滑动窗口 + map 维护颜色计数" },
     { "pid": "atcoder:613", "chapterId": "cpp-5-1-1",  "title": "ABC210D National Railway",    "reason": "扫描每行/列维护最小代价 + C 变化" },
     { "pid": "atcoder:614", "chapterId": "cpp-8-6-2",  "title": "ABC210E Ring MST",            "reason": "Kruskal + gcd 数论性质" },
@@ -15,7 +15,7 @@
     { "pid": "atcoder:620", "chapterId": "cpp-6-8-3",  "title": "ABC211E Red Polyomino",       "reason": "DFS 枚举连通连片方案" },
     { "pid": "atcoder:621", "chapterId": "cpp-8-11-2", "title": "ABC211F Rectilinear Polygons","reason": "扫描线 + 线段树区间加（懒标记）" },
     { "pid": "atcoder:622", "chapterId": "cpp-1-4-5",  "title": "ABC212A Alloy",               "reason": "三向条件判断" },
-    { "pid": "atcoder:623", "chapterId": "cpp-1-3-3",  "title": "ABC212B Weak Password",       "reason": "数位连续/相同判定" },
+    { "pid": "atcoder:623", "chapterId": "cpp-1-5-3",  "title": "ABC212B Weak Password",       "reason": "遍历 4 位数字判连续/相同，需要循环" },
     { "pid": "atcoder:624", "chapterId": "cpp-5-1-1",  "title": "ABC212C Min Difference",      "reason": "排序后双指针扫描差值" },
     { "pid": "atcoder:625", "chapterId": "cpp-8-3-1",  "title": "ABC212D Querying Multiset",   "reason": "优先队列 + 全局偏移技巧" },
     { "pid": "atcoder:626", "chapterId": "cpp-7-3-2",  "title": "ABC212E Safety Journey",      "reason": "DP + 矩阵快速幂（容斥转移）" },
