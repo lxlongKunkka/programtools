@@ -1068,12 +1068,13 @@ export default {
 
 <style scoped>
 .chapter-detail-container {
-  max-width: 1200px;
+  width: min(1680px, 100%);
   margin: 0 auto;
   padding: 20px;
   height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .header-nav {
@@ -1120,13 +1121,15 @@ export default {
 
 .content-wrapper {
   display: flex;
-  gap: 30px;
+  gap: 20px;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .tutorial-section {
-  flex: 2;
+  flex: 1;
+  min-width: 0;
   background: white;
   padding: 30px;
   border-radius: 8px;
@@ -1177,7 +1180,9 @@ export default {
 .html-content-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  min-height: 560px;
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 260px);
   border: 1px solid #eee;
   border-radius: 8px;
   overflow: hidden;
@@ -1340,7 +1345,8 @@ export default {
 }
 
 .problems-section {
-  flex: 1;
+  flex: 0 0 340px;
+  min-width: 320px;
   background: white;
   padding: 20px;
   border-radius: 8px;
@@ -1754,6 +1760,66 @@ export default {
   background: #007aff;
   color: #fff;
   border-color: #007aff;
+}
+
+@media (max-width: 1280px) {
+  .chapter-detail-container {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .tutorial-section {
+    padding: 20px;
+  }
+
+  .problems-section {
+    flex-basis: 300px;
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 960px) {
+  .chapter-detail-container {
+    padding: 12px;
+    height: auto;
+    min-height: calc(100vh - 52px);
+  }
+
+  .header-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .nav-title {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .content-wrapper {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .tutorial-section,
+  .problems-section {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tutorial-section {
+    overflow: visible;
+  }
+
+  .problems-section {
+    flex: none;
+    max-height: none;
+  }
+
+  .html-content-container {
+    min-height: 360px;
+    max-height: none;
+  }
 }
 
 </style>
