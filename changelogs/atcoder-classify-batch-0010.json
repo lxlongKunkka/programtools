@@ -3,35 +3,185 @@
   "range": "atcoder:278-307",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:278", "chapterId": "cpp-9-3-2", "title": "ABC155F Perils in Parallel",     "reason": "差分 + 并查集异或/高斯消元构造" },
-    { "pid": "atcoder:279", "chapterId": "cpp-1-4-5", "title": "ABC156A Beginner",                "reason": "条件计算内部评级" },
-    { "pid": "atcoder:280", "chapterId": "cpp-1-5-2", "title": "ABC156B Digits",                  "reason": "while 除以 K 计数位数，需要 while 循环" },
-    { "pid": "atcoder:281", "chapterId": "cpp-3-1-3", "title": "ABC156C Rally",                   "reason": "枚举 P；平方和最小" },
-    { "pid": "atcoder:282", "chapterId": "cpp-5-3-5", "title": "ABC156D Bouquet",                "reason": "快速幂 + 组合数取模" },
-    { "pid": "atcoder:283", "chapterId": "cpp-7-11-3","title": "ABC156E Roaming",                 "reason": "组合公式累加 C(n,r)*C(n-1,r-1)" },
-    { "pid": "atcoder:284", "chapterId": "cpp-5-3-2", "title": "ABC156F Modularness",            "reason": "周期 + 数论：每段计算" },
-    { "pid": "atcoder:285", "chapterId": "cpp-1-2-3", "title": "ABC157A Duplex Printing",         "reason": "(N+1)/2" },
-    { "pid": "atcoder:286", "chapterId": "cpp-3-1-2", "title": "ABC157B Bingo",                  "reason": "二维数组判 8 条线" },
-    { "pid": "atcoder:287", "chapterId": "cpp-3-5-2", "title": "ABC157C Guess The Number",       "reason": "枚举 0~999 验证条件" },
-    { "pid": "atcoder:288", "chapterId": "cpp-8-2-1", "title": "ABC157D Friend Suggestions",     "reason": "并查集 + 减去黑名单" },
-    { "pid": "atcoder:289", "chapterId": "cpp-8-10-1", "title": "ABC157E Simple String Queries", "reason": "26 个 BIT 单点修改+区间查询" },
-    { "pid": "atcoder:290", "chapterId": "cpp-9-3-6", "title": "ABC157F Yakiniku Optimization", "reason": "二分时间 + 圆交集判定" },
-    { "pid": "atcoder:291", "chapterId": "cpp-3-2-1", "title": "ABC158A Station and Bus",        "reason": "字符串中是否同时含 A 与 B" },
-    { "pid": "atcoder:292", "chapterId": "cpp-5-3-2", "title": "ABC158B Count Balls",            "reason": "整段数 * A + 余数 min(rem,A)" },
-    { "pid": "atcoder:293", "chapterId": "cpp-3-5-2", "title": "ABC158C Tax Increase",          "reason": "枚举 X 验证两税率向下取整" },
-    { "pid": "atcoder:294", "chapterId": "cpp-5-2-3", "title": "ABC158D String Formation",      "reason": "deque 双端添加 + 反转懒标记" },
-    { "pid": "atcoder:295", "chapterId": "cpp-5-5-1", "title": "ABC158E Divisible Substring",   "reason": "后缀模 P 计数（特判 2/5）" },
-    { "pid": "atcoder:296", "chapterId": "cpp-9-6-1", "title": "ABC158F Removing Robots",       "reason": "线段并 + DP / 单调栈" },
-    { "pid": "atcoder:297", "chapterId": "cpp-1-2-3", "title": "ABC159A The Number of Even Pairs","reason": "C(N,2)+C(M,2)" },
-    { "pid": "atcoder:298", "chapterId": "cpp-3-3-1", "title": "ABC159B String Palindrome",     "reason": "三段都是回文判断" },
-    { "pid": "atcoder:299", "chapterId": "cpp-1-3-1", "title": "ABC159C Maximum Volume",        "reason": "数学：(L/3)^3" },
-    { "pid": "atcoder:300", "chapterId": "cpp-5-5-1", "title": "ABC159D Banned K",              "reason": "频次组合数 - 该项贡献" },
-    { "pid": "atcoder:301", "chapterId": "cpp-3-5-2", "title": "ABC159E Dividing Chocolate",    "reason": "二进制枚举横切 + 贪心列分组" },
-    { "pid": "atcoder:302", "chapterId": "cpp-7-11-3","title": "ABC159F Knapsack for All Segments","reason": "二维 DP 计数子段子序列" },
-    { "pid": "atcoder:303", "chapterId": "cpp-3-2-3", "title": "ABC160A Coffee",                "reason": "字符串相邻位比较" },
-    { "pid": "atcoder:304", "chapterId": "cpp-1-2-3", "title": "ABC160B Golden Coins",          "reason": "贪心整除取余，属于整除取模问题" },
-    { "pid": "atcoder:305", "chapterId": "cpp-5-8-1", "title": "ABC160C Traveling Salesman around Lake","reason": "环上贪心：周长减最大间距" },
-    { "pid": "atcoder:306", "chapterId": "cpp-8-4-1", "title": "ABC160D Line++",                "reason": "Floyd/枚举对路径距离计数" },
-    { "pid": "atcoder:307", "chapterId": "cpp-5-8-1", "title": "ABC160E Red and Green Apples",  "reason": "排序后取前 X+Y 名美味度合并贪心" }
+    {
+      "pid": "atcoder:278",
+      "chapterId": "cpp-9-3-2",
+      "title": "ABC155F Perils in Parallel",
+      "reason": "差分 + 并查集异或/高斯消元构造"
+    },
+    {
+      "pid": "atcoder:279",
+      "chapterId": "cpp-1-4-5",
+      "title": "ABC156A Beginner",
+      "reason": "条件计算内部评级"
+    },
+    {
+      "pid": "atcoder:280",
+      "chapterId": "cpp-1-5-2",
+      "title": "ABC156B Digits",
+      "reason": "while 除以 K 计数位数，需要 while 循环"
+    },
+    {
+      "pid": "atcoder:281",
+      "chapterId": "cpp-3-1-3",
+      "title": "ABC156C Rally",
+      "reason": "枚举 P；平方和最小"
+    },
+    {
+      "pid": "atcoder:282",
+      "chapterId": "cpp-5-3-5",
+      "title": "ABC156D Bouquet",
+      "reason": "快速幂 + 组合数取模"
+    },
+    {
+      "pid": "atcoder:283",
+      "chapterId": "cpp-5-3-6",
+      "title": "ABC156E Roaming",
+      "reason": "组合公式累加 C(n,r)*C(n-1,r-1)"
+    },
+    {
+      "pid": "atcoder:284",
+      "chapterId": "cpp-5-3-2",
+      "title": "ABC156F Modularness",
+      "reason": "周期 + 数论：每段计算"
+    },
+    {
+      "pid": "atcoder:285",
+      "chapterId": "cpp-1-2-3",
+      "title": "ABC157A Duplex Printing",
+      "reason": "(N+1)/2"
+    },
+    {
+      "pid": "atcoder:286",
+      "chapterId": "cpp-3-1-2",
+      "title": "ABC157B Bingo",
+      "reason": "二维数组判 8 条线"
+    },
+    {
+      "pid": "atcoder:287",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC157C Guess The Number",
+      "reason": "枚举 0~999 验证条件"
+    },
+    {
+      "pid": "atcoder:288",
+      "chapterId": "cpp-8-2-1",
+      "title": "ABC157D Friend Suggestions",
+      "reason": "并查集 + 减去黑名单"
+    },
+    {
+      "pid": "atcoder:289",
+      "chapterId": "cpp-8-10-1",
+      "title": "ABC157E Simple String Queries",
+      "reason": "26 个 BIT 单点修改+区间查询"
+    },
+    {
+      "pid": "atcoder:290",
+      "chapterId": "cpp-9-3-6",
+      "title": "ABC157F Yakiniku Optimization",
+      "reason": "二分时间 + 圆交集判定"
+    },
+    {
+      "pid": "atcoder:291",
+      "chapterId": "cpp-3-2-1",
+      "title": "ABC158A Station and Bus",
+      "reason": "字符串中是否同时含 A 与 B"
+    },
+    {
+      "pid": "atcoder:292",
+      "chapterId": "cpp-5-3-2",
+      "title": "ABC158B Count Balls",
+      "reason": "整段数 * A + 余数 min(rem,A)"
+    },
+    {
+      "pid": "atcoder:293",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC158C Tax Increase",
+      "reason": "枚举 X 验证两税率向下取整"
+    },
+    {
+      "pid": "atcoder:294",
+      "chapterId": "cpp-6-2-2",
+      "title": "ABC158D String Formation",
+      "reason": "deque 双端添加 + 反转懒标记"
+    },
+    {
+      "pid": "atcoder:295",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC158E Divisible Substring",
+      "reason": "后缀模 P 计数（特判 2/5）"
+    },
+    {
+      "pid": "atcoder:296",
+      "chapterId": "cpp-9-6-1",
+      "title": "ABC158F Removing Robots",
+      "reason": "线段并 + DP / 单调栈"
+    },
+    {
+      "pid": "atcoder:297",
+      "chapterId": "cpp-1-2-3",
+      "title": "ABC159A The Number of Even Pairs",
+      "reason": "C(N,2)+C(M,2)"
+    },
+    {
+      "pid": "atcoder:298",
+      "chapterId": "cpp-3-3-1",
+      "title": "ABC159B String Palindrome",
+      "reason": "三段都是回文判断"
+    },
+    {
+      "pid": "atcoder:299",
+      "chapterId": "cpp-1-3-1",
+      "title": "ABC159C Maximum Volume",
+      "reason": "数学：(L/3)^3"
+    },
+    {
+      "pid": "atcoder:300",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC159D Banned K",
+      "reason": "频次组合数 - 该项贡献"
+    },
+    {
+      "pid": "atcoder:301",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC159E Dividing Chocolate",
+      "reason": "二进制枚举横切 + 贪心列分组"
+    },
+    {
+      "pid": "atcoder:302",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC159F Knapsack for All Segments",
+      "reason": "二维 DP 计数子段子序列"
+    },
+    {
+      "pid": "atcoder:303",
+      "chapterId": "cpp-3-2-3",
+      "title": "ABC160A Coffee",
+      "reason": "字符串相邻位比较"
+    },
+    {
+      "pid": "atcoder:304",
+      "chapterId": "cpp-1-2-3",
+      "title": "ABC160B Golden Coins",
+      "reason": "贪心整除取余，属于整除取模问题"
+    },
+    {
+      "pid": "atcoder:305",
+      "chapterId": "cpp-5-8-1",
+      "title": "ABC160C Traveling Salesman around Lake",
+      "reason": "环上贪心：周长减最大间距"
+    },
+    {
+      "pid": "atcoder:306",
+      "chapterId": "cpp-8-4-1",
+      "title": "ABC160D Line++",
+      "reason": "Floyd/枚举对路径距离计数"
+    },
+    {
+      "pid": "atcoder:307",
+      "chapterId": "cpp-5-8-1",
+      "title": "ABC160E Red and Green Apples",
+      "reason": "排序后取前 X+Y 名美味度合并贪心"
+    }
   ]
 }

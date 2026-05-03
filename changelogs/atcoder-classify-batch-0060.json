@@ -173,7 +173,7 @@
     },
     {
       "pid": "atcoder:1903",
-      "chapterId": "cpp-7-11-3",
+      "chapterId": "cpp-7-11-2",
       "title": "ABC386F Operate K",
       "reason": "二维DP：带剪枝的编辑距离 DP，判断最少操作次数是否不超过 K"
     },

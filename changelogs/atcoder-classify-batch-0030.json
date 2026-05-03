@@ -3,35 +3,185 @@
   "range": "atcoder:887-916 (ABC245B-ABC248F)",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:887", "chapterId": "cpp-3-1-5",  "title": "ABC245B Mex",                     "reason": "桶计数找最小未出现非负整数" },
-    { "pid": "atcoder:888", "chapterId": "cpp-6-10-2", "title": "ABC245C Choose Elements",         "reason": "线性 DP：dp[i][0/1] 由 A/B 转移" },
-    { "pid": "atcoder:889", "chapterId": "cpp-4-7-2",  "title": "ABC245D Polynomial division",     "reason": "顺序递推求 B_k = (C_k − Σ A_iB_{k−i})/A_0" },
-    { "pid": "atcoder:890", "chapterId": "cpp-8-3-2",  "title": "ABC245E Wrapping Chocolate",      "reason": "按一维排序后另一维优先队列贪心匹配" },
-    { "pid": "atcoder:891", "chapterId": "cpp-7-3-3",  "title": "ABC245Ex Product Modulo 2",       "reason": "原根映射 + 矩阵快速幂卷积" },
-    { "pid": "atcoder:892", "chapterId": "cpp-9-8-1",  "title": "ABC245F Endless Walk",            "reason": "Tarjan 缩点 + 反图 BFS 标记可达环" },
-    { "pid": "atcoder:893", "chapterId": "cpp-8-5-1",  "title": "ABC245G Foreign Friends",         "reason": "多源 Dijkstra（次小源国家不同）" },
-    { "pid": "atcoder:894", "chapterId": "cpp-1-4-1",  "title": "ABC246A Four Points",             "reason": "异或/if 找出现奇数次的 x、y" },
-    { "pid": "atcoder:895", "chapterId": "cpp-2-2-2",  "title": "ABC246B Get Closer",              "reason": "sqrt 归一化向量乘距离" },
-    { "pid": "atcoder:896", "chapterId": "cpp-5-8-3",  "title": "ABC246C Coupon",                  "reason": "排序后贪心：先全用整张券，余券再抵贵价" },
-    { "pid": "atcoder:897", "chapterId": "cpp-5-9-1",  "title": "ABC246D 2-variable Function",     "reason": "枚举 a，对 b 二分/双指针求最小满足值" },
-    { "pid": "atcoder:898", "chapterId": "cpp-6-8-4",  "title": "ABC246E Bishop 2",                "reason": "0-1 BFS：同方向继续 0 代价、换向 1 代价" },
-    { "pid": "atcoder:899", "chapterId": "cpp-8-1-3",  "title": "ABC246F typewriter",              "reason": "容斥按子集合并行可用字符 |C|^L" },
-    { "pid": "atcoder:900", "chapterId": "cpp-7-10-1", "title": "ABC246G Game on Tree 3",          "reason": "树形 DP + 二分答案（离线判定）" },
-    { "pid": "atcoder:901", "chapterId": "cpp-8-11-2", "title": "ABC246Ex 01? Queries",            "reason": "线段树维护子序列计数 DP 矩阵" },
-    { "pid": "atcoder:902", "chapterId": "cpp-2-4-1",  "title": "ABC247A Move Right",              "reason": "字符串模拟右移一位" },
-    { "pid": "atcoder:903", "chapterId": "cpp-2-5-2",  "title": "ABC247B Unique Nicknames",        "reason": "双重枚举判断姓/名是否被他人占用" },
-    { "pid": "atcoder:904", "chapterId": "cpp-5-10-2", "title": "ABC247C 1 2 1 3 ... S_N",         "reason": "经典递归生成 S_n = S_{n-1} n S_{n-1}" },
-    { "pid": "atcoder:905", "chapterId": "cpp-6-2-3",  "title": "ABC247D Cylinder",                "reason": "deque/队列维护 (值,数量) 段并取前 c" },
-    { "pid": "atcoder:906", "chapterId": "cpp-5-9-2",  "title": "ABC247E Max Min",                 "reason": "滑动窗口双指针：同向区间统计 max=X min=Y" },
-    { "pid": "atcoder:907", "chapterId": "cpp-9-5-4",  "title": "ABC247Ex Rearranging Problem",    "reason": "置换分解 + 第一类斯特林数计数 DP" },
-    { "pid": "atcoder:908", "chapterId": "cpp-9-5-4",  "title": "ABC247F Cards",                   "reason": "并查集求环长 + 圈选取计数 DP（卢卡斯式）" },
-    { "pid": "atcoder:909", "chapterId": "cpp-9-9-4",  "title": "ABC247G Dream Team",              "reason": "二分图最大权匹配 → 最小费用最大流" },
-    { "pid": "atcoder:910", "chapterId": "cpp-3-1-5",  "title": "ABC248A Lacked Number",           "reason": "数字桶计数找缺失" },
-    { "pid": "atcoder:911", "chapterId": "cpp-2-1-1",  "title": "ABC248B Slimes",                  "reason": "循环倍增计数直至 ≥ B" },
-    { "pid": "atcoder:912", "chapterId": "cpp-6-10-2", "title": "ABC248C Dice Sum",                "reason": "二维线性 DP：dp[i][s] 长度与和" },
-    { "pid": "atcoder:913", "chapterId": "cpp-5-6-1",  "title": "ABC248D Range Count Query",       "reason": "按值存位置 vector，二分上下界差" },
-    { "pid": "atcoder:914", "chapterId": "cpp-2-5-2",  "title": "ABC248E K-colinear Line",         "reason": "枚举两点确定直线（共线判定）+ 去重计数" },
-    { "pid": "atcoder:915", "chapterId": "cpp-7-8-1",  "title": "ABC248Ex Beautiful Subsequences", "reason": "单调栈维护 max/min + 线段树历史和" },
-    { "pid": "atcoder:916", "chapterId": "cpp-7-11-3", "title": "ABC248F Keep Connect",            "reason": "二维 DP：列扫描 + 连通性轮廓状态" }
+    {
+      "pid": "atcoder:887",
+      "chapterId": "cpp-3-1-5",
+      "title": "ABC245B Mex",
+      "reason": "桶计数找最小未出现非负整数"
+    },
+    {
+      "pid": "atcoder:888",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC245C Choose Elements",
+      "reason": "线性 DP：dp[i][0/1] 由 A/B 转移"
+    },
+    {
+      "pid": "atcoder:889",
+      "chapterId": "cpp-4-7-2",
+      "title": "ABC245D Polynomial division",
+      "reason": "顺序递推求 B_k = (C_k − Σ A_iB_{k−i})/A_0"
+    },
+    {
+      "pid": "atcoder:890",
+      "chapterId": "cpp-8-3-2",
+      "title": "ABC245E Wrapping Chocolate",
+      "reason": "按一维排序后另一维优先队列贪心匹配"
+    },
+    {
+      "pid": "atcoder:891",
+      "chapterId": "cpp-7-3-3",
+      "title": "ABC245Ex Product Modulo 2",
+      "reason": "原根映射 + 矩阵快速幂卷积"
+    },
+    {
+      "pid": "atcoder:892",
+      "chapterId": "cpp-9-8-1",
+      "title": "ABC245F Endless Walk",
+      "reason": "Tarjan 缩点 + 反图 BFS 标记可达环"
+    },
+    {
+      "pid": "atcoder:893",
+      "chapterId": "cpp-8-5-1",
+      "title": "ABC245G Foreign Friends",
+      "reason": "多源 Dijkstra（次小源国家不同）"
+    },
+    {
+      "pid": "atcoder:894",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC246A Four Points",
+      "reason": "异或/if 找出现奇数次的 x、y"
+    },
+    {
+      "pid": "atcoder:895",
+      "chapterId": "cpp-2-2-2",
+      "title": "ABC246B Get Closer",
+      "reason": "sqrt 归一化向量乘距离"
+    },
+    {
+      "pid": "atcoder:896",
+      "chapterId": "cpp-5-8-3",
+      "title": "ABC246C Coupon",
+      "reason": "排序后贪心：先全用整张券，余券再抵贵价"
+    },
+    {
+      "pid": "atcoder:897",
+      "chapterId": "cpp-5-9-1",
+      "title": "ABC246D 2-variable Function",
+      "reason": "枚举 a，对 b 二分/双指针求最小满足值"
+    },
+    {
+      "pid": "atcoder:898",
+      "chapterId": "cpp-6-8-4",
+      "title": "ABC246E Bishop 2",
+      "reason": "0-1 BFS：同方向继续 0 代价、换向 1 代价"
+    },
+    {
+      "pid": "atcoder:899",
+      "chapterId": "cpp-8-1-3",
+      "title": "ABC246F typewriter",
+      "reason": "容斥按子集合并行可用字符 |C|^L"
+    },
+    {
+      "pid": "atcoder:900",
+      "chapterId": "cpp-7-10-1",
+      "title": "ABC246G Game on Tree 3",
+      "reason": "树形 DP + 二分答案（离线判定）"
+    },
+    {
+      "pid": "atcoder:901",
+      "chapterId": "cpp-8-11-2",
+      "title": "ABC246Ex 01? Queries",
+      "reason": "线段树维护子序列计数 DP 矩阵"
+    },
+    {
+      "pid": "atcoder:902",
+      "chapterId": "cpp-2-4-1",
+      "title": "ABC247A Move Right",
+      "reason": "字符串模拟右移一位"
+    },
+    {
+      "pid": "atcoder:903",
+      "chapterId": "cpp-2-5-2",
+      "title": "ABC247B Unique Nicknames",
+      "reason": "双重枚举判断姓/名是否被他人占用"
+    },
+    {
+      "pid": "atcoder:904",
+      "chapterId": "cpp-5-10-2",
+      "title": "ABC247C 1 2 1 3 ... S_N",
+      "reason": "经典递归生成 S_n = S_{n-1} n S_{n-1}"
+    },
+    {
+      "pid": "atcoder:905",
+      "chapterId": "cpp-6-2-3",
+      "title": "ABC247D Cylinder",
+      "reason": "deque/队列维护 (值,数量) 段并取前 c"
+    },
+    {
+      "pid": "atcoder:906",
+      "chapterId": "cpp-5-9-2",
+      "title": "ABC247E Max Min",
+      "reason": "滑动窗口双指针：同向区间统计 max=X min=Y"
+    },
+    {
+      "pid": "atcoder:907",
+      "chapterId": "cpp-10-9-1",
+      "title": "ABC247Ex Rearranging Problem",
+      "reason": "置换分解 + 第一类斯特林数计数 DP"
+    },
+    {
+      "pid": "atcoder:908",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC247F Cards",
+      "reason": "并查集求环长 + 圈选取计数 DP（卢卡斯式）"
+    },
+    {
+      "pid": "atcoder:909",
+      "chapterId": "cpp-9-9-4",
+      "title": "ABC247G Dream Team",
+      "reason": "二分图最大权匹配 → 最小费用最大流"
+    },
+    {
+      "pid": "atcoder:910",
+      "chapterId": "cpp-3-1-5",
+      "title": "ABC248A Lacked Number",
+      "reason": "数字桶计数找缺失"
+    },
+    {
+      "pid": "atcoder:911",
+      "chapterId": "cpp-2-1-1",
+      "title": "ABC248B Slimes",
+      "reason": "循环倍增计数直至 ≥ B"
+    },
+    {
+      "pid": "atcoder:912",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC248C Dice Sum",
+      "reason": "二维线性 DP：dp[i][s] 长度与和"
+    },
+    {
+      "pid": "atcoder:913",
+      "chapterId": "cpp-5-6-1",
+      "title": "ABC248D Range Count Query",
+      "reason": "按值存位置 vector，二分上下界差"
+    },
+    {
+      "pid": "atcoder:914",
+      "chapterId": "cpp-2-5-2",
+      "title": "ABC248E K-colinear Line",
+      "reason": "枚举两点确定直线（共线判定）+ 去重计数"
+    },
+    {
+      "pid": "atcoder:915",
+      "chapterId": "cpp-7-8-1",
+      "title": "ABC248Ex Beautiful Subsequences",
+      "reason": "单调栈维护 max/min + 线段树历史和"
+    },
+    {
+      "pid": "atcoder:916",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC248F Keep Connect",
+      "reason": "二维 DP：列扫描 + 连通性轮廓状态"
+    }
   ]
 }

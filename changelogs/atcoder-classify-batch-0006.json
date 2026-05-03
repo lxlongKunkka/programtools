@@ -3,35 +3,185 @@
   "range": "atcoder:156-185 (30 problems)",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:156", "chapterId": "cpp-9-4-3", "title": "ABC135D Digits Parade",        "reason": "数位 DP：?替换+模 13 余数维护" },
-    { "pid": "atcoder:157", "chapterId": "cpp-7-2-1", "title": "ABC135E Golf",                  "reason": "BFS/构造：曼哈顿K步可达性与最少步数" },
-    { "pid": "atcoder:158", "chapterId": "cpp-9-1-3", "title": "ABC135F Strings of Eternity",   "reason": "KMP/字符串匹配检测循环节" },
-    { "pid": "atcoder:159", "chapterId": "cpp-1-4-1", "title": "ABC136A Transfer",              "reason": "max(0, C-(A-B))，需要最值比较（已归 cpp-1-4-1）" },
-    { "pid": "atcoder:160", "chapterId": "cpp-1-5-3", "title": "ABC136B Uneven Numbers",        "reason": "枚举 1..N 判断每个数的位数奇偶，需要循环" },
-    { "pid": "atcoder:161", "chapterId": "cpp-5-8-1", "title": "ABC136C Build Stairs",          "reason": "从右往左贪心：H[i]=min(H[i],H[i+1])" },
-    { "pid": "atcoder:162", "chapterId": "cpp-7-6-3", "title": "ABC136D Gathering Children",    "reason": "找 RL 边界，统计奇偶位置" },
-    { "pid": "atcoder:163", "chapterId": "cpp-5-3-3", "title": "ABC136E Max GCD",               "reason": "枚举总和的因子 d，验证可分配 K 步" },
-    { "pid": "atcoder:164", "chapterId": "cpp-9-7-2", "title": "ABC136F Enclosed Points",       "reason": "扫描线 + BIT：贡献统计 2 的幂和" },
-    { "pid": "atcoder:165", "chapterId": "cpp-1-4-2", "title": "ABC137A +-x",                   "reason": "求 max(A+B,A-B,A*B)，需要最值比较" },
-    { "pid": "atcoder:166", "chapterId": "cpp-1-5-1", "title": "ABC137B One Clue",              "reason": "for 循环输出 [X-K+1, X+K-1] 区间" },
-    { "pid": "atcoder:167", "chapterId": "cpp-5-2-3", "title": "ABC137C Green Bin",             "reason": "排序串作 key，map 计数 C(c,2)" },
-    { "pid": "atcoder:168", "chapterId": "cpp-8-3-2", "title": "ABC137D Summer Vacation",       "reason": "按截止日期 + 大根堆贪心" },
-    { "pid": "atcoder:169", "chapterId": "cpp-7-3-3", "title": "ABC137E Coins Respawn",         "reason": "Bellman-Ford 检测可达正环" },
-    { "pid": "atcoder:170", "chapterId": "cpp-9-3-3", "title": "ABC137F Polynomial Construction","reason": "拉格朗日插值/费马小定理多项式" },
-    { "pid": "atcoder:171", "chapterId": "cpp-1-4-1", "title": "ABC138A Red or Not",            "reason": "if/else 条件输出 red 或原字符串" },
-    { "pid": "atcoder:172", "chapterId": "cpp-1-5-3", "title": "ABC138B Resistors in Parallel", "reason": "循环 N 个电阻倒数求和，需要循环" },
-    { "pid": "atcoder:173", "chapterId": "cpp-5-8-2", "title": "ABC138C Alchemist",             "reason": "贪心：从小到大平均 (除最大)" },
-    { "pid": "atcoder:174", "chapterId": "cpp-7-6-1", "title": "ABC138D Ki",                    "reason": "DFS + 子树差分计数累加" },
-    { "pid": "atcoder:175", "chapterId": "cpp-5-9-2", "title": "ABC138E Strings of Impurity",   "reason": "贪心匹配：每字符位置数组 + 二分" },
-    { "pid": "atcoder:176", "chapterId": "cpp-9-4-3", "title": "ABC138F Coincidence",           "reason": "数位 DP：x XOR y == y-x 等价条件" },
-    { "pid": "atcoder:177", "chapterId": "cpp-1-5-3", "title": "ABC139A Tenki",                 "reason": "比较两字符串相同位置个数" },
-    { "pid": "atcoder:178", "chapterId": "cpp-1-2-1", "title": "ABC139B Power Socket",          "reason": "ceil((B-1)/(A-1)) 公式" },
-    { "pid": "atcoder:179", "chapterId": "cpp-5-2-3", "title": "ABC139C Lower",                 "reason": "扫描连续不上升段长度 - 1 取最大" },
-    { "pid": "atcoder:180", "chapterId": "cpp-5-3-3", "title": "ABC139D ModSum",                "reason": "构造 P=(N,1,2,..,N-1)，结果 N(N-1)/2" },
-    { "pid": "atcoder:181", "chapterId": "cpp-8-1-2", "title": "ABC139E League",                "reason": "分层 BFS/拓扑：建队员对节点找最长路" },
-    { "pid": "atcoder:182", "chapterId": "cpp-9-5-1", "title": "ABC139F Engines",               "reason": "极角排序 + 区间扫描求最大向量和" },
-    { "pid": "atcoder:183", "chapterId": "cpp-1-2-1", "title": "ABC140A Password",              "reason": "输出 N^3" },
-    { "pid": "atcoder:184", "chapterId": "cpp-3-1-3", "title": "ABC140B Buffet",                "reason": "按吃顺序累加 B、相邻奖励 C" },
-    { "pid": "atcoder:185", "chapterId": "cpp-3-1-3", "title": "ABC140C Maximal Value",         "reason": "贪心：A[i]=min(B[i-1],B[i])" }
+    {
+      "pid": "atcoder:156",
+      "chapterId": "cpp-9-4-3",
+      "title": "ABC135D Digits Parade",
+      "reason": "数位 DP：?替换+模 13 余数维护"
+    },
+    {
+      "pid": "atcoder:157",
+      "chapterId": "cpp-7-2-1",
+      "title": "ABC135E Golf",
+      "reason": "BFS/构造：曼哈顿K步可达性与最少步数"
+    },
+    {
+      "pid": "atcoder:158",
+      "chapterId": "cpp-9-1-3",
+      "title": "ABC135F Strings of Eternity",
+      "reason": "KMP/字符串匹配检测循环节"
+    },
+    {
+      "pid": "atcoder:159",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC136A Transfer",
+      "reason": "max(0, C-(A-B))，需要最值比较（已归 cpp-1-4-1）"
+    },
+    {
+      "pid": "atcoder:160",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC136B Uneven Numbers",
+      "reason": "枚举 1..N 判断每个数的位数奇偶，需要循环"
+    },
+    {
+      "pid": "atcoder:161",
+      "chapterId": "cpp-5-8-1",
+      "title": "ABC136C Build Stairs",
+      "reason": "从右往左贪心：H[i]=min(H[i],H[i+1])"
+    },
+    {
+      "pid": "atcoder:162",
+      "chapterId": "cpp-7-6-3",
+      "title": "ABC136D Gathering Children",
+      "reason": "找 RL 边界，统计奇偶位置"
+    },
+    {
+      "pid": "atcoder:163",
+      "chapterId": "cpp-5-3-3",
+      "title": "ABC136E Max GCD",
+      "reason": "枚举总和的因子 d，验证可分配 K 步"
+    },
+    {
+      "pid": "atcoder:164",
+      "chapterId": "cpp-9-7-2",
+      "title": "ABC136F Enclosed Points",
+      "reason": "扫描线 + BIT：贡献统计 2 的幂和"
+    },
+    {
+      "pid": "atcoder:165",
+      "chapterId": "cpp-1-4-2",
+      "title": "ABC137A +-x",
+      "reason": "求 max(A+B,A-B,A*B)，需要最值比较"
+    },
+    {
+      "pid": "atcoder:166",
+      "chapterId": "cpp-1-5-1",
+      "title": "ABC137B One Clue",
+      "reason": "for 循环输出 [X-K+1, X+K-1] 区间"
+    },
+    {
+      "pid": "atcoder:167",
+      "chapterId": "cpp-5-2-3",
+      "title": "ABC137C Green Bin",
+      "reason": "排序串作 key，map 计数 C(c,2)"
+    },
+    {
+      "pid": "atcoder:168",
+      "chapterId": "cpp-8-3-2",
+      "title": "ABC137D Summer Vacation",
+      "reason": "按截止日期 + 大根堆贪心"
+    },
+    {
+      "pid": "atcoder:169",
+      "chapterId": "cpp-7-3-3",
+      "title": "ABC137E Coins Respawn",
+      "reason": "Bellman-Ford 检测可达正环"
+    },
+    {
+      "pid": "atcoder:170",
+      "chapterId": "cpp-9-3-3",
+      "title": "ABC137F Polynomial Construction",
+      "reason": "拉格朗日插值/费马小定理多项式"
+    },
+    {
+      "pid": "atcoder:171",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC138A Red or Not",
+      "reason": "if/else 条件输出 red 或原字符串"
+    },
+    {
+      "pid": "atcoder:172",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC138B Resistors in Parallel",
+      "reason": "循环 N 个电阻倒数求和，需要循环"
+    },
+    {
+      "pid": "atcoder:173",
+      "chapterId": "cpp-5-8-2",
+      "title": "ABC138C Alchemist",
+      "reason": "贪心：从小到大平均 (除最大)"
+    },
+    {
+      "pid": "atcoder:174",
+      "chapterId": "cpp-7-6-1",
+      "title": "ABC138D Ki",
+      "reason": "DFS + 子树差分计数累加"
+    },
+    {
+      "pid": "atcoder:175",
+      "chapterId": "cpp-5-9-2",
+      "title": "ABC138E Strings of Impurity",
+      "reason": "贪心匹配：每字符位置数组 + 二分"
+    },
+    {
+      "pid": "atcoder:176",
+      "chapterId": "cpp-9-4-3",
+      "title": "ABC138F Coincidence",
+      "reason": "数位 DP：x XOR y == y-x 等价条件"
+    },
+    {
+      "pid": "atcoder:177",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC139A Tenki",
+      "reason": "比较两字符串相同位置个数"
+    },
+    {
+      "pid": "atcoder:178",
+      "chapterId": "cpp-1-2-1",
+      "title": "ABC139B Power Socket",
+      "reason": "ceil((B-1)/(A-1)) 公式"
+    },
+    {
+      "pid": "atcoder:179",
+      "chapterId": "cpp-2-1-5",
+      "title": "ABC139C Lower",
+      "reason": "扫描连续不上升段长度 - 1 取最大"
+    },
+    {
+      "pid": "atcoder:180",
+      "chapterId": "cpp-5-3-3",
+      "title": "ABC139D ModSum",
+      "reason": "构造 P=(N,1,2,..,N-1)，结果 N(N-1)/2"
+    },
+    {
+      "pid": "atcoder:181",
+      "chapterId": "cpp-8-1-2",
+      "title": "ABC139E League",
+      "reason": "分层 BFS/拓扑：建队员对节点找最长路"
+    },
+    {
+      "pid": "atcoder:182",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC139F Engines",
+      "reason": "极角排序 + 区间扫描求最大向量和"
+    },
+    {
+      "pid": "atcoder:183",
+      "chapterId": "cpp-1-2-1",
+      "title": "ABC140A Password",
+      "reason": "输出 N^3"
+    },
+    {
+      "pid": "atcoder:184",
+      "chapterId": "cpp-3-1-3",
+      "title": "ABC140B Buffet",
+      "reason": "按吃顺序累加 B、相邻奖励 C"
+    },
+    {
+      "pid": "atcoder:185",
+      "chapterId": "cpp-3-1-3",
+      "title": "ABC140C Maximal Value",
+      "reason": "贪心：A[i]=min(B[i-1],B[i])"
+    }
   ]
 }

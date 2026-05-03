@@ -3,35 +3,185 @@
   "range": "atcoder:490-519",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:490", "chapterId": "cpp-1-5-3",  "title": "ABC191B Remove It",               "reason": "线性遍历过滤等于 X 的元素，需要循环" },
-    { "pid": "atcoder:491", "chapterId": "cpp-3-5-2",  "title": "ABC191C Digital Graffiti",         "reason": "枚举每个 2x2 方块判定顶点" },
-    { "pid": "atcoder:492", "chapterId": "cpp-5-1-1",  "title": "ABC191D Circle Lattice Points",   "reason": "枚举 x 求 y 范围（精度处理）" },
-    { "pid": "atcoder:493", "chapterId": "cpp-8-2-1",  "title": "ABC191E Come Back Quickly",        "reason": "Dijkstra 求每点最短回路" },
-    { "pid": "atcoder:494", "chapterId": "cpp-5-3-4",  "title": "ABC191F GCD or MIN",              "reason": "数论：枚举 min 后求 gcd" },
-    { "pid": "atcoder:495", "chapterId": "cpp-1-2-1",  "title": "ABC192A Star",                    "reason": "100-(X%100)" },
-    { "pid": "atcoder:496", "chapterId": "cpp-3-2-1",  "title": "ABC192B uNrEaDaBlE sTrInG",       "reason": "字符串奇偶位大小写判断" },
-    { "pid": "atcoder:497", "chapterId": "cpp-2-4-2",  "title": "ABC192C Kaprekar Number",         "reason": "卡布列克迭代模拟" },
-    { "pid": "atcoder:498", "chapterId": "cpp-5-1-1",  "title": "ABC192D Base n",                  "reason": "二分 + 进制转换溢出处理" },
-    { "pid": "atcoder:499", "chapterId": "cpp-8-2-1",  "title": "ABC192E Train",                   "reason": "Dijkstra 时间向上取整边权" },
-    { "pid": "atcoder:500", "chapterId": "cpp-7-11-3", "title": "ABC192F Potion",                  "reason": "二维 DP：选 k 个余数和" },
-    { "pid": "atcoder:501", "chapterId": "cpp-1-3-1",  "title": "ABC193A Discount",                 "reason": "百分比公式" },
-    { "pid": "atcoder:502", "chapterId": "cpp-2-4-2",  "title": "ABC193B Play Snuke",              "reason": "店铺购物时间模拟" },
-    { "pid": "atcoder:503", "chapterId": "cpp-5-3-4",  "title": "ABC193C Unexpressed",             "reason": "set 去重幂次数 + 数论" },
-    { "pid": "atcoder:504", "chapterId": "cpp-3-5-2",  "title": "ABC193D Poker",                   "reason": "枚举两人隐藏牌组合 + 概率" },
-    { "pid": "atcoder:505", "chapterId": "cpp-7-11-3", "title": "ABC193E Lucky 7 Battle",          "reason": "博弈 DP / 表达式求值" },
-    { "pid": "atcoder:506", "chapterId": "cpp-9-9-3",  "title": "ABC193F Zebraness",               "reason": "最小割 / 网络流" },
-    { "pid": "atcoder:507", "chapterId": "cpp-1-4-5",  "title": "ABC194A I Scream",                 "reason": "多条件分支" },
-    { "pid": "atcoder:508", "chapterId": "cpp-5-8-1",  "title": "ABC194B Job Assignment",          "reason": "n² 枚举或贪心" },
-    { "pid": "atcoder:509", "chapterId": "cpp-5-1-1",  "title": "ABC194C Squared Error",           "reason": "拆 (Ai-Aj)²，前缀和数学" },
-    { "pid": "atcoder:510", "chapterId": "cpp-9-5-2",  "title": "ABC194D Journey",                  "reason": "期望和：N/(N-i)" },
-    { "pid": "atcoder:511", "chapterId": "cpp-7-11-3", "title": "ABC194E Mex Min",                 "reason": "滑动窗口 + multiset/计数" },
-    { "pid": "atcoder:512", "chapterId": "cpp-9-4-3",  "title": "ABC194F Digits Paradise",         "reason": "数位 DP" },
-    { "pid": "atcoder:513", "chapterId": "cpp-1-4-1",  "title": "ABC195A Health M Death",          "reason": "H%M==0 条件判断，需要 if/else" },
-    { "pid": "atcoder:514", "chapterId": "cpp-5-1-1",  "title": "ABC195B Many Oranges",            "reason": "范围二分 / 数学不等式" },
-    { "pid": "atcoder:515", "chapterId": "cpp-5-1-1",  "title": "ABC195C Comma",                   "reason": "按位数分段累加逗号数" },
-    { "pid": "atcoder:516", "chapterId": "cpp-5-8-1",  "title": "ABC195D Shipping Center",         "reason": "贪心：箱子从小到大配最大可装行李" },
-    { "pid": "atcoder:517", "chapterId": "cpp-7-11-3", "title": "ABC195E Lucky 7 Battle",          "reason": "倒推博弈 DP 模 7" },
-    { "pid": "atcoder:518", "chapterId": "cpp-9-4-1",  "title": "ABC195F Coprime Present",          "reason": "状压 DP 小素数集合" },
-    { "pid": "atcoder:519", "chapterId": "cpp-1-3-1",  "title": "ABC196A Difference Max",          "reason": "b - c" }
+    {
+      "pid": "atcoder:490",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC191B Remove It",
+      "reason": "线性遍历过滤等于 X 的元素，需要循环"
+    },
+    {
+      "pid": "atcoder:491",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC191C Digital Graffiti",
+      "reason": "枚举每个 2x2 方块判定顶点"
+    },
+    {
+      "pid": "atcoder:492",
+      "chapterId": "cpp-5-1-1",
+      "title": "ABC191D Circle Lattice Points",
+      "reason": "枚举 x 求 y 范围（精度处理）"
+    },
+    {
+      "pid": "atcoder:493",
+      "chapterId": "cpp-8-2-1",
+      "title": "ABC191E Come Back Quickly",
+      "reason": "Dijkstra 求每点最短回路"
+    },
+    {
+      "pid": "atcoder:494",
+      "chapterId": "cpp-5-3-4",
+      "title": "ABC191F GCD or MIN",
+      "reason": "数论：枚举 min 后求 gcd"
+    },
+    {
+      "pid": "atcoder:495",
+      "chapterId": "cpp-1-2-1",
+      "title": "ABC192A Star",
+      "reason": "100-(X%100)"
+    },
+    {
+      "pid": "atcoder:496",
+      "chapterId": "cpp-3-2-1",
+      "title": "ABC192B uNrEaDaBlE sTrInG",
+      "reason": "字符串奇偶位大小写判断"
+    },
+    {
+      "pid": "atcoder:497",
+      "chapterId": "cpp-2-4-2",
+      "title": "ABC192C Kaprekar Number",
+      "reason": "卡布列克迭代模拟"
+    },
+    {
+      "pid": "atcoder:498",
+      "chapterId": "cpp-5-1-1",
+      "title": "ABC192D Base n",
+      "reason": "二分 + 进制转换溢出处理"
+    },
+    {
+      "pid": "atcoder:499",
+      "chapterId": "cpp-8-2-1",
+      "title": "ABC192E Train",
+      "reason": "Dijkstra 时间向上取整边权"
+    },
+    {
+      "pid": "atcoder:500",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC192F Potion",
+      "reason": "二维 DP：选 k 个余数和"
+    },
+    {
+      "pid": "atcoder:501",
+      "chapterId": "cpp-1-3-1",
+      "title": "ABC193A Discount",
+      "reason": "百分比公式"
+    },
+    {
+      "pid": "atcoder:502",
+      "chapterId": "cpp-2-4-2",
+      "title": "ABC193B Play Snuke",
+      "reason": "店铺购物时间模拟"
+    },
+    {
+      "pid": "atcoder:503",
+      "chapterId": "cpp-5-3-4",
+      "title": "ABC193C Unexpressed",
+      "reason": "set 去重幂次数 + 数论"
+    },
+    {
+      "pid": "atcoder:504",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC193D Poker",
+      "reason": "枚举两人隐藏牌组合 + 概率"
+    },
+    {
+      "pid": "atcoder:505",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC193E Lucky 7 Battle",
+      "reason": "博弈 DP / 表达式求值"
+    },
+    {
+      "pid": "atcoder:506",
+      "chapterId": "cpp-9-9-3",
+      "title": "ABC193F Zebraness",
+      "reason": "最小割 / 网络流"
+    },
+    {
+      "pid": "atcoder:507",
+      "chapterId": "cpp-1-4-5",
+      "title": "ABC194A I Scream",
+      "reason": "多条件分支"
+    },
+    {
+      "pid": "atcoder:508",
+      "chapterId": "cpp-5-8-1",
+      "title": "ABC194B Job Assignment",
+      "reason": "n² 枚举或贪心"
+    },
+    {
+      "pid": "atcoder:509",
+      "chapterId": "cpp-5-1-1",
+      "title": "ABC194C Squared Error",
+      "reason": "拆 (Ai-Aj)²，前缀和数学"
+    },
+    {
+      "pid": "atcoder:510",
+      "chapterId": "cpp-9-5-2",
+      "title": "ABC194D Journey",
+      "reason": "期望和：N/(N-i)"
+    },
+    {
+      "pid": "atcoder:511",
+      "chapterId": "cpp-5-9-2",
+      "title": "ABC194E Mex Min",
+      "reason": "滑动窗口 + multiset/计数"
+    },
+    {
+      "pid": "atcoder:512",
+      "chapterId": "cpp-9-4-3",
+      "title": "ABC194F Digits Paradise",
+      "reason": "数位 DP"
+    },
+    {
+      "pid": "atcoder:513",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC195A Health M Death",
+      "reason": "H%M==0 条件判断，需要 if/else"
+    },
+    {
+      "pid": "atcoder:514",
+      "chapterId": "cpp-5-1-1",
+      "title": "ABC195B Many Oranges",
+      "reason": "范围二分 / 数学不等式"
+    },
+    {
+      "pid": "atcoder:515",
+      "chapterId": "cpp-5-1-1",
+      "title": "ABC195C Comma",
+      "reason": "按位数分段累加逗号数"
+    },
+    {
+      "pid": "atcoder:516",
+      "chapterId": "cpp-5-8-1",
+      "title": "ABC195D Shipping Center",
+      "reason": "贪心：箱子从小到大配最大可装行李"
+    },
+    {
+      "pid": "atcoder:517",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC195E Lucky 7 Battle",
+      "reason": "倒推博弈 DP 模 7"
+    },
+    {
+      "pid": "atcoder:518",
+      "chapterId": "cpp-9-4-1",
+      "title": "ABC195F Coprime Present",
+      "reason": "状压 DP 小素数集合"
+    },
+    {
+      "pid": "atcoder:519",
+      "chapterId": "cpp-1-3-1",
+      "title": "ABC196A Difference Max",
+      "reason": "b - c"
+    }
   ]
 }

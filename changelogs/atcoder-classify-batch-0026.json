@@ -3,35 +3,185 @@
   "range": "atcoder:765-794",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:765", "chapterId": "cpp-9-10-2", "title": "ABC229H Advance or Eat",         "reason": "对抗博弈搜索与 SG 函数" },
-    { "pid": "atcoder:766", "chapterId": "cpp-1-4-5",  "title": "ABC230A AtCoder Quiz 3",         "reason": "if-else 多分支 + 三位 0 填充输出" },
-    { "pid": "atcoder:767", "chapterId": "cpp-3-2-2",  "title": "ABC230B Triple Metre",           "reason": "string 子串判断（oxx 重复）" },
-    { "pid": "atcoder:768", "chapterId": "cpp-2-5-3",  "title": "ABC230C X drawing",              "reason": "对角线坐标推导枚举" },
-    { "pid": "atcoder:769", "chapterId": "cpp-5-8-3",  "title": "ABC230D Destroyer Takahashi",    "reason": "区间贪心覆盖（按 R 排序）" },
-    { "pid": "atcoder:770", "chapterId": "cpp-9-3-1",  "title": "ABC230E Fraction Floor Sum",     "reason": "数论分块（整除分块）求和" },
-    { "pid": "atcoder:771", "chapterId": "cpp-5-5-1",  "title": "ABC230F Predilection",           "reason": "前缀和去重 DP（合并 0 段）" },
-    { "pid": "atcoder:772", "chapterId": "cpp-8-1-3",  "title": "ABC230G GCD Permutation",        "reason": "容斥原理 / 莫比乌斯反演统计 GCD≠1" },
-    { "pid": "atcoder:773", "chapterId": "cpp-9-5-4",  "title": "ABC230H Bullion",                "reason": "母函数 / 计数 DP（多项式 Inv）" },
-    { "pid": "atcoder:774", "chapterId": "cpp-1-3-1",  "title": "ABC231A Water Pressure",         "reason": "double 除法输出" },
-    { "pid": "atcoder:775", "chapterId": "cpp-5-2-3",  "title": "ABC231B Election",               "reason": "map 计数 + 取最大票数" },
-    { "pid": "atcoder:776", "chapterId": "cpp-5-6-1",  "title": "ABC231C Counting 2",             "reason": "排序 + 二分查找下界" },
-    { "pid": "atcoder:777", "chapterId": "cpp-8-2-1",  "title": "ABC231D Neighbors",              "reason": "并查集 + 度数判定（无环且度≤2）" },
-    { "pid": "atcoder:778", "chapterId": "cpp-6-10-1", "title": "ABC231E Minimal payments",       "reason": "进位 DP（按面额逐位分配）" },
-    { "pid": "atcoder:779", "chapterId": "cpp-8-11-1", "title": "ABC231F Jealous Two",            "reason": "二维偏序 + 树状数组计数" },
-    { "pid": "atcoder:780", "chapterId": "cpp-9-3-6",  "title": "ABC231G Balls in Boxes",         "reason": "概率期望 + 第二类斯特林展开" },
-    { "pid": "atcoder:781", "chapterId": "cpp-9-9-2",  "title": "ABC231H Minimum Coloring",       "reason": "二分图最小费用流（行列覆盖）" },
-    { "pid": "atcoder:782", "chapterId": "cpp-3-2-2",  "title": "ABC232A QQ solver",              "reason": "string 取数字字符并相乘" },
-    { "pid": "atcoder:783", "chapterId": "cpp-3-2-2",  "title": "ABC232B Caesar Cipher",          "reason": "字符 +K mod 26 比较" },
-    { "pid": "atcoder:784", "chapterId": "cpp-7-1-1",  "title": "ABC232C Graph Isomorphism",      "reason": "全排列枚举顶点映射判邻接" },
-    { "pid": "atcoder:785", "chapterId": "cpp-7-11-3", "title": "ABC232D Weak Takahashi",         "reason": "网格 DP 最长右下路径" },
-    { "pid": "atcoder:786", "chapterId": "cpp-7-3-2",  "title": "ABC232E Rook Path",              "reason": "行列状态 DP（矩阵幂或 K 次递推）" },
-    { "pid": "atcoder:787", "chapterId": "cpp-9-4-1",  "title": "ABC232F Simple Operations on Sequence", "reason": "状压 DP（位图选取并贪心交换）" },
-    { "pid": "atcoder:788", "chapterId": "cpp-8-5-1",  "title": "ABC232G Modulo Shortest Path",   "reason": "Dijkstra + 虚点链建图（取模边权）" },
-    { "pid": "atcoder:789", "chapterId": "cpp-7-1-1",  "title": "ABC232H King's Tour",            "reason": "棋盘哈密顿路递归构造" },
-    { "pid": "atcoder:790", "chapterId": "cpp-1-4-1",  "title": "ABC233A 10yen Stamp",            "reason": "向上取整差值" },
-    { "pid": "atcoder:791", "chapterId": "cpp-3-2-2",  "title": "ABC233B A Reverse",              "reason": "string 区间反转 reverse" },
-    { "pid": "atcoder:792", "chapterId": "cpp-3-5-2",  "title": "ABC233C Product",                "reason": "多袋枚举 DFS / 剪枝乘积" },
-    { "pid": "atcoder:793", "chapterId": "cpp-5-5-1",  "title": "ABC233D Count Interval",         "reason": "前缀和 + map 计数" },
-    { "pid": "atcoder:794", "chapterId": "cpp-5-4-1",  "title": "ABC233E ΣX/10^k",                "reason": "高精度加法位上累加与进位" }
+    {
+      "pid": "atcoder:765",
+      "chapterId": "cpp-9-10-2",
+      "title": "ABC229H Advance or Eat",
+      "reason": "对抗博弈搜索与 SG 函数"
+    },
+    {
+      "pid": "atcoder:766",
+      "chapterId": "cpp-1-4-5",
+      "title": "ABC230A AtCoder Quiz 3",
+      "reason": "if-else 多分支 + 三位 0 填充输出"
+    },
+    {
+      "pid": "atcoder:767",
+      "chapterId": "cpp-3-2-2",
+      "title": "ABC230B Triple Metre",
+      "reason": "string 子串判断（oxx 重复）"
+    },
+    {
+      "pid": "atcoder:768",
+      "chapterId": "cpp-2-5-3",
+      "title": "ABC230C X drawing",
+      "reason": "对角线坐标推导枚举"
+    },
+    {
+      "pid": "atcoder:769",
+      "chapterId": "cpp-5-8-3",
+      "title": "ABC230D Destroyer Takahashi",
+      "reason": "区间贪心覆盖（按 R 排序）"
+    },
+    {
+      "pid": "atcoder:770",
+      "chapterId": "cpp-9-3-1",
+      "title": "ABC230E Fraction Floor Sum",
+      "reason": "数论分块（整除分块）求和"
+    },
+    {
+      "pid": "atcoder:771",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC230F Predilection",
+      "reason": "前缀和去重 DP（合并 0 段）"
+    },
+    {
+      "pid": "atcoder:772",
+      "chapterId": "cpp-8-1-3",
+      "title": "ABC230G GCD Permutation",
+      "reason": "容斥原理 / 莫比乌斯反演统计 GCD≠1"
+    },
+    {
+      "pid": "atcoder:773",
+      "chapterId": "cpp-10-7-3",
+      "title": "ABC230H Bullion",
+      "reason": "母函数 / 计数 DP（多项式 Inv）"
+    },
+    {
+      "pid": "atcoder:774",
+      "chapterId": "cpp-1-3-1",
+      "title": "ABC231A Water Pressure",
+      "reason": "double 除法输出"
+    },
+    {
+      "pid": "atcoder:775",
+      "chapterId": "cpp-5-2-3",
+      "title": "ABC231B Election",
+      "reason": "map 计数 + 取最大票数"
+    },
+    {
+      "pid": "atcoder:776",
+      "chapterId": "cpp-5-6-1",
+      "title": "ABC231C Counting 2",
+      "reason": "排序 + 二分查找下界"
+    },
+    {
+      "pid": "atcoder:777",
+      "chapterId": "cpp-8-2-1",
+      "title": "ABC231D Neighbors",
+      "reason": "并查集 + 度数判定（无环且度≤2）"
+    },
+    {
+      "pid": "atcoder:778",
+      "chapterId": "cpp-6-10-1",
+      "title": "ABC231E Minimal payments",
+      "reason": "进位 DP（按面额逐位分配）"
+    },
+    {
+      "pid": "atcoder:779",
+      "chapterId": "cpp-8-11-1",
+      "title": "ABC231F Jealous Two",
+      "reason": "二维偏序 + 树状数组计数"
+    },
+    {
+      "pid": "atcoder:780",
+      "chapterId": "cpp-9-3-6",
+      "title": "ABC231G Balls in Boxes",
+      "reason": "概率期望 + 第二类斯特林展开"
+    },
+    {
+      "pid": "atcoder:781",
+      "chapterId": "cpp-9-9-2",
+      "title": "ABC231H Minimum Coloring",
+      "reason": "二分图最小费用流（行列覆盖）"
+    },
+    {
+      "pid": "atcoder:782",
+      "chapterId": "cpp-3-2-2",
+      "title": "ABC232A QQ solver",
+      "reason": "string 取数字字符并相乘"
+    },
+    {
+      "pid": "atcoder:783",
+      "chapterId": "cpp-3-2-2",
+      "title": "ABC232B Caesar Cipher",
+      "reason": "字符 +K mod 26 比较"
+    },
+    {
+      "pid": "atcoder:784",
+      "chapterId": "cpp-7-1-1",
+      "title": "ABC232C Graph Isomorphism",
+      "reason": "全排列枚举顶点映射判邻接"
+    },
+    {
+      "pid": "atcoder:785",
+      "chapterId": "cpp-7-11-3",
+      "title": "ABC232D Weak Takahashi",
+      "reason": "网格 DP 最长右下路径"
+    },
+    {
+      "pid": "atcoder:786",
+      "chapterId": "cpp-7-3-2",
+      "title": "ABC232E Rook Path",
+      "reason": "行列状态 DP（矩阵幂或 K 次递推）"
+    },
+    {
+      "pid": "atcoder:787",
+      "chapterId": "cpp-9-4-1",
+      "title": "ABC232F Simple Operations on Sequence",
+      "reason": "状压 DP（位图选取并贪心交换）"
+    },
+    {
+      "pid": "atcoder:788",
+      "chapterId": "cpp-8-5-1",
+      "title": "ABC232G Modulo Shortest Path",
+      "reason": "Dijkstra + 虚点链建图（取模边权）"
+    },
+    {
+      "pid": "atcoder:789",
+      "chapterId": "cpp-7-1-1",
+      "title": "ABC232H King's Tour",
+      "reason": "棋盘哈密顿路递归构造"
+    },
+    {
+      "pid": "atcoder:790",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC233A 10yen Stamp",
+      "reason": "向上取整差值"
+    },
+    {
+      "pid": "atcoder:791",
+      "chapterId": "cpp-3-2-2",
+      "title": "ABC233B A Reverse",
+      "reason": "string 区间反转 reverse"
+    },
+    {
+      "pid": "atcoder:792",
+      "chapterId": "cpp-3-5-2",
+      "title": "ABC233C Product",
+      "reason": "多袋枚举 DFS / 剪枝乘积"
+    },
+    {
+      "pid": "atcoder:793",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC233D Count Interval",
+      "reason": "前缀和 + map 计数"
+    },
+    {
+      "pid": "atcoder:794",
+      "chapterId": "cpp-5-4-1",
+      "title": "ABC233E ΣX/10^k",
+      "reason": "高精度加法位上累加与进位"
+    }
   ]
 }

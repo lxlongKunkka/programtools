@@ -11,7 +11,7 @@
     },
     {
       "pid": "atcoder:949",
-      "chapterId": "cpp-9-5-4",
+      "chapterId": "cpp-7-9-3",
       "title": "ABC252G Pre-Order",
       "reason": "区间 DP / 计数 DP：按先序划分子树"
     },
