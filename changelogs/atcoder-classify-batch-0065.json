@@ -1,0 +1,187 @@
+{
+  "batch": "0065",
+  "range": "atcoder:2027-2056 (ABC404D-ABC408D, 30 problems)",
+  "kind": "O",
+  "assignments": [
+    {
+      "pid": "atcoder:2027",
+      "chapterId": "cpp-6-9-2",
+      "title": "AT_abc404_d-Goin' to the Zoo 动物园最低参观费用",
+      "reason": "DFS+枚举，N个动物园M种动物，选择路线使每种动物可见≥2次最小费用，DFS枚举子集"
+    },
+    {
+      "pid": "atcoder:2028",
+      "chapterId": "cpp-5-8-2",
+      "title": "AT_abc404_e-Bowls and Beans 豆子归零最少操作",
+      "reason": "贪心，类 Jump Game II，每碗豆子可转移到前方区间，贪心最少转移次数"
+    },
+    {
+      "pid": "atcoder:2029",
+      "chapterId": "cpp-9-5-3",
+      "title": "AT_abc404_f-Lost and Pound 概率按钮游戏",
+      "reason": "概率期望DP，T轮M次按压K次成功，最优策略最大化胜率，概率DP"
+    },
+    {
+      "pid": "atcoder:2030",
+      "chapterId": "cpp-8-12-2",
+      "title": "AT_abc404_g-Specified Range Sums 区间和约束下的最小序列和",
+      "reason": "差分约束，区间和等式转化为前缀和不等式，Bellman-Ford求最小可行正整数序列"
+    },
+    {
+      "pid": "atcoder:2031",
+      "chapterId": "cpp-1-4-4",
+      "title": "AT_abc405_a-Is it rated? 比赛评级判断",
+      "reason": "Level1条件结构，判断评级R是否在指定区间内，多重条件判断"
+    },
+    {
+      "pid": "atcoder:2032",
+      "chapterId": "cpp-5-5-1",
+      "title": "AT_abc405_b-Not All 移除末尾元素使条件不满足",
+      "reason": "前缀和，逆向追踪最后出现位置，找最小删除尾部次数使1..M不完整，后缀统计"
+    },
+    {
+      "pid": "atcoder:2033",
+      "chapterId": "cpp-5-3-3",
+      "title": "AT_abc405_c-Sum of Product 序列两两乘积之和",
+      "reason": "数学公式化简，sum(AiAj for i<j) = (sum(Ai)^2 - sum(Ai^2)) / 2，数学基础"
+    },
+    {
+      "pid": "atcoder:2034",
+      "chapterId": "cpp-6-8-2",
+      "title": "AT_abc405_d-Escape Route 网格最短路径与方向指示",
+      "reason": "多源BFS，从所有E出发反向BFS，每格标注通往最近出口的方向，BFS应用"
+    },
+    {
+      "pid": "atcoder:2035",
+      "chapterId": "cpp-5-3-5",
+      "title": "AT_abc405_e-Fruit Lineup 水果排列计数问题",
+      "reason": "组合数学，四类水果有序排列满足偏序约束，组合数/插空法，数学基础组合"
+    },
+    {
+      "pid": "atcoder:2036",
+      "chapterId": "cpp-8-10-2",
+      "title": "AT_abc405_f-Chord Crossing 圆上弦交点计数",
+      "reason": "树状数组，在线查询弦交点数，BIT统计区间内偶数端点，离线+树状数组"
+    },
+    {
+      "pid": "atcoder:2037",
+      "chapterId": "cpp-9-7-3",
+      "title": "AT_abc405_g-Range Shuffle Query 范围子序列重排计数查询",
+      "reason": "gesp9莫队算法，区间内多重集排列计数，Mo's algorithm+组合数"
+    },
+    {
+      "pid": "atcoder:2038",
+      "chapterId": "cpp-1-4-2",
+      "title": "AT_abc406_a-Not Acceptable 提交报告时间判断",
+      "reason": "Level1条件结构，比较两个时间(A*60+B vs C*60+D)判断先后，条件判断"
+    },
+    {
+      "pid": "atcoder:2039",
+      "chapterId": "cpp-2-4-1",
+      "title": "AT_abc406_b-Product Calculator 乘法计算器模拟",
+      "reason": "Level2模拟，乘法计算器K位数溢出重置为1，模拟运算过程"
+    },
+    {
+      "pid": "atcoder:2040",
+      "chapterId": "cpp-7-8-1",
+      "title": "AT_abc406_c-~ 波浪形子数组计数",
+      "reason": "单调栈，统计满足波浪形条件（恰好一峰一谷）的子数组，单调栈定位极值点"
+    },
+    {
+      "pid": "atcoder:2041",
+      "chapterId": "cpp-5-2-4",
+      "title": "AT_abc406_d-Garbage Removal 网格垃圾清除",
+      "reason": "STL map存储行列垃圾，按查询类型清除对应行/列，STL容器进阶应用"
+    },
+    {
+      "pid": "atcoder:2042",
+      "chapterId": "cpp-9-4-3",
+      "title": "AT_abc406_e-Popcount Sum 3 数位DP：二进制位计数和",
+      "reason": "gesp9数位DP，统计≤N中popcount=K的所有数之和，数位DP"
+    },
+    {
+      "pid": "atcoder:2043",
+      "chapterId": "cpp-8-10-1",
+      "title": "AT_abc406_f-Compare Tree Weights 树上子树权重查询与更新",
+      "reason": "树上差分+树状数组，DFS序映射子树区间，点权更新+子树权重查询"
+    },
+    {
+      "pid": "atcoder:2044",
+      "chapterId": "cpp-7-8-2",
+      "title": "AT_abc406_g-Travelling Salesman Problem 数轴物品收集最小成本与路径",
+      "reason": "单调队列优化DP，数轴上按顺序收集物品，移动成本线性DP+单调队列优化"
+    },
+    {
+      "pid": "atcoder:2045",
+      "chapterId": "cpp-8-2-3",
+      "title": "[ABC287Ex] Directed Graph and Query 图路径最大点最小化查询",
+      "reason": "gesp8并查集进阶，离线按顶点编号排序逐步扩展，并查集维护可达性查询"
+    },
+    {
+      "pid": "atcoder:2046",
+      "chapterId": "cpp-1-4-5",
+      "title": "AT_abc407_a-Approximation 最接近的分数整数",
+      "reason": "Level1条件，判断A/B最近整数（比较2A与B(2*floor+1)），条件判断数学"
+    },
+    {
+      "pid": "atcoder:2047",
+      "chapterId": "cpp-1-5-4",
+      "title": "AT_abc407_b-P(X or Y) 双骰子条件概率计算",
+      "reason": "Level1双重循环枚举36种骰子组合，统计满足条件的概率，循环嵌套暴力枚举"
+    },
+    {
+      "pid": "atcoder:2048",
+      "chapterId": "cpp-7-2-2",
+      "title": "AT_abc407_c-Security 2 最小按钮操作",
+      "reason": "BFS进阶，逆向贪心构造目标字符串的最短按键序列，BFS最短路"
+    },
+    {
+      "pid": "atcoder:2049",
+      "chapterId": "cpp-6-9-3",
+      "title": "AT_abc407_d-Domino Covering XOR 网格多米诺骨牌异或覆盖最大值",
+      "reason": "DFS进阶，小网格上DFS枚举多米诺骨牌放置方案，最大化未覆盖格XOR和"
+    },
+    {
+      "pid": "atcoder:2050",
+      "chapterId": "cpp-6-10-1",
+      "title": "AT_abc407_e-Most Valuable Parentheses 括号序列最大分数",
+      "reason": "线性DP，正确括号序列中N个')'位置对应A值清零，DP选最优')'位置"
+    },
+    {
+      "pid": "atcoder:2051",
+      "chapterId": "cpp-7-8-2",
+      "title": "AT_abc407_f-Sums of Sliding Window Maximum 各长度子数组最大值之和",
+      "reason": "单调队列，对所有k求长度k的所有子数组最大值之和，单调队列优化"
+    },
+    {
+      "pid": "atcoder:2052",
+      "chapterId": "cpp-9-9-1",
+      "title": "AT_abc407_g-Domino Covering SUM 网格多米诺覆盖最大分数",
+      "reason": "gesp9网络流，负值格用最小割决定是否覆盖，网格二分图最大权匹配"
+    },
+    {
+      "pid": "atcoder:2053",
+      "chapterId": "cpp-1-5-2",
+      "title": "AT_abc408_a-Timeout 判断长者是否保持清醒",
+      "reason": "Level1循环+条件，遍历N次检查相邻两次时间差是否超过S+0.5，循环进阶"
+    },
+    {
+      "pid": "atcoder:2054",
+      "chapterId": "cpp-3-1-3",
+      "title": "AT_abc408_b-Compression 序列去重与升序排列",
+      "reason": "数组操作，去重后排序输出，sort+unique或set实现，数组应用"
+    },
+    {
+      "pid": "atcoder:2055",
+      "chapterId": "cpp-5-5-3",
+      "title": "AT_abc408_c-Not All Covered 区间覆盖最小重叠数",
+      "reason": "差分数组，统计每格被覆盖的炮塔数，找最小覆盖计数即最少删除数"
+    },
+    {
+      "pid": "atcoder:2056",
+      "chapterId": "cpp-5-5-4",
+      "title": "AT_abc408_d-Flip to Gather 字符串1区间化最少操作",
+      "reason": "前缀和优化，枚举最终区间[l,r]用前缀和快速计算外部1数+内部0数，前缀和进阶"
+    }
+  ]
+}
