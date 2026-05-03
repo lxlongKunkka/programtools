@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-05-03T10:04:33.396Z",
+  "apply": false,
+  "questions": [
+    {
+      "questionUid": "downloads-1119-q20",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1036-q18",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1041-q18",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2024-09-cpp-4-q12",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "questionUid": "downloads-1119-q20",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1036-q18",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1041-q18",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2024-09-cpp-4-q12",
+      "matched": 1,
+      "status": "resolved"
+    }
+  ]
+}

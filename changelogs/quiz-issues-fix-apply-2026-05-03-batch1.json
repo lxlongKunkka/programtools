@@ -1,0 +1,108 @@
+{
+  "generatedAt": "2026-05-03T10:01:13.179Z",
+  "apply": true,
+  "questions": [
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q5",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "gesp-2024-06-cpp-6-q15",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1105-q13",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "downloads-1116-q21",
+      "found": true,
+      "patch": [
+        "enabled",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    },
+    {
+      "questionUid": "literacy-contest-6002-q18",
+      "found": true,
+      "patch": [
+        "answer",
+        "explanation",
+        "explanationText",
+        "reviewStatus",
+        "updatedAt"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "questionUid": "gesp-2025-09-cpp-2-q18",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2025-09-cpp-2-q19",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2024-09-cpp-3-q20",
+      "matched": 2,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2025-06-cpp-5-q16",
+      "matched": 1,
+      "status": "ignored"
+    },
+    {
+      "questionUid": "gesp-2023-12-cpp-6-q5",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "gesp-2024-06-cpp-6-q15",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1105-q13",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "downloads-1116-q21",
+      "matched": 1,
+      "status": "resolved"
+    },
+    {
+      "questionUid": "literacy-contest-6002-q18",
+      "matched": 1,
+      "status": "resolved"
+    }
+  ]
+}

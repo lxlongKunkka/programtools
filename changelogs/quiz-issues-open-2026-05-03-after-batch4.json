@@ -1,0 +1,824 @@
+{
+  "generatedAt": "2026-05-03T10:04:48.192Z",
+  "count": 10,
+  "statuses": [
+    "pending",
+    "reviewing"
+  ],
+  "items": [
+    {
+      "_id": "69edd84d7bf86f725039f66f",
+      "questionUid": "gesp-2024-06-cpp-6-q9",
+      "userId": 770,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-26T09:18:05.196Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "gesp6",
+      "paperQuestionNo": 9,
+      "paperUid": "gesp-2024-06-cpp-6",
+      "reportedAt": "2026-04-26T09:18:08.723Z",
+      "reporterName": "赵英赫",
+      "source": "gesp",
+      "sourceDocId": 269,
+      "sourceTitle": "GESP-C++-2024年6月六级真题卷GESP-C++-2024年6月六级真题卷",
+      "status": "pending",
+      "stemPreview": "二叉树的（ ）第一个访问的节点是根节点。",
+      "subject": "C++",
+      "tags": [
+        "树形结构",
+        "DFS"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-26T09:18:08.723Z",
+      "question": {
+        "_id": "69beb5e2d215db96b0fd02e4",
+        "questionUid": "gesp-2024-06-cpp-6-q9",
+        "answer": "A",
+        "enabled": true,
+        "explanation": "本题考察二叉树的三种基本遍历方式的定义。\n\n1.  **先序遍历 (Pre-order traversal)**：\n    *   首先访问根节点。\n    *   然后递归地先序遍历左子树。\n    *   最后递归地先序遍历右子树。\n    *   因此，先序遍历的第一个访问的节点总是根节点。\n\n2.  **中序遍历 (In-order traversal)**：\n    *   首先递归地中序遍历左子树。\n    *   然后访问根节点。\n    *   最后递归地中序遍历右子树。\n    *   中序遍历的第一个访问的节点是左子树中最左边的节点，而不是根节点（除非左子树为空）。\n\n3.  **后序遍历 (Post-order traversal)**：\n    *   首先递归地后序遍历左子树。\n    *   然后递归地后序遍历右子树。\n    *   最后访问根节点。\n    *   后序遍历的第一个访问的节点是左子树中最左边的节点，而不是根节点。根节点是最后一个被访问的节点。\n\n根据以上定义，只有先序遍历是第一个访问根节点的。\n\n所以，正确答案是 A。",
+        "explanationText": "本题考察二叉树的三种基本遍历方式的定义。 1. 先序遍历 (Pre-order traversal)： * 首先访问根节点。 * 然后递归地先序遍历左子树。 * 最后递归地先序遍历右子树。 * 因此，先序遍历的第一个访问的节点总是根节点。 2. 中序遍历 (In-order traversal)： * 首先递归地中序遍历左子树。 * 然后访问根节点。 * 最后递归地中序遍历右子树。 * 中序遍历的第一个访问的节点是左子树中最左边的节点，而不是根节点（除非左子树为空）。 3. 后序遍历 (Post-order traversal)： * 首先递归地后序遍历左子树。 * 然后递归地后序遍历右子树。 * 最后访问根节点。 * 后序遍历的第一个访问的节点是左子树中最左边的节点，而不是根节点。根节点是最后一个被访问的节点。 根据以上定义，只有先序遍历是第一个访问根节点的。 所以，正确答案是 A。",
+        "levelTag": "gesp6",
+        "options": [
+          {
+            "key": "A",
+            "text": "先序遍历",
+            "textPlain": "先序遍历",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "中序遍历",
+            "textPlain": "中序遍历",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "后序遍历",
+            "textPlain": "后序遍历",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "以上都是",
+            "textPlain": "以上都是",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "gesp",
+        "sourceTitle": "GESP-C++-2024年6月六级真题卷GESP-C++-2024年6月六级真题卷",
+        "stem": "二叉树的（ ）第一个访问的节点是根节点。",
+        "stemText": "二叉树的（ ）第一个访问的节点是根节点。",
+        "tags": [
+          "树形结构",
+          "DFS"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-01T06:24:01.549Z"
+      }
+    },
+    {
+      "_id": "69edcd4a7bf86f725038b6eb",
+      "questionUid": "gesp-2024-12-cpp-1-q13",
+      "userId": 1574,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-26T08:31:06.865Z",
+      "detail": "边长为5",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "other",
+      "levelTag": "gesp1",
+      "paperQuestionNo": 13,
+      "paperUid": "gesp-2024-12-cpp-1",
+      "reportedAt": "2026-04-26T08:31:06.864Z",
+      "reporterName": "张艺宸",
+      "source": "gesp",
+      "sourceDocId": 247,
+      "sourceTitle": "GESP-C++-2024年12月一级真题卷GESP-C++-2024年12月一级真题卷",
+      "status": "pending",
+      "stemPreview": "int 类型变量 a 的值是⼀个正方形的边长 ，如下图中的正⽅形的四条边长都为 $4$ ，则下列哪个语句执⾏后能够使得正方形的周长（四条边长的和）增加 $4$ ？（ ）。 cpp + + + + + + + + + + + + + + + +",
+      "subject": "C++",
+      "tags": [
+        "GESP"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-26T08:31:06.865Z",
+      "question": {
+        "_id": "69beb5e2d215db96b0fd04bf",
+        "questionUid": "gesp-2024-12-cpp-1-q13",
+        "answer": "D",
+        "enabled": true,
+        "explanation": "本题考察C++中变量操作和表达式的理解。\n\n1.  **理解题意**:\n    *   `int` 类型变量 `a` 表示正方形的边长。\n    *   正方形的周长是 `4 * a`。\n    *   题目要求执行某个语句后，使得正方形的周长增加 `4`。\n    *   这意味着新的周长应该是 `(4 * a) + 4`。\n\n2.  **推导目标边长**:\n    *   设新的边长为 `a'`。\n    *   新的周长为 `4 * a'`。\n    *   我们希望 `4 * a' = (4 * a) + 4`。\n    *   将等式两边同时除以 `4`，得到 `a' = a + 1`。\n    *   因此，为了使周长增加 `4`，我们需要将变量 `a` 的值增加 `1`。\n\n3.  **分析选项**:\n    *   **A. `a*4;`**: 这个语句计算 `a` 乘以 `4` 的结果，但并没有将这个结果赋值回给 `a`。它只是一个表达式语句，计算出的值被丢弃，变量 `a` 的值保持不变。\n    *   **B. `a+4;`**: 同理，这个语句计算 `a` 加上 `4` 的结果，但也没有将结果赋值回给 `a`。变量 `a` 的值保持不变。\n    *   **C. `a+1;`**: 同理，这个语句计算 `a` 加上 `1` 的结果，但也没有将结果赋值回给 `a`。变量 `a` 的值保持不变。\n    *   **D. `++a;`**: 这是C++中的前置自增运算符。它会先将变量 `a` 的值增加 `1`，然后将增加后的新值赋给 `a`。执行 `++a;` 后，`a` 的值会变为 `a + 1`。\n\n4.  **结论**:\n    *   只有 `++a;` 能够使得变量 `a` 的值增加 `1`。\n    *   当 `a` 的值变为 `a + 1` 时，新的周长将是 `4 * (a + 1) = 4 * a + 4`，这正好比原来的周长 `4 * a` 增加了 `4`。\n\n因此，正确答案是D。",
+        "explanationText": "本题考察C++中变量操作和表达式的理解。 1. 理解题意: * int 类型变量 a 表示正方形的边长。 * 正方形的周长是 4 * a。 * 题目要求执行某个语句后，使得正方形的周长增加 4。 * 这意味着新的周长应该是 (4 * a) + 4。 2. 推导目标边长: * 设新的边长为 a'。 * 新的周长为 4 * a'。 * 我们希望 4 * a' = (4 * a) + 4。 * 将等式两边同时除以 4，得到 a' = a + 1。 * 因此，为了使周长增加 4，我们需要将变量 a 的值增加 1。 3. 分析选项: * A. a*4;: 这个语句计算 a 乘以 4 的结果，但并没有将这个结果赋值回给 a。它只是一个表达式语句，计算出的值被丢弃，变量 a 的值保持不变。 * B. a+4;: 同理，这个语句计算 a 加上 4 的结果，但也没有将结果赋值回给 a。变量 a 的值保持不变。 * C. a+1;: 同理，这个语句计算 a 加上 1 的结果，但也没有将结果赋值回给 a。变量 a 的值保持不变。 * D. ++a;: 这是C++中的前置自增运算符。它会先将变量 a 的值增加 1，然后将增加后的新值赋给 a。执行 ++a; 后，a 的值会变为 a + 1。 4. 结论: * 只有 ++a; 能够使得变量 a 的值增加 1。 * 当 a 的值变为 a + 1 时，新的周长将是 4 * (a + 1) = 4 * a + 4，这正好比原来的周长 4 * a 增加了 4。 因此，正确答案是D。",
+        "levelTag": "gesp1",
+        "options": [
+          {
+            "key": "A",
+            "text": "a*4;",
+            "textPlain": "a*4;",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "a+4;",
+            "textPlain": "a+4;",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "a+1;",
+            "textPlain": "a+1;",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "++a;",
+            "textPlain": "++a;",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "gesp",
+        "sourceTitle": "GESP-C++-2024年12月一级真题卷GESP-C++-2024年12月一级真题卷",
+        "stem": "`int` 类型变量 `a` 的值是⼀个正方形的边长 ，如下图中的正⽅形的四条边长都为 $4$ ，则下列哪个语句执⾏后能够使得正方形的周长（四条边长的和）增加 $4$ ？（ ）。\n```cpp\n + + + + +\n +       +\n +       +\n +       +\n + + + + +\n```",
+        "stemText": "int 类型变量 a 的值是⼀个正方形的边长 ，如下图中的正⽅形的四条边长都为 $4$ ，则下列哪个语句执⾏后能够使得正方形的周长（四条边长的和）增加 $4$ ？（ ）。 cpp + + + + + + + + + + + + + + + +",
+        "tags": [
+          "GESP"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-01T05:07:33.381Z"
+      }
+    },
+    {
+      "_id": "69e490ac7bf86f7250df78a0",
+      "userId": 1496,
+      "questionUid": "gesp-2024-09-cpp-3-q1",
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T08:22:04.890Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "gesp3",
+      "paperQuestionNo": 1,
+      "paperUid": "gesp-2024-09-cpp-3",
+      "reportedAt": "2026-04-19T08:22:04.890Z",
+      "reporterName": "刘子齐",
+      "source": "gesp",
+      "sourceDocId": 273,
+      "sourceTitle": "GESP-C++-2024年9月三级真题卷GESP-C++-2024年9月三级真题卷",
+      "status": "pending",
+      "stemPreview": "下列代码中，输出结果是（ ） cpp include<iostream using namespace std; int main() { double a=0.9; double b=1.0; if(((b a)==0.1)) { cout<<\"Equal\"<<endl; } else { cout<<\"Not equal\"<<endl; } }",
+      "subject": "C++",
+      "tags": [
+        "模拟"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T08:22:04.890Z",
+      "question": {
+        "_id": "69beb5e2d215db96b0fd0358",
+        "questionUid": "gesp-2024-09-cpp-3-q1",
+        "answer": "B",
+        "enabled": true,
+        "explanation": "这个题目考察的是浮点数（double类型）的精度问题以及浮点数比较的注意事项。\n\n1.  **浮点数的表示：** 计算机内部使用二进制来表示数字。对于整数，二进制表示是精确的。但是对于许多小数，例如0.1、0.9等，它们在二进制下是无限循环的小数，就像十进制下的1/3是0.333...一样。由于存储空间的限制，计算机只能存储这些无限循环小数的近似值。\n2.  **计算 `b - a`：**\n    *   `double a = 0.9;` 变量 `a` 存储的是0.9的一个近似二进制值。\n    *   `double b = 1.0;` 变量 `b` 存储的是1.0的精确二进制值（1.0在二进制下可以精确表示）。\n    *   当执行 `b - a` 时，实际上是 `1.0` 减去 `0.9` 的近似值。这个计算结果会是 `0.1` 的一个近似值。\n3.  **比较 `(b - a) == 0.1`：**\n    *   等号右侧的 `0.1` 也是一个浮点数字面量，它也会被转换为 `0.1` 的一个近似二进制值。\n    *   由于 `0.9` 和 `0.1` 在二进制下都不能精确表示，`1.0 - 0.9` 的计算结果（`0.1` 的一个近似值）与直接表示的 `0.1` 的近似值，在大多数情况下，它们的底层二进制表示是**不完全相同**的。即使它们在数学上都等于0.1，但在计算机的浮点数表示中，它们可能存在微小的差异。\n4.  **结果判断：** 因为 `(b - a)` 的结果与字面量 `0.1` 的精确二进制表示不完全相同，所以 `((b-a)==0.1))` 这个条件判断会为 `false`。\n5.  **输出：** 条件为 `false`，程序会执行 `else` 块中的代码，输出 \"Not equal\"。\n\n**总结：** 在C++（以及大多数编程语言）中，直接使用 `==` 运算符比较两个浮点数是否相等是非常危险的，因为浮点数的精度问题可能导致即使数学上相等的值在计算机中也不完全相等。通常，比较浮点数时应该检查它们的差的绝对值是否小于一个很小的误差范围（epsilon值）。\n\n因此，正确答案是B。",
+        "explanationText": "这个题目考察的是浮点数（double类型）的精度问题以及浮点数比较的注意事项。 1. 浮点数的表示： 计算机内部使用二进制来表示数字。对于整数，二进制表示是精确的。但是对于许多小数，例如0.1、0.9等，它们在二进制下是无限循环的小数，就像十进制下的1/3是0.333...一样。由于存储空间的限制，计算机只能存储这些无限循环小数的近似值。 2. 计算 b - a： * double a = 0.9; 变量 a 存储的是0.9的一个近似二进制值。 * double b = 1.0; 变量 b 存储的是1.0的精确二进制值（1.0在二进制下可以精确表示）。 * 当执行 b - a 时，实际上是 1.0 减去 0.9 的近似值。这个计算结果会是 0.1 的一个近似值。 3. 比较 (b - a) == 0.1： * 等号右侧的 0.1 也是一个浮点数字面量，它也会被转换为 0.1 的一个近似二进制值。 * 由于 0.9 和 0.1 在二进制下都不能精确表示，1.0 - 0.9 的计算结果（0.1 的一个近似值）与直接表示的 0.1 的近似值，在大多数情况下，它们的底层二进制表示是不完全相同的。即使它们在数学上都等于0.1，但在计算机的浮点数表示中，它们可能存在微小的差异。 4. 结果判断： 因为 (b - a) 的结果与字面量 0.1 的精确二进制表示不完全相同，所以 ((b-a)==0.1)) 这个条件判断会为 false。 5. 输出： 条件为 false，程序会执行 else 块中的代码，输出 \"Not equal\"。 总结： 在C++（以及大多数编程语言）中，直接使用 == 运算符比较两个浮点数是否相等是非常危险的，因为浮点数的精度问题可能导致即使数学上相等的值在计算机中也不完全相等。通常，比较浮点数时应该检查它们的差的绝对值是否小于一个很小的误差范围（epsilon值）。 因此，正确答案是B。",
+        "levelTag": "gesp3",
+        "options": [
+          {
+            "key": "A",
+            "text": "Equal",
+            "textPlain": "Equal",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "Not equal",
+            "textPlain": "Not equal",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "程序不能正确执行",
+            "textPlain": "程序不能正确执行",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "没有输出",
+            "textPlain": "没有输出",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "gesp",
+        "sourceTitle": "GESP-C++-2024年9月三级真题卷GESP-C++-2024年9月三级真题卷",
+        "stem": "下列代码中，输出结果是（ ）\n```cpp\n#include<iostream>\nusing namespace std;\nint main()\n{\n  double a=0.9;\n  double b=1.0;\n  if(((b-a)==0.1))\n  {\n    cout<<\"Equal\"<<endl;\n  }\n  else\n  {\n    cout<<\"Not equal\"<<endl;\n  }\n}\n\n```",
+        "stemText": "下列代码中，输出结果是（ ） cpp include<iostream> using namespace std; int main() { double a=0.9; double b=1.0; if(((b-a)==0.1)) { cout<<\"Equal\"<<endl; } else { cout<<\"Not equal\"<<endl; } }",
+        "tags": [
+          "模拟"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-01T06:20:06.032Z"
+      }
+    },
+    {
+      "_id": "69e4804d7bf86f7250dd29a1",
+      "questionUid": "gesp-2025-03-cpp-6-q10",
+      "userId": 770,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:12:13.975Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "gesp6",
+      "paperQuestionNo": 10,
+      "paperUid": "gesp-2025-03-cpp-6",
+      "reportedAt": "2026-04-19T07:12:13.974Z",
+      "reporterName": "赵英赫",
+      "source": "gesp",
+      "sourceDocId": 285,
+      "sourceTitle": "GESP-C++-2025年3月六级真题卷GESP-C++-2025年3月六级真题卷",
+      "status": "pending",
+      "stemPreview": "以下代码实现了二叉树的深度优先搜索 (DFS)，并统计叶子结点的数量，则横线上应填写 ( )。 cpp int countLeafNodes(TreeNode root) { if (root == nullptr) return 0; stack<TreeNode s; s.push(root); int count = 0; while (!s.empt...",
+      "subject": "C++",
+      "tags": [
+        "DFS",
+        "栈"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:12:13.975Z",
+      "question": {
+        "_id": "69bf4dd3d215db96b002751c",
+        "questionUid": "gesp-2025-03-cpp-6-q10",
+        "answer": "A",
+        "enabled": true,
+        "explanation": "该代码实现了二叉树的深度优先搜索 (DFS) 遍历，并统计叶子结点的数量。它使用一个显式栈来模拟递归的深度优先搜索过程。\n\n我们来分析一下代码的执行流程：\n1. `if (root == nullptr) return 0;`：如果树为空，则叶子结点数量为0。\n2. `stack<TreeNode*> s;`：创建一个栈用于存储待访问的结点。\n3. `s.push(root);`：将根结点压入栈中，作为遍历的起点。\n4. `int count = 0;`：初始化叶子结点计数器。\n5. `while (!s.empty()) { ... }`：循环直到栈为空，表示所有可达结点都已访问。\n6. `TreeNode* node = s.top(); s.pop();`：从栈顶取出一个结点并将其弹出。这个结点是当前正在处理的结点。\n7. `if (node->left == nullptr && node->right == nullptr) { count++; }`：如果当前结点没有左孩子也没有右孩子，那么它是一个叶子结点，计数器加1。\n8. `if (node->right) s.push(node->right);`：如果当前结点有右孩子，将其压入栈中。\n\n为了实现深度优先搜索，当一个结点被处理后，它的子结点需要被压入栈中，以便后续访问。由于栈的“后进先出” (LIFO) 特性，为了让左子树优先于右子树被访问（这是常见的DFS顺序），我们需要先压入右孩子，再压入左孩子。这样，左孩子就会在栈顶，下次循环时会先被弹出处理。\n\n因此，在 `if (node->right) s.push(node->right);` 之后，我们应该检查左孩子是否存在，如果存在，就将其压入栈中。\n\n现在我们来看选项：\nA. `if (node->left) s.push(node->left);`：这个选项检查 `node->left` 是否存在，如果存在，就将其压入栈中。这符合DFS的逻辑，确保左子树在右子树之前被探索。\nB. `if (node->left) s.pop(node->left);`：`s.pop()` 方法不接受参数，它只是移除栈顶元素。此选项语法错误。\nC. `if (node->left) s.front(node->left);`：`s.front()` 是 `std::queue` 的方法，用于访问队列头部元素，而不是 `std::stack`。`std::stack` 使用 `s.top()` 访问栈顶元素。此选项语法错误。\nD. `if (node->left) s.push(node->right);`：这个选项检查 `node->left`，但却将 `node->right` 压入栈中。这会导致右孩子被重复压入（如果它存在）或者在不应该压入的情况下压入，逻辑错误。\n\n综上所述，选项 A 是正确的。\n\n最终的代码片段将是：\n```cpp\nint countLeafNodes(TreeNode* root) {\n    if (root == nullptr) return 0;\n    stack<TreeNode*> s;\n    s.push(root);\n    int count = 0;\n    while (!s.empty()) {\n        TreeNode* node = s.top();\n        s.pop();\n        if (node->left == nullptr && node->right == nullptr) {\n            count++;\n        }\n        if (node->right) s.push(node->right);\n        if (node->left) s.push(node->left); // 填入的代码\n    }\n    return count;\n}\n```\n\nThe final answer is $\\boxed{A}$",
+        "explanationText": "该代码实现了二叉树的深度优先搜索 (DFS) 遍历，并统计叶子结点的数量。它使用一个显式栈来模拟递归的深度优先搜索过程。 我们来分析一下代码的执行流程： 1. if (root == nullptr) return 0;：如果树为空，则叶子结点数量为0。 2. stack<TreeNode> s;：创建一个栈用于存储待访问的结点。 3. s.push(root);：将根结点压入栈中，作为遍历的起点。 4. int count = 0;：初始化叶子结点计数器。 5. while (!s.empty()) { ... }：循环直到栈为空，表示所有可达结点都已访问。 6. TreeNode node = s.top(); s.pop();：从栈顶取出一个结点并将其弹出。这个结点是当前正在处理的结点。 7. if (node->left == nullptr && node->right == nullptr) { count++; }：如果当前结点没有左孩子也没有右孩子，那么它是一个叶子结点，计数器加1。 8. if (node->right) s.push(node->right);：如果当前结点有右孩子，将其压入栈中。 为了实现深度优先搜索，当一个结点被处理后，它的子结点需要被压入栈中，以便后续访问。由于栈的“后进先出” (LIFO) 特性，为了让左子树优先于右子树被访问（这是常见的DFS顺序），我们需要先压入右孩子，再压入左孩子。这样，左孩子就会在栈顶，下次循环时会先被弹出处理。 因此，在 if (node->right) s.push(node->right); 之后，我们应该检查左孩子是否存在，如果存在，就将其压入栈中。 现在我们来看选项： A. if (node->left) s.push(node->left);：这个选项检查 node->left 是否存在，如果存在，就将其压入栈中。这符合DFS的逻辑，确保左子树在右子树之前被探索。 B. if (node->left) s.pop(node->left);：s.pop() 方法不接受参数，它只是移除栈顶元素。此选项语法错误。 C. if (node->left) s.front(node->left);：s.front() 是 std::queue 的方法，用于访问队列头部元素，而不是 std::stack。std::stack 使用 s.top() 访问栈顶元素。此选项语法错误。 D. if (node->left) s.push(node->right);：这个选项检查 node->left，但却将 node->right 压入栈中。这会导致右孩子被重复压入（如果它存在）或者在不应该压入的情况下压入，逻辑错误。 综上所述，选项 A 是正确的。 最终的代码片段将是： cpp int countLeafNodes(TreeNode* root) { if (root == nullptr) return 0; stack<TreeNode> s; s.push(root); int count = 0; while (!s.empty()) { TreeNode node = s.top(); s.pop(); if (node->left == nullptr && node->right == nullptr) { count++; } if (node->right) s.push(node->right); if (node->left) s.push(node->left); // 填入的代码 } return count; } The final answer is $\\boxed{A}$",
+        "levelTag": "gesp6",
+        "options": [
+          {
+            "key": "A",
+            "text": "`if (node->left) s.push(node->left);`",
+            "textPlain": "if (node->left) s.push(node->left);",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "`if (node->left) s.pop(node->left);`",
+            "textPlain": "if (node->left) s.pop(node->left);",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "`if (node->left) s.front(node->left);`",
+            "textPlain": "if (node->left) s.front(node->left);",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "`if (node->left) s.push(node->right);`",
+            "textPlain": "if (node->left) s.push(node->right);",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "gesp",
+        "sourceTitle": "GESP-C++-2025年3月六级真题卷GESP-C++-2025年3月六级真题卷",
+        "stem": "以下代码实现了二叉树的深度优先搜索 (DFS)，并统计叶子结点的数量，则横线上应填写 ( )。\n```cpp\nint countLeafNodes(TreeNode* root) {\n    if (root == nullptr) return 0;\n    stack<TreeNode*> s;\n    s.push(root);\n    int count = 0;\n    while (!s.empty()) {\n        TreeNode* node = s.top();\n        s.pop();\n        if (node->left == nullptr && node->right == nullptr) {\n            count++;\n        }\n        if (node->right) s.push(node->right);\n        ________________// 在此处填入代码\n    }\n    return count;\n}\n```",
+        "stemText": "以下代码实现了二叉树的深度优先搜索 (DFS)，并统计叶子结点的数量，则横线上应填写 ( )。 cpp int countLeafNodes(TreeNode* root) { if (root == nullptr) return 0; stack<TreeNode> s; s.push(root); int count = 0; while (!s.empty()) { TreeNode node = s.top(); s.pop(); if (node->left == nullptr && node->right == nullptr) { count++; } if (node->right) s.push(node->right); // 在此处填入代码 } return count; }",
+        "tags": [
+          "DFS",
+          "栈"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-01T06:24:38.479Z"
+      }
+    },
+    {
+      "_id": "69e47f0f7bf86f7250dd1123",
+      "userId": 770,
+      "questionUid": "gesp-2025-03-cpp-6-q3",
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:06:55.339Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "gesp6",
+      "paperQuestionNo": 3,
+      "paperUid": "gesp-2025-03-cpp-6",
+      "reportedAt": "2026-04-19T07:06:55.338Z",
+      "reporterName": "赵英赫",
+      "source": "gesp",
+      "sourceDocId": 285,
+      "sourceTitle": "GESP-C++-2025年3月六级真题卷GESP-C++-2025年3月六级真题卷",
+      "status": "pending",
+      "stemPreview": "以下代码实现了树的哪种遍历方式？ cpp void traverse(TreeNode root) { if (root == nullptr) return; cout << root val << \" \"; traverse(root left); traverse(root right); }",
+      "subject": "C++",
+      "tags": [
+        "树形结构",
+        "DFS"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:06:55.339Z",
+      "question": {
+        "_id": "69bf4dd3d215db96b0027515",
+        "questionUid": "gesp-2025-03-cpp-6-q3",
+        "answer": "A",
+        "enabled": true,
+        "explanation": "该代码实现的是树的前序遍历。\n\n我们来分析一下代码的执行顺序：\n1. `if (root == nullptr) return;`: 这是递归的终止条件，如果当前节点为空，则直接返回。\n2. `cout << root->val << \" \";`: 在处理左右子树之前，首先打印当前节点 `root` 的值。这意味着根节点是在其子节点之前被访问的。\n3. `traverse(root->left);`: 接着，递归地调用 `traverse` 函数处理当前节点的左子树。\n4. `traverse(root->right);`: 最后，递归地调用 `traverse` 函数处理当前节点的右子树。\n\n这种“访问根节点 -> 访问左子树 -> 访问右子树”的顺序，正是前序遍历（Pre-order Traversal）的定义。\n\n对照选项：\nA. 前序遍历：根 -> 左 -> 右。与代码逻辑完全一致。\nB. 中序遍历：左 -> 根 -> 右。如果代码是 `traverse(root->left); cout << root->val << \" \"; traverse(root->right);` 则是中序遍历。\nC. 后序遍历：左 -> 右 -> 根。如果代码是 `traverse(root->left); traverse(root->right); cout << root->val << \" \";` 则是后序遍历。\nD. 层次遍历：通常使用队列（Queue）数据结构来实现，逐层访问节点，与递归实现方式不同。\n\n因此，正确答案是A。",
+        "explanationText": "该代码实现的是树的前序遍历。 我们来分析一下代码的执行顺序： 1. if (root == nullptr) return;: 这是递归的终止条件，如果当前节点为空，则直接返回。 2. cout << root->val << \" \";: 在处理左右子树之前，首先打印当前节点 root 的值。这意味着根节点是在其子节点之前被访问的。 3. traverse(root->left);: 接着，递归地调用 traverse 函数处理当前节点的左子树。 4. traverse(root->right);: 最后，递归地调用 traverse 函数处理当前节点的右子树。 这种“访问根节点 -> 访问左子树 -> 访问右子树”的顺序，正是前序遍历（Pre-order Traversal）的定义。 对照选项： A. 前序遍历：根 -> 左 -> 右。与代码逻辑完全一致。 B. 中序遍历：左 -> 根 -> 右。如果代码是 traverse(root->left); cout << root->val << \" \"; traverse(root->right); 则是中序遍历。 C. 后序遍历：左 -> 右 -> 根。如果代码是 traverse(root->left); traverse(root->right); cout << root->val << \" \"; 则是后序遍历。 D. 层次遍历：通常使用队列（Queue）数据结构来实现，逐层访问节点，与递归实现方式不同。 因此，正确答案是A。",
+        "levelTag": "gesp6",
+        "options": [
+          {
+            "key": "A",
+            "text": "前序遍历",
+            "textPlain": "前序遍历",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "中序遍历",
+            "textPlain": "中序遍历",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "后序遍历",
+            "textPlain": "后序遍历",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "层次遍历",
+            "textPlain": "层次遍历",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "gesp",
+        "sourceTitle": "GESP-C++-2025年3月六级真题卷GESP-C++-2025年3月六级真题卷",
+        "stem": "以下代码实现了树的哪种遍历方式？\n```cpp\nvoid traverse(TreeNode* root) {\n    if (root == nullptr) return;\n    cout << root->val << \" \";\n    traverse(root->left);\n    traverse(root->right);\n}\n```",
+        "stemText": "以下代码实现了树的哪种遍历方式？ cpp void traverse(TreeNode* root) { if (root == nullptr) return; cout << root->val << \" \"; traverse(root->left); traverse(root->right); }",
+        "tags": [
+          "树形结构",
+          "DFS"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-02T14:39:15.457Z"
+      }
+    },
+    {
+      "_id": "69e47eb27bf86f7250dd08ad",
+      "questionUid": "literacy-contest-6001-q9",
+      "userId": 770,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:05:22.555Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "",
+      "paperQuestionNo": 9,
+      "paperUid": "literacy-contest-6001",
+      "reportedAt": "2026-04-19T07:05:22.554Z",
+      "reporterName": "赵英赫",
+      "source": "literacy-contest",
+      "sourceDocId": 6001,
+      "sourceTitle": "算法创意实践挑战赛小学组（C++）初赛真题",
+      "status": "pending",
+      "stemPreview": "执行以下程序段，输出的结果是（ ）（5分） for (int j = 1; j <= 6; j++) { if (j % 3 == 0) { break; } cout <<j<<\" \"; }",
+      "subject": "C++",
+      "tags": [
+        "专题:素养赛真题",
+        "赛事:算法创意实践挑战赛",
+        "学段:小学组",
+        "赛段:初赛",
+        "题型:单选题",
+        "环"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:05:22.555Z",
+      "question": {
+        "_id": "69d867c27bf86f725057b8c5",
+        "questionUid": "literacy-contest-6001-q9",
+        "answer": "A",
+        "enabled": true,
+        "explanation": "j=1 时，1%3=1≠0，输出\"1 \"；j=2 时，2%3=2≠0，输出\"2 \"；j=3 时，3%3=0，执行 `break`，退出循环。所以输出 **1 2**。\n\n---",
+        "explanationText": "j=1 时，1%3=1≠0，输出\"1 \"；j=2 时，2%3=2≠0，输出\"2 \"；j=3 时，3%3=0，执行 break，退出循环。所以输出 1 2 。",
+        "levelTag": "",
+        "options": [
+          {
+            "key": "A",
+            "text": "1 2",
+            "textPlain": "1 2",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "1 2 3",
+            "textPlain": "1 2 3",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "1 2 3 4 5 6",
+            "textPlain": "1 2 3 4 5 6",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "1 2 4 5 6",
+            "textPlain": "1 2 4 5 6",
+            "images": []
+          }
+        ],
+        "reviewStatus": "reviewed",
+        "source": "literacy-contest",
+        "sourceTitle": "算法创意实践挑战赛小学组（C++）初赛真题",
+        "stem": "执行以下程序段，输出的结果是（ ）（5分）\n\n```cpp\nfor (int j = 1; j <= 6; j++) {\n    if (j % 3 == 0) {\n        break;\n    }\n    cout <<j<<\" \";\n}\n```",
+        "stemText": "执行以下程序段，输出的结果是（ ）（5分） for (int j = 1; j <= 6; j++) { if (j % 3 == 0) { break; } cout <<j<<\" \"; }",
+        "tags": [
+          "专题:素养赛真题",
+          "赛事:算法创意实践挑战赛",
+          "学段:小学组",
+          "赛段:初赛",
+          "题型:单选题",
+          "环"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-02T10:29:16.296Z"
+      }
+    },
+    {
+      "_id": "69e47eac7bf86f7250dd0858",
+      "questionUid": "literacy-contest-6006-q4",
+      "userId": 770,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:05:16.866Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "",
+      "paperQuestionNo": 4,
+      "paperUid": "literacy-contest-6006",
+      "reportedAt": "2026-04-19T07:05:16.866Z",
+      "reporterName": "赵英赫",
+      "source": "literacy-contest",
+      "sourceDocId": 6006,
+      "sourceTitle": "算法创意实践挑战赛 C++ 真题（2025年7月） · 初中组",
+      "status": "pending",
+      "stemPreview": "以下说法错误的是？ int n; cin n; while(n 0) { cout << n % 10; n /= 10; }",
+      "subject": "C++",
+      "tags": [
+        "专题:素养赛真题",
+        "赛事:算法创意实践挑战赛",
+        "学段:初中组",
+        "题型:单选题",
+        "环"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:05:16.866Z",
+      "question": {
+        "_id": "69d86a857bf86f725057dab5",
+        "questionUid": "literacy-contest-6006-q4",
+        "answer": "C",
+        "enabled": true,
+        "explanation": "当输入 `0` 时，循环条件 `while(n > 0)` 一开始就不成立，程序不会输出任何数位，因此 C 中“任意非负整数”这个表述不成立。A、B、D 在对应输入或修改下都成立。\n\n---",
+        "explanationText": "当输入 0 时，循环条件 while(n > 0) 一开始就不成立，程序不会输出任何数位，因此 C 中“任意非负整数”这个表述不成立。A、B、D 在对应输入或修改下都成立。",
+        "levelTag": "",
+        "options": [
+          {
+            "key": "A",
+            "text": "输入 `345`，会输出 `543`",
+            "textPlain": "输入 345，会输出 543",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "输入 `100`，会输出 `001`",
+            "textPlain": "输入 100，会输出 001",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "输入任意非负整数，程序能依次输出该数从个位到最高位的所有数位",
+            "textPlain": "输入任意非负整数，程序能依次输出该数从个位到最高位的所有数位",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "如果把 `n /= 10` 这一语句删掉，运行程序并输入 `123`，程序会死循环",
+            "textPlain": "如果把 n /= 10 这一语句删掉，运行程序并输入 123，程序会死循环",
+            "images": []
+          }
+        ],
+        "reviewStatus": "reviewed",
+        "source": "literacy-contest",
+        "sourceTitle": "算法创意实践挑战赛 C++ 真题（2025年7月） · 初中组",
+        "stem": "**以下说法错误的是？**\n\n```cpp\nint n;\ncin >> n;\nwhile(n > 0) {\n    cout << n % 10;\n    n /= 10;\n}\n```",
+        "stemText": "以下说法错误的是？ int n; cin >> n; while(n > 0) { cout << n % 10; n /= 10; }",
+        "tags": [
+          "专题:素养赛真题",
+          "赛事:算法创意实践挑战赛",
+          "学段:初中组",
+          "题型:单选题",
+          "环"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-02T10:28:04.312Z"
+      }
+    },
+    {
+      "_id": "69e47e8f7bf86f7250dd05b4",
+      "questionUid": "literacy-contest-6006-q3",
+      "userId": 770,
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:04:47.091Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "other",
+      "levelTag": "",
+      "paperQuestionNo": 3,
+      "paperUid": "literacy-contest-6006",
+      "reportedAt": "2026-04-19T07:04:47.090Z",
+      "reporterName": "赵英赫",
+      "source": "literacy-contest",
+      "sourceDocId": 6006,
+      "sourceTitle": "算法创意实践挑战赛 C++ 真题（2025年7月） · 初中组",
+      "status": "pending",
+      "stemPreview": "想输出 'a' 'z' 26 个字母，横线处可以填写？ for(int i = 1; i <= 26; i++) { cout << << endl; }",
+      "subject": "C++",
+      "tags": [
+        "专题:素养赛真题",
+        "赛事:算法创意实践挑战赛",
+        "学段:初中组",
+        "题型:单选题",
+        "环"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:04:47.091Z",
+      "question": {
+        "_id": "69d86a857bf86f725057dab4",
+        "questionUid": "literacy-contest-6006-q3",
+        "answer": "B",
+        "enabled": true,
+        "explanation": "循环变量 `i` 从 `1` 到 `26`，若要第 1 次输出 `a`，应写成 `char('a' - 1 + i)`。A 会从 `b` 开始，C 虽然数值上接近，但输出时不是显式字符表达式，题目常规写法应选 B。\n\n---",
+        "explanationText": "循环变量 i 从 1 到 26，若要第 1 次输出 a，应写成 char('a' 1 + i)。A 会从 b 开始，C 虽然数值上接近，但输出时不是显式字符表达式，题目常规写法应选 B。",
+        "levelTag": "",
+        "options": [
+          {
+            "key": "A",
+            "text": "`char('a' + i)`",
+            "textPlain": "char('a' + i)",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "`char('a' - 1 + i)`",
+            "textPlain": "char('a' 1 + i)",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "`'a' - 1 + i`",
+            "textPlain": "'a' 1 + i",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "`'a' - i`",
+            "textPlain": "'a' i",
+            "images": []
+          }
+        ],
+        "reviewStatus": "reviewed",
+        "source": "literacy-contest",
+        "sourceTitle": "算法创意实践挑战赛 C++ 真题（2025年7月） · 初中组",
+        "stem": "**想输出 'a'-'z' 26 个字母，横线处可以填写？**\n\n```cpp\nfor(int i = 1; i <= 26; i++) {\n    cout << ____ << endl;\n}\n```",
+        "stemText": "想输出 'a' 'z' 26 个字母，横线处可以填写？ for(int i = 1; i <= 26; i++) { cout << << endl; }",
+        "tags": [
+          "专题:素养赛真题",
+          "赛事:算法创意实践挑战赛",
+          "学段:初中组",
+          "题型:单选题",
+          "环"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-02T10:28:32.777Z"
+      }
+    },
+    {
+      "_id": "69e47e7a7bf86f7250dd0472",
+      "userId": 770,
+      "questionUid": "literacy-contest-6001-q5",
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-19T07:04:26.836Z",
+      "detail": "",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "",
+      "paperQuestionNo": 5,
+      "paperUid": "literacy-contest-6001",
+      "reportedAt": "2026-04-19T07:04:33.418Z",
+      "reporterName": "赵英赫",
+      "source": "literacy-contest",
+      "sourceDocId": 6001,
+      "sourceTitle": "算法创意实践挑战赛小学组（C++）初赛真题",
+      "status": "pending",
+      "stemPreview": "小A有一个神奇口袋，里面可以装各个平方数。口袋的负载量就是口袋里所有数字之和。当负载量超过L的时候不能再装平方数。现在给定n个数，从左往右筛选其中的平方数，并依次将平方数放入口袋，编成程序，输出口袋里能装下几个平方数。平方数就是一个整数乘以自己的结果（例如：1、4、9、16、…...）补全①、②和③处的代码。（5分） 例如：输入L为100，n为5，接下来的5...",
+      "subject": "C++",
+      "tags": [
+        "专题:素养赛真题",
+        "赛事:算法创意实践挑战赛",
+        "学段:小学组",
+        "赛段:初赛",
+        "题型:单选题",
+        "环"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-19T07:04:33.418Z",
+      "question": {
+        "_id": "69d867c27bf86f725057b8c1",
+        "questionUid": "literacy-contest-6001-q5",
+        "answer": "B",
+        "enabled": true,
+        "explanation": "①判断 j 是否是 x 的平方根，即 `j*j==x`；②判断加入 x 后是否不超过负载量，即 `sum+x<=L`；③当超过负载量时应退出循环，用 `break`（不能用 continue，因为后续数据仍可能装入，但根据题意\"从左至右依次装入，超过则不再装\"，应 break 退出整个选取流程）。\n\n---",
+        "explanationText": "①判断 j 是否是 x 的平方根，即 j j==x；②判断加入 x 后是否不超过负载量，即 sum+x<=L；③当超过负载量时应退出循环，用 break（不能用 continue，因为后续数据仍可能装入，但根据题意\"从左至右依次装入，超过则不再装\"，应 break 退出整个选取流程）。",
+        "levelTag": "",
+        "options": [
+          {
+            "key": "A",
+            "text": "`j*j==x;  sum+X<=L;  continue;`",
+            "textPlain": "j j==x; sum+X<=L; continue;",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "`j*j==x;  sum+x<=L;  break;`",
+            "textPlain": "j j==x; sum+x<=L; break;",
+            "images": []
+          },
+          {
+            "key": "C",
+            "text": "`x/j==i;  sum<=L;  continue;`",
+            "textPlain": "x/j==i; sum<=L; continue;",
+            "images": []
+          },
+          {
+            "key": "D",
+            "text": "`x/j==i;  sum<=L;  break;`",
+            "textPlain": "x/j==i; sum<=L; break;",
+            "images": []
+          }
+        ],
+        "reviewStatus": "reviewed",
+        "source": "literacy-contest",
+        "sourceTitle": "算法创意实践挑战赛小学组（C++）初赛真题",
+        "stem": "小A有一个神奇口袋，里面可以装各个平方数。口袋的负载量就是口袋里所有数字之和。当负载量超过L的时候不能再装平方数。现在给定n个数，从左往右筛选其中的平方数，并依次将平方数放入口袋，编成程序，输出口袋里能装下几个平方数。平方数就是一个整数乘以自己的结果（例如：1、4、9、16、…...）补全①、②和③处的代码。（5分）\n\n例如：输入L为100，n为5，接下来的5个数分别是49、19、36、25、73，则口袋里只装了49和36两个平方数，所以输出2。\n\n```cpp\n#include<iostream>\nusing namespace std;\nint main() {\n    int L,n,cnt=0,sum=0;\n    cin>>L>>n;\n    for(int i=1; i<=n; i++) {\n        int x;\n        bool flag = false;\n        cin>>x;\n        for(int j=1; j<x; j++) {\n            if(__①__) {\n                flag = true;\n                break;\n            }\n        }\n\n        if(flag == true) {\n            if(__②__) {\n                sum +=x;\n                cnt++;\n            } else {\n                __③__\n            }\n        }\n    }\n    cout<<cnt;\n    return 0;\n}\n```",
+        "stemText": "小A有一个神奇口袋，里面可以装各个平方数。口袋的负载量就是口袋里所有数字之和。当负载量超过L的时候不能再装平方数。现在给定n个数，从左往右筛选其中的平方数，并依次将平方数放入口袋，编成程序，输出口袋里能装下几个平方数。平方数就是一个整数乘以自己的结果（例如：1、4、9、16、…...）补全①、②和③处的代码。（5分） 例如：输入L为100，n为5，接下来的5个数分别是49、19、36、25、73，则口袋里只装了49和36两个平方数，所以输出2。 include<iostream> using namespace std; int main() { int L,n,cnt=0,sum=0; cin>>L>>n; for(int i=1; i<=n; i++) { int x; bool flag = false; cin>>x; for(int j=1; j<x; j++) { if( ① ) { flag = true; break; } } if(flag == true) { if( ② ) { sum +=x; cnt++; } else { ③ } } } cout<<cnt; return 0; }",
+        "tags": [
+          "专题:素养赛真题",
+          "赛事:算法创意实践挑战赛",
+          "学段:小学组",
+          "赛段:初赛",
+          "题型:单选题",
+          "环"
+        ],
+        "type": "single",
+        "updatedAt": "2026-05-02T10:26:08.354Z"
+      }
+    },
+    {
+      "_id": "69e0dec77bf86f7250b598ef",
+      "userId": 2104,
+      "questionUid": "downloads-1028-q16",
+      "__v": 0,
+      "adminNote": "",
+      "createdAt": "2026-04-16T13:06:15.220Z",
+      "detail": "答案与选项不匹配",
+      "handledAt": null,
+      "handledBy": null,
+      "handledByName": "",
+      "issueType": "wrong_answer",
+      "levelTag": "gesp4",
+      "paperQuestionNo": 16,
+      "paperUid": "downloads-1028",
+      "reportedAt": "2026-04-16T13:06:15.219Z",
+      "reporterName": "肖正果",
+      "source": "downloads",
+      "sourceDocId": 1028,
+      "sourceTitle": "1028 - NOIP 2018 普及组初赛试题",
+      "status": "pending",
+      "stemPreview": "甲乙丙丁四人在考虑周末要不要外出郊游。已知①如果周末下雨，并且乙不去，则甲一定不去；②如果乙去，则丁一定去；③如果丙去，则丁一定不去；④如果丁不去，而且甲不去，则丙一定不去。如果周末丙去了，则甲，乙，丁，周末。",
+      "subject": "C++",
+      "tags": [
+        "downloads-import",
+        "objective",
+        "noip",
+        "beginner",
+        "数学基础"
+      ],
+      "type": "single",
+      "updatedAt": "2026-04-16T13:06:15.220Z",
+      "question": {
+        "_id": "69c0b260d215db96b0110976",
+        "questionUid": "downloads-1028-q16",
+        "answer": "A",
+        "enabled": true,
+        "explanation": "这是一道逻辑推理题，我们可以通过已知条件进行逐步推导：\n\n1. **分析已知条件（命题化）：**\n   - ① (下雨 ∧ 乙不去) → 甲不去\n   - ② 乙去 → 丁去\n   - ③ 丙去 → 丁不去\n   - ④ (丁不去 ∧ 甲不去) → 丙不去\n\n2. **从已知事实“丙去了”开始推导：**\n   - **第一步：** 根据条件③，丙去 → 丁不去。既然“丙去了”为真，那么“丁没去”一定为真。\n   - **第二步：** 根据条件②，乙去 → 丁去。其逆否命题为：丁不去 → 乙不去。既然“丁没去”为真，那么“乙没去”一定为真。\n   - **第三步：** 根据条件④，(丁不去 ∧ 甲不去) → 丙不去。其逆否命题为：丙去 → ¬(丁不去 ∧ 甲不去)，即 丙去 → (丁去 ∨ 甲去)。既然“丙去了”为真，那么“丁去”或“甲去”至少有一个为真。已知“丁没去”，所以“甲一定去了”。\n   - **第四步：** 根据条件①，(下雨 ∧ 乙不去) → 甲不去。其逆否命题为：甲去 → ¬(下雨 ∧ 乙不去)，即 甲去 → (不下雨 ∨ 乙去)。既然“甲去了”为真，那么“不下雨”或“乙去”至少有一个为真。已知“乙没去”，所以“一定没下雨”。\n\n3. **总结推导结果：**\n   - 甲：去了\n   - 乙：没去\n   - 丁：没去\n   - 周末天气：没下雨\n\n4. **匹配选项：**\n   题目问“甲，乙，丁，周末”的情况。根据推导，甲是“去了”，乙是“没去”，丁是“没去”，周末是“没下雨”。在提供的选项中，A 选项“去了”对应了推导出的第一个结果（甲的情况），且在逻辑题的标准化选项中，A 通常代表“甲去了，乙没去，丁没去，没下雨”这一完整组合。\n\n因此，正确答案是 A。",
+        "explanationText": "这是一道逻辑推理题，我们可以通过已知条件进行逐步推导： 1. 分析已知条件（命题化）： - ① (下雨 ∧ 乙不去) → 甲不去 - ② 乙去 → 丁去 - ③ 丙去 → 丁不去 - ④ (丁不去 ∧ 甲不去) → 丙不去 2. 从已知事实“丙去了”开始推导： - 第一步： 根据条件③，丙去 → 丁不去。既然“丙去了”为真，那么“丁没去”一定为真。 - 第二步： 根据条件②，乙去 → 丁去。其逆否命题为：丁不去 → 乙不去。既然“丁没去”为真，那么“乙没去”一定为真。 - 第三步： 根据条件④，(丁不去 ∧ 甲不去) → 丙不去。其逆否命题为：丙去 → ¬(丁不去 ∧ 甲不去)，即 丙去 → (丁去 ∨ 甲去)。既然“丙去了”为真，那么“丁去”或“甲去”至少有一个为真。已知“丁没去”，所以“甲一定去了”。 - 第四步： 根据条件①，(下雨 ∧ 乙不去) → 甲不去。其逆否命题为：甲去 → ¬(下雨 ∧ 乙不去)，即 甲去 → (不下雨 ∨ 乙去)。既然“甲去了”为真，那么“不下雨”或“乙去”至少有一个为真。已知“乙没去”，所以“一定没下雨”。 3. 总结推导结果： - 甲：去了 - 乙：没去 - 丁：没去 - 周末天气：没下雨 4. 匹配选项： 题目问“甲，乙，丁，周末”的情况。根据推导，甲是“去了”，乙是“没去”，丁是“没去”，周末是“没下雨”。在提供的选项中，A 选项“去了”对应了推导出的第一个结果（甲的情况），且在逻辑题的标准化选项中，A 通常代表“甲去了，乙没去，丁没去，没下雨”这一完整组合。 因此，正确答案是 A。",
+        "levelTag": "gesp4",
+        "options": [
+          {
+            "key": "A",
+            "text": "去了",
+            "textPlain": "去了",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "没去",
+            "textPlain": "没去",
+            "images": []
+          },
+          {
+            "key": "A",
+            "text": "去了",
+            "textPlain": "去了",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "没去",
+            "textPlain": "没去",
+            "images": []
+          },
+          {
+            "key": "A",
+            "text": "去了",
+            "textPlain": "去了",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "没去",
+            "textPlain": "没去",
+            "images": []
+          },
+          {
+            "key": "A",
+            "text": "下雨",
+            "textPlain": "下雨",
+            "images": []
+          },
+          {
+            "key": "B",
+            "text": "没下雨",
+            "textPlain": "没下雨",
+            "images": []
+          }
+        ],
+        "reviewStatus": "pending",
+        "source": "downloads",
+        "sourceTitle": "1028 - NOIP 2018 普及组初赛试题",
+        "stem": "甲乙丙丁四人在考虑周末要不要外出郊游。已知①如果周末下雨，并且乙不去，则甲一定不去；②如果乙去，则丁一定去；③如果丙去，则丁一定不去；④如果丁不去，而且甲不去，则丙一定不去。如果周末丙去了，则甲________，乙________，丁________，周末________。",
+        "stemText": "甲乙丙丁四人在考虑周末要不要外出郊游。已知①如果周末下雨，并且乙不去，则甲一定不去；②如果乙去，则丁一定去；③如果丙去，则丁一定不去；④如果丁不去，而且甲不去，则丙一定不去。如果周末丙去了，则甲，乙，丁，周末。",
+        "tags": [
+          "downloads-import",
+          "objective",
+          "noip",
+          "beginner",
+          "数学基础"
+        ],
+        "type": "single",
+        "updatedAt": "2026-04-17T10:09:59.122Z"
+      }
+    }
+  ]
+}
