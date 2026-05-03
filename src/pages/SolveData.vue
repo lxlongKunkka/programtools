@@ -2514,7 +2514,8 @@ export default {
 .solve-data-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 52px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   font-size: 14px;
   background: #f5f7fa;
@@ -2628,6 +2629,7 @@ export default {
 /*  Main layout  */
 .main-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
   padding: 12px;
@@ -2732,6 +2734,7 @@ export default {
 .detail-panel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;

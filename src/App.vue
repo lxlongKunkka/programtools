@@ -281,6 +281,11 @@ export default {
 
 <style>
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif; margin: 0; }
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 .header {
   background: #2b9af3;
   color: white;
@@ -347,7 +352,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
   transition: all 0.15s;
 }
 .btn-logout:hover { background: rgba(239,68,68,0.28); color: #fff; }
-main { padding: 0; }
+main {
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .mobile-bottom-nav {
   display: none;
