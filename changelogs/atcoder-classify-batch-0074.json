@@ -11,9 +11,9 @@
     },
     {
       "pid": "atcoder:2298",
-      "chapterId": "cpp-3-5-2",
+      "chapterId": "cpp-4-2-1",
       "title": "[ABC450B] 分段购票",
-      "reason": "枚举进阶，枚举所有分段购票方案，比较各种拆分方式总费用取最小值"
+      "reason": "二维数组基础，读入二维费用矩阵C[i][j]，三重循环枚举(a,b,c)判断分段是否更优（已从cpp-3-5-2修正：L3未学二维数组）"
     },
     {
       "pid": "atcoder:2299",
@@ -29,9 +29,9 @@
     },
     {
       "pid": "atcoder:2301",
-      "chapterId": "cpp-4-7-1",
+      "chapterId": "cpp-7-6-2",
       "title": "[ABC450E] 斐波那契字符串",
-      "reason": "递推基础，类Fibonacci方式生成字符串（F(n)=F(n-1)+F(n-2)），递归+记忆化查询第K字符"
+      "reason": "字符串算法进阶，查询S_10^18的[L,R]字符频次，递归下降Fibonacci树+long long溢出保护（已从cpp-4-7-1修正：L4远不足以处理10^18级索引）"
     },
     {
       "pid": "atcoder:2302",
@@ -149,9 +149,9 @@
     },
     {
       "pid": "atcoder:2321",
-      "chapterId": "cpp-9-5-4",
+      "chapterId": "cpp-9-6-1",
       "title": "[ABC453E] 队伍划分",
-      "reason": "计数DP进阶，将N人划分两队满足约束，组合计数DP+前缀和优化"
+      "reason": "DP优化，枚举队伍大小k，前缀和优化组合数累加（已从cpp-9-5-4修正：该题是计数/组合DP，非概率期望换根DP）"
     },
     {
       "pid": "atcoder:2322",
