@@ -3,35 +3,185 @@
   "range": "atcoder:1404-1436 (ABC314D-ABC320A, 30 problems, gaps at 1408,1423,1430)",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:1404", "chapterId": "cpp-2-3-3",  "title": "ABC314D LOWER",                             "reason": "字符判断与大小写转换：'1'→大写、'0'→小写、'?'→任意，统计各操作结果串数量" },
-    { "pid": "atcoder:1405", "chapterId": "cpp-9-5-1",  "title": "ABC314E Roulettes",                         "reason": "概率DP基础：最小化集齐所有奖品的期望花费，dp[mask]表示已有prize集mask的期望成本" },
-    { "pid": "atcoder:1406", "chapterId": "cpp-9-5-1",  "title": "ABC314F A Certain Game",                    "reason": "概率DP基础：团队锦标赛按概率决出胜者，dp[i]表示某队赢得i场的概率期望" },
-    { "pid": "atcoder:1407", "chapterId": "cpp-9-5-1",  "title": "ABC314G Amulets",                           "reason": "概率DP基础：选K种护身符使怪物无法击败的概率最小化，贪心+概率DP" },
-    { "pid": "atcoder:1409", "chapterId": "cpp-5-5-1",  "title": "ABC315B The Middle Day",                    "reason": "前缀和基础：对各月天数建前缀和，二分定位一年中间日期所在月份和具体日" },
-    { "pid": "atcoder:1410", "chapterId": "cpp-5-2-3",  "title": "ABC315C Flavors",                           "reason": "set/map：用map记录每种口味的最大分，枚举选两种口味（同味½，异味正常）最大化" },
-    { "pid": "atcoder:1411", "chapterId": "cpp-6-2-1",  "title": "ABC315D Magical Cookies",                   "reason": "队列基本用法：BFS/队列模拟饼干消除，反复删除同行或同列只剩一种颜色的整行/列" },
-    { "pid": "atcoder:1412", "chapterId": "cpp-8-7-1",  "title": "ABC315E Prerequisites",                     "reason": "拓扑排序BFS实现：书籍阅读有前置依赖，拓扑排序确定合法阅读顺序" },
-    { "pid": "atcoder:1413", "chapterId": "cpp-6-10-2", "title": "ABC315F Shortcuts",                         "reason": "线性DP基础与状态设计：dp[i][k]表示到第i个检查点跳过k个时的最短路径距离" },
-    { "pid": "atcoder:1414", "chapterId": "cpp-5-6-1",  "title": "ABC315G Ai + Bj + Ck = X",                  "reason": "二分查找：枚举A_i和B_j，二分在C数组中查找X-A_i-B_j，统计满足条件的三元组数" },
-    { "pid": "atcoder:1415", "chapterId": "cpp-1-5-3",  "title": "ABC317A Potions",                           "reason": "循环应用：遍历药水序列，累加体力并判断是否最小满足条件" },
-    { "pid": "atcoder:1416", "chapterId": "cpp-1-5-3",  "title": "ABC317B MissingNo.",                        "reason": "循环应用统计：用期望和减实际和得到缺失整数，或标记数组找缺失位置" },
-    { "pid": "atcoder:1417", "chapterId": "cpp-6-9-3",  "title": "ABC317C Remembering the Days",              "reason": "路径枚举与剪枝：枚举所有简单路径（N≤20），DFS + 剪枝求最长简单路" },
-    { "pid": "atcoder:1418", "chapterId": "cpp-5-8-3",  "title": "ABC317D President",                         "reason": "贪心经典例题：排序后贪心转票，最小化需拉拢的选民数量以赢得选举" },
-    { "pid": "atcoder:1419", "chapterId": "cpp-6-8-5",  "title": "ABC317E Avoid Eye Contact",                 "reason": "BFS的应用：预处理怪物视线覆盖格，BFS求从S到T绕开视线的最短路" },
-    { "pid": "atcoder:1420", "chapterId": "cpp-5-2-3",  "title": "ABC317F Nim",                               "reason": "set/map：枚举两个数组所有对的XOR值，用map统计频次，查三元组A⊕B⊕C=0的数量" },
-    { "pid": "atcoder:1421", "chapterId": "cpp-9-9-4",  "title": "ABC317G Rearranging",                       "reason": "网络流建模例题：行内重排使每列成排列，建二分图匹配/流模型判定可行性" },
-    { "pid": "atcoder:1422", "chapterId": "cpp-1-5-3",  "title": "ABC318A Full Moon",                         "reason": "循环应用：等差数列M, M+L, M+2L, ...中在[1,N]内的项数，简单算术" },
-    { "pid": "atcoder:1424", "chapterId": "cpp-6-10-2", "title": "ABC318C Blue Spring",                       "reason": "线性DP基础与状态设计：dp[i]为前i天最低旅行费用，滑动窗口选K连续天买通票" },
-    { "pid": "atcoder:1425", "chapterId": "cpp-9-4-1",  "title": "ABC318D General Weighted Max Matching",     "reason": "状压DP基础：N≤8节点完全图，状压DP求最大权不相交边集（最大权匹配）" },
-    { "pid": "atcoder:1426", "chapterId": "cpp-8-10-1", "title": "ABC318E Sandwiches",                        "reason": "树状数组（BIT）单点修改与区间查询：枚举中间位置j，BIT统计左侧小于B[j]和右侧大于B[j]的数" },
-    { "pid": "atcoder:1427", "chapterId": "cpp-9-5-4",  "title": "ABC318F Octopus",                           "reason": "计数DP基础：每个机器人目标在某区间内，计数DP统计不冲突的有效分配方案数" },
-    { "pid": "atcoder:1428", "chapterId": "cpp-6-9-3",  "title": "ABC318G Typical Path Problem",              "reason": "路径枚举与剪枝：判断图中是否存在经过指定中间节点v的从s到t的简单路径" },
-    { "pid": "atcoder:1429", "chapterId": "cpp-5-2-3",  "title": "ABC319A Legendary Players",                 "reason": "set/map：用map建立用户名→评分的映射，查询输出对应选手的AtCoder评分" },
-    { "pid": "atcoder:1431", "chapterId": "cpp-9-5-1",  "title": "ABC319C False Hope",                        "reason": "概率DP基础：计算观察3×3网格时不出现失望状态（期望值与实际不符）的概率" },
-    { "pid": "atcoder:1432", "chapterId": "cpp-5-6-2",  "title": "ABC319D Minimum Width",                     "reason": "二分答案：二分行宽W，验证所有单词能否以不超过W字符/行的格式排版" },
-    { "pid": "atcoder:1433", "chapterId": "cpp-6-10-2", "title": "ABC319E Bus Stops",                         "reason": "线性DP基础与状态设计：dp[i]为到达第i站的最早时刻，每站需等下班车再出发" },
-    { "pid": "atcoder:1434", "chapterId": "cpp-7-10-1", "title": "ABC319F Fighter Takahashi",                 "reason": "树形DP基础框架：树上DP，在路径上收集药剂，最优化战斗策略的树形DP" },
-    { "pid": "atcoder:1435", "chapterId": "cpp-6-8-5",  "title": "ABC319G Counting Shortest Paths",           "reason": "BFS的应用：BFS求最短路层次图，同层DP累计最短路计数" },
-    { "pid": "atcoder:1436", "chapterId": "cpp-1-5-3",  "title": "ABC320A Leyland Number",                    "reason": "循环应用：计算a^b + b^a（a,b≤10），直接幂次循环求值输出" }
+    {
+      "pid": "atcoder:1404",
+      "chapterId": "cpp-2-3-3",
+      "title": "ABC314D LOWER",
+      "reason": "字符判断与大小写转换：'1'→大写、'0'→小写、'?'→任意，统计各操作结果串数量"
+    },
+    {
+      "pid": "atcoder:1405",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC314E Roulettes",
+      "reason": "概率DP基础：最小化集齐所有奖品的期望花费，dp[mask]表示已有prize集mask的期望成本"
+    },
+    {
+      "pid": "atcoder:1406",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC314F A Certain Game",
+      "reason": "概率DP基础：团队锦标赛按概率决出胜者，dp[i]表示某队赢得i场的概率期望"
+    },
+    {
+      "pid": "atcoder:1407",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC314G Amulets",
+      "reason": "概率DP基础：选K种护身符使怪物无法击败的概率最小化，贪心+概率DP"
+    },
+    {
+      "pid": "atcoder:1409",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC315B The Middle Day",
+      "reason": "前缀和基础：对各月天数建前缀和，二分定位一年中间日期所在月份和具体日"
+    },
+    {
+      "pid": "atcoder:1410",
+      "chapterId": "cpp-5-2-3",
+      "title": "ABC315C Flavors",
+      "reason": "set/map：用map记录每种口味的最大分，枚举选两种口味（同味½，异味正常）最大化"
+    },
+    {
+      "pid": "atcoder:1411",
+      "chapterId": "cpp-6-2-1",
+      "title": "ABC315D Magical Cookies",
+      "reason": "队列基本用法：BFS/队列模拟饼干消除，反复删除同行或同列只剩一种颜色的整行/列"
+    },
+    {
+      "pid": "atcoder:1412",
+      "chapterId": "cpp-8-7-1",
+      "title": "ABC315E Prerequisites",
+      "reason": "拓扑排序BFS实现：书籍阅读有前置依赖，拓扑排序确定合法阅读顺序"
+    },
+    {
+      "pid": "atcoder:1413",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC315F Shortcuts",
+      "reason": "线性DP基础与状态设计：dp[i][k]表示到第i个检查点跳过k个时的最短路径距离"
+    },
+    {
+      "pid": "atcoder:1414",
+      "chapterId": "cpp-5-6-1",
+      "title": "ABC315G Ai + Bj + Ck = X",
+      "reason": "二分查找：枚举A_i和B_j，二分在C数组中查找X-A_i-B_j，统计满足条件的三元组数"
+    },
+    {
+      "pid": "atcoder:1415",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC317A Potions",
+      "reason": "循环应用：遍历药水序列，累加体力并判断是否最小满足条件"
+    },
+    {
+      "pid": "atcoder:1416",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC317B MissingNo.",
+      "reason": "循环应用统计：用期望和减实际和得到缺失整数，或标记数组找缺失位置"
+    },
+    {
+      "pid": "atcoder:1417",
+      "chapterId": "cpp-6-9-3",
+      "title": "ABC317C Remembering the Days",
+      "reason": "路径枚举与剪枝：枚举所有简单路径（N≤20），DFS + 剪枝求最长简单路"
+    },
+    {
+      "pid": "atcoder:1418",
+      "chapterId": "cpp-5-8-3",
+      "title": "ABC317D President",
+      "reason": "贪心经典例题：排序后贪心转票，最小化需拉拢的选民数量以赢得选举"
+    },
+    {
+      "pid": "atcoder:1419",
+      "chapterId": "cpp-6-8-5",
+      "title": "ABC317E Avoid Eye Contact",
+      "reason": "BFS的应用：预处理怪物视线覆盖格，BFS求从S到T绕开视线的最短路"
+    },
+    {
+      "pid": "atcoder:1420",
+      "chapterId": "cpp-5-2-3",
+      "title": "ABC317F Nim",
+      "reason": "set/map：枚举两个数组所有对的XOR值，用map统计频次，查三元组A⊕B⊕C=0的数量"
+    },
+    {
+      "pid": "atcoder:1421",
+      "chapterId": "cpp-9-9-4",
+      "title": "ABC317G Rearranging",
+      "reason": "网络流建模例题：行内重排使每列成排列，建二分图匹配/流模型判定可行性"
+    },
+    {
+      "pid": "atcoder:1422",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC318A Full Moon",
+      "reason": "循环应用：等差数列M, M+L, M+2L, ...中在[1,N]内的项数，简单算术"
+    },
+    {
+      "pid": "atcoder:1424",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC318C Blue Spring",
+      "reason": "线性DP基础与状态设计：dp[i]为前i天最低旅行费用，滑动窗口选K连续天买通票"
+    },
+    {
+      "pid": "atcoder:1425",
+      "chapterId": "cpp-9-4-1",
+      "title": "ABC318D General Weighted Max Matching",
+      "reason": "状压DP基础：N≤8节点完全图，状压DP求最大权不相交边集（最大权匹配）"
+    },
+    {
+      "pid": "atcoder:1426",
+      "chapterId": "cpp-8-10-1",
+      "title": "ABC318E Sandwiches",
+      "reason": "树状数组（BIT）单点修改与区间查询：枚举中间位置j，BIT统计左侧小于B[j]和右侧大于B[j]的数"
+    },
+    {
+      "pid": "atcoder:1427",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC318F Octopus",
+      "reason": "计数DP基础：每个机器人目标在某区间内，计数DP统计不冲突的有效分配方案数"
+    },
+    {
+      "pid": "atcoder:1428",
+      "chapterId": "cpp-6-9-3",
+      "title": "ABC318G Typical Path Problem",
+      "reason": "路径枚举与剪枝：判断图中是否存在经过指定中间节点v的从s到t的简单路径"
+    },
+    {
+      "pid": "atcoder:1429",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC319A Legendary Players",
+      "reason": "set/map：用map建立用户名→评分的映射，查询输出对应选手的AtCoder评分"
+    },
+    {
+      "pid": "atcoder:1431",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC319C False Hope",
+      "reason": "概率DP基础：计算观察3×3网格时不出现失望状态（期望值与实际不符）的概率"
+    },
+    {
+      "pid": "atcoder:1432",
+      "chapterId": "cpp-5-6-2",
+      "title": "ABC319D Minimum Width",
+      "reason": "二分答案：二分行宽W，验证所有单词能否以不超过W字符/行的格式排版"
+    },
+    {
+      "pid": "atcoder:1433",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC319E Bus Stops",
+      "reason": "线性DP基础与状态设计：dp[i]为到达第i站的最早时刻，每站需等下班车再出发"
+    },
+    {
+      "pid": "atcoder:1434",
+      "chapterId": "cpp-7-10-1",
+      "title": "ABC319F Fighter Takahashi",
+      "reason": "树形DP基础框架：树上DP，在路径上收集药剂，最优化战斗策略的树形DP"
+    },
+    {
+      "pid": "atcoder:1435",
+      "chapterId": "cpp-6-8-5",
+      "title": "ABC319G Counting Shortest Paths",
+      "reason": "BFS的应用：BFS求最短路层次图，同层DP累计最短路计数"
+    },
+    {
+      "pid": "atcoder:1436",
+      "chapterId": "cpp-1-5-3",
+      "title": "ABC320A Leyland Number",
+      "reason": "循环应用：计算a^b + b^a（a,b≤10），直接幂次循环求值输出"
+    }
   ]
 }

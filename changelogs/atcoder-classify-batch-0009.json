@@ -29,7 +29,7 @@
     { "pid": "atcoder:271", "chapterId": "cpp-9-4-3",  "title": "ABC154E Almost Everywhere Zero","reason": "数位 DP 计数恰 K 非零位" },
     { "pid": "atcoder:272", "chapterId": "cpp-7-11-3", "title": "ABC154F Many Many Paths",        "reason": "组合恒等式: 网格路径之和" },
     { "pid": "atcoder:273", "chapterId": "cpp-1-4-5",  "title": "ABC155A Poor",                    "reason": "判恰好两数相等" },
-    { "pid": "atcoder:274", "chapterId": "cpp-1-5-3",  "title": "ABC155B Papers Please",          "reason": "遍历偶数判断 3 戹5 整除，需要循环" }  
+    { "pid": "atcoder:274", "chapterId": "cpp-1-5-3",  "title": "ABC155B Papers Please",          "reason": "遍历偶数判断 3 或 5 整除，需要循环" },
     { "pid": "atcoder:275", "chapterId": "cpp-5-2-3",  "title": "ABC155C Poll",                   "reason": "map 计数 + 字典序输出" },
     { "pid": "atcoder:276", "chapterId": "cpp-8-3-1",  "title": "ABC155D Pairs",                   "reason": "二分答案 + 双指针计算 ≤x 对数" },
     { "pid": "atcoder:277", "chapterId": "cpp-9-4-4",  "title": "ABC155E Payment",                "reason": "数位 DP/贪心：进位与不进位" }

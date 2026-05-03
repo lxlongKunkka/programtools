@@ -3,35 +3,185 @@
   "range": "atcoder:978-1008 (ABC256E-ABC260C, 30 problems, skip 1006)",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:978",  "chapterId": "cpp-8-7-1",  "title": "ABC256E Takahashi's Anguish",          "reason": "函数图每节点一条出边，拓扑排序找环，每环取最小C累加" },
-    { "pid": "atcoder:979",  "chapterId": "cpp-9-7-2",  "title": "ABC256Ex I like Query Problem",        "reason": "分块维护区间整除（均摊：每块均一化后只需 O(√N) 迭代）" },
-    { "pid": "atcoder:980",  "chapterId": "cpp-8-10-1", "title": "ABC256F Cumulative^3 Sum",             "reason": "三重前缀和关系：D_x = Σ(j=1..x) (x-j+1)(x-j+2)/2 * A_j，BIT单点更新" },
-    { "pid": "atcoder:981",  "chapterId": "cpp-7-3-2",  "title": "ABC256G Black and White Stones",       "reason": "Burnside引理：对称方案数 = 旋转等价类 + 矩阵快速幂求 k 步方案数" },
-    { "pid": "atcoder:982",  "chapterId": "cpp-1-2-3",  "title": "ABC257A A to Z String 2",              "reason": "字符 = char('A' + (X-1)/N)" },
-    { "pid": "atcoder:983",  "chapterId": "cpp-3-1-3",  "title": "ABC257B 1D Pawn",                      "reason": "一维数组维护棋子位置，逐次模拟" },
-    { "pid": "atcoder:984",  "chapterId": "cpp-5-5-1",  "title": "ABC257C Robot Takahashi",              "reason": "排序后枚举阈值 X，前缀和统计准确判断数" },
-    { "pid": "atcoder:985",  "chapterId": "cpp-8-5-1",  "title": "ABC257D Jumping Takahashi 2",          "reason": "二分 S，建图后 Dijkstra / Floyd 验证全图可达" },
-    { "pid": "atcoder:986",  "chapterId": "cpp-5-8-3",  "title": "ABC257E Addition and Multiplication 2","reason": "贪心：先定最大位数 = N/min(C_i)，再逐位从大到小选数字" },
-    { "pid": "atcoder:987",  "chapterId": "cpp-9-5-4",  "title": "ABC257Ex Dice Sum 2",                  "reason": "骰子掷和计数 DP + 容斥" },
-    { "pid": "atcoder:988",  "chapterId": "cpp-8-5-1",  "title": "ABC257F Teleporter Setting",           "reason": "双向 Dijkstra：固定图中先跑 d1,dN，再枚举每个 i 加未知边求最短路" },
-    { "pid": "atcoder:989",  "chapterId": "cpp-9-1-2",  "title": "ABC257G Prefix Concatenation",         "reason": "Z函数求 S 各前缀在 T 的对应位置，再 DP 求最小前缀拼接数" },
-    { "pid": "atcoder:990",  "chapterId": "cpp-1-2-3",  "title": "ABC258A When?",                        "reason": "21*60+K 总分钟转 HH:MM，printf(\"%02d:%02d\")" },
-    { "pid": "atcoder:991",  "chapterId": "cpp-2-5-2",  "title": "ABC258B Number Box",                   "reason": "枚举8方向×N×N起点，取模绕行 N 步拼最大数" },
-    { "pid": "atcoder:992",  "chapterId": "cpp-2-4-1",  "title": "ABC258C Rotation",                     "reason": "累加 offset，查询 2 x 时取 S[(x-1+offset)%N]" },
-    { "pid": "atcoder:993",  "chapterId": "cpp-5-5-1",  "title": "ABC258D Trophy",                       "reason": "枚举最终停在第 i 关：preA[i] + (X-i)*B[i]，前缀和辅助" },
-    { "pid": "atcoder:994",  "chapterId": "cpp-7-4-1",  "title": "ABC258E Packing Potatoes",             "reason": "倍增：预处理每次满箱跨周期的倍增跳跃" },
-    { "pid": "atcoder:995",  "chapterId": "cpp-7-3-2",  "title": "ABC258Ex Odd Steps",                   "reason": "矩阵快速幂加速 DP 转移：禁止前缀和恰好落在特定点" },
-    { "pid": "atcoder:996",  "chapterId": "cpp-8-5-1",  "title": "ABC258F Main Street",                  "reason": "Dijkstra on virtual graph：主干道连接各整数网格块" },
-    { "pid": "atcoder:997",  "chapterId": "cpp-2-5-2",  "title": "ABC258G Triangle",                     "reason": "邻接矩阵 O(N^3) 三元组枚举三角形（N 小）" },
-    { "pid": "atcoder:998",  "chapterId": "cpp-1-4-1",  "title": "ABC259A Growth Record",                "reason": "min(M,X)*D + (T - min(N,X)*D) 条件计算" },
-    { "pid": "atcoder:999",  "chapterId": "cpp-2-2-2",  "title": "ABC259B Counterclockwise Rotation",    "reason": "cos/sin 数学函数旋转公式" },
-    { "pid": "atcoder:1000", "chapterId": "cpp-5-9-2",  "title": "ABC259C XX to XXX",                    "reason": "双指针比较两串各连续块的字符和个数（S块数≤T块数且字符一致）" },
-    { "pid": "atcoder:1001", "chapterId": "cpp-8-2-1",  "title": "ABC259D Circumferences",              "reason": "并查集：起点/终点加入同圆即可达，圆与圆相交则合并" },
-    { "pid": "atcoder:1002", "chapterId": "cpp-5-3-3",  "title": "ABC259E LCM on Whiteboard",            "reason": "质因数分解：每个素数看是否唯一决定最大幂次" },
-    { "pid": "atcoder:1003", "chapterId": "cpp-9-5-4",  "title": "ABC259Ex Yet Another Path Counting",  "reason": "对角线分治 + 计数DP：相同标签的起终点对数" },
-    { "pid": "atcoder:1004", "chapterId": "cpp-7-10-1", "title": "ABC259F Select Edges",                "reason": "树形DP：以度数 d_i 为约束的树边最大权值选取" },
-    { "pid": "atcoder:1005", "chapterId": "cpp-9-9-3",  "title": "ABC259G Grid Card Game",              "reason": "选行/列最大化收益 = 最小割：负格子不能同时选行列" },
-    { "pid": "atcoder:1007", "chapterId": "cpp-4-6-6",  "title": "ABC260B Better Students",             "reason": "结构体排序三轮：按数学分→英语分→总分，带编号优先" },
-    { "pid": "atcoder:1008", "chapterId": "cpp-6-10-2", "title": "ABC260C Changing Jewels",             "reason": "线性递推 DP：每级红转为红(n-1)+X蓝(n)，蓝(n)转为红(n-1)+Y蓝(n-1)" }
+    {
+      "pid": "atcoder:978",
+      "chapterId": "cpp-8-7-1",
+      "title": "ABC256E Takahashi's Anguish",
+      "reason": "函数图每节点一条出边，拓扑排序找环，每环取最小C累加"
+    },
+    {
+      "pid": "atcoder:979",
+      "chapterId": "cpp-9-7-2",
+      "title": "ABC256Ex I like Query Problem",
+      "reason": "分块维护区间整除（均摊：每块均一化后只需 O(√N) 迭代）"
+    },
+    {
+      "pid": "atcoder:980",
+      "chapterId": "cpp-8-10-1",
+      "title": "ABC256F Cumulative^3 Sum",
+      "reason": "三重前缀和关系：D_x = Σ(j=1..x) (x-j+1)(x-j+2)/2 * A_j，BIT单点更新"
+    },
+    {
+      "pid": "atcoder:981",
+      "chapterId": "cpp-7-3-2",
+      "title": "ABC256G Black and White Stones",
+      "reason": "Burnside引理：对称方案数 = 旋转等价类 + 矩阵快速幂求 k 步方案数"
+    },
+    {
+      "pid": "atcoder:982",
+      "chapterId": "cpp-1-2-3",
+      "title": "ABC257A A to Z String 2",
+      "reason": "字符 = char('A' + (X-1)/N)"
+    },
+    {
+      "pid": "atcoder:983",
+      "chapterId": "cpp-3-1-3",
+      "title": "ABC257B 1D Pawn",
+      "reason": "一维数组维护棋子位置，逐次模拟"
+    },
+    {
+      "pid": "atcoder:984",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC257C Robot Takahashi",
+      "reason": "排序后枚举阈值 X，前缀和统计准确判断数"
+    },
+    {
+      "pid": "atcoder:985",
+      "chapterId": "cpp-8-5-1",
+      "title": "ABC257D Jumping Takahashi 2",
+      "reason": "二分 S，建图后 Dijkstra / Floyd 验证全图可达"
+    },
+    {
+      "pid": "atcoder:986",
+      "chapterId": "cpp-5-8-3",
+      "title": "ABC257E Addition and Multiplication 2",
+      "reason": "贪心：先定最大位数 = N/min(C_i)，再逐位从大到小选数字"
+    },
+    {
+      "pid": "atcoder:987",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC257Ex Dice Sum 2",
+      "reason": "骰子掷和计数 DP + 容斥"
+    },
+    {
+      "pid": "atcoder:988",
+      "chapterId": "cpp-8-5-1",
+      "title": "ABC257F Teleporter Setting",
+      "reason": "双向 Dijkstra：固定图中先跑 d1,dN，再枚举每个 i 加未知边求最短路"
+    },
+    {
+      "pid": "atcoder:989",
+      "chapterId": "cpp-9-1-2",
+      "title": "ABC257G Prefix Concatenation",
+      "reason": "Z函数求 S 各前缀在 T 的对应位置，再 DP 求最小前缀拼接数"
+    },
+    {
+      "pid": "atcoder:990",
+      "chapterId": "cpp-1-2-3",
+      "title": "ABC258A When?",
+      "reason": "21*60+K 总分钟转 HH:MM，printf(\"%02d:%02d\")"
+    },
+    {
+      "pid": "atcoder:991",
+      "chapterId": "cpp-2-5-2",
+      "title": "ABC258B Number Box",
+      "reason": "枚举8方向×N×N起点，取模绕行 N 步拼最大数"
+    },
+    {
+      "pid": "atcoder:992",
+      "chapterId": "cpp-2-4-1",
+      "title": "ABC258C Rotation",
+      "reason": "累加 offset，查询 2 x 时取 S[(x-1+offset)%N]"
+    },
+    {
+      "pid": "atcoder:993",
+      "chapterId": "cpp-5-5-1",
+      "title": "ABC258D Trophy",
+      "reason": "枚举最终停在第 i 关：preA[i] + (X-i)*B[i]，前缀和辅助"
+    },
+    {
+      "pid": "atcoder:994",
+      "chapterId": "cpp-7-4-1",
+      "title": "ABC258E Packing Potatoes",
+      "reason": "倍增：预处理每次满箱跨周期的倍增跳跃"
+    },
+    {
+      "pid": "atcoder:995",
+      "chapterId": "cpp-7-3-2",
+      "title": "ABC258Ex Odd Steps",
+      "reason": "矩阵快速幂加速 DP 转移：禁止前缀和恰好落在特定点"
+    },
+    {
+      "pid": "atcoder:996",
+      "chapterId": "cpp-8-5-1",
+      "title": "ABC258F Main Street",
+      "reason": "Dijkstra on virtual graph：主干道连接各整数网格块"
+    },
+    {
+      "pid": "atcoder:997",
+      "chapterId": "cpp-4-2-2",
+      "title": "ABC258G Triangle",
+      "reason": "邻接矩阵 O(N^3) 三元组枚举三角形（N 小）"
+    },
+    {
+      "pid": "atcoder:998",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC259A Growth Record",
+      "reason": "min(M,X)*D + (T - min(N,X)*D) 条件计算"
+    },
+    {
+      "pid": "atcoder:999",
+      "chapterId": "cpp-2-2-2",
+      "title": "ABC259B Counterclockwise Rotation",
+      "reason": "cos/sin 数学函数旋转公式"
+    },
+    {
+      "pid": "atcoder:1000",
+      "chapterId": "cpp-5-9-2",
+      "title": "ABC259C XX to XXX",
+      "reason": "双指针比较两串各连续块的字符和个数（S块数≤T块数且字符一致）"
+    },
+    {
+      "pid": "atcoder:1001",
+      "chapterId": "cpp-8-2-1",
+      "title": "ABC259D Circumferences",
+      "reason": "并查集：起点/终点加入同圆即可达，圆与圆相交则合并"
+    },
+    {
+      "pid": "atcoder:1002",
+      "chapterId": "cpp-5-3-3",
+      "title": "ABC259E LCM on Whiteboard",
+      "reason": "质因数分解：每个素数看是否唯一决定最大幂次"
+    },
+    {
+      "pid": "atcoder:1003",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC259Ex Yet Another Path Counting",
+      "reason": "对角线分治 + 计数DP：相同标签的起终点对数"
+    },
+    {
+      "pid": "atcoder:1004",
+      "chapterId": "cpp-7-10-1",
+      "title": "ABC259F Select Edges",
+      "reason": "树形DP：以度数 d_i 为约束的树边最大权值选取"
+    },
+    {
+      "pid": "atcoder:1005",
+      "chapterId": "cpp-9-9-3",
+      "title": "ABC259G Grid Card Game",
+      "reason": "选行/列最大化收益 = 最小割：负格子不能同时选行列"
+    },
+    {
+      "pid": "atcoder:1007",
+      "chapterId": "cpp-4-6-6",
+      "title": "ABC260B Better Students",
+      "reason": "结构体排序三轮：按数学分→英语分→总分，带编号优先"
+    },
+    {
+      "pid": "atcoder:1008",
+      "chapterId": "cpp-6-10-2",
+      "title": "ABC260C Changing Jewels",
+      "reason": "线性递推 DP：每级红转为红(n-1)+X蓝(n)，蓝(n)转为红(n-1)+Y蓝(n-1)"
+    }
   ]
 }

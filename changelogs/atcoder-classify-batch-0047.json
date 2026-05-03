@@ -3,35 +3,185 @@
   "range": "atcoder:1437-1467 (ABC320B-ABC324D, 30 problems, gap at 1458)",
   "kind": "O",
   "assignments": [
-    { "pid": "atcoder:1437", "chapterId": "cpp-9-1-5",  "title": "ABC320B Longest Palindrome",                "reason": "Manacher回文算法：Manacher O(n)求字符串的最长回文子串长度" },
-    { "pid": "atcoder:1438", "chapterId": "cpp-2-4-3",  "title": "ABC320C Slot Strategy 2 (Easy)",            "reason": "过程模拟类例题：枚举目标符号，模拟各轮盘同步停止所需的最少按键总次数" },
-    { "pid": "atcoder:1439", "chapterId": "cpp-8-2-3",  "title": "ABC320D Relative Position",                 "reason": "扩展并查集与应用：带权并查集维护节点间的相对坐标偏移，回答各点绝对坐标" },
-    { "pid": "atcoder:1440", "chapterId": "cpp-6-4-2",  "title": "ABC320E Somen Nagashi",                     "reason": "优先队列：用优先队列维护各人下次能取面条的时刻，模拟流水面条的分配过程" },
-    { "pid": "atcoder:1441", "chapterId": "cpp-7-10-1", "title": "ABC320F Fuel Round Trip",                   "reason": "树形DP基础框架：树上往返旅行，DP记录去程/回程各路径最优加油方案" },
-    { "pid": "atcoder:1442", "chapterId": "cpp-9-5-2",  "title": "ABC320G Slot Strategy 2 (Hard)",            "reason": "期望DP（逆推期望步数）：困难版老虎机同步，期望DP结合复杂状态转移求最优策略" },
-    { "pid": "atcoder:1443", "chapterId": "cpp-2-3-2",  "title": "ABC321A 321-like Checker",                  "reason": "字符与整数的相互转换：提取各数字位，检验是否严格递减构成321型数" },
-    { "pid": "atcoder:1444", "chapterId": "cpp-1-4-1",  "title": "ABC321B Cutoff",                            "reason": "if/else 单分支与双分支：计算需使最终均值满足条件的得分下界与上界范围" },
-    { "pid": "atcoder:1445", "chapterId": "cpp-5-6-2",  "title": "ABC321C 321-like Searcher",                 "reason": "二分答案：二分第K个321型数，计数函数统计≤X的321型数个数辅助二分" },
-    { "pid": "atcoder:1446", "chapterId": "cpp-5-6-2",  "title": "ABC321D Set Menu",                          "reason": "二分答案：排序后对每个B_j二分查找，求所有A_i+B_j对中第K小的值" },
-    { "pid": "atcoder:1447", "chapterId": "cpp-6-5-2",  "title": "ABC321E Complete Binary Tree",              "reason": "二叉树遍历（前中后）：利用完全二叉树父节点=节点/2的性质，求两节点LCA" },
-    { "pid": "atcoder:1448", "chapterId": "cpp-6-11-1", "title": "ABC321F #(subset sum = K) with Add and Erase", "reason": "0-1背包：动态维护背包（加入/删除元素），用bitset加速统计子集和等于K的方案数" },
-    { "pid": "atcoder:1449", "chapterId": "cpp-9-5-4",  "title": "ABC321G Electric Circuit",                  "reason": "计数DP基础：电路图计数问题，DP统计满足连通条件的边集合数量" },
-    { "pid": "atcoder:1450", "chapterId": "cpp-3-2-4",  "title": "ABC322A First ABC 2",                       "reason": "字符串遍历统计：遍历字符串，找到子串ABC第一次完整出现的结束位置" },
-    { "pid": "atcoder:1451", "chapterId": "cpp-3-2-4",  "title": "ABC322B Prefix and Suffix",                 "reason": "字符串遍历统计：检查字符串S是T的前缀、T是S的前缀或S=T，输出对应情况" },
-    { "pid": "atcoder:1452", "chapterId": "cpp-5-6-1",  "title": "ABC322C Festival",                          "reason": "二分查找：对每一天，在节日日期列表中二分查找下一个节日距今天数" },
-    { "pid": "atcoder:1453", "chapterId": "cpp-9-4-1",  "title": "ABC322D Polyomino",                         "reason": "状压DP基础：用位掩码表示4×4格的覆盖状态，枚举三个多格骨牌的所有放置方案" },
-    { "pid": "atcoder:1454", "chapterId": "cpp-6-11-1", "title": "ABC322E Product Development",               "reason": "0-1背包：多维背包DP，dp[a1][a2]...[aK]记录达到各维度参数时的最小成本" },
-    { "pid": "atcoder:1455", "chapterId": "cpp-8-11-1", "title": "ABC322F Vacation Query",                    "reason": "线段树基础：线段树维护区间最大连续假期段，支持单点修改与区间最大连续1查询" },
-    { "pid": "atcoder:1456", "chapterId": "cpp-9-5-4",  "title": "ABC322G Two Kinds of Base",                 "reason": "计数DP基础：统计在两种进制下编码相等的序列对数量" },
-    { "pid": "atcoder:1457", "chapterId": "cpp-1-4-1",  "title": "ABC323A Weak Beats",                        "reason": "if/else 单分支与双分支：检查字符串所有偶数位（弱拍位）是否均为'0'" },
-    { "pid": "atcoder:1459", "chapterId": "cpp-5-8-3",  "title": "ABC323C World Tour Finals",                 "reason": "贪心经典例题：贪心选择解题，找超越所有对手所需的最少题目数量" },
-    { "pid": "atcoder:1460", "chapterId": "cpp-2-4-3",  "title": "ABC323D Merge Slimes",                      "reason": "过程模拟类例题：模拟史莱姆合并（K个i级→1个i+1级），进位传递求最终分组数" },
-    { "pid": "atcoder:1461", "chapterId": "cpp-9-5-1",  "title": "ABC323E Playlist",                          "reason": "概率DP基础：随机播放歌单，计算恰好第X秒某首歌仍在播放的概率" },
-    { "pid": "atcoder:1462", "chapterId": "cpp-6-8-5",  "title": "ABC323F Push and Carry",                    "reason": "BFS的应用：推箱子路径规划，BFS搜索机器人推动箱子到目标位置的最小步数" },
-    { "pid": "atcoder:1463", "chapterId": "cpp-9-7-4",  "title": "ABC323G Inversion of Tree",                 "reason": "CDQ分治（离线三维偏序）：树上路径逆序对计数，CDQ分治处理三维偏序关系" },
-    { "pid": "atcoder:1464", "chapterId": "cpp-1-4-1",  "title": "ABC324A Same",                              "reason": "if/else 单分支与双分支：判断数组中所有元素是否相等" },
-    { "pid": "atcoder:1465", "chapterId": "cpp-1-5-2",  "title": "ABC324B 3-smooth Numbers",                  "reason": "while与do-while循环：循环整除2和3，检验最终余数是否为1来判定3-smooth数" },
-    { "pid": "atcoder:1466", "chapterId": "cpp-3-2-5",  "title": "ABC324C Error Correction",                  "reason": "字符串查找与替换：找出哪个字符串删除恰好一个字符后与目标串相等" },
-    { "pid": "atcoder:1467", "chapterId": "cpp-5-10-3", "title": "ABC324D Square Permutation",                "reason": "下一种排列方法：用next_permutation枚举N位数字的所有排列，统计完全平方数的个数" }
+    {
+      "pid": "atcoder:1437",
+      "chapterId": "cpp-3-2-6",
+      "title": "ABC320B Longest Palindrome",
+      "reason": "Manacher回文算法：Manacher O(n)求字符串的最长回文子串长度"
+    },
+    {
+      "pid": "atcoder:1438",
+      "chapterId": "cpp-2-4-3",
+      "title": "ABC320C Slot Strategy 2 (Easy)",
+      "reason": "过程模拟类例题：枚举目标符号，模拟各轮盘同步停止所需的最少按键总次数"
+    },
+    {
+      "pid": "atcoder:1439",
+      "chapterId": "cpp-8-2-3",
+      "title": "ABC320D Relative Position",
+      "reason": "扩展并查集与应用：带权并查集维护节点间的相对坐标偏移，回答各点绝对坐标"
+    },
+    {
+      "pid": "atcoder:1440",
+      "chapterId": "cpp-6-4-2",
+      "title": "ABC320E Somen Nagashi",
+      "reason": "优先队列：用优先队列维护各人下次能取面条的时刻，模拟流水面条的分配过程"
+    },
+    {
+      "pid": "atcoder:1441",
+      "chapterId": "cpp-7-10-1",
+      "title": "ABC320F Fuel Round Trip",
+      "reason": "树形DP基础框架：树上往返旅行，DP记录去程/回程各路径最优加油方案"
+    },
+    {
+      "pid": "atcoder:1442",
+      "chapterId": "cpp-9-5-2",
+      "title": "ABC320G Slot Strategy 2 (Hard)",
+      "reason": "期望DP（逆推期望步数）：困难版老虎机同步，期望DP结合复杂状态转移求最优策略"
+    },
+    {
+      "pid": "atcoder:1443",
+      "chapterId": "cpp-2-3-2",
+      "title": "ABC321A 321-like Checker",
+      "reason": "字符与整数的相互转换：提取各数字位，检验是否严格递减构成321型数"
+    },
+    {
+      "pid": "atcoder:1444",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC321B Cutoff",
+      "reason": "if/else 单分支与双分支：计算需使最终均值满足条件的得分下界与上界范围"
+    },
+    {
+      "pid": "atcoder:1445",
+      "chapterId": "cpp-5-6-2",
+      "title": "ABC321C 321-like Searcher",
+      "reason": "二分答案：二分第K个321型数，计数函数统计≤X的321型数个数辅助二分"
+    },
+    {
+      "pid": "atcoder:1446",
+      "chapterId": "cpp-5-6-2",
+      "title": "ABC321D Set Menu",
+      "reason": "二分答案：排序后对每个B_j二分查找，求所有A_i+B_j对中第K小的值"
+    },
+    {
+      "pid": "atcoder:1447",
+      "chapterId": "cpp-6-5-2",
+      "title": "ABC321E Complete Binary Tree",
+      "reason": "二叉树遍历（前中后）：利用完全二叉树父节点=节点/2的性质，求两节点LCA"
+    },
+    {
+      "pid": "atcoder:1448",
+      "chapterId": "cpp-6-11-1",
+      "title": "ABC321F #(subset sum = K) with Add and Erase",
+      "reason": "0-1背包：动态维护背包（加入/删除元素），用bitset加速统计子集和等于K的方案数"
+    },
+    {
+      "pid": "atcoder:1449",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC321G Electric Circuit",
+      "reason": "计数DP基础：电路图计数问题，DP统计满足连通条件的边集合数量"
+    },
+    {
+      "pid": "atcoder:1450",
+      "chapterId": "cpp-3-2-4",
+      "title": "ABC322A First ABC 2",
+      "reason": "字符串遍历统计：遍历字符串，找到子串ABC第一次完整出现的结束位置"
+    },
+    {
+      "pid": "atcoder:1451",
+      "chapterId": "cpp-3-2-4",
+      "title": "ABC322B Prefix and Suffix",
+      "reason": "字符串遍历统计：检查字符串S是T的前缀、T是S的前缀或S=T，输出对应情况"
+    },
+    {
+      "pid": "atcoder:1452",
+      "chapterId": "cpp-5-6-1",
+      "title": "ABC322C Festival",
+      "reason": "二分查找：对每一天，在节日日期列表中二分查找下一个节日距今天数"
+    },
+    {
+      "pid": "atcoder:1453",
+      "chapterId": "cpp-9-4-1",
+      "title": "ABC322D Polyomino",
+      "reason": "状压DP基础：用位掩码表示4×4格的覆盖状态，枚举三个多格骨牌的所有放置方案"
+    },
+    {
+      "pid": "atcoder:1454",
+      "chapterId": "cpp-6-11-1",
+      "title": "ABC322E Product Development",
+      "reason": "0-1背包：多维背包DP，dp[a1][a2]...[aK]记录达到各维度参数时的最小成本"
+    },
+    {
+      "pid": "atcoder:1455",
+      "chapterId": "cpp-8-11-1",
+      "title": "ABC322F Vacation Query",
+      "reason": "线段树基础：线段树维护区间最大连续假期段，支持单点修改与区间最大连续1查询"
+    },
+    {
+      "pid": "atcoder:1456",
+      "chapterId": "cpp-9-5-4",
+      "title": "ABC322G Two Kinds of Base",
+      "reason": "计数DP基础：统计在两种进制下编码相等的序列对数量"
+    },
+    {
+      "pid": "atcoder:1457",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC323A Weak Beats",
+      "reason": "if/else 单分支与双分支：检查字符串所有偶数位（弱拍位）是否均为'0'"
+    },
+    {
+      "pid": "atcoder:1459",
+      "chapterId": "cpp-5-8-3",
+      "title": "ABC323C World Tour Finals",
+      "reason": "贪心经典例题：贪心选择解题，找超越所有对手所需的最少题目数量"
+    },
+    {
+      "pid": "atcoder:1460",
+      "chapterId": "cpp-2-4-3",
+      "title": "ABC323D Merge Slimes",
+      "reason": "过程模拟类例题：模拟史莱姆合并（K个i级→1个i+1级），进位传递求最终分组数"
+    },
+    {
+      "pid": "atcoder:1461",
+      "chapterId": "cpp-9-5-1",
+      "title": "ABC323E Playlist",
+      "reason": "概率DP基础：随机播放歌单，计算恰好第X秒某首歌仍在播放的概率"
+    },
+    {
+      "pid": "atcoder:1462",
+      "chapterId": "cpp-6-8-5",
+      "title": "ABC323F Push and Carry",
+      "reason": "BFS的应用：推箱子路径规划，BFS搜索机器人推动箱子到目标位置的最小步数"
+    },
+    {
+      "pid": "atcoder:1463",
+      "chapterId": "cpp-9-7-4",
+      "title": "ABC323G Inversion of Tree",
+      "reason": "CDQ分治（离线三维偏序）：树上路径逆序对计数，CDQ分治处理三维偏序关系"
+    },
+    {
+      "pid": "atcoder:1464",
+      "chapterId": "cpp-1-4-1",
+      "title": "ABC324A Same",
+      "reason": "if/else 单分支与双分支：判断数组中所有元素是否相等"
+    },
+    {
+      "pid": "atcoder:1465",
+      "chapterId": "cpp-1-5-2",
+      "title": "ABC324B 3-smooth Numbers",
+      "reason": "while与do-while循环：循环整除2和3，检验最终余数是否为1来判定3-smooth数"
+    },
+    {
+      "pid": "atcoder:1466",
+      "chapterId": "cpp-3-2-5",
+      "title": "ABC324C Error Correction",
+      "reason": "字符串查找与替换：找出哪个字符串删除恰好一个字符后与目标串相等"
+    },
+    {
+      "pid": "atcoder:1467",
+      "chapterId": "cpp-5-10-3",
+      "title": "ABC324D Square Permutation",
+      "reason": "下一种排列方法：用next_permutation枚举N位数字的所有排列，统计完全平方数的个数"
+    }
   ]
 }
