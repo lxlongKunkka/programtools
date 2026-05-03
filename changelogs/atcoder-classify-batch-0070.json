@@ -1,0 +1,187 @@
+{
+  "batch": "0070",
+  "range": "atcoder:2177-2206 (ABC428D-ABC435A, 30 problems)",
+  "kind": "O",
+  "assignments": [
+    {
+      "pid": "atcoder:2177",
+      "chapterId": "cpp-5-3-4",
+      "title": "abc428_d 183184  连接数与完全平方数",
+      "reason": "数学基础进阶，整数拼接后判断是否为完全平方数，枚举x结合数论判断"
+    },
+    {
+      "pid": "atcoder:2178",
+      "chapterId": "cpp-8-8-1",
+      "title": "abc428_e Farthest Vertex 树上每个点的最远点",
+      "reason": "树直径基础，两次BFS/DFS求树直径，确定每个节点的最远节点编号"
+    },
+    {
+      "pid": "atcoder:2179",
+      "chapterId": "cpp-1-4-9",
+      "title": "abc429_a Too Many Requests 请求限制判断输出",
+      "reason": "Level1条件综合，i≤M输出OK否则Too Many Requests，循环条件输出"
+    },
+    {
+      "pid": "atcoder:2180",
+      "chapterId": "cpp-2-1-3",
+      "title": "abc429_b N - 1 删除一个元素使剩余和达标",
+      "reason": "循环进阶，预计算总和，遍历每个元素检查(sum-A[i])是否等于M"
+    },
+    {
+      "pid": "atcoder:2181",
+      "chapterId": "cpp-5-2-1",
+      "title": "abc429_c Odd One Subsequence 数字配对游戏",
+      "reason": "STL基础，map统计类型频率，组合计数恰好两同一异的三元组数量"
+    },
+    {
+      "pid": "atcoder:2182",
+      "chapterId": "cpp-5-5-3",
+      "title": "abc429_d On AtCoder Conference 环形区间游客统计",
+      "reason": "前缀和+二分，环形数组前缀和+二分查找确定顺时针走到K人的位置"
+    },
+    {
+      "pid": "atcoder:2183",
+      "chapterId": "cpp-6-8-5",
+      "title": "abc429_e Hit and Away 多源BFS求两最近安全点距离",
+      "reason": "BFS综合，多源BFS从危险点求到所有安全点最短距离，综合最近对"
+    },
+    {
+      "pid": "atcoder:2184",
+      "chapterId": "cpp-7-3-1",
+      "title": "abc429_f Shortest Path Query 3行N列网格最短路与连通性",
+      "reason": "矩阵快速幂基础，3行N列网格路径转移用矩阵乘法+快速幂加速查询"
+    },
+    {
+      "pid": "atcoder:2185",
+      "chapterId": "cpp-1-3-1",
+      "title": "abc430_a Candy Cookie Law 糖果饼干法律条件判断",
+      "reason": "Level1数据类型条件，判断C≥A且D<B是否成立，双条件逻辑判断"
+    },
+    {
+      "pid": "atcoder:2186",
+      "chapterId": "cpp-3-1-5",
+      "title": "abc430_b Count Subgrid 网格不同子图案计数",
+      "reason": "数组应用，枚举所有M×M子矩阵，哈希去重统计不同子图案数量"
+    },
+    {
+      "pid": "atcoder:2187",
+      "chapterId": "cpp-5-9-2",
+      "title": "abc430_c Truck Driver 统计满足双条件子串对",
+      "reason": "双指针进阶，滑动窗口分别统计满足A次a和B次b的连续区间，双指针"
+    },
+    {
+      "pid": "atcoder:2188",
+      "chapterId": "cpp-5-2-2",
+      "title": "abc430_d Neighbor Distance 数轴最近邻距离之和",
+      "reason": "STL set动态维护，用有序set维护各点位置，动态插入后更新最近邻距离和"
+    },
+    {
+      "pid": "atcoder:2189",
+      "chapterId": "cpp-9-1-2",
+      "title": "abc430_e Shift String 字符串旋转匹配最少操作",
+      "reason": "字符串算法，KMP/Z函数判断字符串A旋转后是否能匹配B，最少操作次数"
+    },
+    {
+      "pid": "atcoder:2190",
+      "chapterId": "cpp-4-6-5",
+      "title": "abc430_f Back and Forth Filling 排列游戏中的数字范围",
+      "reason": "排序综合，LR约束下构造合法排列，统计每格可能出现的数字个数范围"
+    },
+    {
+      "pid": "atcoder:2191",
+      "chapterId": "cpp-1-2-3",
+      "title": "abc431_a Robot Balance 机器人平衡所需增重",
+      "reason": "Level1运算综合，计算使身体重量≥头部所需最小增量，差值计算"
+    },
+    {
+      "pid": "atcoder:2192",
+      "chapterId": "cpp-2-4-3",
+      "title": "abc431_b Robot Weight 机器人零件装配与拆卸",
+      "reason": "模拟进阶，用数组记录各类零件是否装配，实时更新机器人总重量"
+    },
+    {
+      "pid": "atcoder:2193",
+      "chapterId": "cpp-4-3-2",
+      "title": "abc431_c Robot Factory 机器人稳定组装",
+      "reason": "结构体+贪心配对，排序头部和身体零件后双指针匹配最大化稳定机器人数"
+    },
+    {
+      "pid": "atcoder:2194",
+      "chapterId": "cpp-6-11-3",
+      "title": "abc431_d Robot Customize 机器人部件平衡问题",
+      "reason": "背包DP综合，每个部件可选头部或身体，DP求头部总重≤身体总重的最大方案"
+    },
+    {
+      "pid": "atcoder:2195",
+      "chapterId": "cpp-8-5-2",
+      "title": "abc431_e Reflection on Grid 镜面迷宫光线折射最少操作",
+      "reason": "最短路进阶，迷宫中光线按镜面反射，Dijkstra求最少镜面替换次数"
+    },
+    {
+      "pid": "atcoder:2196",
+      "chapterId": "cpp-9-7-4",
+      "title": "abc431_f Almost Sorted 2 序列重排计数与条件约束",
+      "reason": "gesp9分治综合，统计满足位移约束D的重排序列B数量，DP+分治优化"
+    },
+    {
+      "pid": "atcoder:2197",
+      "chapterId": "cpp-1-1-3",
+      "title": "abc433_a Happy Birthday! 4 年龄倍数判断",
+      "reason": "Level1 I/O基础，判断未来是否存在X的年龄恰好是Y年龄Z倍的时刻"
+    },
+    {
+      "pid": "atcoder:2198",
+      "chapterId": "cpp-6-1-2",
+      "title": "abc433_b Nearest Taller 寻找左侧第一个更高元素",
+      "reason": "栈进阶，单调递减栈维护，对每个元素找左侧最近更高元素位置"
+    },
+    {
+      "pid": "atcoder:2199",
+      "chapterId": "cpp-7-6-2",
+      "title": "abc433_c 1122 Substring 2 统计特定模式数字子串",
+      "reason": "字符串算法，双指针统计满足1122模式（每种字符出现偶数次）的子串数"
+    },
+    {
+      "pid": "atcoder:2200",
+      "chapterId": "cpp-5-3-3",
+      "title": "abc433_d 183183  整数拼接整除计数",
+      "reason": "数学基础，枚举两数拼接后除以给定整数，哈希/数学分析整除条件"
+    },
+    {
+      "pid": "atcoder:2201",
+      "chapterId": "cpp-1-1-1",
+      "title": "abc434_a Balloon Trip 计算所需气球数量",
+      "reason": "Level1 I/O基础，ceiling(W*1000/B)计算最少气球数，基础运算输出"
+    },
+    {
+      "pid": "atcoder:2202",
+      "chapterId": "cpp-2-2-1",
+      "title": "abc434_b Bird Watching 计算各类鸟的平均大小",
+      "reason": "数学函数，按种类分组统计每种鸟的总大小和数量，计算平均值输出"
+    },
+    {
+      "pid": "atcoder:2203",
+      "chapterId": "cpp-6-10-1",
+      "title": "abc434_c Flapping Takahashi 气球飞行计划可行性判断",
+      "reason": "DP基础，按时间区间动态规划验证气球高度能否满足所有要求，贪心DP"
+    },
+    {
+      "pid": "atcoder:2204",
+      "chapterId": "cpp-8-12-3",
+      "title": "abc434_d Clouds 移除云朵后的未覆盖格子",
+      "reason": "差分约束/扫描线，移除每朵云后统计新增未被遮盖格子，2D差分扫描线"
+    },
+    {
+      "pid": "atcoder:2205",
+      "chapterId": "cpp-9-9-1",
+      "title": "abc434_e Distribute Bunnies 兔子跳跃最大不同坐标数",
+      "reason": "网络流二分图，兔子跳跃方向分配的最大独立集/二分图匹配，最大化不同坐标"
+    },
+    {
+      "pid": "atcoder:2206",
+      "chapterId": "cpp-1-1-2",
+      "title": "[ABC435A] 1到N的整数和 1到N整数求和",
+      "reason": "Level1 I/O基础，等差数列求和公式N*(N+1)/2，最基础数学运算输出"
+    }
+  ]
+}
