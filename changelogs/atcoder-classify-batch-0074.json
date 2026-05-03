@@ -143,9 +143,9 @@
     },
     {
       "pid": "atcoder:2320",
-      "chapterId": "cpp-6-7-1",
+      "chapterId": "cpp-6-8-1",
       "title": "[ABC453D] 勇往直前",
-      "reason": "图论基础，网格中按方向符号强制移动，BFS/DFS求从起点出发可达的所有单元格"
+      "reason": "BFS基础，网格中按方向符号强制移动，反向BFS/DFS求所有可达出口的单元格（已从cpp-6-7-1修正）"
     },
     {
       "pid": "atcoder:2321",
