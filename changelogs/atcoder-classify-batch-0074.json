@@ -1,0 +1,169 @@
+{
+  "batch": "0074",
+  "range": "atcoder:2297-2323 (ABC450A-ABC453G, 27 problems)",
+  "kind": "O",
+  "assignments": [
+    {
+      "pid": "atcoder:2297",
+      "chapterId": "cpp-1-5-2",
+      "title": "[ABC450A] 倒数计数",
+      "reason": "Level1循环结构，从N倒数到0每行输出一个数字，循环倒计数输出"
+    },
+    {
+      "pid": "atcoder:2298",
+      "chapterId": "cpp-3-5-2",
+      "title": "[ABC450B] 分段购票",
+      "reason": "枚举进阶，枚举所有分段购票方案，比较各种拆分方式总费用取最小值"
+    },
+    {
+      "pid": "atcoder:2299",
+      "chapterId": "cpp-6-8-1",
+      "title": "[ABC450C] 封闭的积水坑",
+      "reason": "BFS基础，从边界出发BFS标记所有与边界联通的白色区域，未被标记的白区即为封闭积水坑"
+    },
+    {
+      "pid": "atcoder:2300",
+      "chapterId": "cpp-5-8-3",
+      "title": "[ABC450D] 最小化极差",
+      "reason": "贪心基础，排序后贪心选择操作顺序，最小化max-min（极差）的范围"
+    },
+    {
+      "pid": "atcoder:2301",
+      "chapterId": "cpp-4-7-1",
+      "title": "[ABC450E] 斐波那契字符串",
+      "reason": "递推基础，类Fibonacci方式生成字符串（F(n)=F(n-1)+F(n-2)），递归+记忆化查询第K字符"
+    },
+    {
+      "pid": "atcoder:2302",
+      "chapterId": "cpp-9-6-3",
+      "title": "[ABC450F] 强连通图计数",
+      "reason": "DP优化综合，统计满足强连通条件的DAG数量，线段树优化DP状态转移"
+    },
+    {
+      "pid": "atcoder:2303",
+      "chapterId": "cpp-9-5-1",
+      "title": "[ABC450G] Random Subtraction",
+      "reason": "概率期望基础，随机减法过程的期望步数/代价，期望DP建模求解"
+    },
+    {
+      "pid": "atcoder:2304",
+      "chapterId": "cpp-1-4-5",
+      "title": "[ABC451A] 违法的字符串",
+      "reason": "Level1条件结构，判断字符串长度是否违反法律规定，字符串长度比较输出"
+    },
+    {
+      "pid": "atcoder:2305",
+      "chapterId": "cpp-2-6-2",
+      "title": "[ABC451B] 人事变动",
+      "reason": "数组进阶，数组模拟人员轮换重组过程，逐步更新数组元素位置"
+    },
+    {
+      "pid": "atcoder:2306",
+      "chapterId": "cpp-5-2-5",
+      "title": "[ABC451C] 花园树木管理",
+      "reason": "STL综合，multiset/set动态管理树木数量，支持增删和第K小值查询"
+    },
+    {
+      "pid": "atcoder:2307",
+      "chapterId": "cpp-5-10-2",
+      "title": "[ABC451D] 2的幂拼接数",
+      "reason": "递归进阶，枚举所有2的幂次方拼接组合，递归生成所有合法拼接方式"
+    },
+    {
+      "pid": "atcoder:2308",
+      "chapterId": "cpp-8-6-1",
+      "title": "[ABC451E] 树上距离",
+      "reason": "最小生成树基础，给定距离矩阵验证能否构造合法加权树，Prim/Kruskal+距离性质检验"
+    },
+    {
+      "pid": "atcoder:2309",
+      "chapterId": "cpp-8-2-2",
+      "title": "[ABC451F] 二分图最小黑点数",
+      "reason": "并查集进阶，在线加边维护二分图着色，并查集检测奇圈并计算最少黑色顶点数"
+    },
+    {
+      "pid": "atcoder:2310",
+      "chapterId": "cpp-9-10-3",
+      "title": "[ABC451G] 最小异或途径计数",
+      "reason": "数学进阶，线性基+字典树优化XOR最小路径计数，统计达到最小异或值的路径数量"
+    },
+    {
+      "pid": "atcoder:2311",
+      "chapterId": "cpp-1-4-6",
+      "title": "[ABC452A] 五大时令节日",
+      "reason": "Level1条件综合，根据月份输出对应五节气名称，多分支条件判断输出"
+    },
+    {
+      "pid": "atcoder:2312",
+      "chapterId": "cpp-2-1-4",
+      "title": "[ABC452B] 绘制边框",
+      "reason": "循环嵌套，双重循环绘制H×W矩形边框（边界为#中间为.），条件判断填充字符"
+    },
+    {
+      "pid": "atcoder:2313",
+      "chapterId": "cpp-4-1-1",
+      "title": "[ABC452C] 鱼骨头艺术",
+      "reason": "函数基础，构造满足脊椎与肋骨字符串相互匹配约束的字符串填充方案"
+    },
+    {
+      "pid": "atcoder:2314",
+      "chapterId": "cpp-7-6-3",
+      "title": "[ABC452D] 不含子序列的子串",
+      "reason": "字符串算法，线性DP求S中最长不含T为子序列的连续子串，DP+子序列匹配"
+    },
+    {
+      "pid": "atcoder:2315",
+      "chapterId": "cpp-9-3-4",
+      "title": "[ABC452E] 双重求和的奥秘",
+      "reason": "数论进阶，利用Sigma/GCD性质优化双重求和，前缀和+数论函数数论变换"
+    },
+    {
+      "pid": "atcoder:2316",
+      "chapterId": "cpp-8-10-2",
+      "title": "[ABC452F] 区间逆序对计数",
+      "reason": "树状数组进阶，离线滑动窗口+BIT统计各区间逆序对数量"
+    },
+    {
+      "pid": "atcoder:2317",
+      "chapterId": "cpp-3-2-5",
+      "title": "[ABC453A] 去除前导o",
+      "reason": "字符串综合，跳过字符串开头所有'o'字符，输出去除前导特定字符后的子串"
+    },
+    {
+      "pid": "atcoder:2318",
+      "chapterId": "cpp-2-1-5",
+      "title": "[ABC453B] 传感器数据记录",
+      "reason": "循环进阶，模拟传感器记录规则：初始值保存，之后只在读数变化时才记录"
+    },
+    {
+      "pid": "atcoder:2319",
+      "chapterId": "cpp-5-10-3",
+      "title": "[ABC453C] 穿越原点",
+      "reason": "递归进阶，从0.5出发N步每步±整数，递归枚举所有过原点的合法移动序列"
+    },
+    {
+      "pid": "atcoder:2320",
+      "chapterId": "cpp-6-7-1",
+      "title": "[ABC453D] 勇往直前",
+      "reason": "图论基础，网格中按方向符号强制移动，BFS/DFS求从起点出发可达的所有单元格"
+    },
+    {
+      "pid": "atcoder:2321",
+      "chapterId": "cpp-9-5-4",
+      "title": "[ABC453E] 队伍划分",
+      "reason": "计数DP进阶，将N人划分两队满足约束，组合计数DP+前缀和优化"
+    },
+    {
+      "pid": "atcoder:2322",
+      "chapterId": "cpp-9-2-2",
+      "title": "[ABC453F] Avoid Division",
+      "reason": "搜索进阶，树重心分解+DFS着色构造，使各颜色连通子图不超过配额限制"
+    },
+    {
+      "pid": "atcoder:2323",
+      "chapterId": "cpp-10-3-1",
+      "title": "[ABC453G] 序列复制查询",
+      "reason": "Level10数据结构，N条序列支持整行复制/单点修改/区间求和，可持久化线段树实现"
+    }
+  ]
+}
