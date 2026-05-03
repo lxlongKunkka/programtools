@@ -1,0 +1,187 @@
+{
+  "batch": "0071",
+  "range": "atcoder:2207-2236 (ABC435B-ABC440A, 30 problems)",
+  "kind": "O",
+  "assignments": [
+    {
+      "pid": "atcoder:2207",
+      "chapterId": "cpp-3-5-1",
+      "title": "[ABC435B] 子区间和不被元素整除计数",
+      "reason": "枚举进阶，前缀和枚举所有(l,r)区间，验证各A[i]是否不整除区间和"
+    },
+    {
+      "pid": "atcoder:2208",
+      "chapterId": "cpp-6-10-2",
+      "title": "[ABC435C] 多米诺骨牌连锁倒塌",
+      "reason": "DP基础进阶，贪心维护当前最大覆盖右端，模拟多米诺连锁倒塌前缀最远点"
+    },
+    {
+      "pid": "atcoder:2209",
+      "chapterId": "cpp-8-7-3",
+      "title": "[ABC435D] 有向图黑点可达性查询",
+      "reason": "拓扑排序综合，反向图BFS/拓扑序，在线动态染黑顶点后查询可达任一黑点"
+    },
+    {
+      "pid": "atcoder:2210",
+      "chapterId": "cpp-5-2-4",
+      "title": "[ABC435E] 区间涂黑后白格计数",
+      "reason": "STL set区间合并，维护白色区间集合，每次涂黑范围后动态合并更新白格数"
+    },
+    {
+      "pid": "atcoder:2211",
+      "chapterId": "cpp-7-10-1",
+      "title": "[ABC435F] 猫塔运动最大距离",
+      "reason": "树上DP基础，逆序添加猫塔，并查集维护相邻最近，优先队列选最优拆除"
+    },
+    {
+      "pid": "atcoder:2212",
+      "chapterId": "cpp-2-3-3",
+      "title": "[ABC436A] 前缀 o 填充 字符串前缀填充指定字符",
+      "reason": "ASCII/字符处理，在字符串S前补'o'直到长度为N，字符串前缀填充输出"
+    },
+    {
+      "pid": "atcoder:2213",
+      "chapterId": "cpp-2-6-3",
+      "title": "[ABC436B] 魔法方阵构造 奇数阶魔方阵构造",
+      "reason": "数组综合模拟，Siamese算法在二维数组中按固定移动规则填入数字构造魔方阵"
+    },
+    {
+      "pid": "atcoder:2214",
+      "chapterId": "cpp-3-6-2",
+      "title": "[ABC436C] 2×2方块放置 网格2x2方块放置计数",
+      "reason": "模拟进阶，网格标记2x2占用，哈希检验区域无重叠后放置，统计成功次数"
+    },
+    {
+      "pid": "atcoder:2215",
+      "chapterId": "cpp-6-8-3",
+      "title": "[ABC436D] 传送迷宫 迷宫最短路径与瞬移",
+      "reason": "BFS进阶，扩展BFS处理瞬移边（同字母点），最少行动次数到达终点"
+    },
+    {
+      "pid": "atcoder:2216",
+      "chapterId": "cpp-6-7-2",
+      "title": "[ABC436E] 最少交换首选操作 排列还原最优首步交换",
+      "reason": "图论进阶，排列环分解，最少交换次数等于N减去环数，分析首步可选交换集合"
+    },
+    {
+      "pid": "atcoder:2217",
+      "chapterId": "cpp-7-8-1",
+      "title": "[ABC436F] 星空拍摄方案计数",
+      "reason": "单调栈应用，统计子区间中最亮星的单调性条件，单调栈+线段树计数合法区间"
+    },
+    {
+      "pid": "atcoder:2218",
+      "chapterId": "cpp-1-2-1",
+      "title": "[ABC437A] 英尺转英寸",
+      "reason": "Level1运算基础，A*12+B直接计算英寸总数，单位换算输出"
+    },
+    {
+      "pid": "atcoder:2219",
+      "chapterId": "cpp-2-6-1",
+      "title": "[ABC437B] 抽奖游戏 格子抽奖计数最大值",
+      "reason": "一维数组入门，用数组标记B中各元素，按行统计各行被叫出数字数量"
+    },
+    {
+      "pid": "atcoder:2220",
+      "chapterId": "cpp-6-4-2",
+      "title": "[ABC437C] 驯鹿与雪橇2 驯鹿分配：最大化骑雪橇数量",
+      "reason": "堆进阶，优先队列贪心配对，排序后用大根堆选出使拉力≥重量最多的骑者"
+    },
+    {
+      "pid": "atcoder:2221",
+      "chapterId": "cpp-5-6-2",
+      "title": "[ABC437D] 差值之和 序列差值绝对值之和",
+      "reason": "二分法进阶，排序A后用前缀和对每个B[j]二分，O(NlogN)计算绝对值差总和"
+    },
+    {
+      "pid": "atcoder:2222",
+      "chapterId": "cpp-7-1-1",
+      "title": "[ABC437E] 排序数组 树上序列字典序排序",
+      "reason": "DFS进阶，树形结构上的序列由父节点扩展，DFS遍历+序列字典序比较排序"
+    },
+    {
+      "pid": "atcoder:2223",
+      "chapterId": "cpp-9-11-3",
+      "title": "[ABC437F] 曼哈顿圣诞树2 区间曼哈顿距离最值查询",
+      "reason": "线段树进阶，离线处理区间内最大曼哈顿距离，坐标轴转换后线段树维护区间最值"
+    },
+    {
+      "pid": "atcoder:2224",
+      "chapterId": "cpp-1-1-5",
+      "title": "[ABC438A] 年初赛日 跨年比赛日计算",
+      "reason": "Level1 I/O基础，从F开始每7天跳一次，计算超过D后取模得下一年首赛日"
+    },
+    {
+      "pid": "atcoder:2225",
+      "chapterId": "cpp-2-5-2",
+      "title": "[ABC438B] 子串匹配最少操作 子串匹配最少操作数",
+      "reason": "枚举进阶，暴力枚举T在S中的起始位置，计算各对应位数字循环差之和的最小值"
+    },
+    {
+      "pid": "atcoder:2226",
+      "chapterId": "cpp-6-1-3",
+      "title": "[ABC438C] 一维消消乐 一维消消乐最小剩余方块数",
+      "reason": "栈综合应用，栈模拟消除：入栈时检查栈顶4个连续同色方块即消除，求最小剩余"
+    },
+    {
+      "pid": "atcoder:2227",
+      "chapterId": "cpp-5-5-4",
+      "title": "[ABC438D] 蛇的尾部 三段和最大值",
+      "reason": "前缀和综合，预计算A前缀最大值和C后缀最大值，枚举B段位置求三段最优划分"
+    },
+    {
+      "pid": "atcoder:2228",
+      "chapterId": "cpp-7-4-2",
+      "title": "[ABC438E] 装水传递 容器水传递与倍增求和",
+      "reason": "倍增进阶，N个容器循环传递模拟倍增跳转，二进制拆分快速计算累积水量"
+    },
+    {
+      "pid": "atcoder:2229",
+      "chapterId": "cpp-9-8-4",
+      "title": "[ABC438F] Mex之和 树上路径MEX之和",
+      "reason": "图论进阶，树链剖分+线段树，对树上所有路径计算MEX（最小未出现值）之和"
+    },
+    {
+      "pid": "atcoder:2230",
+      "chapterId": "cpp-1-1-6",
+      "title": "[ABC439A] 计算2^N-2N 计算2的N次幂减去2N",
+      "reason": "Level1 I/O基础，2^N-2*N直接计算，指数运算与线性运算组合输出"
+    },
+    {
+      "pid": "atcoder:2231",
+      "chapterId": "cpp-2-2-2",
+      "title": "[ABC439B] 快乐数判断 判断快乐数",
+      "reason": "数学函数进阶，模拟各位平方和迭代，set记录已出现值检测循环，判断快乐数"
+    },
+    {
+      "pid": "atcoder:2232",
+      "chapterId": "cpp-2-5-3",
+      "title": "[ABC439C] 好数枚举 枚举平方和的好整数",
+      "reason": "枚举综合，枚举所有x<y满足x²+y²=n，统计n≤K中恰好一对解的好整数个数"
+    },
+    {
+      "pid": "atcoder:2233",
+      "chapterId": "cpp-3-5-3",
+      "title": "[ABC439D] 卡多松子序列 序列三元组计数：比例与位置限制",
+      "reason": "枚举综合，对满足7:5:3比例三元组枚举中间元素，前缀计数辅助快速统计"
+    },
+    {
+      "pid": "atcoder:2234",
+      "chapterId": "cpp-5-6-4",
+      "title": "[ABC439E] 放风筝 最长不相交线段子序列",
+      "reason": "二分法综合，排序线段后用LIS二分求最长不相交子集，等价于最长递增子序列"
+    },
+    {
+      "pid": "atcoder:2235",
+      "chapterId": "cpp-9-6-2",
+      "title": "[ABC439F] 美丽门松序列 排列子序列峰谷计数",
+      "reason": "DP优化进阶，树状数组优化DP，计数满足峰谷交替模式的子序列个数"
+    },
+    {
+      "pid": "atcoder:2236",
+      "chapterId": "cpp-1-1-4",
+      "title": "[ABC440A] 八度倍频 计算倍频后的声音频率",
+      "reason": "Level1 I/O基础，X*(2^Y)，幂运算基础，声音八度倍频直接输出结果"
+    }
+  ]
+}
