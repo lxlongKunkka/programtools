@@ -1191,10 +1191,12 @@ export default {
 }
 .html-content-container.maximized {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
+  min-height: 100vh;
+  max-height: none;
+  aspect-ratio: auto;
   z-index: 9999;
   border-radius: 0;
   margin: 0;
