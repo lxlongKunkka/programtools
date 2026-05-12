@@ -924,6 +924,7 @@ const editorReturnScreen = ref('select')
 const currentUser = ref(getStoredLightbotUser())
 const editorDraft = reactive(createDefaultEditorDraft())
 const editorBaseDraft = ref(createDefaultEditorDraft())
+const editorSavedSnapshot = ref(JSON.stringify(serializeEditorDraft(createDefaultEditorDraft())))
 const editorVerification = ref(null)
 let editorPaintActive = false
 let editorPaintedKeys = new Set()
@@ -1034,10 +1035,12 @@ const currentProgramMetrics = computed(() => {
 })
 const editorLevelPreview = computed(() => buildCustomLevel(editorDraft))
 const editorSignature = computed(() => JSON.stringify(editorLevelPreview.value))
+const editorDraftSnapshot = computed(() => JSON.stringify(serializeEditorDraft(editorDraft)))
 const isVerificationFresh = computed(() => Boolean(
   editorVerification.value && editorVerification.value.signature === editorSignature.value
 ))
 const editorSolvedProgram = computed(() => editorVerification.value?.solvable ? editorVerification.value.program : null)
+const hasEditorUnsavedChanges = computed(() => screen.value === 'editor' && editorDraftSnapshot.value !== editorSavedSnapshot.value)
 const finishLeaderboard = computed(() => levelLeaderboard.value.slice(0, 5))
 const editorCanModifySource = computed(() => {
   if (!editorDraft.sourceLevelId) return true
@@ -1051,7 +1054,10 @@ const editorCanModifySource = computed(() => {
 const canDeleteEditorLevel = computed(() => Boolean(editorDraft.sourceLevelId) && editorCanModifySource.value)
 const editorDeleteLabel = computed(() => (editorDraft.sourceIsCustom ? '删除自定义关卡' : '删除默认关卡'))
 const canSaveEditorLevel = computed(() => {
-  return editorCanModifySource.value && Boolean(editorVerification.value?.solvable) && isVerificationFresh.value
+  return editorCanModifySource.value
+    && Boolean(editorVerification.value?.solvable)
+    && !editorVerification.value?.requiresManualVerification
+    && isVerificationFresh.value
 })
 const editorPublishToneClass = computed(() => {
   if (!editorCanModifySource.value) return 'danger'
@@ -1247,6 +1253,11 @@ function resetEditorDraft() {
   setStatus('Editor reset')
 }
 
+function confirmDiscardEditorChanges() {
+  if (!hasEditorUnsavedChanges.value) return true
+  return window.confirm('当前编辑器里有未保存到草稿或数据库的修改。确定要离开吗？')
+}
+
 function openEditor(level = null) {
   if (level && !canEditLevel(level)) {
     setStatus(getLevelEditHint(level), 'danger')
@@ -1261,12 +1272,14 @@ function openEditor(level = null) {
     start: { ...nextDraft.start },
     board: cloneBoard(nextDraft.board)
   }
+  editorSavedSnapshot.value = JSON.stringify(serializeEditorDraft(nextDraft))
   applyDraftToEditor(nextDraft)
   screen.value = 'editor'
   setStatus(level ? 'Loaded level into editor' : (loadSavedEditorDraft() ? '已载入保存草稿' : 'Editor ready'))
 }
 
 function leaveEditor() {
+  if (!confirmDiscardEditorChanges()) return
   activeCustomLevel.value = null
   screen.value = editorReturnScreen.value === 'brief' ? 'brief' : 'select'
 }
@@ -1274,6 +1287,7 @@ function leaveEditor() {
 function saveEditorDraft() {
   const payload = serializeEditorDraft(editorDraft)
   writeLightbotStorage(EDITOR_DRAFT_STORAGE_KEY, JSON.stringify(payload))
+  editorSavedSnapshot.value = JSON.stringify(payload)
   setStatus('草稿已保存到当前账号的本地浏览器数据', 'success')
 }
 
@@ -1489,6 +1503,7 @@ async function saveEditorLevelToGame() {
       p2: cloneOperationList(sharedLevel.demo.p2)
     }
     editorBaseDraft.value = serializeEditorDraft(editorDraft)
+    editorSavedSnapshot.value = JSON.stringify(editorBaseDraft.value)
 
     saveEditorDraft()
     setStatus(sharedLevel.isCustom ? '已创建新关卡；所有人现在都能在“自定义关卡”章节看到它' : '已保存到数据库；所有人现在看到的都是这个关卡的最新版本', 'success')
@@ -1762,6 +1777,15 @@ function markFinished() {
     }
   }
   chapterMasteryUnlocked.value = masteryUnlocked
+  if (isCustomPlaytest.value) {
+    editorVerification.value = {
+      solvable: true,
+      signature: editorSignature.value,
+      program: null,
+      requiresManualVerification: false,
+      message: '试玩通关验证通过，可以保存到游戏'
+    }
+  }
   lastCompletionMetrics.value = { ...currentProgramMetrics.value }
   showFinishPanel.value = true
   setStatus('Level complete', 'success')
@@ -2028,6 +2052,12 @@ watch(screen, () => {
   endEditorPaint()
 })
 
+function handleBeforeUnload(event) {
+  if (!hasEditorUnsavedChanges.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
 watch(
   () => [currentLevel.value.id, isCustomPlaytest.value],
   ([levelId, customPlaytest]) => {
@@ -2042,6 +2072,7 @@ watch(
 
 onMounted(async () => {
   window.addEventListener('pointerup', endEditorPaint)
+  window.addEventListener('beforeunload', handleBeforeUnload)
   try {
     await fetchSharedLevelOverrides()
     await Promise.all([
@@ -2060,6 +2091,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointerup', endEditorPaint)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
   briefSceneController?.dispose()
   playSceneController?.dispose()
   editorSceneController?.dispose()

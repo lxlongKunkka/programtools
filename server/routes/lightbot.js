@@ -11,6 +11,10 @@ const CUSTOM_CHAPTER_TITLE = '自定义关卡'
 const CUSTOM_CHAPTER_ORDER = 999
 const VALID_OPERATION_IDS = new Set(['walk', 'light', 'left', 'right', 'jump', 'p1', 'p2'])
 
+function normalizeFloorColor(color = 'neutral') {
+  return ['neutral', 'green', 'red'].includes(color) ? color : 'neutral'
+}
+
 function isAdminUser(user) {
   return Boolean(user && (user.role === 'admin' || user.priv === -1))
 }
@@ -78,10 +82,25 @@ function normalizeBoard(board) {
       if (!cell) return null
       return {
         h: Math.max(1, Math.min(8, Number(cell.h) || 1)),
-        target: Boolean(cell.target)
+        target: Boolean(cell.target),
+        floorColor: normalizeFloorColor(cell.floorColor)
       }
     })
   })
+}
+
+function normalizeCommandOptions(commandOptions, baseOptions = {}) {
+  const source = {
+    ...baseOptions,
+    ...(commandOptions && typeof commandOptions === 'object' ? commandOptions : {})
+  }
+
+  return {
+    ...(source.ifGreen ? { ifGreen: true } : {}),
+    ...(source.ifRed ? { ifRed: true } : {}),
+    ...(source.ifDark ? { ifDark: true } : {}),
+    ...(source.ifForwardClear ? { ifForwardClear: true } : {})
+  }
 }
 
 function normalizeLightbotLevel(level, options = {}) {
@@ -118,6 +137,7 @@ function normalizeLightbotLevel(level, options = {}) {
   const baseMainLimit = isBuiltIn ? originalLevel.mainLimit : (existingDoc?.mainLimit || 8)
   const baseTips = isBuiltIn ? (originalLevel.tips || []) : (existingDoc?.tips || [])
   const baseDir = isBuiltIn ? originalLevel.start.dir : (existingDoc?.start?.dir || 'forward')
+  const baseCommandOptions = isBuiltIn ? (originalLevel.commandOptions || {}) : (existingDoc?.commandOptions || {})
   const board = normalizeBoard(level.board)
   const start = {
     x: Math.max(0, Number(level.start?.x) || 0),
@@ -149,6 +169,7 @@ function normalizeLightbotLevel(level, options = {}) {
       p1: Math.max(0, Math.min(20, Number(level.procLimits?.p1) || 0)),
       p2: Math.max(0, Math.min(20, Number(level.procLimits?.p2) || 0))
     },
+    commandOptions: normalizeCommandOptions(level.commandOptions, baseCommandOptions),
     tips: (Array.isArray(level.tips) ? level.tips : baseTips).map(normalizeTip).filter((tip) => tip.title && tip.copy),
     board,
     start,
@@ -173,8 +194,9 @@ function toClientLevel(doc) {
     goal: doc.goal,
     mainLimit: doc.mainLimit,
     procLimits: { ...(doc.procLimits || {}) },
+    commandOptions: { ...(doc.commandOptions || {}) },
     tips: (doc.tips || []).map((tip) => ({ title: tip.title, copy: tip.copy })),
-    board: (doc.board || []).map((row) => row.map((cell) => (cell ? { h: cell.h, target: Boolean(cell.target) } : null))),
+    board: (doc.board || []).map((row) => row.map((cell) => (cell ? { h: cell.h, target: Boolean(cell.target), floorColor: normalizeFloorColor(cell.floorColor) } : null))),
     start: { ...doc.start },
     demo: {
       main: (doc.demo?.main || []).map(cloneOperationItem).filter(Boolean),
@@ -336,6 +358,7 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
           goal: existingDoc.goal,
           mainLimit: existingDoc.mainLimit,
           procLimits: existingDoc.procLimits || {},
+          commandOptions: existingDoc.commandOptions || {},
           tips: existingDoc.tips || [],
           board: existingDoc.board,
           start: existingDoc.start,
@@ -359,6 +382,7 @@ router.delete('/levels/:id', authenticateToken, async (req, res) => {
         goal: sourceLevel.goal,
         mainLimit: sourceLevel.mainLimit,
         procLimits: { ...(sourceLevel.procLimits || {}) },
+        commandOptions: normalizeCommandOptions(sourceLevel.commandOptions),
         tips: (sourceLevel.tips || []).map(normalizeTip),
         board: sourceLevel.board,
         start: sourceLevel.start,
