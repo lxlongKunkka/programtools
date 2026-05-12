@@ -1,6 +1,7 @@
 [
   { "id": "o4-mini", "name": "o4-mini", "role": "user" },
   { "id": "gpt-5", "name": "gpt-5", "role": "admin" },
+  { "id": "gpt-5.5", "name": "gpt-5.5", "role": "premium" },
   { "id": "gpt-5.4", "name": "gpt-5.4", "role": "premium" },
   { "id": "gpt-5.4-mini", "name": "gpt-5.4-mini", "role": "premium" },
   { "id": "gpt-5.4-nano", "name": "gpt-5.4-nano", "role": "premium" },
