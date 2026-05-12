@@ -1,0 +1,127 @@
+{
+  "batch": "0075",
+  "range": "atcoder:2332-2351 (ABC455B-ABC457G, 20 problems)",
+  "kind": "O",
+  "assignments": [
+    {
+      "pid": "atcoder:2332",
+      "chapterId": "cpp-2-5-2",
+      "title": "[ABC455B] 中心对称矩形计数",
+      "reason": "枚举矩形/中心并做条件判断，属于暴力枚举与模拟综合，适合放在双重枚举与三重枚举章节"
+    },
+    {
+      "pid": "atcoder:2333",
+      "chapterId": "cpp-5-5-1",
+      "title": "[ABC455C] Vanish",
+      "reason": "按前缀信息统计并结合贪心决策，核心落点更接近前缀和基础应用"
+    },
+    {
+      "pid": "atcoder:2334",
+      "chapterId": "cpp-6-3-2",
+      "title": "[ABC455D] 叠卡片询问",
+      "reason": "卡片堆的插入删除与相邻关系维护适合用双向链表模拟，归入双向链表章节"
+    },
+    {
+      "pid": "atcoder:2335",
+      "chapterId": "cpp-7-6-1",
+      "title": "[ABC455E] 不平衡的 ABC 子串",
+      "reason": "前缀统计配合状态哈希判定子串性质，最贴近字符串哈希与哈希状态统计"
+    },
+    {
+      "pid": "atcoder:2336",
+      "chapterId": "cpp-8-11-1",
+      "title": "[ABC455F] 史莱姆合并 2",
+      "reason": "需要维护区间信息并支持高效合并查询，核心数据结构是线段树"
+    },
+    {
+      "pid": "atcoder:2337",
+      "chapterId": "cpp-7-6-1",
+      "title": "[ABC455G] Balanced Subarrays",
+      "reason": "平衡子数组计数可转为前缀频次状态的归一化与哈希统计，放入字符串哈希章节作为状态哈希扩展题"
+    },
+    {
+      "pid": "atcoder:2338",
+      "chapterId": "cpp-2-4-2",
+      "title": "[ABC456A] 骰子点数和",
+      "reason": "按规则枚举掷骰结果并统计答案，属于基础计数模拟题"
+    },
+    {
+      "pid": "atcoder:2339",
+      "chapterId": "cpp-2-5-2",
+      "title": "[ABC456B] 骰子组合概率",
+      "reason": "需要枚举多种骰子结果组合并统计概率，适合放在双重枚举与三重枚举章节"
+    },
+    {
+      "pid": "atcoder:2340",
+      "chapterId": "cpp-5-9-2",
+      "title": "[ABC456C] 不相邻子串",
+      "reason": "利用滑动窗口维护合法区间并结合前缀统计，核心方法是同向双指针"
+    },
+    {
+      "pid": "atcoder:2341",
+      "chapterId": "cpp-6-10-2",
+      "title": "[ABC456D] 不相邻子序列计数",
+      "reason": "按位置转移统计合法方案数，是典型线性 DP 与状态设计练习"
+    },
+    {
+      "pid": "atcoder:2342",
+      "chapterId": "cpp-9-8-1",
+      "title": "[ABC456E] 无尽的假期",
+      "reason": "图上可达性与环结构分析需要强连通分量缩点，归入 Tarjan SCC 章节"
+    },
+    {
+      "pid": "atcoder:2343",
+      "chapterId": "cpp-9-6-1",
+      "title": "[ABC456F] 假期计划",
+      "reason": "在线性 DP 基础上借助单调队列优化转移，适合作为单调队列优化 DP 例题"
+    },
+    {
+      "pid": "atcoder:2344",
+      "chapterId": "cpp-8-1-3",
+      "title": "[ABC456G] 假期计数",
+      "reason": "组合计数中需要用到容斥思想处理重叠情况，并与 DP 结合，优先归入容斥原理章节"
+    },
+    {
+      "pid": "atcoder:2345",
+      "chapterId": "cpp-3-1-3",
+      "title": "[ABC457A] 数组查询",
+      "reason": "题目围绕一维数组的访问与查询展开，适合作为一维数组强化练习"
+    },
+    {
+      "pid": "atcoder:2346",
+      "chapterId": "cpp-4-2-2",
+      "title": "[ABC457B] 数组查询",
+      "reason": "需要在二维网格/矩阵上做查询与模拟，归入二维数组的应用章节"
+    },
+    {
+      "pid": "atcoder:2347",
+      "chapterId": "cpp-5-1-1",
+      "title": "[ABC457C] 长序列的第 K 项",
+      "reason": "按序列构造规律定位第 K 项，重在规律发现与分类讨论，适合作为思维训练题"
+    },
+    {
+      "pid": "atcoder:2348",
+      "chapterId": "cpp-5-6-2",
+      "title": "[ABC457D] 提升最小值",
+      "reason": "通过二分答案并做贪心可行性检验求最大最小值，核心是二分答案"
+    },
+    {
+      "pid": "atcoder:2349",
+      "chapterId": "cpp-5-2-3",
+      "title": "[ABC457E] 铺设桌布",
+      "reason": "围绕区间端点组合与查询判断，适合用 set/map 索引端点信息，归入 set/map 的遍历与查找"
+    },
+    {
+      "pid": "atcoder:2350",
+      "chapterId": "cpp-9-5-4",
+      "title": "[ABC457F] 第二间距",
+      "reason": "对排列满足条件的方案数进行状态计数，属于计数 DP 与组合计数综合题"
+    },
+    {
+      "pid": "atcoder:2351",
+      "chapterId": "cpp-9-9-1",
+      "title": "[ABC457G] 机器人接苹果",
+      "reason": "可转化为可达关系上的最小链覆盖/二分图匹配模型，适合放在二分图判断与匈牙利算法章节"
+    }
+  ]
+}
