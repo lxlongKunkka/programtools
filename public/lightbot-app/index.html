@@ -2,34 +2,14 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/lightbot-app/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="岐麦教育出品的编程思维启蒙游戏" />
     <title>Codebot · 岐麦编程启蒙</title>
-    <!-- Auth bridge: inject JWT from parent app's localStorage for /api/* requests -->
-    <script>
-      (function () {
-        var _fetch = window.fetch.bind(window)
-        window.fetch = function (resource, init) {
-          var url = typeof resource === 'string' ? resource
-            : (resource instanceof Request ? resource.url : '')
-          if (url && (url.startsWith('/api/') || url.startsWith('/api'))) {
-            var token = localStorage.getItem('auth_token')
-            if (token) {
-              init = Object.assign({}, init)
-              var headers = new Headers(init.headers || {})
-              if (!headers.has('Authorization')) {
-                headers.set('Authorization', 'Bearer ' + token)
-              }
-              init.headers = headers
-            }
-          }
-          return _fetch(resource, init)
-        }
-      })()
-    </script>
-    <script type="module" crossorigin src="/lightbot-app/assets/index-D3xd_6n5.js"></script>
-    <link rel="stylesheet" crossorigin href="/lightbot-app/assets/index-CfzU2iL1.css">
+    <!-- TODO: 将下方 ca-pub-XXXXXXXXXXXXXXXX 替换为你的 Google AdSense 发布商 ID -->
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+    <script type="module" crossorigin src="/assets/index-BqgmbRK0.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CfzU2iL1.css">
   </head>
   <body>
     <div id="root"></div>

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { MAIL_CONFIG } from '../config.js'
 import { authenticateToken } from '../middleware/auth.js'
 import LightbotUserLevel from '../models/LightbotUserLevel.js'
+import LightbotLevel from '../models/LightbotLevel.js'
 
 const router = express.Router()
 
@@ -56,6 +57,19 @@ function maybeCreateMailer() {
     auth: { user: MAIL_CONFIG.user, pass: MAIL_CONFIG.pass },
   })
 }
+
+// ── 官方关卡列表 ────────────────────────────────────────────────────────────
+router.get('/lightbot/levels', async (_req, res) => {
+  try {
+    const levels = await LightbotLevel.find({}, { _id: 0, __v: 0 })
+      .sort({ sortOrder: 1 })
+      .lean()
+    res.json({ ok: true, levels })
+  } catch (err) {
+    console.error('[lightbot] GET /lightbot/levels error:', err)
+    res.status(500).json({ ok: false, error: 'Failed to load levels' })
+  }
+})
 
 router.post('/track', (req, res) => {
   try {
