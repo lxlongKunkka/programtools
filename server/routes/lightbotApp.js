@@ -4,6 +4,8 @@ import path from 'path'
 import nodemailer from 'nodemailer'
 import { fileURLToPath } from 'url'
 import { MAIL_CONFIG } from '../config.js'
+import { authenticateToken } from '../middleware/auth.js'
+import LightbotUserLevel from '../models/LightbotUserLevel.js'
 
 const router = express.Router()
 
@@ -12,7 +14,6 @@ const __dirname = path.dirname(__filename)
 const EVENTS_DIR = path.join(__dirname, '../logs')
 const EVENTS_FILE = path.join(EVENTS_DIR, 'lightbot-events.ndjson')
 const SUBMISSIONS_FILE = path.join(EVENTS_DIR, 'lightbot-submissions.ndjson')
-const SAVED_LEVELS_DIR = path.join(__dirname, '../temp_lightbot_levels')
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true })
@@ -21,6 +22,16 @@ function ensureDir(dirPath) {
 function appendNdjson(filePath, payload) {
   ensureDir(path.dirname(filePath))
   fs.appendFileSync(filePath, `${JSON.stringify(payload)}\n`, 'utf8')
+}
+
+/** 从 level content JSON 字符串中提取 title */
+function extractTitle(content) {
+  try {
+    const obj = JSON.parse(content)
+    return String(obj?.name || obj?.title || '').trim() || '未命名关卡'
+  } catch {
+    return '未命名关卡'
+  }
 }
 
 function getRequesterIp(req) {
@@ -151,7 +162,7 @@ router.post('/submit-level', async (req, res) => {
   res.json({ ok: true })
 })
 
-router.post('/save-level', (req, res) => {
+router.post('/save-level', authenticateToken, async (req, res) => {
   try {
     const levelId = sanitizeLevelId(req.body?.levelId)
     const content = String(req.body?.content || '')
@@ -159,32 +170,110 @@ router.post('/save-level', (req, res) => {
       return res.status(400).json({ error: 'Missing levelId or content' })
     }
 
-    ensureDir(SAVED_LEVELS_DIR)
-    const targetPath = path.join(SAVED_LEVELS_DIR, `${levelId}.json`)
-    fs.writeFileSync(targetPath, content, 'utf8')
-    res.json({ ok: true, path: targetPath.replace(/\\/g, '/') })
+    const title = extractTitle(content)
+    const userId = req.user.id
+    const username = req.user.username
+
+    await LightbotUserLevel.findOneAndUpdate(
+      { userId, levelId },
+      { userId, username, levelId, title, content, updatedAt: new Date() },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    )
+
+    res.json({ ok: true })
   } catch (error) {
     console.error('[lightbot-app] save-level failed:', error)
     res.status(500).json({ error: '保存关卡失败' })
   }
 })
 
-router.post('/delete-level', (req, res) => {
+router.post('/delete-level', authenticateToken, async (req, res) => {
   try {
     const levelId = sanitizeLevelId(req.body?.levelId)
     if (!levelId) {
       return res.status(400).json({ error: 'Missing levelId' })
     }
 
-    const targetPath = path.join(SAVED_LEVELS_DIR, `${levelId}.json`)
-    if (!fs.existsSync(targetPath)) {
+    const result = await LightbotUserLevel.deleteOne({ userId: req.user.id, levelId })
+    if (result.deletedCount === 0) {
       return res.status(404).json({ error: 'Level not found' })
     }
 
-    fs.unlinkSync(targetPath)
     res.json({ ok: true })
   } catch (error) {
     console.error('[lightbot-app] delete-level failed:', error)
+    res.status(500).json({ error: '删除关卡失败' })
+  }
+})
+
+// ── 我的关卡 CRUD ──────────────────────────────────────────────
+
+// 获取用户所有关卡
+router.get('/lightbot/my-levels', authenticateToken, async (req, res) => {
+  try {
+    const levels = await LightbotUserLevel.find(
+      { userId: req.user.id },
+      { content: 0 } // 列表不返回 content，减少传输量
+    ).sort({ updatedAt: -1 }).lean()
+
+    res.json({ ok: true, levels })
+  } catch (error) {
+    console.error('[lightbot-app] my-levels list failed:', error)
+    res.status(500).json({ error: '获取关卡列表失败' })
+  }
+})
+
+// 获取单个关卡（含 content，用于加载编辑器）
+router.get('/lightbot/my-levels/:id', authenticateToken, async (req, res) => {
+  try {
+    const level = await LightbotUserLevel.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    }).lean()
+
+    if (!level) return res.status(404).json({ error: '关卡不存在' })
+    res.json({ ok: true, level })
+  } catch (error) {
+    console.error('[lightbot-app] my-levels get failed:', error)
+    res.status(500).json({ error: '获取关卡失败' })
+  }
+})
+
+// 切换发布状态
+router.patch('/lightbot/my-levels/:id/publish', authenticateToken, async (req, res) => {
+  try {
+    const level = await LightbotUserLevel.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    })
+
+    if (!level) return res.status(404).json({ error: '关卡不存在' })
+
+    level.isPublished = !level.isPublished
+    await level.save()
+
+    res.json({ ok: true, isPublished: level.isPublished })
+  } catch (error) {
+    console.error('[lightbot-app] my-levels publish failed:', error)
+    res.status(500).json({ error: '操作失败' })
+  }
+})
+
+// 删除关卡（通过 _id）
+router.delete('/lightbot/my-levels/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await LightbotUserLevel.deleteOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    })
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: '关卡不存在' })
+    }
+
+    res.json({ ok: true })
+  } catch (error) {
+    console.error('[lightbot-app] my-levels delete failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
   }
 })
