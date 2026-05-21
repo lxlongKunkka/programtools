@@ -247,6 +247,35 @@ router.get('/lightbot/my-published-levels', authenticateToken, async (req, res) 
   }
 })
 
+// 获取所有用户已发布关卡（社区关卡，无需登录，可选排除指定用户）
+// 查询参数：excludeUserId=<number>
+router.get('/lightbot/community-levels', async (req, res) => {
+  try {
+    const excludeUserId = req.query.excludeUserId ? Number(req.query.excludeUserId) : null
+    const query = { isPublished: true, solutionSteps: { $gte: 10 } }
+    if (excludeUserId && !isNaN(excludeUserId)) {
+      query.userId = { $ne: excludeUserId }
+    }
+    const records = await LightbotUserLevel.find(query, { content: 1, levelId: 1, username: 1 })
+      .sort({ updatedAt: -1 })
+      .limit(50)
+      .lean()
+
+    const levels = records.map(r => {
+      try {
+        const cfg = JSON.parse(r.content)
+        // 附带作者名，便于前端在关卡卡片上展示
+        return { ...cfg, _author: r.username }
+      } catch { return null }
+    }).filter(Boolean)
+
+    res.json({ ok: true, levels })
+  } catch (error) {
+    console.error('[lightbot-app] community-levels failed:', error)
+    res.status(500).json({ error: '获取社区关卡失败' })
+  }
+})
+
 // 获取用户所有关卡
 router.get('/lightbot/my-levels', authenticateToken, async (req, res) => {
   try {
