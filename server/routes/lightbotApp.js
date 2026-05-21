@@ -7,6 +7,7 @@ import { MAIL_CONFIG } from '../config.js'
 import { authenticateToken } from '../middleware/auth.js'
 import LightbotUserLevel from '../models/LightbotUserLevel.js'
 import LightbotLevel from '../models/LightbotLevel.js'
+import LightbotResult from '../models/LightbotResult.js'
 
 const router = express.Router()
 
@@ -331,6 +332,64 @@ router.delete('/lightbot/admin/level/:levelId', authenticateToken, async (req, r
   } catch (error) {
     console.error('[lightbot-app] admin delete-level failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
+  }
+})
+
+// POST /lightbot/levels/:levelId/complete — 登录用户提交/更新最优成绩
+router.post('/lightbot/levels/:levelId/complete', authenticateToken, async (req, res) => {
+  const { levelId } = req.params
+  const { totalCommands, executionSteps } = req.body
+
+  if (typeof totalCommands !== 'number' || typeof executionSteps !== 'number'
+      || !Number.isInteger(totalCommands) || !Number.isInteger(executionSteps)
+      || totalCommands < 0 || executionSteps < 0) {
+    return res.status(400).json({ ok: false, error: '参数无效' })
+  }
+
+  try {
+    const userId = req.user.id
+    const username = req.user.username || req.user.name || String(userId)
+    const existing = await LightbotResult.findOne({ userId, levelId })
+    if (existing) {
+      const isBetter =
+        totalCommands < existing.totalCommands ||
+        (totalCommands === existing.totalCommands && executionSteps < existing.executionSteps)
+      if (isBetter) {
+        existing.totalCommands = totalCommands
+        existing.executionSteps = executionSteps
+        existing.completedAt = new Date()
+        await existing.save()
+      }
+    } else {
+      await LightbotResult.create({ userId, username, levelId, totalCommands, executionSteps })
+    }
+    res.json({ ok: true })
+  } catch (error) {
+    console.error('[lightbot-app] submit-complete failed:', error)
+    res.status(500).json({ ok: false, error: '提交失败' })
+  }
+})
+
+// GET /lightbot/levels/:levelId/leaderboard — 公开排行榜（前10名）
+router.get('/lightbot/levels/:levelId/leaderboard', async (req, res) => {
+  const { levelId } = req.params
+  try {
+    const results = await LightbotResult.find({ levelId })
+      .sort({ totalCommands: 1, executionSteps: 1, completedAt: 1 })
+      .limit(10)
+      .lean()
+    res.json({
+      ok: true,
+      data: results.map((r, i) => ({
+        rank: i + 1,
+        username: r.username,
+        totalCommands: r.totalCommands,
+        executionSteps: r.executionSteps,
+      })),
+    })
+  } catch (error) {
+    console.error('[lightbot-app] leaderboard failed:', error)
+    res.status(500).json({ ok: false, error: '获取排行榜失败' })
   }
 })
 
