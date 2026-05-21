@@ -24,7 +24,7 @@ const GespTool = () => import('../pages/GespTool.vue')
 const GespMap = () => import('../pages/GespMap.vue')
 const GameSudoku = () => import('../pages/GameSudoku.vue')
 const SokobanGame = () => import('../pages/SokobanGame.vue')
-const LightbotGame = () => import('../pages/LightbotGame.vue')
+const LightbotGame = () => import('../pages/LightbotEmbed.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [

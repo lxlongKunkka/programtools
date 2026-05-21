@@ -16,7 +16,7 @@ import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
 import sokobanRoutes from './routes/sokoban.js'
-import lightbotRoutes from './routes/lightbot.js'
+import lightbotAppRoutes from './routes/lightbotApp.js'
 import settingsRoutes from './routes/settings.js'
 import atcoderRoutes from './routes/atcoder.js'
 import htojRoutes from './routes/htoj.js'
@@ -82,7 +82,7 @@ app.use('/api/gesp', gespRoutes)
 app.use('/api', settingsRoutes)
 app.use('/api', sudokuRoutes)
 app.use('/api/sokoban', sokobanRoutes)
-app.use('/api/lightbot', lightbotRoutes)
+app.use('/api', lightbotAppRoutes)
 app.use('/api/atcoder', atcoderRoutes)
 app.use('/api/htoj', htojRoutes)
 app.use('/api/nflsoj', nflsojRoutes)

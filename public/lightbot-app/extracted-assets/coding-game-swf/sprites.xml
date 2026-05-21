@@ -1,0 +1,112 @@
+<TextureAtlas imagePath="sprites.png">
+	<!--
+	Created with ShoeBox
+	http://renderhjs.net/shoebox/
+	-->
+	<SubTexture name="barTitleImg"	x="0"	y="0"	width="300"	height="39" frameX="-0" frameY="-0" frameWidth="300" frameHeight="39"/>
+	<SubTexture name="baseButton01Image"	x="131"	y="633"	width="112"	height="95" frameX="-0" frameY="-0" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="baseButton02Image"	x="206"	y="99"	width="86"	height="73" frameX="-13" frameY="-11" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="baseButton0Image"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="block0Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block1Img"	x="0"	y="436"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block2Img"	x="0"	y="436"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block3Img"	x="0"	y="436"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block4Img"	x="0"	y="436"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	
+	<SubTexture name="block5Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block6Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block7Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block8Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block9Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block10Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	<SubTexture name="block11Img"	x="0"	y="336"	width="128"	height="97" frameX="-0" frameY="-0" frameWidth="128" frameHeight="97"/>
+	
+	
+	<SubTexture name="char0ArkaSagImg"	x="312"	y="390"	width="58"	height="64" frameX="-11" frameY="-16" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char0SagImg"	x="314"	y="248"	width="57"	height="64" frameX="-11" frameY="-16" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char10ArkaSagImg"	x="312"	y="457"	width="58"	height="70" frameX="-11" frameY="-10" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char10SagImg"	x="415"	y="79"	width="50"	height="70" frameX="-15" frameY="-10" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char11ArkaSagImg"	x="246"	y="390"	width="63"	height="68" frameX="-9" frameY="-12" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char11SagImg"	x="312"	y="530"	width="57"	height="68" frameX="-12" frameY="-12" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char12ArkaSagImg"	x="416"	y="0"	width="50"	height="61" frameX="-15" frameY="-19" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char12SagImg"	x="374"	y="594"	width="50"	height="62" frameX="-15" frameY="-18" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char13ArkaSagImg"	x="288"	y="175"	width="62"	height="70" frameX="-9" frameY="-10" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char13SagImg"	x="246"	y="611"	width="62"	height="70" frameX="-9" frameY="-10" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char14ArkaSagImg"	x="246"	y="461"	width="63"	height="72" frameX="-9" frameY="-8" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char14SagImg"	x="246"	y="536"	width="63"	height="72" frameX="-9" frameY="-8" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char1ArkaSagImg"	x="141"	y="275"	width="60"	height="51" frameX="-10" frameY="-29" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char1SagImg"	x="295"	y="117"	width="60"	height="48" frameX="-10" frameY="-32" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char2ArkaSagImg"	x="358"	y="117"	width="54"	height="80" frameX="-13" frameY="-0" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char2SagImg"	x="370"	y="679"	width="54"	height="74" frameX="-13" frameY="-6" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char3ArkaSagImg"	x="426"	y="508"	width="49"	height="65" frameX="-16" frameY="-15" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char3SagImg"	x="426"	y="274"	width="49"	height="65" frameX="-16" frameY="-15" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char4ArkaSagImg"	x="359"	y="0"	width="54"	height="76" frameX="-13" frameY="-4" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char4SagImg"	x="315"	y="832"	width="54"	height="67" frameX="-13" frameY="-13" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char5ArkaSagImg"	x="373"	y="434"	width="51"	height="71" frameX="-15" frameY="-9" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char5SagImg"	x="374"	y="200"	width="51"	height="71" frameX="-15" frameY="-9" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char6ArkaSagImg"	x="372"	y="530"	width="51"	height="61" frameX="-15" frameY="-19" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char6SagImg"	x="312"	y="947"	width="57"	height="57" frameX="-12" frameY="-23" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char7ArkaSagImg"	x="369"	y="762"	width="53"	height="56" frameX="-14" frameY="-24" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char7SagImg"	x="373"	y="375"	width="51"	height="56" frameX="-15" frameY="-24" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char8ArkaSagImg"	x="306"	y="684"	width="61"	height="75" frameX="-9" frameY="-5" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char8SagImg"	x="295"	y="42"	width="61"	height="72" frameX="-9" frameY="-8" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char9ArkaSagImg"	x="311"	y="611"	width="60"	height="65" frameX="-10" frameY="-15" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="char9SagImg"	x="306"	y="762"	width="60"	height="67" frameX="-10" frameY="-13" frameWidth="80" frameHeight="80"/>
+	<SubTexture name="cmd0Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd1Img"	x="131"	y="850"	width="42"	height="26" frameX="-11" frameY="-19" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd22Img"	x="465"	y="951"	width="32"	height="45" frameX="-16" frameY="-10" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd23Img"	x="428"	y="951"	width="34"	height="41" frameX="-15" frameY="-12" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd24Img"	x="176"	y="850"	width="42"	height="33" frameX="-11" frameY="-16" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd2Img"	x="428"	y="875"	width="36"	height="35" frameX="-13" frameY="-15" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd3Img"	x="428"	y="913"	width="36"	height="35" frameX="-14" frameY="-15" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd4Img"	x="467"	y="838"	width="30"	height="57" frameX="-17" frameY="-2" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd5Img"	x="374"	y="274"	width="46"	height="35" frameX="-9" frameY="-16" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="cmd6Img"	x="372"	y="315"	width="51"	height="57" frameX="-9" frameY="-3" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="commandSquareImg"	x="245"	y="947"	width="64"	height="64" frameX="-0" frameY="-0" frameWidth="64" frameHeight="64"/>
+	<SubTexture name="goldImg"	x="427"	y="342"	width="41"	height="50" frameX="-0" frameY="-0" frameWidth="41" frameHeight="50"/>
+	<SubTexture name="handImg"	x="0"	y="536"	width="128"	height="100" frameX="-0" frameY="-0" frameWidth="128" frameHeight="100"/>
+	<SubTexture name="iconCozumImg"	x="428"	y="192"	width="41"	height="54" frameX="-36" frameY="-21" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconFalseImg"	x="428"	y="838"	width="36"	height="34" frameX="-38" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconHomeImg"	x="246"	y="684"	width="48"	height="41" frameX="-32" frameY="-27" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconLikeImg"	x="425"	y="756"	width="45"	height="41" frameX="-33" frameY="-25" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconMusicOffImg"	x="427"	y="576"	width="45"	height="35" frameX="-33" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconMusicOnImg"	x="428"	y="800"	width="38"	height="35" frameX="-33" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconMusterenImg"	x="427"	y="614"	width="45"	height="41" frameX="-33" frameY="-25" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconNextImg"	x="204"	y="285"	width="38"	height="39" frameX="-37" frameY="-28" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconNextLevelImg"	x="427"	y="658"	width="44"	height="37" frameX="-34" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconOynatma0Img"	x="372"	y="939"	width="53"	height="56" frameX="-30" frameY="-20" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconOynatma1Img"	x="372"	y="880"	width="53"	height="56" frameX="-30" frameY="-20" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconOynatma2Img"	x="372"	y="821"	width="53"	height="56" frameX="-30" frameY="-20" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconRefreshImg"	x="315"	y="902"	width="48"	height="41" frameX="-33" frameY="-25" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconSelectLevelImg"	x="427"	y="698"	width="44"	height="34" frameX="-34" frameY="-31" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconShopImg"	x="415"	y="152"	width="45"	height="37" frameX="-33" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconSoundOffImg"	x="467"	y="898"	width="30"	height="43" frameX="-39" frameY="-25" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconSoundOnImg"	x="303"	y="0"	width="46"	height="39" frameX="-33" frameY="-27" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="iconTrueImg"	x="359"	y="79"	width="46"	height="34" frameX="-33" frameY="-29" frameWidth="112" frameHeight="95"/>
+	<SubTexture name="kareSoruImg"	x="0"	y="886"	width="124"	height="124" frameX="-2" frameY="-2" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="kilitImg"	x="463"	y="152"	width="30"	height="30" frameX="-7" frameY="-4" frameWidth="40" frameHeight="36"/>
+	<SubTexture name="musterenImg"	x="131"	y="336"	width="112"	height="96" frameX="-0" frameY="-0" frameWidth="112" frameHeight="97"/>
+	<SubTexture name="obstacle0Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle1Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle2Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle3Img"	x="0"	y="1013"	width="1"	height="1" frameX="--2" frameY="--2" frameWidth="128" frameHeight="128"/>
+	
+	<SubTexture name="obstacle10Img"	x="131"	y="792"	width="87"	height="55" frameX="-20" frameY="-62" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle11Img"	x="314"	y="315"	width="55"	height="53" frameX="-36" frameY="-54" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle4Img"	x="0"	y="639"	width="128"	height="97" frameX="-0" frameY="-31" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle5Img"	x="206"	y="175"	width="79"	height="107" frameX="-24" frameY="-1" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle6Img"	x="231"	y="731"	width="72"	height="108" frameX="-31" frameY="-0" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle7Img"	x="245"	y="842"	width="67"	height="102" frameX="-29" frameY="-6" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle8Img"	x="246"	y="285"	width="65"	height="102" frameX="-31" frameY="-6" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="obstacle9Img"	x="131"	y="731"	width="97"	height="58" frameX="-13" frameY="-59" frameWidth="128" frameHeight="128"/>
+	<SubTexture name="playImg"	x="0"	y="99"	width="203"	height="173" frameX="-0" frameY="-0" frameWidth="203" frameHeight="173"/>
+	<SubTexture name="pointTableContainerImg"	x="0"	y="275"	width="138"	height="58" frameX="-0" frameY="-0" frameWidth="138" frameHeight="58"/>
+	<SubTexture name="protectKidsImg"	x="0"	y="42"	width="288"	height="54" frameX="-0" frameY="-0" frameWidth="288" frameHeight="54"/>
+	<SubTexture name="rateImg"	x="131"	y="435"	width="112"	height="96" frameX="-0" frameY="-0" frameWidth="112" frameHeight="97"/>
+	<SubTexture name="shopImg"	x="131"	y="534"	width="112"	height="96" frameX="-0" frameY="-0" frameWidth="112" frameHeight="97"/>
+	<SubTexture name="shopKare0Img"	x="127"	y="886"	width="115"	height="135" frameX="-13" frameY="-5" frameWidth="128" frameHeight="144"/>
+	<SubTexture name="shopKare1Img"	x="0"	y="739"	width="128"	height="144" frameX="-0" frameY="-0" frameWidth="128" frameHeight="144"/>
+	<SubTexture name="targetImg"	x="427"	y="395"	width="41"	height="85" frameX="-30" frameY="-15" frameWidth="100" frameHeight="100"/>
+	<SubTexture name="whiteImg"	x="221"	y="864"	width="10"	height="10" frameX="-0" frameY="-0" frameWidth="10" frameHeight="10"/>
+	<SubTexture name="yildiz32Img"	x="221"	y="842"	width="20"	height="19" frameX="-0" frameY="-0" frameWidth="20" frameHeight="20"/>
+</TextureAtlas>
