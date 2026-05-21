@@ -180,8 +180,13 @@ router.post('/save-level', authenticateToken, async (req, res) => {
   try {
     const levelId = sanitizeLevelId(req.body?.levelId)
     const content = String(req.body?.content || '')
+    const solutionSteps = Number(req.body?.solutionSteps ?? 0)
     if (!levelId || !content) {
       return res.status(400).json({ error: 'Missing levelId or content' })
+    }
+
+    if (solutionSteps < 10) {
+      return res.status(400).json({ error: `关卡解法至少需要 10 步，当前仅 ${solutionSteps} 步` })
     }
 
     const title = extractTitle(content)
@@ -190,7 +195,7 @@ router.post('/save-level', authenticateToken, async (req, res) => {
 
     await LightbotUserLevel.findOneAndUpdate(
       { userId, levelId },
-      { userId, username, levelId, title, content, updatedAt: new Date() },
+      { userId, username, levelId, title, content, solutionSteps, updatedAt: new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     )
 
@@ -263,6 +268,11 @@ router.patch('/lightbot/my-levels/:id/publish', authenticateToken, async (req, r
 
     if (!level) return res.status(404).json({ error: '关卡不存在' })
 
+    // 只有在取消发布，或者关卡已通关验证（solutionSteps >= 1）时才允许发布
+    if (!level.isPublished && (level.solutionSteps ?? 0) < 1) {
+      return res.status(400).json({ error: '关卡必须先通关验证才能发布' })
+    }
+
     level.isPublished = !level.isPublished
     await level.save()
 
@@ -288,6 +298,38 @@ router.delete('/lightbot/my-levels/:id', authenticateToken, async (req, res) => 
     res.json({ ok: true })
   } catch (error) {
     console.error('[lightbot-app] my-levels delete failed:', error)
+    res.status(500).json({ error: '删除关卡失败' })
+  }
+})
+
+// 管理员删除任意关卡（官方关卡或用户关卡）
+router.delete('/lightbot/admin/level/:levelId', authenticateToken, async (req, res) => {
+  try {
+    const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
+    if (!isAdminUser) {
+      return res.status(403).json({ error: '需要管理员权限' })
+    }
+
+    const levelId = req.params.levelId
+    if (!levelId) {
+      return res.status(400).json({ error: '缺少 levelId' })
+    }
+
+    // 先尝试从官方关卡集合中删除
+    const officialResult = await LightbotLevel.deleteOne({ id: levelId })
+    if (officialResult.deletedCount > 0) {
+      return res.json({ ok: true, from: 'official' })
+    }
+
+    // 再尝试从用户关卡集合中删除
+    const userResult = await LightbotUserLevel.deleteOne({ levelId })
+    if (userResult.deletedCount > 0) {
+      return res.json({ ok: true, from: 'user' })
+    }
+
+    res.status(404).json({ error: '关卡不存在' })
+  } catch (error) {
+    console.error('[lightbot-app] admin delete-level failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
   }
 })

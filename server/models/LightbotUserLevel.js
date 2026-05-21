@@ -9,6 +9,7 @@ const schema = new mongoose.Schema(
     title: { type: String, default: '未命名关卡', maxlength: 100 },
     content: { type: String, required: true }, // JSON string of the level
     isPublished: { type: Boolean, default: false },
+    solutionSteps: { type: Number, default: 0 }, // 通关验证的执行步数，≥1 表示有解
   },
   { timestamps: true }
 )
