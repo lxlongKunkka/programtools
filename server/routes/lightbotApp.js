@@ -196,7 +196,7 @@ router.post('/save-level', authenticateToken, async (req, res) => {
 
     await LightbotUserLevel.findOneAndUpdate(
       { userId, levelId },
-      { userId, username, levelId, title, content, solutionSteps, updatedAt: new Date() },
+      { userId, username, levelId, title, content, solutionSteps, isPublished: true, updatedAt: new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     )
 
@@ -227,6 +227,25 @@ router.post('/delete-level', authenticateToken, async (req, res) => {
 })
 
 // ── 我的关卡 CRUD ──────────────────────────────────────────────
+
+// 获取用户已发布关卡（含完整 content，供游戏启动时加载）
+router.get('/lightbot/my-published-levels', authenticateToken, async (req, res) => {
+  try {
+    const records = await LightbotUserLevel.find(
+      { userId: req.user.id, isPublished: true },
+      { content: 1, levelId: 1 }
+    ).sort({ updatedAt: -1 }).lean()
+
+    const levels = records.map(r => {
+      try { return JSON.parse(r.content) } catch { return null }
+    }).filter(Boolean)
+
+    res.json({ ok: true, levels })
+  } catch (error) {
+    console.error('[lightbot-app] my-published-levels failed:', error)
+    res.status(500).json({ error: '获取关卡失败' })
+  }
+})
 
 // 获取用户所有关卡
 router.get('/lightbot/my-levels', authenticateToken, async (req, res) => {
