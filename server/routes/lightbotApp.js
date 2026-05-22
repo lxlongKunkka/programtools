@@ -442,4 +442,61 @@ router.get('/lightbot/levels/:levelId/leaderboard', async (req, res) => {
   }
 })
 
+// GET /lightbot/admin/stats — 管理员统计（需管理员权限）
+router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
+  const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
+  if (!isAdminUser) return res.status(403).json({ error: '需要管理员权限' })
+
+  try {
+    // 读取事件日志
+    const lines = fs.existsSync(EVENTS_FILE)
+      ? fs.readFileSync(EVENTS_FILE, 'utf8').split('\n').filter(Boolean)
+      : []
+    const events = lines.map(l => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+
+    const daily = {}
+    const dailyIps = {}
+    const levelCompletions = {}
+
+    for (const ev of events) {
+      const day = new Date(ev.t || Date.now()).toISOString().slice(0, 10)
+      daily[day] ||= { game_start: 0, level_complete: 0 }
+      daily[day][ev.event] = (daily[day][ev.event] || 0) + 1
+      dailyIps[day] ||= new Set()
+      if (ev.ip) dailyIps[day].add(ev.ip)
+      if (ev.event === 'level_complete' && ev.levelId) {
+        levelCompletions[ev.levelId] = (levelCompletions[ev.levelId] || 0) + 1
+      }
+    }
+
+    // 最近 30 条通关记录（来自 MongoDB，含用户名）
+    const recentResults = await LightbotResult.find({})
+      .sort({ completedAt: -1 })
+      .limit(30)
+      .lean()
+
+    res.json({
+      ok: true,
+      total_events: events.length,
+      daily: Object.entries(daily).sort().map(([day, counts]) => ({
+        day,
+        game_start: counts.game_start || 0,
+        level_complete: counts.level_complete || 0,
+        unique_ips: dailyIps[day]?.size || 0,
+      })),
+      level_completions: levelCompletions,
+      recent_results: recentResults.map(r => ({
+        username: r.username,
+        levelId: r.levelId,
+        totalCommands: r.totalCommands,
+        executionSteps: r.executionSteps,
+        completedAt: r.completedAt ? r.completedAt.toISOString() : null,
+      })),
+    })
+  } catch (error) {
+    console.error('[lightbot-app] admin/stats failed:', error)
+    res.status(500).json({ ok: false, error: '获取统计失败' })
+  }
+})
+
 export default router

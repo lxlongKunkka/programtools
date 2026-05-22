@@ -25,6 +25,7 @@ const GespMap = () => import('../pages/GespMap.vue')
 const GameSudoku = () => import('../pages/GameSudoku.vue')
 const SokobanGame = () => import('../pages/SokobanGame.vue')
 const LightbotGame = () => import('../pages/LightbotEmbed.vue')
+const LightbotStatsAdmin = () => import('../pages/LightbotStatsAdmin.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [
@@ -36,6 +37,7 @@ const routes = [
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/quiz-issues', component: QuizIssueAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/lightbot-stats', component: LightbotStatsAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/learners/dashboard', component: TeacherQuizDashboard, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/quiz-following', redirect: '/learners/dashboard' },
   { path: '/report/:token', component: ParentReport },
