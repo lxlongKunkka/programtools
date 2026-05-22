@@ -182,6 +182,13 @@ export function LevelEditorShell() {
           solvable?: boolean
           minSteps?: number
           actions?: string[]
+          programCode?: string
+          totalCommands?: number
+          mainBlocks?: number
+          functionBlocks?: {
+            f1?: number
+            f2?: number
+          }
           error?: string
           note?: string
           visitedStates?: number
@@ -198,24 +205,22 @@ export function LevelEditorShell() {
         return
       }
 
-      const actionLabels: Record<string, string> = {
-        forward: '前进',
-        left: '左转',
-        right: '右转',
-        jump: '跳跃',
-        pickup: '拾取',
-      }
       const actions = Array.isArray(data.result.actions) ? data.result.actions : []
-      const display = actions.slice(0, 24).map((item) => actionLabels[item] ?? item).join(' -> ')
-      const suffix = actions.length > 24 ? ' ...' : ''
-      setShareMsg(`✓ 智能测试通过：最优 ${data.result.minSteps ?? actions.length} 步`)
+      const programCode = String(data.result.programCode || '').trim()
+      const f1Blocks = data.result.functionBlocks?.f1 ?? 0
+      const f2Blocks = data.result.functionBlocks?.f2 ?? 0
+      setShareMsg(`✓ 智能测试通过：最优 ${data.result.minSteps ?? actions.length} 步，参考程序 ${data.result.totalCommands ?? '-'} 块`)
       window.alert([
         `智能测试完成`,
         `是否有解：有`,
         `最优步数：${data.result.minSteps ?? actions.length}`,
+        `参考程序总块数：${data.result.totalCommands ?? '-'}`,
+        `主程序块数：${data.result.mainBlocks ?? '-'}`,
+        `函数块数：f1=${f1Blocks}，f2=${f2Blocks}`,
         `搜索状态数：${data.result.visitedStates ?? '-'}`,
         data.result.note ? `备注：${data.result.note}` : '',
-        `动作序列：${display}${suffix}`,
+        actions.length > 0 ? `最短动作序列：${actions.join(' -> ')}` : '',
+        programCode ? `参考程序：\n${programCode}` : '',
       ].filter(Boolean).join('\n'))
       setTimeout(() => setShareMsg(''), 5000)
     } catch {
