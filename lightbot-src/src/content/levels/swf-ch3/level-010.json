@@ -1,0 +1,375 @@
+{
+  "id": "swf-03-010",
+  "title": "第3-10关",
+  "teachingGoal": "基于 SWF LevelData 构造参数恢复出的关卡，地图编码和金币位置带有启发式推断。",
+  "availableBlocks": [
+    "forward",
+    "turnLeft",
+    "turnRight",
+    "jump",
+    "pickup",
+    "f1Call",
+    "repeat"
+  ],
+  "grid": [
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "obstacle"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "trap"
+      },
+      {
+        "height": 0,
+        "kind": "coin"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "trap"
+      },
+      {
+        "height": 0,
+        "kind": "coin"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "trap"
+      },
+      {
+        "height": 0,
+        "kind": "coin"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ]
+  ],
+  "robot": {
+    "x": 5,
+    "y": 1,
+    "z": 0,
+    "direction": "E"
+  },
+  "winCondition": {
+    "type": "all-coins-collected"
+  },
+  "chapter": {
+    "id": "swf-ch3",
+    "title": "第三章 · 函数入门",
+    "order": 12
+  },
+  "constraints": {
+    "maxMainBlocks": 1
+  }
+}

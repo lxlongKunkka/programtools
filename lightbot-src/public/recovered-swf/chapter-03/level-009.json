@@ -1,0 +1,382 @@
+﻿{
+  "id": "swf-03-009",
+  "title": "第3-9关",
+  "chapter": {
+    "id": "recovered-swf-3",
+    "title": "第三章",
+    "order": 2
+  },
+  "teachingGoal": "基于 SWF LevelData 构造参数恢复出的关卡，地图编码和金币位置带有启发式推断。",
+  "availableBlocks": [
+    "forward",
+    "right",
+    "left",
+    "pickup",
+    "call-f1"
+  ],
+  "grid": [
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "coin"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "path"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ],
+    [
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      },
+      {
+        "height": 0,
+        "kind": "void"
+      }
+    ]
+  ],
+  "robot": {
+    "x": 7,
+    "y": 4,
+    "z": 0,
+    "direction": "N"
+  },
+  "winCondition": {
+    "type": "all-coins-collected"
+  },
+  "constraints": {
+    "maxMainBlocks": 12,
+    "maxFunctions": 1,
+    "recommendedSteps": 12
+  },
+  "hints": [
+    "SWF 原始方向码: 2",
+    "SWF 原始可用指令码: [1, 2, 3, 4, 5]",
+    "SWF 原始速度值: 1",
+    "grid 的 height/kind 由 LevelData 数值编码启发式推断。",
+    "coin 数量依据参考解中的 pickup 次数估算。"
+  ]
+}

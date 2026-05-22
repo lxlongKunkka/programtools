@@ -30,3 +30,8 @@ node_modules/.package-lock.json
 # Ignore runtime sensitive data
 server/premium_users.json
 server/teachers.json
+
+# lightbot 源码子项目
+lightbot-src/node_modules/
+lightbot-src/dist/
+lightbot-src/.env.local
