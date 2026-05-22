@@ -2245,7 +2245,7 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* 弹窗内的排行榜面板覆盖暗色游戏样式 */
