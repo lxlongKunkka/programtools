@@ -2310,6 +2310,7 @@ button {
   font-size: 0.78rem;
   background: #fafafa;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .lb-leaderboard-table--modal td:nth-child(2) { text-align: left; }
 .lb-leaderboard-table--modal th:nth-child(2) { text-align: left; }
