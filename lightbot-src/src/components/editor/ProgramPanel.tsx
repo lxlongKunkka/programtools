@@ -581,7 +581,6 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const level         = useGameStore((state) => state.level)
   const winMeta       = useGameStore((state) => state.winMeta)
   const program       = useGameStore((state) => state.program)
-  const setProgram    = useGameStore((state) => state.setProgram)
 
   const mainBlocks = program.main.length
   const myTotalCommands = countProgramNodes(program)
@@ -620,41 +619,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
   const [myLevelEntry, setMyLevelEntry] = useState<LeaderboardEntry | null>(null)
   const [myOverallEntry, setMyOverallEntry] = useState<OverallLeaderboardEntry | null>(null)
-  const [solutionLoading, setSolutionLoading] = useState(false)
-  const [solutionHint, setSolutionHint] = useState<string | null>(null)
 
-  const loadMySolution = async () => {
-    const token = localStorage.getItem('auth_token')
-    if (!token) return
-    setSolutionLoading(true)
-    setSolutionHint(null)
-    try {
-      const r = await fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/my-solution`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await r.json()
-      if (data.ok && data.solution && Array.isArray(data.solution.main)) {
-        // 防御性规范化：确保 functions 字段结构完整
-        const normalized: ProgramDocument = {
-          main: data.solution.main,
-          functions: {
-            f1: Array.isArray(data.solution.functions?.f1) ? data.solution.functions.f1 : [],
-            f2: Array.isArray(data.solution.functions?.f2) ? data.solution.functions.f2 : [],
-          },
-        }
-        setProgram(normalized)
-        resetWorld()
-      } else {
-        setSolutionHint('暂无已保存的最优解')
-        setTimeout(() => setSolutionHint(null), 3000)
-      }
-    } catch {
-      setSolutionHint('加载失败，请重试')
-      setTimeout(() => setSolutionHint(null), 3000)
-    } finally {
-      setSolutionLoading(false)
-    }
-  }
   // 动态星级：优先使用服务端按当前榜首重算后的本人星级
   const stars = myLevelEntry?.stars ?? (leaderboardLoading || leaderboard.length === 0
     ? 1
@@ -739,14 +704,8 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               ? <button className="lb-win-next-btn" onClick={() => loadLevel(levelIndex + 1)}>下一关 ▶</button>
               : <span className="lb-win-all-done">🏆 全部完成！</span>
             }
-            {hasLeaderboard && !!localStorage.getItem('auth_token') && (
-              <button className="lb-win-retry-btn" onClick={loadMySolution} disabled={solutionLoading}
-                title="从数据库读取你的历史最优解">
-                {solutionLoading ? '加载中…' : '📂 最优解'}
-              </button>
-            )}
+
           </div>
-          {solutionHint && <div className="lb-solution-hint">{solutionHint}</div>}
           {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
           {hasLeaderboard && (
             <div className="lb-leaderboard">

@@ -119,19 +119,7 @@ export function createPlatformGeometry(params: {
 
 export function createVectorMapSkin(): MapSkin {
   return {
-    renderBackground({ backgroundGraphics, levelMetrics }) {
-      for (let offset = -levelMetrics.height; offset < levelMetrics.width + levelMetrics.height; offset += 44) {
-        backgroundGraphics.moveTo(offset, 0)
-        backgroundGraphics.lineTo(offset + levelMetrics.height, levelMetrics.height)
-        backgroundGraphics.stroke({ color: '#ffffff', width: 1, alpha: 0.06 })
-      }
-      for (let sparkleIndex = 0; sparkleIndex < 12; sparkleIndex += 1) {
-        const x = levelMetrics.width * (0.18 + (sparkleIndex % 6) * 0.12)
-        const y = levelMetrics.height * (0.18 + Math.floor(sparkleIndex / 6) * 0.22) + (sparkleIndex % 2) * 12
-        backgroundGraphics.roundRect(x, y, 6, 6, 2)
-        backgroundGraphics.fill({ color: '#ffffff', alpha: 0.18 })
-      }
-    },
+    renderBackground(_params) {},  // no decorations
     renderTile({ tileGraphics, glowGraphics, tileState }) {
       // treeGraphics accepted but unused in vector skin
       const kind = tileState.tile.kind
@@ -250,19 +238,7 @@ function createSpriteReadyMapSkin(_spriteManifest: LightbotSpriteManifest): MapS
   void ensureFileTextureLoaded(ATLAS_PATH)
 
   return {
-    renderBackground({ backgroundGraphics, levelMetrics }) {
-      for (let offset = -levelMetrics.height; offset < levelMetrics.width + levelMetrics.height; offset += 44) {
-        backgroundGraphics.moveTo(offset, 0)
-        backgroundGraphics.lineTo(offset + levelMetrics.height, levelMetrics.height)
-        backgroundGraphics.stroke({ color: '#ffffff', width: 1, alpha: 0.06 })
-      }
-      for (let i = 0; i < 12; i += 1) {
-        const x = levelMetrics.width * (0.18 + (i % 6) * 0.12)
-        const y = levelMetrics.height * (0.18 + Math.floor(i / 6) * 0.22) + (i % 2) * 12
-        backgroundGraphics.roundRect(x, y, 6, 6, 2)
-        backgroundGraphics.fill({ color: '#ffffff', alpha: 0.18 })
-      }
-    },
+    renderBackground(_params) {},  // no decorations
     renderTile({ tileGraphics, treeGraphics, glowGraphics, tileState, level }) {
       const { kind } = tileState.tile
       if (kind === 'void') return
