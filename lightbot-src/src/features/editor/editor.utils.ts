@@ -1,4 +1,4 @@
-import type { ProgramDocument } from '../../domain/program/ast.types'
+import type { ProgramDocument, ProgramNode } from '../../domain/program/ast.types'
 
 export const emptyProgramDocument: ProgramDocument = {
   main: [],
@@ -26,6 +26,25 @@ export const defaultProgramDocument: ProgramDocument = {
     ],
     f2: []
   }
+}
+
+/** 递归统计程序中所有积木块数量（含 repeat/if 内部的嵌套块） */
+export function countProgramNodes(program: ProgramDocument): number {
+  const walk = (nodes: ProgramNode[]): number => {
+    let n = 0
+    for (const node of nodes) {
+      n++
+      if (node.type === 'repeat') n += walk(node.body)
+      else if (node.type === 'if') {
+        n += walk(node.then)
+        n += walk(node.else ?? [])
+      }
+    }
+    return n
+  }
+  return walk(program.main)
+    + walk(program.functions?.f1 ?? [])
+    + walk(program.functions?.f2 ?? [])
 }
 
 function formatCondition(type: string) {

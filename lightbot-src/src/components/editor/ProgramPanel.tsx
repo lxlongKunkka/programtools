@@ -4,6 +4,7 @@ import { useAppStore } from '../../app/app.store'
 import { useLevelEditorStore } from '../../features/leveleditor/leveleditor.store'
 import type { RootArea, BlockBlueprint, InsertTarget } from '../../features/editor/editor.helpers'
 import { conditionOptions } from '../../features/editor/editor.helpers'
+import { countProgramNodes } from '../../features/editor/editor.utils'
 import type { ProgramNode, ConditionNode } from '../../domain/program/ast.types'
 import { CmdBlock, TextCmdBlock, nodeToIcon } from './cmd-sprites'
 import { BLOCK_DRAG_KEY } from './BlockArea'
@@ -531,9 +532,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const program       = useGameStore((state) => state.program)
 
   const mainBlocks = program.main.length
-  const myTotalCommands = program.main.length
-    + (program.functions?.f1?.length ?? 0)
-    + (program.functions?.f2?.length ?? 0)
+  const myTotalCommands = countProgramNodes(program)
 
   const world       = useGameStore((state) => state.world)
 

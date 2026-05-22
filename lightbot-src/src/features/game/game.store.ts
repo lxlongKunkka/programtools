@@ -22,6 +22,7 @@ import {
   updateConditionType as updateProgramConditionType,
   updateRepeatTimes as updateProgramRepeatTimes,
 } from '../editor/editor.helpers'
+import { countProgramNodes } from '../editor/editor.utils'
 
 function applyEvent(world: WorldState, event: ExecutionEvent): WorldState {
   switch (event.type) {
@@ -353,10 +354,7 @@ export const useGameStore = create<GameStore>()(
           const token = localStorage.getItem('auth_token')
           if (token) {
             const prog = current.program
-            const totalCommands =
-              prog.main.length +
-              (prog.functions.f1?.length ?? 0) +
-              (prog.functions.f2?.length ?? 0)
+            const totalCommands = countProgramNodes(prog)
             const executionSteps = result.events.filter(
               (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
             ).length
