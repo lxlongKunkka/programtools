@@ -3152,6 +3152,11 @@ button {
   .lb-block-palette .lb-cmd-block[draggable="true"] { touch-action: pan-x; }
 }
 
+/* ── 触屏设备：禁用 hover 上弹（overflow-x:auto 会隐式裁剪 overflow-y，导致上移被截断）── */
+@media (hover: none) {
+  .lb-cmd-block:hover { transform: none; filter: none; }
+}
+
 /* ── 极窄手机额外紧凑 (≤ 480px) ─────────────────────────────────── */
 @media (max-width: 480px) {
   .lb-level-nav-name { max-width: 80px; }
