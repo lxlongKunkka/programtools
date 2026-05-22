@@ -9,6 +9,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import CodebotUserLevel from '../models/CodebotUserLevel.js'
 import CodebotLevel from '../models/CodebotLevel.js'
 import CodebotResult from '../models/CodebotResult.js'
+import { solveCodebotLevel } from '../utils/codebotSolver.js'
 
 const router = express.Router()
 
@@ -282,6 +283,26 @@ router.put('/codebot/admin/level/:levelId', authenticateToken, async (req, res) 
   } catch (error) {
     console.error('[codebot-app] admin save-level failed:', error)
     return res.status(500).json({ error: '保存关卡失败' })
+  }
+})
+
+router.post('/codebot/admin/solve-level', authenticateToken, async (req, res) => {
+  try {
+    if (!isAdminUser(req)) {
+      return res.status(403).json({ error: '需要管理员权限' })
+    }
+
+    const content = String(req.body?.content || '')
+    if (!content) {
+      return res.status(400).json({ error: '缺少关卡内容' })
+    }
+
+    const cfg = parseLevelContent(content)
+    const result = solveCodebotLevel(cfg)
+    res.json({ ok: true, result })
+  } catch (error) {
+    console.error('[codebot-app] admin solve-level failed:', error)
+    res.status(500).json({ error: '智能测试失败' })
   }
 })
 

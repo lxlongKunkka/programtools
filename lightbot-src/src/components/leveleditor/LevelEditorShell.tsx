@@ -49,6 +49,7 @@ export function LevelEditorShell() {
   const [validationError, setValidationError] = useState('')
   const [publishState, setPublishState] = useState<'idle' | 'asking' | 'loading'>('idle')
   const [submitState, setSubmitState] = useState<'idle' | 'asking' | 'sending'>('idle')
+  const [smartTestState, setSmartTestState] = useState<'idle' | 'loading'>('idle')
   const [authorName, setAuthorName] = useState('')
   // 用户是否已登录（有 JWT 令牌）
   const [isLoggedIn] = useState(() => !!localStorage.getItem('auth_token'))
@@ -157,6 +158,73 @@ export function LevelEditorShell() {
     setTimeout(() => setShareMsg(''), 3500)
   }
 
+  async function handleSmartTest() {
+    const err = validate()
+    if (err) { setValidationError(err); return }
+    setValidationError('')
+    setSmartTestState('loading')
+    try {
+      const cfg = toLevelConfig()
+      const token = localStorage.getItem('auth_token')
+      const res = await fetch('/api/codebot/admin/solve-level', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: JSON.stringify(cfg) }),
+      })
+      const data = await res.json() as {
+        ok?: boolean
+        error?: string
+        result?: {
+          ok?: boolean
+          solvable?: boolean
+          minSteps?: number
+          actions?: string[]
+          error?: string
+          note?: string
+          visitedStates?: number
+        }
+      }
+
+      if (!data.ok || !data.result) {
+        setValidationError(data.error ?? '智能测试失败')
+        return
+      }
+
+      if (!data.result.ok || !data.result.solvable) {
+        setValidationError(data.result.error ?? '未找到可行解')
+        return
+      }
+
+      const actionLabels: Record<string, string> = {
+        forward: '前进',
+        left: '左转',
+        right: '右转',
+        jump: '跳跃',
+        pickup: '拾取',
+      }
+      const actions = Array.isArray(data.result.actions) ? data.result.actions : []
+      const display = actions.slice(0, 24).map((item) => actionLabels[item] ?? item).join(' -> ')
+      const suffix = actions.length > 24 ? ' ...' : ''
+      setShareMsg(`✓ 智能测试通过：最优 ${data.result.minSteps ?? actions.length} 步`)
+      window.alert([
+        `智能测试完成`,
+        `是否有解：有`,
+        `最优步数：${data.result.minSteps ?? actions.length}`,
+        `搜索状态数：${data.result.visitedStates ?? '-'}`,
+        data.result.note ? `备注：${data.result.note}` : '',
+        `动作序列：${display}${suffix}`,
+      ].filter(Boolean).join('\n'))
+      setTimeout(() => setShareMsg(''), 5000)
+    } catch {
+      setValidationError('智能测试失败：网络错误，请稍后重试')
+    } finally {
+      setSmartTestState('idle')
+    }
+  }
+
   async function handleSubmit() {
     if (submitState === 'asking') {
       const err = validate()
@@ -240,6 +308,15 @@ export function LevelEditorShell() {
           {shareMsg && <span className="lb-editor-msg lb-editor-msg--ok">{shareMsg}</span>}
           <button className="lb-editor-action-btn lb-editor-action-btn--reset" onClick={reset}>清空</button>
           <button className="lb-editor-action-btn lb-editor-action-btn--test" onClick={handleTest}>▶ 测试</button>
+          {isAdmin && (
+            <button
+              className="lb-editor-action-btn lb-editor-action-btn--publish"
+              onClick={() => void handleSmartTest()}
+              disabled={smartTestState === 'loading'}
+            >
+              {smartTestState === 'loading' ? '智能测试中…' : '🧠 智能测试'}
+            </button>
+          )}
           {customLevelSolutionSteps > 0 && (
             <span className="lb-editor-msg lb-editor-msg--ok" title="已验证解法">
               ✓ {customLevelSolutionSteps}步
