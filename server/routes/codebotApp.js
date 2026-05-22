@@ -246,10 +246,6 @@ router.put('/codebot/admin/level/:levelId', authenticateToken, async (req, res) 
       return res.status(400).json({ error: '缺少 levelId 或 content' })
     }
 
-    if (solutionSteps < 1) {
-      return res.status(400).json({ error: '请先测试并通关关卡，再保存到数据库' })
-    }
-
     const cfg = parseLevelContent(content)
     cfg.id = levelId
 

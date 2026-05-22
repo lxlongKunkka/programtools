@@ -93,7 +93,7 @@ export function LevelEditorShell() {
   async function handleSave() {
     const err = validate()
     if (err) { setValidationError(err); return }
-    if (customLevelSolutionSteps === 0) {
+    if (!isAdminEditingExistingLevel && customLevelSolutionSteps === 0) {
       setValidationError('请先点击》测试《通关关卡，再保存到服务器')
       return
     }
