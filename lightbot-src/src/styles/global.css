@@ -741,43 +741,43 @@ button {
 /* ── 关卡排行榜 ── */
 .lb-leaderboard {
   width: 100%;
-  max-width: 280px;
+  max-width: 420px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(100,200,140,0.25);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin: 2px 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 6px 0;
 }
 .lb-leaderboard-title {
-  font-size: 0.78rem;
+  font-size: 0.96rem;
   font-weight: 700;
   color: #7ecfa0;
   text-align: center;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   letter-spacing: 0.04em;
 }
 .lb-leaderboard-loading,
 .lb-leaderboard-empty {
-  font-size: 0.72rem;
+  font-size: 0.86rem;
   color: rgba(200,220,240,0.55);
   text-align: center;
-  padding: 4px 0;
+  padding: 8px 0;
 }
 .lb-leaderboard-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: 0.86rem;
   color: #c8d8f0;
 }
 .lb-leaderboard-table th {
   color: rgba(200,220,255,0.5);
   font-weight: 600;
-  padding: 2px 4px;
+  padding: 6px 8px;
   text-align: left;
   border-bottom: 1px solid rgba(100,180,140,0.18);
 }
 .lb-leaderboard-table td {
-  padding: 3px 4px;
+  padding: 7px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .lb-leaderboard-table tbody tr:last-child td { border-bottom: none; }
@@ -786,15 +786,15 @@ button {
   background: rgba(126, 207, 160, 0.12);
   font-weight: 600;
 }
-.lb-leaderboard-rank { font-size: 0.85rem; width: 28px; }
+.lb-leaderboard-rank { font-size: 1rem; width: 40px; }
 .lb-leaderboard-user {
-  max-width: 100px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .lb-leaderboard-date {
-  font-size: 0.78rem;
+  font-size: 0.86rem;
   color: #94a3b8;
   white-space: nowrap;
 }
@@ -803,7 +803,7 @@ button {
   color: #f59e0b;
   letter-spacing: 1px;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 0.96rem;
 }
 
 
@@ -2152,11 +2152,13 @@ button {
 
 .lb-modal {
   background: #fff;
-  border-radius: 18px;
-  padding: 24px 28px 28px;
-  min-width: 320px;
-  max-width: 440px;
-  width: 90vw;
+  border-radius: 20px;
+  padding: 28px 32px 32px;
+  min-width: 360px;
+  max-width: 860px;
+  width: min(92vw, 860px);
+  max-height: min(88vh, 920px);
+  overflow: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
 }
 
@@ -2174,20 +2176,20 @@ button {
 }
 
 .lb-modal-title {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #1d2939;
 }
 
 .lb-modal-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: #64748b;
 }
 
 .lb-modal-hint {
-  font-size: 0.75rem;
+  font-size: 0.92rem;
   color: #94a3b8;
-  margin: 0 0 14px;
+  margin: 0 0 18px;
 }
 
 .lb-modal-close {
@@ -2207,24 +2209,24 @@ button {
   text-align: center;
   padding: 24px 0;
   color: #64748b;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .lb-leaderboard-table--modal {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 .lb-leaderboard-table--modal th,
 .lb-leaderboard-table--modal td {
-  padding: 8px 10px;
+  padding: 12px 14px;
   text-align: center;
   border-bottom: 1px solid #f1f5f9;
 }
 .lb-leaderboard-table--modal th {
   font-weight: 600;
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
