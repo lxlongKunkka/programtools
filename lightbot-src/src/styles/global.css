@@ -301,6 +301,16 @@ button {
 
 .lb-cmd-block[draggable="true"] {
   cursor: grab;
+  touch-action: none;   /* required: lets mobile-drag-drop polyfill intercept touch */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* All draggable elements: prevent browser from treating touch as scroll/pan */
+[draggable="true"] {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .lb-cmd-block[draggable="true"]:active {
@@ -3136,7 +3146,9 @@ button {
 
   /* 积木栏：减少内边距，支持触屏横向滑动 */
   .lb-block-area { padding: 8px 12px 10px; gap: 8px; min-width: 0; }
+  /* 积木格子整体可横向滑动，但单个可拖拽块自己接管触摸 */
   .lb-block-palette { touch-action: pan-x; }
+  .lb-block-palette .lb-cmd-block[draggable="true"] { touch-action: none; }
 }
 
 /* ── 极窄手机额外紧凑 (≤ 480px) ─────────────────────────────────── */
