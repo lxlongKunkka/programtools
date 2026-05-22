@@ -17,11 +17,16 @@
       @load="handleLoad"
     ></iframe>
 
-    <!-- 我的关卡 toggle 按钮 -->
-    <button class="my-levels-toggle" @click="togglePanel" :title="panelOpen ? '关闭' : '我的关卡'">
-      <span v-if="!panelOpen">📚 我的关卡</span>
-      <span v-else>✕</span>
-    </button>
+    <!-- 右上角角标栏：排行榜 | 我的关卡 | 用户名 -->
+    <div class="lightbot-corner-bar">
+      <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
+        🏆 排行榜
+      </button>
+      <button v-if="username" class="lightbot-corner-btn" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
+        {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
+      </button>
+      <span v-if="username" class="lightbot-corner-user">👤 {{ username }}</span>
+    </div>
 
     <!-- 我的关卡面板 -->
     <transition name="panel-slide">
@@ -101,6 +106,7 @@ export default {
       deleteTarget: null,
       shareNotice: '',
       shareNoticeTimer: null,
+      username: '',
     }
   },
   mounted() {
@@ -109,10 +115,22 @@ export default {
     if (levelParam) {
       this.iframeSrc = `/lightbot-app/index.html?level=${encodeURIComponent(levelParam)}`
     }
+    // 读取登录用户名
+    try {
+      const info = JSON.parse(localStorage.getItem('user_info') || '{}')
+      this.username = info?.username || info?.uname || ''
+    } catch {}
   },
   methods: {
     handleLoad() {
       this.loaded = true
+    },
+
+    openLeaderboard() {
+      const iframe = this.$refs.iframeRef
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'open-leaderboard' }, window.location.origin)
+      }
     },
 
     async togglePanel() {
@@ -263,27 +281,42 @@ export default {
   letter-spacing: 0.02em;
 }
 
-/* ── 我的关卡 toggle 按钮 ── */
-.my-levels-toggle {
+/* ── 右上角角标栏 ── */
+.lightbot-corner-bar {
   position: fixed;
   top: 12px;
   right: 16px;
   z-index: 200;
-  background: rgba(18, 30, 56, 0.92);
-  color: #c8d8f8;
-  border: 1px solid rgba(100, 150, 230, 0.35);
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-  transition: background 0.2s, color 0.2s;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.my-levels-toggle:hover {
-  background: rgba(40, 65, 120, 0.95);
-  color: #fff;
+.lightbot-corner-btn,
+.lightbot-corner-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.80);
+  color: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  line-height: 1;
+}
+
+.lightbot-corner-btn {
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.lightbot-corner-btn:hover {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 /* ── 面板 ── */
