@@ -100,7 +100,7 @@ export function GameShell() {
             {lbLoading ? (
               <div className="lb-modal-status">加载中…</div>
             ) : (
-              <>
+              <div className="lb-modal-leaderboards">
                 <div className="lb-leaderboard">
                   <div className="lb-leaderboard-title">⭐ 总星数排行</div>
                   {myOverallEntry && (
@@ -172,7 +172,7 @@ export function GameShell() {
                     </table>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

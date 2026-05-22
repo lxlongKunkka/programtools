@@ -2212,6 +2212,20 @@ button {
   font-size: 1rem;
 }
 
+.lb-modal-leaderboards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.lb-modal-leaderboards .lb-leaderboard {
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
 .lb-leaderboard-table--modal {
   width: 100%;
   border-collapse: collapse;
@@ -2235,6 +2249,12 @@ button {
 .lb-leaderboard-table--modal .lb-leaderboard-top3 td { background: #fffbeb; }
 .lb-leaderboard-table--modal .lb-leaderboard-row--me td { background: #ecfdf5; }
 .lb-leaderboard-table--modal tr:last-child td { border-bottom: none; }
+
+@media (max-width: 900px) {
+  .lb-modal-leaderboards {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ── 管理员触发按钮（Topbar 右侧）── */
 .lb-topbar-user-area {
