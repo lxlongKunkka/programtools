@@ -782,6 +782,10 @@ button {
 }
 .lb-leaderboard-table tbody tr:last-child td { border-bottom: none; }
 .lb-leaderboard-top3 { color: #ffd700; }
+.lb-leaderboard-row--me td {
+  background: rgba(126, 207, 160, 0.12);
+  font-weight: 600;
+}
 .lb-leaderboard-rank { font-size: 0.85rem; width: 28px; }
 .lb-leaderboard-user {
   max-width: 100px;
@@ -2227,6 +2231,7 @@ button {
 .lb-leaderboard-table--modal td:nth-child(2) { text-align: left; }
 .lb-leaderboard-table--modal th:nth-child(2) { text-align: left; }
 .lb-leaderboard-table--modal .lb-leaderboard-top3 td { background: #fffbeb; }
+.lb-leaderboard-table--modal .lb-leaderboard-row--me td { background: #ecfdf5; }
 .lb-leaderboard-table--modal tr:last-child td { border-bottom: none; }
 
 /* ── 管理员触发按钮（Topbar 右侧）── */

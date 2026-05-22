@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer'
 import jwt from 'jsonwebtoken'
 import { fileURLToPath } from 'url'
 import { MAIL_CONFIG, JWT_SECRET } from '../config.js'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js'
 import CodebotUserLevel from '../models/CodebotUserLevel.js'
 import CodebotLevel from '../models/CodebotLevel.js'
 import CodebotResult from '../models/CodebotResult.js'
@@ -58,6 +58,138 @@ function parseLevelContent(content) {
     throw new Error('Invalid level content')
   }
   return parsed
+}
+
+function compareResultRows(a, b) {
+  if (a.totalCommands !== b.totalCommands) return a.totalCommands - b.totalCommands
+  if (a.executionSteps !== b.executionSteps) return a.executionSteps - b.executionSteps
+  return new Date(a.completedAt || 0).getTime() - new Date(b.completedAt || 0).getTime()
+}
+
+function starsForCommands(totalCommands, bestTotalCommands) {
+  if (!Number.isFinite(bestTotalCommands)) return 1
+  if (totalCommands <= bestTotalCommands) return 3
+  if (totalCommands <= bestTotalCommands + 2) return 2
+  return 1
+}
+
+function serializeLevelEntry(entry, currentUserId) {
+  return {
+    rank: entry.rank,
+    userId: entry.userId,
+    username: entry.username,
+    totalCommands: entry.totalCommands,
+    executionSteps: entry.executionSteps,
+    completedAt: entry.completedAt ? new Date(entry.completedAt).toISOString() : null,
+    stars: entry.stars,
+    isCurrentUser: currentUserId != null && entry.userId === currentUserId,
+  }
+}
+
+async function buildLevelLeaderboard(levelId, currentUserId = null) {
+  const results = await CodebotResult.find({ levelId })
+    .sort({ totalCommands: 1, executionSteps: 1, completedAt: 1 })
+    .lean()
+
+  if (results.length === 0) {
+    return {
+      bestTotalCommands: null,
+      entries: [],
+      topEntries: [],
+      myEntry: null,
+    }
+  }
+
+  const bestTotalCommands = results[0].totalCommands
+  const entries = results.map((result, index) => ({
+    ...result,
+    rank: index + 1,
+    stars: starsForCommands(result.totalCommands, bestTotalCommands),
+  }))
+
+  const myEntry = currentUserId == null
+    ? null
+    : entries.find((entry) => entry.userId === currentUserId) ?? null
+
+  return {
+    bestTotalCommands,
+    entries,
+    topEntries: entries.slice(0, 10),
+    myEntry,
+  }
+}
+
+function compareOverallRows(a, b) {
+  if (a.totalStars !== b.totalStars) return b.totalStars - a.totalStars
+  if (a.levelsCompleted !== b.levelsCompleted) return b.levelsCompleted - a.levelsCompleted
+  if (a.totalCommandsSum !== b.totalCommandsSum) return a.totalCommandsSum - b.totalCommandsSum
+  if (a.executionStepsSum !== b.executionStepsSum) return a.executionStepsSum - b.executionStepsSum
+  return String(a.username).localeCompare(String(b.username), 'zh-CN')
+}
+
+async function buildOverallStarLeaderboard(currentUserId = null) {
+  const officialLevels = await CodebotLevel.find({}, { _id: 0, id: 1 }).lean()
+  const officialLevelIds = officialLevels.map((level) => level.id).filter(Boolean)
+
+  if (officialLevelIds.length === 0) {
+    return { entries: [], topEntries: [], myEntry: null }
+  }
+
+  const results = await CodebotResult.find({ levelId: { $in: officialLevelIds } }).lean()
+  if (results.length === 0) {
+    return { entries: [], topEntries: [], myEntry: null }
+  }
+
+  const bestByLevel = new Map()
+  for (const result of results) {
+    const existing = bestByLevel.get(result.levelId)
+    if (existing == null || result.totalCommands < existing) {
+      bestByLevel.set(result.levelId, result.totalCommands)
+    }
+  }
+
+  const rowsByUserId = new Map()
+  for (const result of results) {
+    const stars = starsForCommands(result.totalCommands, bestByLevel.get(result.levelId))
+    const current = rowsByUserId.get(result.userId) ?? {
+      userId: result.userId,
+      username: result.username,
+      totalStars: 0,
+      levelsCompleted: 0,
+      threeStarLevels: 0,
+      twoStarLevels: 0,
+      oneStarLevels: 0,
+      totalCommandsSum: 0,
+      executionStepsSum: 0,
+    }
+    current.username = result.username
+    current.totalStars += stars
+    current.levelsCompleted += 1
+    current.totalCommandsSum += result.totalCommands
+    current.executionStepsSum += result.executionSteps
+    if (stars === 3) current.threeStarLevels += 1
+    else if (stars === 2) current.twoStarLevels += 1
+    else current.oneStarLevels += 1
+    rowsByUserId.set(result.userId, current)
+  }
+
+  const entries = Array.from(rowsByUserId.values())
+    .sort(compareOverallRows)
+    .map((entry, index) => ({
+      rank: index + 1,
+      ...entry,
+      isCurrentUser: currentUserId != null && entry.userId === currentUserId,
+    }))
+
+  const myEntry = currentUserId == null
+    ? null
+    : entries.find((entry) => entry.userId === currentUserId) ?? null
+
+  return {
+    entries,
+    topEntries: entries.slice(0, 20),
+    myEntry,
+  }
 }
 
 function maybeCreateMailer() {
@@ -516,27 +648,37 @@ router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, 
   }
 })
 
-// GET /codebot/levels/:levelId/leaderboard — 公开排行榜（前10名）
-router.get('/codebot/levels/:levelId/leaderboard', async (req, res) => {
+// GET /codebot/levels/:levelId/leaderboard — 公开排行榜（前10名 + 当前用户名次）
+router.get('/codebot/levels/:levelId/leaderboard', optionalAuthenticateToken, async (req, res) => {
   const { levelId } = req.params
   try {
-    const results = await CodebotResult.find({ levelId })
-      .sort({ totalCommands: 1, executionSteps: 1, completedAt: 1 })
-      .limit(10)
-      .lean()
+    const currentUserId = req.user?.id ?? null
+    const leaderboard = await buildLevelLeaderboard(levelId, currentUserId)
     res.json({
       ok: true,
-      data: results.map((r, i) => ({
-        rank: i + 1,
-        username: r.username,
-        totalCommands: r.totalCommands,
-        executionSteps: r.executionSteps,
-        completedAt: r.completedAt ? r.completedAt.toISOString() : null,
-      })),
+      bestTotalCommands: leaderboard.bestTotalCommands,
+      data: leaderboard.topEntries.map((entry) => serializeLevelEntry(entry, currentUserId)),
+      myEntry: leaderboard.myEntry ? serializeLevelEntry(leaderboard.myEntry, currentUserId) : null,
     })
   } catch (error) {
     console.error('[codebot-app] leaderboard failed:', error)
     res.status(500).json({ ok: false, error: '获取排行榜失败' })
+  }
+})
+
+// GET /codebot/leaderboard/overall — 按总星数统计的总排行
+router.get('/codebot/leaderboard/overall', optionalAuthenticateToken, async (req, res) => {
+  try {
+    const currentUserId = req.user?.id ?? null
+    const leaderboard = await buildOverallStarLeaderboard(currentUserId)
+    res.json({
+      ok: true,
+      data: leaderboard.topEntries,
+      myEntry: leaderboard.myEntry,
+    })
+  } catch (error) {
+    console.error('[codebot-app] overall leaderboard failed:', error)
+    res.status(500).json({ ok: false, error: '获取总排行失败' })
   }
 })
 

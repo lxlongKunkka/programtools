@@ -9,6 +9,17 @@ import { useGameStore } from '../../features/game/game.store'
 const TIKU_URL = 'https://ai.acjudge.com'
 
 type LbEntry = { rank: number; username: string; totalCommands: number; executionSteps: number; completedAt?: string | null }
+type LevelLbEntry = LbEntry & { stars: number; isCurrentUser?: boolean }
+type OverallLbEntry = {
+  rank: number
+  username: string
+  totalStars: number
+  levelsCompleted: number
+  threeStarLevels: number
+  twoStarLevels: number
+  oneStarLevels: number
+  isCurrentUser?: boolean
+}
 
 function fmtDate(iso?: string | null) {
   if (!iso) return '-'
@@ -27,18 +38,37 @@ export function GameShell() {
   const level = useGameStore((s) => s.level)
 
   const [lbOpen, setLbOpen]       = useState(false)
-  const [lbData, setLbData]       = useState<LbEntry[]>([])
+  const [lbData, setLbData]       = useState<LevelLbEntry[]>([])
+  const [overallLbData, setOverallLbData] = useState<OverallLbEntry[]>([])
   const [lbLoading, setLbLoading] = useState(false)
   const [lbTitle, setLbTitle]     = useState('')
+  const [myLevelEntry, setMyLevelEntry] = useState<LevelLbEntry | null>(null)
+  const [myOverallEntry, setMyOverallEntry] = useState<OverallLbEntry | null>(null)
 
   function openLeaderboard() {
     setLbOpen(true)
     setLbTitle(level.title)
     setLbLoading(true)
     setLbData([])
-    fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`)
-      .then((r) => r.json() as Promise<{ ok: boolean; data: LbEntry[] }>)
-      .then((json) => { if (json.ok) setLbData(json.data) })
+    setOverallLbData([])
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+    Promise.all([
+      fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`, { headers })
+        .then((r) => r.json() as Promise<{ ok: boolean; data: LevelLbEntry[]; myEntry?: LevelLbEntry | null }>),
+      fetch('/api/codebot/leaderboard/overall', { headers })
+        .then((r) => r.json() as Promise<{ ok: boolean; data: OverallLbEntry[]; myEntry?: OverallLbEntry | null }>),
+    ])
+      .then(([levelJson, overallJson]) => {
+        if (levelJson.ok) {
+          setLbData(levelJson.data)
+          setMyLevelEntry(levelJson.myEntry ?? null)
+        }
+        if (overallJson.ok) {
+          setOverallLbData(overallJson.data)
+          setMyOverallEntry(overallJson.myEntry ?? null)
+        }
+      })
       .catch(() => {})
       .finally(() => setLbLoading(false))
   }
@@ -66,42 +96,83 @@ export function GameShell() {
               </div>
               <button className="lb-modal-close" onClick={() => setLbOpen(false)}>✕</button>
             </div>
-            <p className="lb-modal-hint">按积木总数由少到多排列，最多显示前 10 名</p>
+            <p className="lb-modal-hint">总排行按累计星数排序；本关排行按积木总数、执行步数排序，星级会随当前全服最佳解实时变化。</p>
             {lbLoading ? (
               <div className="lb-modal-status">加载中…</div>
-            ) : lbData.length === 0 ? (
-              <div className="lb-modal-status">暂无记录，快来挑战吧！</div>
             ) : (
-              <table className="lb-leaderboard-table lb-leaderboard-table--modal">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>玩家</th>
-                    <th title="主程序+子程序积木总数">积木数</th>
-                    <th title="机器人执行步数">执行步</th>
-                    <th title="星级评定">★</th>
-                    <th title="最优成绩创建时间">通关时间</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const bestCmds = Math.min(...lbData.map((e) => e.totalCommands))
-                    const entryStars = (c: number) => c <= bestCmds ? 3 : c <= bestCmds + 2 ? 2 : 1
-                    return lbData.map((entry) => (
-                      <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
-                        <td className="lb-leaderboard-rank">
-                          {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
-                        </td>
-                        <td className="lb-leaderboard-user">{entry.username}</td>
-                        <td>{entry.totalCommands}</td>
-                        <td>{entry.executionSteps}</td>
-                        <td className="lb-leaderboard-stars">{"★".repeat(entryStars(entry.totalCommands))}{"☆".repeat(3 - entryStars(entry.totalCommands))}</td>
-                        <td className="lb-leaderboard-date">{fmtDate(entry.completedAt)}</td>
-                      </tr>
-                    ))
-                  })()}
-                </tbody>
-              </table>
+              <>
+                <div className="lb-leaderboard">
+                  <div className="lb-leaderboard-title">⭐ 总星数排行</div>
+                  {myOverallEntry && (
+                    <div className="lb-modal-hint">你的总排行：第 {myOverallEntry.rank} 名，累计 {myOverallEntry.totalStars} 星</div>
+                  )}
+                  {overallLbData.length === 0 ? (
+                    <div className="lb-leaderboard-empty">暂无总排行数据</div>
+                  ) : (
+                    <table className="lb-leaderboard-table lb-leaderboard-table--modal">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>玩家</th>
+                          <th title="累计获得星数">总星数</th>
+                          <th title="已完成官方关卡数量">通关关卡</th>
+                          <th title="3 星 / 2 星 / 1 星">星级分布</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {overallLbData.map((entry) => (
+                          <tr key={entry.rank} className={`${entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}${entry.isCurrentUser ? ' lb-leaderboard-row--me' : ''}`}>
+                            <td className="lb-leaderboard-rank">
+                              {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                            </td>
+                            <td className="lb-leaderboard-user">{entry.username}{entry.isCurrentUser ? '（我）' : ''}</td>
+                            <td className="lb-leaderboard-stars">{entry.totalStars} 星</td>
+                            <td>{entry.levelsCompleted}</td>
+                            <td>{entry.threeStarLevels}/{entry.twoStarLevels}/{entry.oneStarLevels}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div className="lb-leaderboard">
+                  <div className="lb-leaderboard-title">🏆 本关排行榜</div>
+                  {myLevelEntry && (
+                    <div className="lb-modal-hint">你的本关排名：第 {myLevelEntry.rank} 名，当前 {myLevelEntry.stars} 星</div>
+                  )}
+                  {lbData.length === 0 ? (
+                    <div className="lb-leaderboard-empty">暂无记录，快来挑战吧！</div>
+                  ) : (
+                    <table className="lb-leaderboard-table lb-leaderboard-table--modal">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>玩家</th>
+                          <th title="主程序+子程序积木总数">积木数</th>
+                          <th title="机器人执行步数">执行步</th>
+                          <th title="星级评定">★</th>
+                          <th title="最优成绩创建时间">通关时间</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lbData.map((entry) => (
+                          <tr key={entry.rank} className={`${entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}${entry.isCurrentUser ? ' lb-leaderboard-row--me' : ''}`}>
+                            <td className="lb-leaderboard-rank">
+                              {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                            </td>
+                            <td className="lb-leaderboard-user">{entry.username}{entry.isCurrentUser ? '（我）' : ''}</td>
+                            <td>{entry.totalCommands}</td>
+                            <td>{entry.executionSteps}</td>
+                            <td className="lb-leaderboard-stars">{'★'.repeat(entry.stars)}{'☆'.repeat(3 - entry.stars)}</td>
+                            <td className="lb-leaderboard-date">{fmtDate(entry.completedAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>

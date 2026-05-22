@@ -549,36 +549,76 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const isWin   = runStatus === 'complete'
   const isFail  = !isWin && !!world.failureReason
   const hasNext = levelIndex < levels.length - 1
-  const isOfficialLevel = !level.id.startsWith('custom-')
   // 有排行榜的条件：非编辑器临时测试关卡（chapter.id !== 'custom'）
   const hasLeaderboard = level.chapter?.id !== 'custom'
 
   // 排行榜状态
-  type LeaderboardEntry = { rank: number; username: string; totalCommands: number; executionSteps: number }
+  type LeaderboardEntry = {
+    rank: number
+    userId?: number
+    username: string
+    totalCommands: number
+    executionSteps: number
+    completedAt?: string | null
+    stars: number
+    isCurrentUser?: boolean
+  }
+  type OverallLeaderboardEntry = {
+    rank: number
+    userId: number
+    username: string
+    totalStars: number
+    levelsCompleted: number
+    threeStarLevels: number
+    twoStarLevels: number
+    oneStarLevels: number
+    isCurrentUser?: boolean
+  }
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
-  // 动态星级：对比排行榜第一名积木数（排行榜加载中或无记录时默认1星）
-  const stars = leaderboardLoading || leaderboard.length === 0
+  const [myLevelEntry, setMyLevelEntry] = useState<LeaderboardEntry | null>(null)
+  const [myOverallEntry, setMyOverallEntry] = useState<OverallLeaderboardEntry | null>(null)
+  // 动态星级：优先使用服务端按当前榜首重算后的本人星级
+  const stars = myLevelEntry?.stars ?? (leaderboardLoading || leaderboard.length === 0
     ? 1
     : myTotalCommands <= leaderboard[0].totalCommands
       ? 3
       : myTotalCommands <= leaderboard[0].totalCommands + 2
         ? 2
-        : 1
+        : 1)
 
   useEffect(() => {
-    if (!isWin || !hasLeaderboard) { setLeaderboard([]); return }
+    if (!isWin || !hasLeaderboard) {
+      setLeaderboard([])
+      setMyLevelEntry(null)
+      setMyOverallEntry(null)
+      return
+    }
     setLeaderboardLoading(true)
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined
     // 延迟 600ms 等待本次成绩提交完成
     const timer = setTimeout(() => {
-      fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`)
-        .then((r) => r.json() as Promise<{ ok: boolean; data: LeaderboardEntry[] }>)
-        .then((json) => { if (json.ok) setLeaderboard(json.data) })
+      Promise.all([
+        fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`, { headers })
+          .then((r) => r.json() as Promise<{ ok: boolean; data: LeaderboardEntry[]; myEntry?: LeaderboardEntry | null }>),
+        fetch('/api/codebot/leaderboard/overall', { headers })
+          .then((r) => r.json() as Promise<{ ok: boolean; data: OverallLeaderboardEntry[]; myEntry?: OverallLeaderboardEntry | null }>),
+      ])
+        .then(([levelJson, overallJson]) => {
+          if (levelJson.ok) {
+            setLeaderboard(levelJson.data)
+            setMyLevelEntry(levelJson.myEntry ?? null)
+          }
+          if (overallJson.ok) {
+            setMyOverallEntry(overallJson.myEntry ?? null)
+          }
+        })
         .catch(() => {})
         .finally(() => setLeaderboardLoading(false))
     }, 600)
     return () => clearTimeout(timer)
-  }, [isWin, level.id, isOfficialLevel])
+  }, [hasLeaderboard, isWin, level.id])
 
   return (
     <div className={`lb-program-panel${mobileOpen ? ' lb-program-panel--mobile-open' : ''}${isWin ? ' lb-program-panel--win' : ''}${isFail ? ' lb-program-panel--fail' : ''}`}>
@@ -600,6 +640,12 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               <span key={i} className={`lb-win-star${i < stars ? ' lb-win-star--lit' : ''}`}>★</span>
             ))}
           </div>
+          {myLevelEntry && (
+            <div className="lb-win-subheading">本关排名：第 {myLevelEntry.rank} 名，获得 {myLevelEntry.stars} 星</div>
+          )}
+          {myOverallEntry && (
+            <div className="lb-win-subheading">总排行：第 {myOverallEntry.rank} 名，累计 {myOverallEntry.totalStars} 星</div>
+          )}
           <div className="lb-win-qr">
             <img src={WECHAT_QR_SRC} alt={WECHAT_QR_LABEL} className="lb-win-qr-img" />
             <span className="lb-win-qr-text">{WECHAT_QR_LABEL}</span>
@@ -625,17 +671,15 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
                   </thead>
                   <tbody>
                     {(() => {
-                      const bestCmds = Math.min(...leaderboard.map((e) => e.totalCommands))
-                      const entryStars = (c: number) => c <= bestCmds ? 3 : c <= bestCmds + 2 ? 2 : 1
                       return leaderboard.map((entry) => (
-                        <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
+                        <tr key={entry.rank} className={`${entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}${entry.isCurrentUser ? ' lb-leaderboard-row--me' : ''}`}>
                           <td className="lb-leaderboard-rank">
                             {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
                           </td>
-                          <td className="lb-leaderboard-user">{entry.username}</td>
+                          <td className="lb-leaderboard-user">{entry.username}{entry.isCurrentUser ? '（我）' : ''}</td>
                           <td>{entry.totalCommands}</td>
                           <td>{entry.executionSteps}</td>
-                          <td className="lb-leaderboard-stars">{'★'.repeat(entryStars(entry.totalCommands))}{'☆'.repeat(3 - entryStars(entry.totalCommands))}</td>
+                          <td className="lb-leaderboard-stars">{'★'.repeat(entry.stars)}{'☆'.repeat(3 - entry.stars)}</td>
                         </tr>
                       ))
                     })()}
