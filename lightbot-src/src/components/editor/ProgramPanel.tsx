@@ -657,6 +657,13 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
             <img src={WECHAT_QR_SRC} alt={WECHAT_QR_LABEL} className="lb-win-qr-img" />
             <span className="lb-win-qr-text">{WECHAT_QR_LABEL}</span>
           </div>
+          <div className="lb-win-actions">
+            <button className="lb-win-retry-btn" onClick={resetWorld}>↺ 再试</button>
+            {hasNext
+              ? <button className="lb-win-next-btn" onClick={() => loadLevel(levelIndex + 1)}>下一关 ▶</button>
+              : <span className="lb-win-all-done">🏆 全部完成！</span>
+            }
+          </div>
           {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
           {hasLeaderboard && (
             <div className="lb-leaderboard">
@@ -695,13 +702,6 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               )}
             </div>
           )}
-          <div className="lb-win-actions">
-            <button className="lb-win-retry-btn" onClick={resetWorld}>↺ 再试</button>
-            {hasNext
-              ? <button className="lb-win-next-btn" onClick={() => loadLevel(levelIndex + 1)}>下一关 ▶</button>
-              : <span className="lb-win-all-done">🏆 全部完成！</span>
-            }
-          </div>
         </div>
       )}
 
