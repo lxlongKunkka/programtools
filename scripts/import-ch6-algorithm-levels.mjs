@@ -50,7 +50,181 @@ function row(str) {
 const VOID_ROW = row('V V V V V V V V V')
 const CHAPTER = { id: 'custom-ch6', title: '算法思维', order: 6 }
 
-const levels = [
+function makeVoidGrid() {
+  return Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => ({ height: 0, kind: 'void' })))
+}
+
+function setCell(grid, x, y, kind = 'path', height = 0) {
+  if (x < 0 || x > 8 || y < 0 || y > 8) return
+  grid[y][x] = { height, kind }
+}
+
+function lineCoins(start, end, skip = []) {
+  const values = []
+  for (let x = start; x <= end; x++) {
+    if (!skip.includes(x)) values.push(x)
+  }
+  return values
+}
+
+function buildCombLevel(config) {
+  const grid = makeVoidGrid()
+  for (let x = 1; x <= 7; x++) setCell(grid, x, config.spineY, 'path')
+  for (const toothX of config.teeth) {
+    for (let step = 1; step <= config.toothLength; step++) {
+      const y = config.spineY - step
+      const kind = step === config.toothLength || config.extraCoinRows.includes(step) ? 'coin' : 'path'
+      setCell(grid, toothX, y, kind)
+    }
+  }
+  return {
+    id: config.id,
+    title: config.title,
+    chapter: CHAPTER,
+    teachingGoal: config.goal,
+    availableBlocks: ['forward', 'turnLeft', 'turnRight', 'pickup', 'f1Call', 'repeat'],
+    grid,
+    robot: { x: 1, y: config.spineY, z: 0, direction: 'E' },
+    winCondition: { type: 'all-coins-collected' },
+    constraints: config.constraints,
+    hints: config.hints,
+    sortOrder: config.sortOrder,
+  }
+}
+
+function buildSnakeLevel(config) {
+  const grid = makeVoidGrid()
+  for (let index = 0; index < config.rows.length; index++) {
+    const y = config.rows[index]
+    for (let x = 1; x <= 7; x++) {
+      const kind = config.coinRows[index].includes(x) ? 'coin' : 'path'
+      setCell(grid, x, y, kind)
+    }
+    if (index < config.rows.length - 1) {
+      const connectorX = index % 2 === 0 ? 7 : 1
+      const nextY = config.rows[index + 1]
+      const [fromY, toY] = y < nextY ? [y, nextY] : [nextY, y]
+      for (let cy = fromY + 1; cy < toY; cy++) setCell(grid, connectorX, cy, 'path')
+    }
+  }
+  return {
+    id: config.id,
+    title: config.title,
+    chapter: CHAPTER,
+    teachingGoal: config.goal,
+    availableBlocks: ['forward', 'turnLeft', 'turnRight', 'pickup', 'f1Call', 'repeat'],
+    grid,
+    robot: { x: 1, y: config.rows[0], z: 0, direction: 'E' },
+    winCondition: { type: 'all-coins-collected' },
+    constraints: config.constraints,
+    hints: config.hints,
+    sortOrder: config.sortOrder,
+  }
+}
+
+function buildCrossLevel(config) {
+  const grid = makeVoidGrid()
+  const { cx, cy } = config.center
+  setCell(grid, cx, cy, 'coin')
+  for (let step = 1; step <= config.armLength; step++) {
+    setCell(grid, cx, cy - step, step === config.armLength ? 'coin' : 'path')
+    setCell(grid, cx + step, cy, step === config.armLength ? 'coin' : 'path')
+    setCell(grid, cx, cy + step, step === config.armLength ? 'coin' : 'path')
+    setCell(grid, cx - step, cy, step === config.armLength ? 'coin' : 'path')
+  }
+  for (const branch of config.sideBranches) {
+    for (let step = 1; step <= branch.length; step++) {
+      const x = branch.dx === 0 ? branch.x : branch.x + branch.dx * step
+      const y = branch.dy === 0 ? branch.y : branch.y + branch.dy * step
+      setCell(grid, x, y, step === branch.length ? 'coin' : 'path')
+    }
+  }
+  return {
+    id: config.id,
+    title: config.title,
+    chapter: CHAPTER,
+    teachingGoal: config.goal,
+    availableBlocks: ['forward', 'turnLeft', 'turnRight', 'pickup', 'f1Call', 'f2Call', 'repeat'],
+    grid,
+    robot: { x: cx, y: cy, z: 0, direction: config.direction },
+    winCondition: { type: 'all-coins-collected' },
+    constraints: config.constraints,
+    hints: config.hints,
+    sortOrder: config.sortOrder,
+  }
+}
+
+function buildStairLevel(config) {
+  const grid = makeVoidGrid()
+  for (let index = 0; index < config.heights.length; index++) {
+    const x = config.startX + index
+    setCell(grid, x, config.y, index === 0 ? 'path' : 'coin', config.heights[index])
+  }
+  if (config.returnHeights) {
+    for (let index = 0; index < config.returnHeights.length; index++) {
+      const x = config.returnStartX + index
+      setCell(grid, x, config.returnY, 'coin', config.returnHeights[index])
+    }
+    for (let y = Math.min(config.y, config.returnY); y <= Math.max(config.y, config.returnY); y++) {
+      setCell(grid, config.turnX, y, 'path', config.turnHeight)
+    }
+  }
+  return {
+    id: config.id,
+    title: config.title,
+    chapter: CHAPTER,
+    teachingGoal: config.goal,
+    availableBlocks: ['jump', 'turnLeft', 'turnRight', 'pickup', 'f1Call', 'repeat'],
+    grid,
+    robot: { x: config.startX, y: config.y, z: config.heights[0], direction: 'E' },
+    winCondition: { type: 'all-coins-collected' },
+    constraints: config.constraints,
+    hints: config.hints,
+    sortOrder: config.sortOrder,
+  }
+}
+
+function buildRingLevel(config) {
+  const grid = makeVoidGrid()
+  for (let x = config.outer.left; x <= config.outer.right; x++) {
+    setCell(grid, x, config.outer.top, config.outerCoins.top.includes(x) ? 'coin' : 'path')
+    setCell(grid, x, config.outer.bottom, config.outerCoins.bottom.includes(x) ? 'coin' : 'path')
+  }
+  for (let y = config.outer.top; y <= config.outer.bottom; y++) {
+    setCell(grid, config.outer.left, y, config.outerCoins.left.includes(y) ? 'coin' : 'path')
+    setCell(grid, config.outer.right, y, config.outerCoins.right.includes(y) ? 'coin' : 'path')
+  }
+  for (let x = config.inner.left; x <= config.inner.right; x++) {
+    setCell(grid, x, config.inner.top, config.innerCoins.top.includes(x) ? 'coin' : 'path')
+    setCell(grid, x, config.inner.bottom, config.innerCoins.bottom.includes(x) ? 'coin' : 'path')
+  }
+  for (let y = config.inner.top; y <= config.inner.bottom; y++) {
+    setCell(grid, config.inner.left, y, config.innerCoins.left.includes(y) ? 'coin' : 'path')
+    setCell(grid, config.inner.right, y, config.innerCoins.right.includes(y) ? 'coin' : 'path')
+  }
+  for (const gate of config.gates) {
+    if (gate.x1 === gate.x2) {
+      for (let y = Math.min(gate.y1, gate.y2); y <= Math.max(gate.y1, gate.y2); y++) setCell(grid, gate.x1, y, 'path')
+    } else {
+      for (let x = Math.min(gate.x1, gate.x2); x <= Math.max(gate.x1, gate.x2); x++) setCell(grid, x, gate.y1, 'path')
+    }
+  }
+  return {
+    id: config.id,
+    title: config.title,
+    chapter: CHAPTER,
+    teachingGoal: config.goal,
+    availableBlocks: ['forward', 'turnLeft', 'turnRight', 'pickup', 'f1Call', 'f2Call', 'repeat'],
+    grid,
+    robot: { x: config.robot.x, y: config.robot.y, z: 0, direction: config.robot.direction },
+    winCondition: { type: 'all-coins-collected' },
+    constraints: config.constraints,
+    hints: config.hints,
+    sortOrder: config.sortOrder,
+  }
+}
+
+const baseLevels = [
   {
     id: 'custom-ch6-001',
     title: '第6-1关：回字长廊',
@@ -321,6 +495,159 @@ const levels = [
     ],
     sortOrder: 309,
   },
+]
+
+const combConfigs = [
+  ['custom-ch6-011', '第6-11关：五齿长梳', [1, 2, 4, 6, 7], 3, [2], 10, 56],
+  ['custom-ch6-012', '第6-12关：偏移梳阵', [2, 4, 6], 4, [2], 10, 52],
+  ['custom-ch6-013', '第6-13关：密齿回收', [1, 3, 5, 7], 3, [1, 2], 11, 60],
+  ['custom-ch6-014', '第6-14关：双层梳背', [2, 3, 5, 6], 3, [2], 10, 58],
+  ['custom-ch6-015', '第6-15关：宽脊梳路', [1, 3, 5, 7], 2, [1], 10, 46],
+  ['custom-ch6-016', '第6-16关：六齿展开', [1, 2, 3, 5, 6, 7], 2, [1], 12, 62],
+  ['custom-ch6-017', '第6-17关：深齿长廊', [2, 4, 6], 5, [2, 4], 12, 66],
+  ['custom-ch6-018', '第6-18关：齿阵折返', [1, 3, 4, 6], 4, [3], 11, 64],
+].map(([id, title, teeth, toothLength, extraCoinRows, maxMainBlocks, recommendedSteps], index) => buildCombLevel({
+  id,
+  title,
+  spineY: 7,
+  teeth,
+  toothLength,
+  extraCoinRows,
+  goal: '识别“进入齿位、回收、返回主干”的统一动作，逼出循环和子程序复用。',
+  constraints: { maxMainBlocks, maxFunctions: 10, recommendedSteps },
+  hints: [
+    '主干负责位移，齿位负责收星，别把两层逻辑混在一起。',
+    '每个齿位并不需要单独写，重复结构已经很明显。',
+    '最短解一定是“沿主干推进 + 单齿模板”的组合。',
+  ],
+  sortOrder: 310 + index,
+}))
+
+const snakeConfigs = [
+  ['custom-ch6-019', '第6-19关：五排蛇阵', [1, 2, 3, 4, 5], [[], [], [], [], []], 13, 78],
+  ['custom-ch6-020', '第6-20关：断点蛇形', [2, 4, 6, 8], [[4], [3], [5], [4]], 12, 68],
+  ['custom-ch6-021', '第6-21关：密集扫廊', [0, 2, 4, 6], [[], [2], [], [6]], 12, 72],
+  ['custom-ch6-022', '第6-22关：双缺口蛇阵', [1, 3, 5, 7], [[3], [5], [3], [5]], 13, 74],
+  ['custom-ch6-023', '第6-23关：长蛇变道', [0, 2, 4, 6, 8], [[6], [], [2], [], [6]], 14, 82],
+  ['custom-ch6-024', '第6-24关：交错星带', [1, 3, 5, 7], [[2, 6], [3, 5], [2, 6], [3, 5]], 14, 76],
+  ['custom-ch6-025', '第6-25关：窄门蛇行', [2, 4, 6], [[4], [4], [4]], 10, 58],
+  ['custom-ch6-026', '第6-26关：五线巡回', [0, 2, 4, 6, 8], [[2], [6], [2], [6], [2]], 15, 88],
+].map(([id, title, rows, skipColumnsPerRow, maxMainBlocks, recommendedSteps], index) => buildSnakeLevel({
+  id,
+  title,
+  rows,
+  coinRows: rows.map((_, rowIndex) => lineCoins(1, 7, [1, 7, ...skipColumnsPerRow[rowIndex]])),
+  goal: '在长蛇形路径中保持方向无关的横向模板复用，训练跨行调度。',
+  constraints: { maxMainBlocks, maxFunctions: 8, recommendedSteps },
+  hints: [
+    '先把单排清扫抽出来，再考虑换排。',
+    '朝向会变，但“清扫一排”的结构不会变。',
+    '如果你为每一排写不同代码，积木数会立刻失控。',
+  ],
+  sortOrder: 318 + index,
+}))
+
+const crossConfigs = [
+  ['custom-ch6-027', '第6-27关：中心四射', { x: 4, y: 4 }, 2, 'N', [{ x: 2, y: 4, dx: 0, dy: -1, length: 1 }, { x: 6, y: 4, dx: 0, dy: 1, length: 1 }], 10, 40],
+  ['custom-ch6-028', '第6-28关：十字偏枝', { x: 4, y: 4 }, 3, 'E', [{ x: 4, y: 1, dx: -1, dy: 0, length: 1 }, { x: 4, y: 7, dx: 1, dy: 0, length: 1 }], 11, 46],
+  ['custom-ch6-029', '第6-29关：双侧回收', { x: 4, y: 4 }, 2, 'S', [{ x: 2, y: 4, dx: 0, dy: 1, length: 1 }, { x: 6, y: 4, dx: 0, dy: -1, length: 1 }], 10, 42],
+  ['custom-ch6-030', '第6-30关：长臂十字', { x: 4, y: 4 }, 3, 'W', [{ x: 1, y: 4, dx: 0, dy: -1, length: 1 }, { x: 7, y: 4, dx: 0, dy: 1, length: 1 }], 12, 48],
+  ['custom-ch6-031', '第6-31关：外扩四翼', { x: 4, y: 4 }, 2, 'N', [{ x: 4, y: 2, dx: -1, dy: 0, length: 1 }, { x: 4, y: 6, dx: 1, dy: 0, length: 1 }], 10, 44],
+  ['custom-ch6-032', '第6-32关：中枢回路', { x: 4, y: 4 }, 3, 'E', [{ x: 3, y: 4, dx: 0, dy: -1, length: 2 }, { x: 5, y: 4, dx: 0, dy: 1, length: 2 }], 12, 52],
+  ['custom-ch6-033', '第6-33关：十字加挂', { x: 4, y: 4 }, 2, 'S', [{ x: 4, y: 2, dx: -1, dy: 0, length: 2 }, { x: 4, y: 6, dx: 1, dy: 0, length: 2 }], 12, 50],
+  ['custom-ch6-034', '第6-34关：四象归心', { x: 4, y: 4 }, 3, 'W', [{ x: 2, y: 4, dx: 0, dy: -1, length: 2 }, { x: 6, y: 4, dx: 0, dy: 1, length: 2 }], 13, 56],
+].map(([id, title, center, armLength, direction, sideBranches, maxMainBlocks, recommendedSteps], index) => buildCrossLevel({
+  id,
+  title,
+  center,
+  armLength,
+  direction,
+  sideBranches,
+  goal: '从中枢出发访问多条分支，并不断返回中枢，训练调度层和动作层分离。',
+  constraints: { maxMainBlocks, maxFunctions: 9, recommendedSteps },
+  hints: [
+    '从中心出发去四边，本质是同一种往返过程。',
+    '支路只是局部差异，主骨架仍然统一。',
+    'main 负责顺序，f1/f2 负责动作模板。',
+  ],
+  sortOrder: 326 + index,
+}))
+
+const stairConfigs = [
+  ['custom-ch6-035', '第6-35关：五阶长梯', 2, [0, 1, 2, 3, 4, 5], null, 10, 24],
+  ['custom-ch6-036', '第6-36关：折返阶梯', 2, [0, 1, 2, 3], { returnStartX: 5, returnY: 5, returnHeights: [3, 2, 1], turnX: 5, turnHeight: 3 }, 11, 30],
+  ['custom-ch6-037', '第6-37关：镜像长梯', 1, [0, 1, 2, 3, 4], { returnStartX: 5, returnY: 5, returnHeights: [4, 3, 2, 1], turnX: 5, turnHeight: 4 }, 12, 34],
+  ['custom-ch6-038', '第6-38关：高低反转', 1, [0, 1, 2, 3], { returnStartX: 4, returnY: 4, returnHeights: [2, 1, 0], turnX: 4, turnHeight: 3 }, 10, 28],
+  ['custom-ch6-039', '第6-39关：连续登顶', 2, [0, 1, 2, 3, 4], null, 10, 22],
+  ['custom-ch6-040', '第6-40关：双段上坡', 1, [0, 1, 2, 3], { returnStartX: 5, returnY: 3, returnHeights: [3, 4, 5], turnX: 5, turnHeight: 3 }, 12, 32],
+  ['custom-ch6-041', '第6-41关：楼梯回勾', 1, [0, 1, 2, 3, 4], { returnStartX: 6, returnY: 5, returnHeights: [4, 3, 2], turnX: 6, turnHeight: 4 }, 12, 34],
+  ['custom-ch6-042', '第6-42关：拐角天梯', 2, [0, 1, 2, 3], { returnStartX: 5, returnY: 6, returnHeights: [3, 2, 1, 0], turnX: 5, turnHeight: 3 }, 13, 36],
+].map(([id, title, y, heights, returnConfig, maxMainBlocks, recommendedSteps], index) => buildStairLevel({
+  id,
+  title,
+  startX: 1,
+  y,
+  heights,
+  returnStartX: returnConfig?.returnStartX,
+  returnY: returnConfig?.returnY,
+  returnHeights: returnConfig?.returnHeights,
+  turnX: returnConfig?.turnX,
+  turnHeight: returnConfig?.turnHeight,
+  goal: '把跳跃与转向拆解成稳定模板，在高度变化中保持抽象一致性。',
+  constraints: { maxMainBlocks, maxFunctions: 7, recommendedSteps },
+  hints: [
+    '高度变化才是核心，路径只是承载。',
+    '如果每一级都单独处理，你会浪费大量积木。',
+    '先找重复的 jump 节奏，再考虑拐角。',
+  ],
+  sortOrder: 334 + index,
+}))
+
+const ringConfigs = [
+  ['custom-ch6-043', '第6-43关：双环内切', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 3, top: 3, right: 5, bottom: 5 }, [{ x1: 4, y1: 1, x2: 4, y2: 3 }], 12, 58],
+  ['custom-ch6-044', '第6-44关：回字双门', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 2, top: 2, right: 6, bottom: 6 }, [{ x1: 1, y1: 4, x2: 2, y2: 4 }, { x1: 6, y1: 4, x2: 7, y2: 4 }], 13, 64],
+  ['custom-ch6-045', '第6-45关：偏心双环', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 3, top: 2, right: 6, bottom: 5 }, [{ x1: 5, y1: 1, x2: 5, y2: 2 }], 12, 60],
+  ['custom-ch6-046', '第6-46关：双环换轴', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 2, top: 3, right: 6, bottom: 5 }, [{ x1: 7, y1: 4, x2: 6, y2: 4 }], 13, 62],
+  ['custom-ch6-047', '第6-47关：双层回廊', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 3, top: 3, right: 5, bottom: 5 }, [{ x1: 4, y1: 7, x2: 4, y2: 5 }], 12, 56],
+  ['custom-ch6-048', '第6-48关：四门回字', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 3, top: 3, right: 5, bottom: 5 }, [{ x1: 4, y1: 1, x2: 4, y2: 3 }, { x1: 7, y1: 4, x2: 5, y2: 4 }], 14, 68],
+  ['custom-ch6-049', '第6-49关：双环穿梭', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 2, top: 2, right: 6, bottom: 6 }, [{ x1: 1, y1: 4, x2: 2, y2: 4 }, { x1: 4, y1: 6, x2: 4, y2: 7 }], 14, 70],
+  ['custom-ch6-050', '第6-50关：螺旋双环', { left: 1, top: 1, right: 7, bottom: 7 }, { left: 3, top: 2, right: 5, bottom: 6 }, [{ x1: 4, y1: 1, x2: 4, y2: 2 }, { x1: 5, y1: 6, x2: 7, y2: 6 }], 15, 74],
+].map(([id, title, outer, inner, gates, maxMainBlocks, recommendedSteps], index) => buildRingLevel({
+  id,
+  title,
+  outer,
+  inner,
+  gates,
+  outerCoins: {
+    top: lineCoins(outer.left + 1, outer.right - 1, [4]),
+    bottom: lineCoins(outer.left + 1, outer.right - 1, [outer.left + 1]),
+    left: [outer.top + 2, outer.bottom - 2],
+    right: [outer.top + 2, outer.bottom - 2],
+  },
+  innerCoins: {
+    top: lineCoins(inner.left + 1, inner.right - 1, []),
+    bottom: lineCoins(inner.left + 1, inner.right - 1, []),
+    left: inner.bottom - inner.top >= 2 ? [inner.top + 1] : [],
+    right: inner.bottom - inner.top >= 2 ? [inner.bottom - 1] : [],
+  },
+  robot: { x: outer.left, y: outer.bottom, direction: 'E' },
+  goal: '在外环与内环之间多次切换，训练局部模板复用与全局调度。',
+  constraints: { maxMainBlocks, maxFunctions: 10, recommendedSteps },
+  hints: [
+    '外环和内环不是两套完全不同的代码。',
+    '关键在于什么时候切入，什么时候回到外层。',
+    '把“环的一边”抽成统一模板，主程序只做路线编排。',
+  ],
+  sortOrder: 342 + index,
+}))
+
+const levels = [
+  ...baseLevels,
+  ...combConfigs,
+  ...snakeConfigs,
+  ...crossConfigs,
+  ...stairConfigs,
+  ...ringConfigs,
 ]
 
 async function main() {
