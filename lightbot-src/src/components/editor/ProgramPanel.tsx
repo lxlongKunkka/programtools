@@ -198,6 +198,7 @@ function NodeItem({ node, activeBlockId, dataNid }: { node: ProgramNode; activeB
           draggable onDragStart={(e) => { e.dataTransfer.setData(NODE_DRAG_KEY, node.id); e.dataTransfer.effectAllowed = 'move' }}>
           <TextCmdBlock symbol="↻" sqSize={54} onClick={() => setOpen(true)} title="点击展开编辑，拖动可移位" />
           {total > 0 && <span className="lb-seq-collapsed-badge">{total}</span>}
+          <span className="lb-seq-times-badge">×{node.times}</span>
           <button className="lb-seq-collapsed-remove"
             onClick={(e) => { e.stopPropagation(); removeNode(node.id) }}>×</button>
         </span>
