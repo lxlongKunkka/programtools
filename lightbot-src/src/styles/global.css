@@ -313,12 +313,6 @@ button {
   -webkit-user-select: none;
 }
 
-/* Program sequence area: lock touch-action so polyfill can intercept for DnD */
-.lb-seq-branch-body [draggable="true"],
-.lb-seq-ctrl-collapsed[draggable="true"] {
-  touch-action: none;
-}
-
 .lb-cmd-block[draggable="true"]:active {
   cursor: grabbing;
 }
