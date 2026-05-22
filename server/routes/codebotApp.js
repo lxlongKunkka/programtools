@@ -643,12 +643,16 @@ router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, 
         existing.totalCommands = totalCommands
         existing.executionSteps = executionSteps
         existing.completedAt = new Date()
-        if (solution !== undefined) existing.solution = solution
+        if (solution !== undefined) {
+          existing.solution = solution
+          existing.markModified('solution')
+        }
         await existing.save()
         saved = true
       } else if (!existing.solution && solution !== undefined && totalCommands <= existing.totalCommands) {
         // 历史记录缺少解法快照：补存（不改分数/排名）
         existing.solution = solution
+        existing.markModified('solution')
         await existing.save()
       }
     } else {

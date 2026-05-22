@@ -5,7 +5,7 @@ import { useLevelEditorStore } from '../../features/leveleditor/leveleditor.stor
 import type { RootArea, BlockBlueprint, InsertTarget } from '../../features/editor/editor.helpers'
 import { conditionOptions } from '../../features/editor/editor.helpers'
 import { countProgramNodes } from '../../features/editor/editor.utils'
-import type { ProgramNode, ConditionNode } from '../../domain/program/ast.types'
+import type { ProgramNode, ProgramDocument, ConditionNode } from '../../domain/program/ast.types'
 import { CmdBlock, TextCmdBlock, nodeToIcon } from './cmd-sprites'
 import { BLOCK_DRAG_KEY } from './BlockArea'
 import { CommunityLevelsBrowser } from './CommunityLevelsBrowser'
@@ -581,21 +581,37 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const [myLevelEntry, setMyLevelEntry] = useState<LeaderboardEntry | null>(null)
   const [myOverallEntry, setMyOverallEntry] = useState<OverallLeaderboardEntry | null>(null)
   const [solutionLoading, setSolutionLoading] = useState(false)
+  const [solutionHint, setSolutionHint] = useState<string | null>(null)
 
   const loadMySolution = async () => {
     const token = localStorage.getItem('auth_token')
     if (!token) return
     setSolutionLoading(true)
+    setSolutionHint(null)
     try {
       const r = await fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/my-solution`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await r.json()
-      if (data.ok && data.solution) {
-        setProgram(data.solution)
+      if (data.ok && data.solution && Array.isArray(data.solution.main)) {
+        // 防御性规范化：确保 functions 字段结构完整
+        const normalized: ProgramDocument = {
+          main: data.solution.main,
+          functions: {
+            f1: Array.isArray(data.solution.functions?.f1) ? data.solution.functions.f1 : [],
+            f2: Array.isArray(data.solution.functions?.f2) ? data.solution.functions.f2 : [],
+          },
+        }
+        setProgram(normalized)
         resetWorld()
+      } else {
+        setSolutionHint('暂无已保存的最优解')
+        setTimeout(() => setSolutionHint(null), 3000)
       }
-    } catch { /* 静默失败 */ } finally {
+    } catch {
+      setSolutionHint('加载失败，请重试')
+      setTimeout(() => setSolutionHint(null), 3000)
+    } finally {
       setSolutionLoading(false)
     }
   }
@@ -690,6 +706,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               </button>
             )}
           </div>
+          {solutionHint && <div className="lb-solution-hint">{solutionHint}</div>}
           {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
           {hasLeaderboard && (
             <div className="lb-leaderboard">
@@ -762,10 +779,13 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
             />
           ))}
           {hasLeaderboard && !!localStorage.getItem('auth_token') && (
-            <button className="lb-load-solution-btn" onClick={loadMySolution} disabled={solutionLoading}
-              title="从数据库读取你的历史最优解">
-              {solutionLoading ? '加载中…' : '📂 读取最优解'}
-            </button>
+            <>
+              <button className="lb-load-solution-btn" onClick={loadMySolution} disabled={solutionLoading}
+                title="从数据库读取你的历史最优解">
+                {solutionLoading ? '加载中…' : '📂 读取最优解'}
+              </button>
+              {solutionHint && <div className="lb-solution-hint">{solutionHint}</div>}
+            </>
           )}
         </div>
       )}
