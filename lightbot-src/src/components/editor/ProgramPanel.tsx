@@ -378,8 +378,38 @@ export function LevelNavBar() {
   const [showStats, setShowStats] = useState(false)
 
   const isCustomLevel    = level.id.startsWith('custom-')
+  const setProgram      = useGameStore((s) => s.setProgram)
+  const resetWorld      = useGameStore((s) => s.resetWorld)
+  const [solLoading, setSolLoading] = useState(false)
   const loadFromConfig  = useLevelEditorStore((s) => s.loadFromConfig)
   const resetEditor     = useLevelEditorStore((s) => s.reset)
+
+  const hasNavLeaderboard = level.chapter?.id !== 'custom' && !isCustomLevel
+
+  const loadMySolutionNav = async () => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return
+    setSolLoading(true)
+    try {
+      const r = await fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/my-solution`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await r.json()
+      if (data.ok && data.solution && Array.isArray(data.solution.main)) {
+        const normalized: ProgramDocument = {
+          main: data.solution.main,
+          functions: {
+            f1: Array.isArray(data.solution.functions?.f1) ? data.solution.functions.f1 : [],
+            f2: Array.isArray(data.solution.functions?.f2) ? data.solution.functions.f2 : [],
+          },
+        }
+        setProgram(normalized)
+        resetWorld()
+      }
+    } catch { /* 静默失败 */ } finally {
+      setSolLoading(false)
+    }
+  }
 
   function handleEditLevel() {
     loadFromConfig(level)
@@ -420,6 +450,14 @@ export function LevelNavBar() {
   return (
     <div className="lb-level-nav-bar">
       <div className="lb-level-nav">
+        {hasNavLeaderboard && !!localStorage.getItem('auth_token') && (
+          <button
+            className="lb-level-nav-btn"
+            onClick={() => void loadMySolutionNav()}
+            disabled={solLoading}
+            title="读取我的历史最优解"
+          >{solLoading ? '⏳' : '📂'}</button>
+        )}
         <button
           className="lb-level-nav-btn"
           onClick={() => loadLevel(levelIndex - 1)}
@@ -778,15 +816,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               maxBlocks={area === 'main' ? level.constraints?.maxMainBlocks : 12}
             />
           ))}
-          {hasLeaderboard && !!localStorage.getItem('auth_token') && (
-            <>
-              <button className="lb-load-solution-btn" onClick={loadMySolution} disabled={solutionLoading}
-                title="从数据库读取你的历史最优解">
-                {solutionLoading ? '加载中…' : '📂 读取最优解'}
-              </button>
-              {solutionHint && <div className="lb-solution-hint">{solutionHint}</div>}
-            </>
-          )}
+
         </div>
       )}
     </div>

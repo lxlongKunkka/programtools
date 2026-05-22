@@ -437,12 +437,12 @@ export default {
   background: rgba(255, 255, 255, 0.96);
 }
 
-/* 汉堡堡图标：三条横线 */
+/* 汉堡图标：三条横线 */
 .hamburger-icon,
 .hamburger-icon::before,
 .hamburger-icon::after {
   display: block;
-  width: 17px;
+  width: 20px;
   height: 2px;
   background: #1e293b;
   border-radius: 2px;
@@ -457,11 +457,11 @@ export default {
   position: absolute;
   left: 0;
 }
-.hamburger-icon::before { top: -5px; }
-.hamburger-icon::after  { top: 5px; }
+.hamburger-icon::before { top: -7px; }
+.hamburger-icon::after  { top: 7px; }
 .mobile-menu-btn.active .hamburger-icon { background: transparent; }
-.mobile-menu-btn.active .hamburger-icon::before { transform: rotate(45deg) translate(3.5px, 3.5px); }
-.mobile-menu-btn.active .hamburger-icon::after  { transform: rotate(-45deg) translate(3.5px, -3.5px); }
+.mobile-menu-btn.active .hamburger-icon::before { transform: rotate(45deg) translate(5px, 5px); }
+.mobile-menu-btn.active .hamburger-icon::after  { transform: rotate(-45deg) translate(5px, -5px); }
 
 /* 下拉菜单遮罩和内容 */
 .mobile-menu-overlay {
