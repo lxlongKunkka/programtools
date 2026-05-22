@@ -33,7 +33,6 @@ function startDrag(e: DragEvent, bp: BlockBlueprint) {
 export function BlockArea() {
   const appendNode     = useGameStore((state) => state.appendNode)
   const selectedTarget = useGameStore((state) => state.selectedTarget)
-  const resetWorld     = useGameStore((state) => state.resetWorld)
   const runProgram     = useGameStore((state) => state.runProgram)
   const runStatus      = useGameStore((state) => state.runStatus)
   const availableBlocks = useGameStore((state) => state.level.availableBlocks)
@@ -63,18 +62,6 @@ export function BlockArea() {
 
       {/* ── 右侧控制按钮 ── */}
       <div className="lb-block-area-controls">
-        {/* 重置：蓝底 + 白叠层 + 刷新图标 */}
-        <button
-          className="lb-hex-btn"
-          onClick={resetWorld}
-          disabled={runStatus === 'running'}
-          title="重置"
-        >
-          <span className="lb-hex-btn-inner">
-            <img className="lb-hex-btn-bg" src="/extracted-assets/coding-game-swf/atlas-slices/components/component_54.png" alt="" aria-hidden="true" />
-            <img className="lb-hex-btn-icon" src="/extracted-assets/coding-game-swf/atlas-slices/components/component_70.png" alt="重置" />
-          </span>
-        </button>
         {/* 运行 */}
         <button
           className="lb-hex-btn lb-hex-btn--run"
