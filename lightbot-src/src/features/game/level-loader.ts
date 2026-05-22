@@ -8,7 +8,7 @@ export const beginnerLesson = lessonJson as LessonConfig
 
 /** 从后端 API 异步获取所有官方关卡 */
 export async function loadLevelsFromApi(): Promise<LevelConfig[]> {
-  const res = await fetch('/api/lightbot/levels')
+  const res = await fetch('/api/codebot/levels')
   if (!res.ok) throw new Error(`Failed to load levels: ${res.status}`)
   const data = await res.json() as { ok: boolean; levels: LevelConfig[] }
   if (!data.ok || !Array.isArray(data.levels)) throw new Error('Invalid levels response')
@@ -20,7 +20,7 @@ export async function loadUserLevelsFromApi(): Promise<LevelConfig[]> {
   const token = localStorage.getItem('auth_token')
   if (!token) return []
   try {
-    const res = await fetch('/api/lightbot/my-published-levels', {
+    const res = await fetch('/api/codebot/my-published-levels', {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) return []
@@ -36,8 +36,8 @@ export async function loadUserLevelsFromApi(): Promise<LevelConfig[]> {
 export async function loadCommunityLevelsFromApi(excludeUserId?: number): Promise<LevelConfig[]> {
   try {
     const url = excludeUserId
-      ? `/api/lightbot/community-levels?excludeUserId=${excludeUserId}`
-      : '/api/lightbot/community-levels'
+      ? `/api/codebot/community-levels?excludeUserId=${excludeUserId}`
+      : '/api/codebot/community-levels'
     const res = await fetch(url)
     if (!res.ok) return []
     const data = await res.json() as { ok: boolean; levels: LevelConfig[] }

@@ -358,7 +358,7 @@ export const useGameStore = create<GameStore>()(
             const executionSteps = result.events.filter(
               (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
             ).length
-            void fetch(`/api/lightbot/levels/${encodeURIComponent(current.level.id)}/complete`, {
+            void fetch(`/api/codebot/levels/${encodeURIComponent(current.level.id)}/complete`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
