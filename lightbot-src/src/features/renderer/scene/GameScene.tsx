@@ -128,6 +128,8 @@ export function GameScene() {
   const sectionRef = useRef<HTMLElement | null>(null)
   const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null)
 
+  const clampZoom = (value: number) => Math.min(3.0, Math.max(0.5, parseFloat(value.toFixed(2))))
+
   const levelMetrics = useMemo(() => {
     // Use the bounding box of non-void tiles so small levels (e.g. SWF levels with
     // sparse grids) are zoomed to fill the viewport instead of appearing tiny.
@@ -584,6 +586,7 @@ export function GameScene() {
   useEffect(() => {
     const el = sectionRef.current
     if (!el) return
+    const isFinePointer = window.matchMedia('(pointer: fine)').matches
     const getTouchDist = (touches: TouchList) => {
       const dx = touches[0].clientX - touches[1].clientX
       const dy = touches[0].clientY - touches[1].clientY
@@ -597,17 +600,28 @@ export function GameScene() {
       if (e.touches.length !== 2 || !pinchRef.current) return
       e.preventDefault()
       const scale = getTouchDist(e.touches) / pinchRef.current.startDist
-      const next = Math.min(3.0, Math.max(0.5, parseFloat((pinchRef.current.startZoom * scale).toFixed(2))))
+      const next = clampZoom(pinchRef.current.startZoom * scale)
       setZoom(next)
     }
     const onTouchEnd = () => { pinchRef.current = null }
+    const onWheel = (e: WheelEvent) => {
+      if (!isFinePointer) return
+      e.preventDefault()
+      const direction = e.deltaY > 0 ? -1 : 1
+      const next = clampZoom(zoomRef.current + direction * 0.1)
+      if (next !== zoomRef.current) {
+        setZoom(next)
+      }
+    }
     el.addEventListener('touchstart', onTouchStart, { passive: true })
     el.addEventListener('touchmove', onTouchMove, { passive: false })
     el.addEventListener('touchend', onTouchEnd, { passive: true })
+    el.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('wheel', onWheel)
     }
   }, [])
 
@@ -615,9 +629,9 @@ export function GameScene() {
     <section className="lb-stage-card" ref={sectionRef}>
       <div className="lb-stage-canvas" ref={hostRef} />
       <div className="lb-zoom-controls">
-        <button className="lb-zoom-btn" onClick={() => setZoom(z => Math.max(0.5, parseFloat((z - 0.25).toFixed(2))))} title="缩小">－</button>
+        <button className="lb-zoom-btn" onClick={() => setZoom(z => clampZoom(z - 0.25))} title="缩小">－</button>
         <span className="lb-zoom-label">{Math.round(zoom * 100)}%</span>
-        <button className="lb-zoom-btn" onClick={() => setZoom(z => Math.min(3.0, parseFloat((z + 0.25).toFixed(2))))} title="放大">＋</button>
+        <button className="lb-zoom-btn" onClick={() => setZoom(z => clampZoom(z + 0.25))} title="放大">＋</button>
       </div>
     </section>
   )
