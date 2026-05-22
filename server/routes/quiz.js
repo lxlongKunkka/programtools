@@ -138,7 +138,11 @@ function sanitizeIssueState(issue) {
 
 function normalizeSubmittedAnswer(answer, type) {
   const text = String(answer || '').trim()
-  if (type === 'judge') return text.toLowerCase()
+  if (type === 'judge') {
+    const normalized = text.toLowerCase()
+    if (normalized === 'true' || normalized === 'false') return normalized
+    return text.toUpperCase()
+  }
   return text.toUpperCase()
 }
 
