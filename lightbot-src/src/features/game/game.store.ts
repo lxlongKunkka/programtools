@@ -83,7 +83,6 @@ type GameStore = {
   moveNodeToTarget: (nodeId: string, target: InsertTarget) => void
   updateRepeatTimes: (nodeId: string, times: number) => void
   updateConditionType: (nodeId: string, conditionType: Parameters<typeof updateProgramConditionType>[2]) => void
-  savedPrograms: Record<number, ProgramDocument>
   setProgram: (program: ProgramDocument) => void
   stepProgram: () => void
   runProgram: () => Promise<void>
@@ -104,7 +103,6 @@ export const useGameStore = create<GameStore>()(
   level: beginnerLevel,
   lesson: beginnerLesson,
   completedLevels: [],
-  savedPrograms: {},
   program: emptyProgramDocument,
   selectedTarget: defaultBranchTarget,
   world: createWorldState(beginnerLevel),
@@ -145,7 +143,7 @@ export const useGameStore = create<GameStore>()(
           chapter: { id: 'community', title: '\uD83C\uDF0D \u793E\u533A\u5173\u5361', order: 97 },
         }))
       const levels = [...officialLevels, ...communityLevelsWithChapter, ...userLevelsWithChapter]
-      const { levelIndex, savedPrograms } = get()
+      const { levelIndex } = get()
       const idx = Math.max(0, Math.min(levelIndex, levels.length - 1))
       const level = levels[idx]
       set({
@@ -154,7 +152,7 @@ export const useGameStore = create<GameStore>()(
         levelIndex: idx,
         level,
         world: createWorldState(level),
-        program: savedPrograms[idx] ?? emptyProgramDocument,
+        program: emptyProgramDocument,
       })
     } catch (err) {
       console.error('[game] loadLevels failed:', err)
@@ -163,14 +161,15 @@ export const useGameStore = create<GameStore>()(
     }
   },
   loadLevel: (index) => {
-    const { levels, savedPrograms } = get()
+    const { levels } = get()
     const next = levels[index]
     if (!next) return
     set({
       levelIndex: index,
       level: next,
       world: createWorldState(next),
-      program: savedPrograms[index] ?? emptyProgramDocument,
+      program: emptyProgramDocument,
+      selectedTarget: defaultBranchTarget,
       runStatus: 'idle',
       currentRobotAction: createIdleRobotAction(),
       executionLog: [],
@@ -314,9 +313,6 @@ export const useGameStore = create<GameStore>()(
       currentRobotAction: mapExecutionEventToRobotAction(event),
       eventIndex: eventIndex + 1,
       runStatus: event.type === 'fail' ? 'failed' : event.type === 'complete' ? 'complete' : 'idle',
-      ...(event.type === 'complete' ? {
-        savedPrograms: { ...get().savedPrograms, [get().levelIndex]: get().program },
-      } : {}),
     })
   },
   runProgram: async () => {
@@ -344,7 +340,6 @@ export const useGameStore = create<GameStore>()(
         runStatus: event.type === 'fail' ? 'failed' : event.type === 'complete' ? 'complete' : 'running',
         ...(event.type === 'complete' ? {
           completedLevels: Array.from(new Set([...current.completedLevels, current.levelIndex])),
-          savedPrograms: { ...current.savedPrograms, [current.levelIndex]: current.program },
         } : {}),
       })
       if (event.type === 'complete') {
@@ -390,8 +385,6 @@ export const useGameStore = create<GameStore>()(
   partialize: (state) => ({
     levelIndex:      state.levelIndex,
     completedLevels: state.completedLevels,
-    savedPrograms:   state.savedPrograms,
-    program:         state.program,
   }),
   // rehydrate 后 level/world 会在 loadLevels() 完成时重建，这里只做安全重置
   onRehydrateStorage: () => (_state) => { /* levels are loaded async in App.tsx */ },
