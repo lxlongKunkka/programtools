@@ -723,6 +723,23 @@ button {
   transition: background 0.12s;
 }
 .lb-win-retry-btn:hover { background: rgba(255,255,255,0.18); }
+.lb-win-retry-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* 游戏面板底部"读取最优解"按钮 */
+.lb-load-solution-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 12px;
+  background: none;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.lb-load-solution-btn:hover { background: #f1f5f9; color: #334155; }
+.lb-load-solution-btn:disabled { opacity: 0.5; cursor: default; }
 .lb-win-next-btn {
   background: #ffd700;
   color: #1a2a00;

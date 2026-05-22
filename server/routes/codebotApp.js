@@ -709,6 +709,22 @@ router.get('/codebot/leaderboard/overall', optionalAuthenticateToken, async (req
   }
 })
 
+// GET /codebot/levels/:levelId/my-solution — 获取当前用户在该关的最优解（需登录）
+router.get('/codebot/levels/:levelId/my-solution', authenticateToken, async (req, res) => {
+  const { levelId } = req.params
+  try {
+    const userId = req.user.id
+    const record = await CodebotResult.findOne({ userId, levelId })
+      .select('solution totalCommands executionSteps')
+      .lean()
+    if (!record) return res.json({ ok: true, solution: null })
+    res.json({ ok: true, solution: record.solution ?? null, totalCommands: record.totalCommands, executionSteps: record.executionSteps })
+  } catch (error) {
+    console.error('[codebot-app] my-solution failed:', error)
+    res.status(500).json({ ok: false, error: '获取失败' })
+  }
+})
+
 // GET /codebot/admin/stats — 管理员统计（需管理员权限）
 router.get('/codebot/admin/stats', authenticateToken, async (req, res) => {
   const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
