@@ -433,6 +433,7 @@ router.get('/lightbot/levels/:levelId/leaderboard', async (req, res) => {
         username: r.username,
         totalCommands: r.totalCommands,
         executionSteps: r.executionSteps,
+        completedAt: r.completedAt ? r.completedAt.toISOString() : null,
       })),
     })
   } catch (error) {

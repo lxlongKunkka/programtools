@@ -8,7 +8,19 @@ import { useGameStore } from '../../features/game/game.store'
 // TODO: 如需修改学习网站链接，在此处更改
 const TIKU_URL = 'https://ai.acjudge.com'
 
-type LbEntry = { rank: number; username: string; totalCommands: number; executionSteps: number }
+type LbEntry = { rank: number; username: string; totalCommands: number; executionSteps: number; completedAt?: string | null }
+
+function fmtDate(iso?: string | null) {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffDays === 0) return '今天 ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 30) return `${diffDays}天前`
+  return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
 
 export function GameShell() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
@@ -67,6 +79,7 @@ export function GameShell() {
                     <th>玩家</th>
                     <th title="主程序+子程序积木总数">积木数</th>
                     <th title="机器人执行步数">执行步</th>
+                    <th title="最优成绩创建时间">通关时间</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -78,6 +91,7 @@ export function GameShell() {
                       <td className="lb-leaderboard-user">{entry.username}</td>
                       <td>{entry.totalCommands}</td>
                       <td>{entry.executionSteps}</td>
+                      <td className="lb-leaderboard-date">{fmtDate(entry.completedAt)}</td>
                     </tr>
                   ))}
                 </tbody>
