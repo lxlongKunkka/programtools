@@ -40,6 +40,18 @@ function AppContent() {
     window.parent?.postMessage({ type: 'app-mode', mode: appMode }, '*')
   }, [appMode])
 
+  // 监听父页面退出登录（父页面 removeItem('auth_token') → storage 事件触发到 iframe）
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'auth_token' && e.newValue === null) {
+        // 清除关卡进度，使选关界面不再显示已通关/星级
+        useGameStore.setState({ completedLevels: [], savedUserId: null })
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
+
   // 关卡未就绪时显示加载中
   if (!levelsLoaded) {
     return (
