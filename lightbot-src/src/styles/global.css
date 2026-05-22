@@ -2912,12 +2912,27 @@ button {
   }
   .lb-program-panel.lb-program-panel--win,
   .lb-program-panel.lb-program-panel--fail {
-    max-height: 55vh;
+    height: 62vh;
+    max-height: 62vh;
   }
-  /* 通关/失败时，win-screen 用自然高度，让面板滚动容器感知溢出 */
+  /* 通关/失败时：win-screen 撑满面板并内部滚动，按钮 sticky 固定底部 */
   .lb-program-panel--win .lb-win-screen,
   .lb-program-panel--fail .lb-win-screen {
-    flex: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+  }
+  .lb-program-panel--win .lb-win-actions,
+  .lb-program-panel--fail .lb-win-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding: 10px 0 6px;
+    background: linear-gradient(to bottom, transparent 0%, rgba(8,25,55,0.97) 22%);
+    width: 100%;
+    justify-content: center;
   }
 
   /* 折叠把手在手机上隐藏（面板常驻，不需要折叠） */
@@ -2948,7 +2963,8 @@ button {
   .lb-program-panel { max-height: 28vh; }
   .lb-program-panel.lb-program-panel--win,
   .lb-program-panel.lb-program-panel--fail {
-    max-height: 52vh;
+    height: 58vh;
+    max-height: 58vh;
   }
 }
 
