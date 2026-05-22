@@ -18,7 +18,7 @@
     ></iframe>
 
     <!-- 右上角角标栏：排行榜 | 我的关卡 | 用户名 -->
-    <div class="lightbot-corner-bar">
+    <div v-if="!inEditorMode" class="lightbot-corner-bar">
       <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
         🏆 排行榜
       </button>
@@ -107,6 +107,7 @@ export default {
       shareNotice: '',
       shareNoticeTimer: null,
       username: '',
+      inEditorMode: false,
     }
   },
   mounted() {
@@ -120,6 +121,16 @@ export default {
       const info = JSON.parse(localStorage.getItem('user_info') || '{}')
       this.username = info?.username || info?.uname || ''
     } catch {}
+    // 监听 iframe 内 React 的模式变化
+    this._modeListener = (e) => {
+      if (e.data?.type === 'app-mode') {
+        this.inEditorMode = e.data.mode === 'editor'
+      }
+    }
+    window.addEventListener('message', this._modeListener)
+  },
+  beforeUnmount() {
+    window.removeEventListener('message', this._modeListener)
   },
   methods: {
     handleLoad() {
