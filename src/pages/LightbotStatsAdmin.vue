@@ -118,10 +118,10 @@ export default {
   },
   async mounted() {
     try {
-      const res = await request.get('/lightbot/admin/stats')
-      this.data = res.data
+      const res = await request('/api/lightbot/admin/stats')
+      this.data = res
     } catch (e) {
-      this.error = e?.response?.data?.error || '加载失败'
+      this.error = e?.message || '加载失败'
     } finally {
       this.loading = false
     }
