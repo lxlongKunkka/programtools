@@ -18,7 +18,7 @@ import { resolve, join } from 'path'
 const LIGHTBOT_SRC = process.env.LIGHTBOT_SRC || 'D:/webapp/lightbot/src/content/levels'
 const MONGODB_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools'
 
-// ── Schema（与 server/models/LightbotLevel.js 保持一致）────────────────────
+// ── Schema（与 server/models/CodebotLevel.js 保持一致）────────────────────
 
 const schema = new mongoose.Schema(
   {
@@ -103,7 +103,7 @@ async function main() {
   await mongoose.connect(MONGODB_URI)
   console.log(`[import] 已连接 MongoDB: ${MONGODB_URI}`)
 
-  const LightbotLevel = mongoose.model('LightbotLevel', schema)
+  const CodebotLevel = mongoose.model('CodebotLevel', schema)
 
   let upserted = 0
   let skipped = 0
@@ -125,7 +125,7 @@ async function main() {
     }
 
     try {
-      await LightbotLevel.findOneAndUpdate(
+      await CodebotLevel.findOneAndUpdate(
         { id: lvl.id },
         { $set: doc },
         { upsert: true, new: true },

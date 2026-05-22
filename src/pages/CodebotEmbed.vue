@@ -1,38 +1,38 @@
 <template>
-  <div class="lightbot-embed-page">
+  <div class="codebot-embed-page">
     <!-- 加载遮罩 -->
-    <div v-if="!loaded" class="lightbot-embed-loading">
+    <div v-if="!loaded" class="codebot-embed-loading">
       <div class="spinner"></div>
-      <p>正在加载 Lightbot…</p>
+      <p>正在加载 Codebot…</p>
     </div>
 
     <!-- iframe -->
     <iframe
       ref="iframeRef"
-      class="lightbot-embed-frame"
+      class="codebot-embed-frame"
       :class="{ ready: loaded }"
       :src="iframeSrc"
-      title="Lightbot"
+      title="Codebot"
       allow="clipboard-read; clipboard-write"
       @load="handleLoad"
     ></iframe>
 
     <!-- 右上角角标栏：主页 | 排行榜 | 我的关卡 | 用户名 | 登录 -->
-    <div v-if="!inEditorMode" class="lightbot-corner-bar">
+    <div v-if="!inEditorMode" class="codebot-corner-bar">
       <!-- 桌面端按钮 -->
-      <a class="lightbot-corner-btn lightbot-corner-home desktop-only" href="https://ai.acjudge.com" title="返回主页">🏠 主页</a>
-      <button class="lightbot-corner-btn desktop-only" @click="openLeaderboard" title="查看本关排行榜">
+      <a class="codebot-corner-btn codebot-corner-home desktop-only" href="https://ai.acjudge.com" title="返回主页">🏠 主页</a>
+      <button class="codebot-corner-btn desktop-only" @click="openLeaderboard" title="查看本关排行榜">
         🏆 排行榜
       </button>
-      <button v-if="username" class="lightbot-corner-btn desktop-only" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
+      <button v-if="username" class="codebot-corner-btn desktop-only" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
         {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
       </button>
-      <span v-if="username" class="lightbot-corner-btn lightbot-corner-user desktop-only" @click="confirmLogout" title="点击退出登录">👤 {{ username }}</span>
-      <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login desktop-only" @click="goToLogin" title="登录以保存关卡进度">
+      <span v-if="username" class="codebot-corner-btn codebot-corner-user desktop-only" @click="confirmLogout" title="点击退出登录">👤 {{ username }}</span>
+      <button v-if="!username" class="codebot-corner-btn codebot-corner-login desktop-only" @click="goToLogin" title="登录以保存关卡进度">
         登录
       </button>
       <!-- 手机端汉堡堡按鈕 -->
-      <button class="lightbot-corner-btn mobile-menu-btn mobile-only" @click="mobileMenuOpen = !mobileMenuOpen" :class="{ active: mobileMenuOpen }">
+      <button class="codebot-corner-btn mobile-menu-btn mobile-only" @click="mobileMenuOpen = !mobileMenuOpen" :class="{ active: mobileMenuOpen }">
         <span class="hamburger-icon"></span>
       </button>
     </div>
@@ -127,11 +127,11 @@
 import { request } from '../utils/request.js'
 
 export default {
-  name: 'LightbotEmbed',
+  name: 'CodebotEmbed',
   data() {
     return {
       loaded: false,
-      iframeSrc: '/lightbot-app/index.html',
+      iframeSrc: '/codebot-app/index.html',
       panelOpen: false,
       loadingLevels: false,
       levels: [],
@@ -145,10 +145,10 @@ export default {
     }
   },
   mounted() {
-    // 支持分享链接：/lightbot?level=<b64>
+    // 支持分享链接：/codebot?level=<b64>
     const levelParam = this.$route?.query?.level
     if (levelParam) {
-      this.iframeSrc = `/lightbot-app/index.html?level=${encodeURIComponent(levelParam)}`
+      this.iframeSrc = `/codebot-app/index.html?level=${encodeURIComponent(levelParam)}`
     }
     // 读取登录用户名
     try {
@@ -188,7 +188,7 @@ export default {
     async fetchLevels() {
       this.loadingLevels = true
       try {
-        const data = await request('/api/lightbot/my-levels')
+        const data = await request('/api/codebot/my-levels')
         this.levels = data.levels || []
       } catch (e) {
         console.error('获取关卡列表失败', e)
@@ -200,10 +200,10 @@ export default {
     async editLevel(level) {
       // 获取完整 content（列表接口不含 content）
       try {
-        const data = await request(`/api/lightbot/my-levels/${level._id}`)
+        const data = await request(`/api/codebot/my-levels/${level._id}`)
         if (data.level?.content) {
           const b64 = this.encodeContentForUrl(data.level.content)
-          this.iframeSrc = `/lightbot-app/index.html?level=${b64}`
+          this.iframeSrc = `/codebot-app/index.html?level=${b64}`
           this.loaded = false
           this.panelOpen = false
         }
@@ -214,7 +214,7 @@ export default {
 
     async togglePublish(level) {
       try {
-        const data = await request(`/api/lightbot/my-levels/${level._id}/publish`, {
+        const data = await request(`/api/codebot/my-levels/${level._id}/publish`, {
           method: 'PATCH',
         })
         level.isPublished = data.isPublished
@@ -224,7 +224,7 @@ export default {
     },
 
     goToLogin() {
-      this.$router.push('/login?redirect=/lightbot')
+      this.$router.push('/login?redirect=/codebot')
     },
 
     confirmLogout() {
@@ -248,7 +248,7 @@ export default {
       if (!this.deleteTarget) return
       const id = this.deleteTarget._id
       try {
-        await request(`/api/lightbot/my-levels/${id}`, { method: 'DELETE' })
+        await request(`/api/codebot/my-levels/${id}`, { method: 'DELETE' })
         this.levels = this.levels.filter(l => l._id !== id)
       } catch (e) {
         console.error('删除失败', e)
@@ -259,10 +259,10 @@ export default {
 
     async shareLevel(level) {
       try {
-        const data = await request(`/api/lightbot/my-levels/${level._id}`)
+        const data = await request(`/api/codebot/my-levels/${level._id}`)
         if (!data.level?.content) return
         const b64 = this.encodeContentForUrl(data.level.content)
-        const url = `${window.location.origin}/lightbot?level=${b64}`
+        const url = `${window.location.origin}/codebot?level=${b64}`
         await navigator.clipboard.writeText(url)
         this.showShareNotice('链接已复制到剪贴板 ✅')
       } catch (e) {
@@ -278,7 +278,7 @@ export default {
     },
 
     /**
-     * 与 lightbot-app 内部编码一致：
+     * 与 codebot-app 内部编码一致：
      * JSON string → TextEncoder → byte-by-byte fromCharCode → btoa
      */
     encodeContentForUrl(jsonStr) {
@@ -304,13 +304,13 @@ export default {
 </script>
 
 <style scoped>
-.lightbot-embed-page {
+.codebot-embed-page {
   position: fixed;
   inset: 0;
   background: #0c1222;
 }
 
-.lightbot-embed-frame {
+.codebot-embed-frame {
   width: 100%;
   height: 100%;
   border: 0;
@@ -320,11 +320,11 @@ export default {
   background: #0c1222;
 }
 
-.lightbot-embed-frame.ready {
+.codebot-embed-frame.ready {
   opacity: 1;
 }
 
-.lightbot-embed-loading {
+.codebot-embed-loading {
   position: absolute;
   inset: 0;
   display: flex;
@@ -337,14 +337,14 @@ export default {
   pointer-events: none;
 }
 
-.lightbot-embed-loading p {
+.codebot-embed-loading p {
   margin: 0;
   font-size: 15px;
   letter-spacing: 0.02em;
 }
 
 /* ── 右上角角标栏 ── */
-.lightbot-corner-bar {
+.codebot-corner-bar {
   position: fixed;
   top: 12px;
   right: 16px;
@@ -354,8 +354,8 @@ export default {
   gap: 8px;
 }
 
-.lightbot-corner-btn,
-.lightbot-corner-user {
+.codebot-corner-btn,
+.codebot-corner-user {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -372,34 +372,34 @@ export default {
   line-height: 1;
 }
 
-.lightbot-corner-btn {
+.codebot-corner-btn {
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s;
 }
-.lightbot-corner-btn:hover {
+.codebot-corner-btn:hover {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
-.lightbot-corner-home {
+.codebot-corner-home {
   text-decoration: none;
 }
-.lightbot-corner-home:hover {
+.codebot-corner-home:hover {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
-.lightbot-corner-user {
+.codebot-corner-user {
   cursor: pointer;
 }
-.lightbot-corner-user:hover {
+.codebot-corner-user:hover {
   background: rgba(255, 220, 220, 0.92);
   color: #c0392b;
 }
-.lightbot-corner-login {
+.codebot-corner-login {
   background: rgba(79, 140, 255, 0.92);
   color: #fff;
   font-weight: 600;
 }
-.lightbot-corner-login:hover {
+.codebot-corner-login:hover {
   background: rgba(60, 120, 240, 1);
   color: #fff;
 }
@@ -410,7 +410,7 @@ export default {
 .mobile-only { display: none; }
 
 @media (max-width: 520px) {
-  .lightbot-corner-bar {
+  .codebot-corner-bar {
     top: 8px;
     right: 8px;
     gap: 5px;
@@ -768,13 +768,13 @@ export default {
 
 
 <style scoped>
-.lightbot-embed-page {
+.codebot-embed-page {
   position: fixed;
   inset: 0;
   background: #0c1222;
 }
 
-.lightbot-embed-frame {
+.codebot-embed-frame {
   width: 100%;
   height: 100%;
   border: 0;
@@ -784,11 +784,11 @@ export default {
   background: #0c1222;
 }
 
-.lightbot-embed-frame.ready {
+.codebot-embed-frame.ready {
   opacity: 1;
 }
 
-.lightbot-embed-loading {
+.codebot-embed-loading {
   position: absolute;
   inset: 0;
   display: flex;
@@ -801,7 +801,7 @@ export default {
   pointer-events: none;
 }
 
-.lightbot-embed-loading p {
+.codebot-embed-loading p {
   margin: 0;
   font-size: 15px;
   letter-spacing: 0.02em;

@@ -16,9 +16,9 @@
     "audit:quiz-knowledge": "node server/scripts/audit-quiz-knowledge-tags.js",
     "backfill:quiz-knowledge": "node server/scripts/backfill-quiz-knowledge-from-text.js",
     "export:gesp-objective-bank": "node server/scripts/import-gesp-objective-bank.js --export-only --out-dir=server/temp_gesp/objective_bank_export",
-    "import:lightbot-images": "node scripts/build-lightbot-image-manifest.mjs",
+    "import:codebot-images": "node scripts/build-codebot-image-manifest.mjs",
     "deploy": "node deploy.mjs",
-    "build:lightbot": "cd lightbot-src && npm install && npm run build",
+    "build:codebot": "cd lightbot-src && npm install && npm run build",
     "deploy:rotate-jwt": "cross-env ROTATE_JWT_SECRET=1 node deploy.mjs"
   },
   "dependencies": {

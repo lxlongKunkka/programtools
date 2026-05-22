@@ -5,7 +5,7 @@ import { conditionOptions } from '../../features/editor/editor.helpers'
 import { useGameStore } from '../../features/game/game.store'
 import type { ConditionNode, ProgramNode } from '../../domain/program/ast.types'
 
-const DRAG_PAYLOAD_KEY = 'application/x-lightbot-payload'
+const DRAG_PAYLOAD_KEY = 'application/x-codebot-payload'
 let dragPayloadFallback: DragPayload | null = null
 
 const actionBlueprints: BlockBlueprint[] = [

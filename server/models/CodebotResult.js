@@ -20,4 +20,4 @@ schema.index({ levelId: 1, totalCommands: 1, executionSteps: 1, completedAt: 1 }
 // 每人每关唯一记录
 schema.index({ userId: 1, levelId: 1 }, { unique: true })
 
-export default appConn.model('LightbotResult', schema)
+export default appConn.model('CodebotResult', schema, 'lightbotresults')

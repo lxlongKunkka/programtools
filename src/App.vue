@@ -27,7 +27,7 @@
         <router-link to="/">Quiz</router-link>
         <router-link to="/translate">Translate</router-link>
         <router-link to="/typing">Typing</router-link>
-        <router-link v-if="user" to="/lightbot">Lightbot</router-link>
+        <router-link v-if="user" to="/codebot">Codebot</router-link>
         <router-link v-if="user" to="/course">Course</router-link>
         <router-link v-if="user" to="/progress">进度</router-link>
         <router-link v-if="user" to="/daily">Daily</router-link>
@@ -162,7 +162,7 @@ export default {
         return [
           { key: 'home', type: 'route', to: '/', label: '首页' },
           { key: 'course', type: 'route', to: '/course', label: '课程' },
-          { key: 'lightbot', type: 'route', to: '/lightbot', label: 'Lightbot' },
+          { key: 'codebot', type: 'route', to: '/codebot', label: 'Codebot' },
           { key: 'progress', type: 'route', to: '/progress', label: '进度' },
           { key: 'profile', type: 'route', to: '/profile', label: '我的' }
         ]

@@ -1,13 +1,13 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { LIGHTBOT_LEVELS } from '../src/data/lightbotLevels.js'
+import { CODEBOT_LEVELS } from '../src/data/codebotLevels.js'
 
 const scriptPath = fileURLToPath(import.meta.url)
 const workspaceRoot = path.resolve(path.dirname(scriptPath), '..')
-const imageRoot = path.join(workspaceRoot, 'other', 'lightbot_images')
+const imageRoot = path.join(workspaceRoot, 'other', 'codebot_images')
 const outputPath = path.join(imageRoot, 'import-manifest.json')
-const IMAGE_PATTERN = /^Lightbot-([a-z]+)-(\d+)\.(gif|png|jpg|jpeg|webp)$/i
+const IMAGE_PATTERN = /^Codebot-([a-z]+)-(\d+)\.(gif|png|jpg|jpeg|webp)$/i
 
 function normalizePath(filePath) {
   return path.relative(workspaceRoot, filePath).replace(/\\/g, '/')
@@ -54,7 +54,7 @@ async function main() {
     })
     .sort((left, right) => compareLevelIds(left.id, right.id))
 
-  const levelById = new Map(LIGHTBOT_LEVELS.map((level) => [level.id, level]))
+  const levelById = new Map(CODEBOT_LEVELS.map((level) => [level.id, level]))
   const matchedLevels = imageFiles
     .filter((image) => levelById.has(image.id))
     .map((image) => {
@@ -84,7 +84,7 @@ async function main() {
     }))
 
   const imageIdSet = new Set(imageFiles.map((image) => image.id))
-  const levelsWithoutImages = LIGHTBOT_LEVELS
+  const levelsWithoutImages = CODEBOT_LEVELS
     .filter((level) => !imageIdSet.has(level.id))
     .map((level) => ({
       id: level.id,

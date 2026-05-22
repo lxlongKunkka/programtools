@@ -18,7 +18,7 @@ const WECHAT_QR_SRC = '/qrcode.png'
 // TODO: 替换为二维码下方的说明文字
 const WECHAT_QR_LABEL = '学编程请联系教务老师'
 
-const NODE_DRAG_KEY = 'application/x-lightbot-node'
+const NODE_DRAG_KEY = 'application/x-codebot-node'
 
 const AREAS: Array<{ area: RootArea; label: string }> = [
   { area: 'main', label: '主程序' },
@@ -395,7 +395,7 @@ export function LevelNavBar() {
     if (!window.confirm(`确定要删除关卡「${level.title}」吗？此操作不可撤销。`)) return
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch(`/api/lightbot/admin/level/${encodeURIComponent(level.id)}`, {
+      const res = await fetch(`/api/codebot/admin/level/${encodeURIComponent(level.id)}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -571,7 +571,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
     setLeaderboardLoading(true)
     // 延迟 600ms 等待本次成绩提交完成
     const timer = setTimeout(() => {
-      fetch(`/api/lightbot/levels/${encodeURIComponent(level.id)}/leaderboard`)
+      fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`)
         .then((r) => r.json() as Promise<{ ok: boolean; data: LeaderboardEntry[] }>)
         .then((json) => { if (json.ok) setLeaderboard(json.data) })
         .catch(() => {})

@@ -1,6 +1,6 @@
 <template>
   <div class="lb-stats-page">
-    <h2>Lightbot 运营统计</h2>
+    <h2>Codebot 运营统计</h2>
 
     <div v-if="loading" class="lb-loading">加载中…</div>
     <div v-else-if="error" class="lb-error">{{ error }}</div>
@@ -117,7 +117,7 @@
 import request from '../utils/request'
 
 export default {
-  name: 'LightbotStatsAdmin',
+  name: 'CodebotStatsAdmin',
   data() {
     return {
       loading: true,
@@ -139,7 +139,7 @@ export default {
   },
   async mounted() {
     try {
-      const res = await request('/api/lightbot/admin/stats')
+      const res = await request('/api/codebot/admin/stats')
       this.data = res
     } catch (e) {
       this.error = e?.message || '加载失败'

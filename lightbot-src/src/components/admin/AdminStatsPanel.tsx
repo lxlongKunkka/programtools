@@ -33,7 +33,7 @@ export function AdminStatsPanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token')
-    fetch('/api/lightbot/admin/stats', {
+    fetch('/api/codebot/admin/stats', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => r.json())

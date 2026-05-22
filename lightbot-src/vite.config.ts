@@ -169,7 +169,7 @@ function levelsPlugin(): Plugin {
     name: 'levels-api',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/lightbot/levels', (_req, res) => {
+      server.middlewares.use('/api/codebot/levels', (_req, res) => {
         res.setHeader('Content-Type', 'application/json')
         const levelsDir = resolve(process.cwd(), 'src/content/levels')
         const levels: unknown[] = []
@@ -200,9 +200,9 @@ function levelsPlugin(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), levelSavePlugin(), levelDeletePlugin(), submitLevelPlugin(), trackPlugin(), levelsPlugin()],
-  base: process.env.NODE_ENV === 'production' ? '/lightbot-app/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/codebot-app/' : '/',
   build: {
-    outDir: '../public/lightbot-app',
+    outDir: '../public/codebot-app',
     emptyOutDir: true,
     cssTarget: 'chrome87',
   },

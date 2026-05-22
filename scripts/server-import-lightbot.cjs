@@ -18,12 +18,12 @@ const MONGO_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/prog
 console.log('[import] URI:', MONGO_URI.replace(/:([^@/]+)@/, ':***@'))
 const conn = mongoose.createConnection(MONGO_URI)
 conn.on('connected', async () => {
-  const LightbotLevel = conn.model('LightbotLevel', schema)
+  const CodebotLevel = conn.model('CodebotLevel', schema)
   let ok = 0, fail = 0
   for (let i = 0; i < levels.length; i++) {
     const l = levels[i]
     try {
-      await LightbotLevel.findOneAndUpdate({ id: l.id }, { $set: { ...l, sortOrder: i } }, { upsert: true, new: true })
+      await CodebotLevel.findOneAndUpdate({ id: l.id }, { $set: { ...l, sortOrder: i } }, { upsert: true, new: true })
       process.stdout.write('.')
       ok++
     } catch (e) {

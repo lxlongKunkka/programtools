@@ -4,7 +4,7 @@ import { appConn } from '../db.js'
 const appSettingSchema = new mongoose.Schema({
   _id: { type: String, default: 'global' },
   gamesEnabled: { type: Boolean, default: true },
-  lightbotEnabled: { type: Boolean, default: true },
+  codebotEnabled: { type: Boolean, default: true },
   updatedAt: { type: Date, default: Date.now }
 }, {
   collection: 'app_settings',

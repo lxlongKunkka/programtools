@@ -10,7 +10,7 @@ export function Topbar() {
   return (
     <header className="lb-topbar">
       <div>
-        <p className="lb-eyebrow">Lightbot Teaching Game</p>
+        <p className="lb-eyebrow">Codebot Teaching Game</p>
         <h1>网页嵌入式编程启蒙游戏骨架</h1>
       </div>
       <p className="lb-topbar-note">

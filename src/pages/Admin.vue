@@ -101,15 +101,15 @@
           </div>
           <div class="setting-item">
             <div class="setting-info">
-              <div class="setting-title">Lightbot 开关</div>
-              <div class="setting-desc">关闭后，普通用户无法进入 Lightbot；不影响数独 / 推箱子。</div>
+              <div class="setting-title">Codebot 开关</div>
+              <div class="setting-desc">关闭后，普通用户无法进入 Codebot；不影响数独 / 推箱子。</div>
             </div>
             <label class="switch">
               <input
                 type="checkbox"
-                :checked="lightbotEnabled"
+                :checked="codebotEnabled"
                 :disabled="settingsLoading || settingsSaving"
-                @change="toggleLightbot"
+                @change="toggleCodebot"
               />
               <span class="slider"></span>
             </label>
@@ -154,7 +154,7 @@ export default {
       isInitialLoad: true,
 
       gamesEnabled: true,
-      lightbotEnabled: true,
+      codebotEnabled: true,
       settingsLoading: false,
       settingsSaving: false
     }
@@ -289,7 +289,7 @@ export default {
       try {
         const data = await request('/api/admin/settings')
         this.gamesEnabled = data?.gamesEnabled !== false
-        this.lightbotEnabled = data?.lightbotEnabled !== false
+        this.codebotEnabled = data?.codebotEnabled !== false
       } catch (e) {
         this.showToastMessage('加载设置失败: ' + e.message)
       } finally {
@@ -305,7 +305,7 @@ export default {
           body: JSON.stringify({ gamesEnabled: nextValue })
         })
         this.gamesEnabled = data?.gamesEnabled !== false
-        this.lightbotEnabled = data?.lightbotEnabled !== false
+        this.codebotEnabled = data?.codebotEnabled !== false
         this.showToastMessage(this.gamesEnabled ? '已开启游戏入口' : '已关闭游戏入口')
       } catch (e) {
         this.showToastMessage('更新失败: ' + e.message)
@@ -313,17 +313,17 @@ export default {
         this.settingsSaving = false
       }
     },
-    async toggleLightbot() {
-      const nextValue = !this.lightbotEnabled
+    async toggleCodebot() {
+      const nextValue = !this.codebotEnabled
       this.settingsSaving = true
       try {
         const data = await request('/api/admin/settings', {
           method: 'POST',
-          body: JSON.stringify({ lightbotEnabled: nextValue })
+          body: JSON.stringify({ codebotEnabled: nextValue })
         })
         this.gamesEnabled = data?.gamesEnabled !== false
-        this.lightbotEnabled = data?.lightbotEnabled !== false
-        this.showToastMessage(this.lightbotEnabled ? '已开启 Lightbot' : '已关闭 Lightbot')
+        this.codebotEnabled = data?.codebotEnabled !== false
+        this.showToastMessage(this.codebotEnabled ? '已开启 Codebot' : '已关闭 Codebot')
       } catch (e) {
         this.showToastMessage('更新失败: ' + e.message)
       } finally {

@@ -17,4 +17,4 @@ const schema = new mongoose.Schema(
 // 每个用户的每个 levelId 唯一
 schema.index({ userId: 1, levelId: 1 }, { unique: true })
 
-export default appConn.model('LightbotUserLevel', schema)
+export default appConn.model('CodebotUserLevel', schema, 'lightbotuserlevels')

@@ -6,17 +6,17 @@ import jwt from 'jsonwebtoken'
 import { fileURLToPath } from 'url'
 import { MAIL_CONFIG, JWT_SECRET } from '../config.js'
 import { authenticateToken } from '../middleware/auth.js'
-import LightbotUserLevel from '../models/LightbotUserLevel.js'
-import LightbotLevel from '../models/LightbotLevel.js'
-import LightbotResult from '../models/LightbotResult.js'
+import CodebotUserLevel from '../models/CodebotUserLevel.js'
+import CodebotLevel from '../models/CodebotLevel.js'
+import CodebotResult from '../models/CodebotResult.js'
 
 const router = express.Router()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const EVENTS_DIR = path.join(__dirname, '../logs')
-const EVENTS_FILE = path.join(EVENTS_DIR, 'lightbot-events.ndjson')
-const SUBMISSIONS_FILE = path.join(EVENTS_DIR, 'lightbot-submissions.ndjson')
+const EVENTS_FILE = path.join(EVENTS_DIR, 'codebot-events.ndjson')
+const SUBMISSIONS_FILE = path.join(EVENTS_DIR, 'codebot-submissions.ndjson')
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true })
@@ -61,14 +61,14 @@ function maybeCreateMailer() {
 }
 
 // ── 官方关卡列表 ────────────────────────────────────────────────────────────
-router.get('/lightbot/levels', async (_req, res) => {
+router.get('/codebot/levels', async (_req, res) => {
   try {
-    const levels = await LightbotLevel.find({}, { _id: 0, __v: 0 })
+    const levels = await CodebotLevel.find({}, { _id: 0, __v: 0 })
       .sort({ sortOrder: 1 })
       .lean()
     res.json({ ok: true, levels })
   } catch (err) {
-    console.error('[lightbot] GET /lightbot/levels error:', err)
+    console.error('[codebot] GET /codebot/levels error:', err)
     res.status(500).json({ ok: false, error: 'Failed to load levels' })
   }
 })
@@ -94,7 +94,7 @@ router.post('/track', (req, res) => {
       ...(username ? { username } : {}),
     })
   } catch (error) {
-    console.error('[lightbot-app] track failed:', error)
+    console.error('[codebot-app] track failed:', error)
   }
   res.json({ ok: true })
 })
@@ -139,7 +139,7 @@ router.get('/stats', (_req, res) => {
       level_completions: levelCompletions,
     })
   } catch (error) {
-    console.error('[lightbot-app] stats failed:', error)
+    console.error('[codebot-app] stats failed:', error)
     res.status(500).json({ error: '读取统计失败' })
   }
 })
@@ -164,7 +164,7 @@ router.post('/submit-level', async (req, res) => {
   try {
     appendNdjson(SUBMISSIONS_FILE, payload)
   } catch (error) {
-    console.error('[lightbot-app] submit append failed:', error)
+    console.error('[codebot-app] submit append failed:', error)
   }
 
   const mailer = maybeCreateMailer()
@@ -174,9 +174,9 @@ router.post('/submit-level', async (req, res) => {
       await mailer.sendMail({
         from: MAIL_CONFIG.from,
         to: recipients.join(', '),
-        subject: `Lightbot 关卡投稿：${title}`,
+        subject: `Codebot 关卡投稿：${title}`,
         text: [
-          '收到一条新的 Lightbot 关卡投稿。',
+          '收到一条新的 Codebot 关卡投稿。',
           '',
           `关卡名称：${title}`,
           `作者昵称：${author}`,
@@ -184,7 +184,7 @@ router.post('/submit-level', async (req, res) => {
         ].join('\n'),
       })
     } catch (error) {
-      console.error('[lightbot-app] submit mail failed:', error)
+      console.error('[codebot-app] submit mail failed:', error)
     }
   }
 
@@ -208,7 +208,7 @@ router.post('/save-level', authenticateToken, async (req, res) => {
     const userId = req.user.id
     const username = req.user.username
 
-    await LightbotUserLevel.findOneAndUpdate(
+    await CodebotUserLevel.findOneAndUpdate(
       { userId, levelId },
       { userId, username, levelId, title, content, solutionSteps, isPublished: true, updatedAt: new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -216,7 +216,7 @@ router.post('/save-level', authenticateToken, async (req, res) => {
 
     res.json({ ok: true })
   } catch (error) {
-    console.error('[lightbot-app] save-level failed:', error)
+    console.error('[codebot-app] save-level failed:', error)
     res.status(500).json({ error: '保存关卡失败' })
   }
 })
@@ -228,14 +228,14 @@ router.post('/delete-level', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing levelId' })
     }
 
-    const result = await LightbotUserLevel.deleteOne({ userId: req.user.id, levelId })
+    const result = await CodebotUserLevel.deleteOne({ userId: req.user.id, levelId })
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: 'Level not found' })
     }
 
     res.json({ ok: true })
   } catch (error) {
-    console.error('[lightbot-app] delete-level failed:', error)
+    console.error('[codebot-app] delete-level failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
   }
 })
@@ -243,9 +243,9 @@ router.post('/delete-level', authenticateToken, async (req, res) => {
 // ── 我的关卡 CRUD ──────────────────────────────────────────────
 
 // 获取用户已发布关卡（含完整 content，供游戏启动时加载）
-router.get('/lightbot/my-published-levels', authenticateToken, async (req, res) => {
+router.get('/codebot/my-published-levels', authenticateToken, async (req, res) => {
   try {
-    const records = await LightbotUserLevel.find(
+    const records = await CodebotUserLevel.find(
       { userId: req.user.id, isPublished: true },
       { content: 1, levelId: 1 }
     ).sort({ updatedAt: -1 }).lean()
@@ -256,21 +256,21 @@ router.get('/lightbot/my-published-levels', authenticateToken, async (req, res) 
 
     res.json({ ok: true, levels })
   } catch (error) {
-    console.error('[lightbot-app] my-published-levels failed:', error)
+    console.error('[codebot-app] my-published-levels failed:', error)
     res.status(500).json({ error: '获取关卡失败' })
   }
 })
 
 // 获取所有用户已发布关卡（社区关卡，无需登录，可选排除指定用户）
 // 查询参数：excludeUserId=<number>
-router.get('/lightbot/community-levels', async (req, res) => {
+router.get('/codebot/community-levels', async (req, res) => {
   try {
     const excludeUserId = req.query.excludeUserId ? Number(req.query.excludeUserId) : null
     const query = { isPublished: true, solutionSteps: { $gte: 10 } }
     if (excludeUserId && !isNaN(excludeUserId)) {
       query.userId = { $ne: excludeUserId }
     }
-    const records = await LightbotUserLevel.find(query, { content: 1, levelId: 1, username: 1 })
+    const records = await CodebotUserLevel.find(query, { content: 1, levelId: 1, username: 1 })
       .sort({ updatedAt: -1 })
       .limit(50)
       .lean()
@@ -285,30 +285,30 @@ router.get('/lightbot/community-levels', async (req, res) => {
 
     res.json({ ok: true, levels })
   } catch (error) {
-    console.error('[lightbot-app] community-levels failed:', error)
+    console.error('[codebot-app] community-levels failed:', error)
     res.status(500).json({ error: '获取社区关卡失败' })
   }
 })
 
 // 获取用户所有关卡
-router.get('/lightbot/my-levels', authenticateToken, async (req, res) => {
+router.get('/codebot/my-levels', authenticateToken, async (req, res) => {
   try {
-    const levels = await LightbotUserLevel.find(
+    const levels = await CodebotUserLevel.find(
       { userId: req.user.id },
       { content: 0 } // 列表不返回 content，减少传输量
     ).sort({ updatedAt: -1 }).lean()
 
     res.json({ ok: true, levels })
   } catch (error) {
-    console.error('[lightbot-app] my-levels list failed:', error)
+    console.error('[codebot-app] my-levels list failed:', error)
     res.status(500).json({ error: '获取关卡列表失败' })
   }
 })
 
 // 获取单个关卡（含 content，用于加载编辑器）
-router.get('/lightbot/my-levels/:id', authenticateToken, async (req, res) => {
+router.get('/codebot/my-levels/:id', authenticateToken, async (req, res) => {
   try {
-    const level = await LightbotUserLevel.findOne({
+    const level = await CodebotUserLevel.findOne({
       _id: req.params.id,
       userId: req.user.id,
     }).lean()
@@ -316,15 +316,15 @@ router.get('/lightbot/my-levels/:id', authenticateToken, async (req, res) => {
     if (!level) return res.status(404).json({ error: '关卡不存在' })
     res.json({ ok: true, level })
   } catch (error) {
-    console.error('[lightbot-app] my-levels get failed:', error)
+    console.error('[codebot-app] my-levels get failed:', error)
     res.status(500).json({ error: '获取关卡失败' })
   }
 })
 
 // 切换发布状态
-router.patch('/lightbot/my-levels/:id/publish', authenticateToken, async (req, res) => {
+router.patch('/codebot/my-levels/:id/publish', authenticateToken, async (req, res) => {
   try {
-    const level = await LightbotUserLevel.findOne({
+    const level = await CodebotUserLevel.findOne({
       _id: req.params.id,
       userId: req.user.id,
     })
@@ -341,15 +341,15 @@ router.patch('/lightbot/my-levels/:id/publish', authenticateToken, async (req, r
 
     res.json({ ok: true, isPublished: level.isPublished })
   } catch (error) {
-    console.error('[lightbot-app] my-levels publish failed:', error)
+    console.error('[codebot-app] my-levels publish failed:', error)
     res.status(500).json({ error: '操作失败' })
   }
 })
 
 // 删除关卡（通过 _id）
-router.delete('/lightbot/my-levels/:id', authenticateToken, async (req, res) => {
+router.delete('/codebot/my-levels/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await LightbotUserLevel.deleteOne({
+    const result = await CodebotUserLevel.deleteOne({
       _id: req.params.id,
       userId: req.user.id,
     })
@@ -360,13 +360,13 @@ router.delete('/lightbot/my-levels/:id', authenticateToken, async (req, res) => 
 
     res.json({ ok: true })
   } catch (error) {
-    console.error('[lightbot-app] my-levels delete failed:', error)
+    console.error('[codebot-app] my-levels delete failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
   }
 })
 
 // 管理员删除任意关卡（官方关卡或用户关卡）
-router.delete('/lightbot/admin/level/:levelId', authenticateToken, async (req, res) => {
+router.delete('/codebot/admin/level/:levelId', authenticateToken, async (req, res) => {
   try {
     const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
     if (!isAdminUser) {
@@ -379,26 +379,26 @@ router.delete('/lightbot/admin/level/:levelId', authenticateToken, async (req, r
     }
 
     // 先尝试从官方关卡集合中删除
-    const officialResult = await LightbotLevel.deleteOne({ id: levelId })
+    const officialResult = await CodebotLevel.deleteOne({ id: levelId })
     if (officialResult.deletedCount > 0) {
       return res.json({ ok: true, from: 'official' })
     }
 
     // 再尝试从用户关卡集合中删除
-    const userResult = await LightbotUserLevel.deleteOne({ levelId })
+    const userResult = await CodebotUserLevel.deleteOne({ levelId })
     if (userResult.deletedCount > 0) {
       return res.json({ ok: true, from: 'user' })
     }
 
     res.status(404).json({ error: '关卡不存在' })
   } catch (error) {
-    console.error('[lightbot-app] admin delete-level failed:', error)
+    console.error('[codebot-app] admin delete-level failed:', error)
     res.status(500).json({ error: '删除关卡失败' })
   }
 })
 
-// POST /lightbot/levels/:levelId/complete — 登录用户提交/更新最优成绩
-router.post('/lightbot/levels/:levelId/complete', authenticateToken, async (req, res) => {
+// POST /codebot/levels/:levelId/complete — 登录用户提交/更新最优成绩
+router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, res) => {
   const { levelId } = req.params
   const { totalCommands, executionSteps } = req.body
 
@@ -411,7 +411,7 @@ router.post('/lightbot/levels/:levelId/complete', authenticateToken, async (req,
   try {
     const userId = req.user.id
     const username = req.user.username || req.user.name || String(userId)
-    const existing = await LightbotResult.findOne({ userId, levelId })
+    const existing = await CodebotResult.findOne({ userId, levelId })
     if (existing) {
       const isBetter =
         totalCommands < existing.totalCommands ||
@@ -423,20 +423,20 @@ router.post('/lightbot/levels/:levelId/complete', authenticateToken, async (req,
         await existing.save()
       }
     } else {
-      await LightbotResult.create({ userId, username, levelId, totalCommands, executionSteps })
+      await CodebotResult.create({ userId, username, levelId, totalCommands, executionSteps })
     }
     res.json({ ok: true })
   } catch (error) {
-    console.error('[lightbot-app] submit-complete failed:', error)
+    console.error('[codebot-app] submit-complete failed:', error)
     res.status(500).json({ ok: false, error: '提交失败' })
   }
 })
 
-// GET /lightbot/levels/:levelId/leaderboard — 公开排行榜（前10名）
-router.get('/lightbot/levels/:levelId/leaderboard', async (req, res) => {
+// GET /codebot/levels/:levelId/leaderboard — 公开排行榜（前10名）
+router.get('/codebot/levels/:levelId/leaderboard', async (req, res) => {
   const { levelId } = req.params
   try {
-    const results = await LightbotResult.find({ levelId })
+    const results = await CodebotResult.find({ levelId })
       .sort({ totalCommands: 1, executionSteps: 1, completedAt: 1 })
       .limit(10)
       .lean()
@@ -451,13 +451,13 @@ router.get('/lightbot/levels/:levelId/leaderboard', async (req, res) => {
       })),
     })
   } catch (error) {
-    console.error('[lightbot-app] leaderboard failed:', error)
+    console.error('[codebot-app] leaderboard failed:', error)
     res.status(500).json({ ok: false, error: '获取排行榜失败' })
   }
 })
 
-// GET /lightbot/admin/stats — 管理员统计（需管理员权限）
-router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
+// GET /codebot/admin/stats — 管理员统计（需管理员权限）
+router.get('/codebot/admin/stats', authenticateToken, async (req, res) => {
   const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
   if (!isAdminUser) return res.status(403).json({ error: '需要管理员权限' })
 
@@ -484,7 +484,7 @@ router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
     }
 
     // 最近 30 条通关记录（来自 MongoDB，含用户名）
-    const recentResults = await LightbotResult.find({})
+    const recentResults = await CodebotResult.find({})
       .sort({ completedAt: -1 })
       .limit(30)
       .lean()
@@ -521,7 +521,7 @@ router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
       recent_events: recentEvents,
     })
   } catch (error) {
-    console.error('[lightbot-app] admin/stats failed:', error)
+    console.error('[codebot-app] admin/stats failed:', error)
     res.status(500).json({ ok: false, error: '获取统计失败' })
   }
 })

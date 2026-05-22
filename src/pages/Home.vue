@@ -67,7 +67,7 @@
           <div class="card-desc">经典益智游戏，支持自定义关卡。</div>
         </router-link>
 
-        <router-link v-if="showLightbot && user" to="/lightbot" class="card">
+        <router-link v-if="showCodebot && user" to="/codebot" class="card">
           <div class="card-icon">🤖</div>
           <div class="card-title">机器人点灯</div>
           <div class="card-desc">编排前进、跳跃、转向和子程序，点亮整张地图。</div>
@@ -95,7 +95,7 @@ export default {
     return {
       user: null,
       gamesEnabled: true,
-      lightbotEnabled: true
+      codebotEnabled: true
     }
   },
   computed: {
@@ -105,8 +105,8 @@ export default {
     showGames() {
       return this.gamesEnabled || this.isStaff
     },
-    showLightbot() {
-      return this.lightbotEnabled || this.isStaff
+    showCodebot() {
+      return this.codebotEnabled || this.isStaff
     }
   },
   mounted() {
@@ -125,10 +125,10 @@ export default {
       try {
         const data = await request('/api/settings')
         this.gamesEnabled = data?.gamesEnabled !== false
-        this.lightbotEnabled = data?.lightbotEnabled !== false
+        this.codebotEnabled = data?.codebotEnabled !== false
       } catch (e) {
         this.gamesEnabled = true
-        this.lightbotEnabled = true
+        this.codebotEnabled = true
       }
     }
   }

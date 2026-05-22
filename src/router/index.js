@@ -24,8 +24,8 @@ const GespTool = () => import('../pages/GespTool.vue')
 const GespMap = () => import('../pages/GespMap.vue')
 const GameSudoku = () => import('../pages/GameSudoku.vue')
 const SokobanGame = () => import('../pages/SokobanGame.vue')
-const LightbotGame = () => import('../pages/LightbotEmbed.vue')
-const LightbotStatsAdmin = () => import('../pages/LightbotStatsAdmin.vue')
+const CodebotGame = () => import('../pages/CodebotEmbed.vue')
+const CodebotStatsAdmin = () => import('../pages/CodebotStatsAdmin.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
 const routes = [
@@ -37,7 +37,7 @@ const routes = [
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/quiz-issues', component: QuizIssueAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/lightbot-stats', component: LightbotStatsAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/codebot-stats', component: CodebotStatsAdmin, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/learners/dashboard', component: TeacherQuizDashboard, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/admin/quiz-following', redirect: '/learners/dashboard' },
   { path: '/report/:token', component: ParentReport },
@@ -57,7 +57,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/lightbot', component: LightbotGame, meta: { hideMobileBottomNav: true } },
+  { path: '/codebot', component: CodebotGame, meta: { hideMobileBottomNav: true } },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 
@@ -69,7 +69,7 @@ const router = createRouter({
 const GAME_SETTINGS_BY_PATH = {
   '/sudoku': { key: 'gamesEnabled', message: '课堂游戏已被管理员关闭' },
   '/sokoban': { key: 'gamesEnabled', message: '课堂游戏已被管理员关闭' },
-  '/lightbot': { key: 'lightbotEnabled', message: 'Lightbot 已被管理员关闭' }
+  '/codebot': { key: 'codebotEnabled', message: 'Codebot 已被管理员关闭' }
 }
 let cachedSettings = null
 let settingsPromise = null
@@ -85,14 +85,14 @@ async function getSettings() {
     .then((data) => {
       cachedSettings = {
         gamesEnabled: data?.gamesEnabled !== false,
-        lightbotEnabled: data?.lightbotEnabled !== false
+        codebotEnabled: data?.codebotEnabled !== false
       }
       settingsFetchedAt = Date.now()
       return cachedSettings
     })
     .catch((e) => {
       console.warn('Failed to load settings:', e)
-      return { gamesEnabled: true, lightbotEnabled: true }
+      return { gamesEnabled: true, codebotEnabled: true }
     })
     .finally(() => {
       settingsPromise = null
@@ -102,9 +102,9 @@ async function getSettings() {
 }
 
 router.beforeEach(async (to, from, next) => {
-  // bot.acjudge.com 专用入口：根路径直接进入 lightbot
+  // bot.acjudge.com 专用入口：根路径直接进入 codebot
   if (window.location.hostname === 'bot.acjudge.com' && to.path === '/') {
-    return next('/lightbot')
+    return next('/codebot')
   }
 
   const userStr = localStorage.getItem('user_info')

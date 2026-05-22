@@ -36,4 +36,4 @@ const schema = new mongoose.Schema(
 
 schema.index({ 'chapter.id': 1, sortOrder: 1 })
 
-export default appConn.model('LightbotLevel', schema)
+export default appConn.model('CodebotLevel', schema, 'lightbotlevels')

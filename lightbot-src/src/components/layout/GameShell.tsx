@@ -36,7 +36,7 @@ export function GameShell() {
     setLbTitle(level.title)
     setLbLoading(true)
     setLbData([])
-    fetch(`/api/lightbot/levels/${encodeURIComponent(level.id)}/leaderboard`)
+    fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`)
       .then((r) => r.json() as Promise<{ ok: boolean; data: LbEntry[] }>)
       .then((json) => { if (json.ok) setLbData(json.data) })
       .catch(() => {})
