@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useAppStore } from '../../app/app.store'
+import { AdminStatsPanel } from '../admin/AdminStatsPanel'
 
 export function Topbar() {
   const isAdmin  = useAppStore((s) => s.isAdmin)
   const username = useAppStore((s) => s.username)
+  const [showStats, setShowStats] = useState(false)
 
   return (
     <header className="lb-topbar">
@@ -24,7 +27,13 @@ export function Topbar() {
             🔓 管理员
           </span>
         )}
+        {isAdmin && (
+          <button className="lb-admin-trigger lb-admin-log-btn" onClick={() => setShowStats(true)} title="查看统计日志">
+            📊 日志
+          </button>
+        )}
       </div>
+      {showStats && <AdminStatsPanel onClose={() => setShowStats(false)} />}
     </header>
   )
 }
