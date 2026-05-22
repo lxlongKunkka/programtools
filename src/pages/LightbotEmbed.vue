@@ -19,19 +19,36 @@
 
     <!-- 右上角角标栏：主页 | 排行榜 | 我的关卡 | 用户名 | 登录 -->
     <div v-if="!inEditorMode" class="lightbot-corner-bar">
-      <a class="lightbot-corner-btn lightbot-corner-home" href="https://ai.acjudge.com" title="返回主页">🏠<span class="btn-text"> 主页</span></a>
-      <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
-        🏆<span class="btn-text"> 排行榜</span>
+      <!-- 桌面端按钮 -->
+      <a class="lightbot-corner-btn lightbot-corner-home desktop-only" href="https://ai.acjudge.com" title="返回主页">🏠 主页</a>
+      <button class="lightbot-corner-btn desktop-only" @click="openLeaderboard" title="查看本关排行榜">
+        🏆 排行榜
       </button>
-      <button v-if="username" class="lightbot-corner-btn" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
-        <span v-if="panelOpen">✕<span class="btn-text"> 关闭</span></span>
-        <span v-else>📚<span class="btn-text"> 我的关卡</span></span>
+      <button v-if="username" class="lightbot-corner-btn desktop-only" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
+        {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
       </button>
-      <span v-if="username" class="lightbot-corner-btn lightbot-corner-user" @click="confirmLogout" title="点击退出登录">👤<span class="btn-text"> {{ username }}</span></span>
-      <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login" @click="goToLogin" title="登录以保存关卡进度">
-        <span class="btn-text">登录</span><span class="btn-icon-only">👤</span>
+      <span v-if="username" class="lightbot-corner-btn lightbot-corner-user desktop-only" @click="confirmLogout" title="点击退出登录">👤 {{ username }}</span>
+      <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login desktop-only" @click="goToLogin" title="登录以保存关卡进度">
+        登录
+      </button>
+      <!-- 手机端汉堡堡按鈕 -->
+      <button class="lightbot-corner-btn mobile-menu-btn mobile-only" @click="mobileMenuOpen = !mobileMenuOpen" :class="{ active: mobileMenuOpen }">
+        <span class="hamburger-icon"></span>
       </button>
     </div>
+
+    <!-- 手机端下拉菜单 -->
+    <transition name="menu-fade">
+      <div v-if="mobileMenuOpen" class="mobile-menu-overlay" @click="mobileMenuOpen = false">
+        <div class="mobile-menu-dropdown" @click.stop>
+          <a href="https://ai.acjudge.com" class="mobile-menu-item">🏠 返回主页</a>
+          <button class="mobile-menu-item" @click="openLeaderboard(); mobileMenuOpen = false">🏆 排行榜</button>
+          <button v-if="username" class="mobile-menu-item" @click="togglePanel(); mobileMenuOpen = false">📚 我的关卡</button>
+          <button v-if="username" class="mobile-menu-item mobile-menu-logout" @click="confirmLogout(); mobileMenuOpen = false">👤 {{ username }}<span class="menu-hint">退出登录</span></button>
+          <button v-if="!username" class="mobile-menu-item mobile-menu-login" @click="goToLogin(); mobileMenuOpen = false">👤 登录</button>
+        </div>
+      </div>
+    </transition>
 
     <!-- 我的关卡面板 -->
     <transition name="panel-slide">
@@ -124,6 +141,7 @@ export default {
       username: '',
       inEditorMode: false,
       showLogoutDialog: false,
+      mobileMenuOpen: false,
     }
   },
   mounted() {
@@ -388,20 +406,106 @@ export default {
 
 /* 移动端：只显示 emoji，隐藏文字 */
 .btn-icon-only { display: none; }
+.desktop-only { display: inline-flex; }
+.mobile-only { display: none; }
+
 @media (max-width: 520px) {
   .lightbot-corner-bar {
     top: 8px;
     right: 8px;
     gap: 5px;
   }
-  .lightbot-corner-btn,
-  .lightbot-corner-user {
-    padding: 5px 9px;
-    font-size: 15px;
-    gap: 0;
-  }
-  .btn-text { display: none; }
-  .btn-icon-only { display: inline; }
+  .desktop-only { display: none !important; }
+  .mobile-only { display: inline-flex; }
+}
+
+/* 手机端汉堡堡按鈕 */
+.mobile-menu-btn {
+  padding: 7px 11px;
+  font-size: 15px;
+}
+.mobile-menu-btn.active {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+/* 汉堡堡图标：三条横线 */
+.hamburger-icon,
+.hamburger-icon::before,
+.hamburger-icon::after {
+  display: block;
+  width: 17px;
+  height: 2px;
+  background: #1e293b;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.hamburger-icon {
+  position: relative;
+}
+.hamburger-icon::before,
+.hamburger-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+.hamburger-icon::before { top: -5px; }
+.hamburger-icon::after  { top: 5px; }
+.mobile-menu-btn.active .hamburger-icon { background: transparent; }
+.mobile-menu-btn.active .hamburger-icon::before { transform: rotate(45deg) translate(3.5px, 3.5px); }
+.mobile-menu-btn.active .hamburger-icon::after  { transform: rotate(-45deg) translate(3.5px, -3.5px); }
+
+/* 下拉菜单遮罩和内容 */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+}
+.mobile-menu-dropdown {
+  position: absolute;
+  top: 52px;
+  right: 8px;
+  min-width: 180px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1e293b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.mobile-menu-item:last-child { border-bottom: none; }
+.mobile-menu-item:hover { background: rgba(0,0,0,0.06); }
+.mobile-menu-logout { color: #c0392b; }
+.mobile-menu-login { color: #2563eb; font-weight: 600; }
+.menu-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+.menu-fade-enter-active, .menu-fade-leave-active {
+  transition: opacity 0.15s, transform 0.15s;
+}
+.menu-fade-enter-from, .menu-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.97) translateY(-4px);
 }
 
 /* ── 面板 ── */
