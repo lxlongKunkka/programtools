@@ -24,6 +24,9 @@
       <button class="codebot-corner-btn desktop-only" @click="openLeaderboard" title="查看本关排行榜">
         🏆 排行榜
       </button>
+      <button v-if="isAdmin" class="codebot-corner-btn desktop-only" @click="openAdminLog" title="管理员统计日志">
+        📊 日志
+      </button>
       <button v-if="username" class="codebot-corner-btn desktop-only" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
         {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
       </button>
@@ -53,6 +56,7 @@
         <div class="mobile-menu-dropdown" @click.stop>
           <a href="https://ai.acjudge.com" class="mobile-menu-item">🏠 返回主页</a>
           <button class="mobile-menu-item" @click="openLeaderboard(); mobileMenuOpen = false">🏆 排行榜</button>
+          <button v-if="isAdmin" class="mobile-menu-item" @click="openAdminLog(); mobileMenuOpen = false">📊 管理员日志</button>
           <button v-if="username" class="mobile-menu-item" @click="togglePanel(); mobileMenuOpen = false">📚 我的关卡</button>
           <button v-if="username" class="mobile-menu-item mobile-menu-logout" @click="confirmLogout(); mobileMenuOpen = false">👤 {{ username }}<span class="menu-hint">退出登录</span></button>
           <button v-if="!username" class="mobile-menu-item mobile-menu-login" @click="goToLogin(); mobileMenuOpen = false">👤 登录</button>
@@ -152,6 +156,7 @@ export default {
       inEditorMode: false,
       showLogoutDialog: false,
       mobileMenuOpen: false,
+      isAdmin: false,
     }
   },
   mounted() {
@@ -164,6 +169,7 @@ export default {
     try {
       const info = JSON.parse(localStorage.getItem('user_info') || '{}')
       this.username = info?.username || info?.uname || ''
+      this.isAdmin = info?.role === 'admin' || info?.priv === -1
     } catch {}
     // 监听 iframe 内 React 的模式变化
     this._modeListener = (e) => {
@@ -185,6 +191,13 @@ export default {
       const iframe = this.$refs.iframeRef
       if (iframe?.contentWindow) {
         iframe.contentWindow.postMessage({ type: 'open-leaderboard' }, window.location.origin)
+      }
+    },
+
+    openAdminLog() {
+      const iframe = this.$refs.iframeRef
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'open-admin-log' }, window.location.origin)
       }
     },
 

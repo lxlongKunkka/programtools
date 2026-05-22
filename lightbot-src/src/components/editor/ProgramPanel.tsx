@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment, type DragEvent } from 'react'
+import { useState, useEffect, Fragment, type DragEvent } from 'react'
 import { useGameStore } from '../../features/game/game.store'
 import { useAppStore } from '../../app/app.store'
 import { useLevelEditorStore } from '../../features/leveleditor/leveleditor.store'
@@ -360,24 +360,12 @@ function Sequence({ area, label, maxBlocks }: { area: RootArea; label: string; m
 export function LevelNavBar() {
   const [showPicker, setShowPicker] = useState(false)
   const [showCommunity, setShowCommunity] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!showPicker) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowPicker(false) }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [showPicker])
-  useEffect(() => {
-    if (!menuOpen) return
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
   const levels        = useGameStore((state) => state.levels)
   const levelIndex    = useGameStore((state) => state.levelIndex)
   const loadLevel     = useGameStore((state) => state.loadLevel)
@@ -389,6 +377,13 @@ export function LevelNavBar() {
   const setIsTestingCustomLevel = useAppStore((s) => s.setIsTestingCustomLevel)
   const isAdmin                 = useAppStore((s) => s.isAdmin)
   const [showStats, setShowStats] = useState(false)
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'open-admin-log') setShowStats(true)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
 
   const isCustomLevel    = level.id.startsWith('custom-')
   const setProgram      = useGameStore((s) => s.setProgram)
@@ -526,25 +521,7 @@ export function LevelNavBar() {
                 title="删除此关卡"
               >🗑️</button>
             )}
-            {isAdmin && (
-              <div className="lb-topbar-menu" ref={menuRef}>
-                <button
-                  className="lb-level-nav-btn lb-admin-log-btn"
-                  onClick={() => setMenuOpen(v => !v)}
-                  title="更多管理员操作"
-                >☰</button>
-                {menuOpen && (
-                  <div className="lb-topbar-dropdown">
-                    <button
-                      className="lb-topbar-dropdown-item"
-                      onClick={() => { setShowStats(true); setMenuOpen(false) }}
-                    >
-                      📊 管理员日志
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+
           </>
         )}
       </div>
