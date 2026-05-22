@@ -533,7 +533,6 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const myTotalCommands = program.main.length
     + (program.functions?.f1?.length ?? 0)
     + (program.functions?.f2?.length ?? 0)
-  const executionLog = useGameStore((state) => state.executionLog)
 
   const world       = useGameStore((state) => state.world)
 
