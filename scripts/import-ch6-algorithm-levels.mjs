@@ -124,7 +124,7 @@ function buildSnakeLevel(config) {
 
 function buildCrossLevel(config) {
   const grid = makeVoidGrid()
-  const { cx, cy } = config.center
+  const { x: cx, y: cy } = config.center
   setCell(grid, cx, cy, 'coin')
   for (let step = 1; step <= config.armLength; step++) {
     setCell(grid, cx, cy - step, step === config.armLength ? 'coin' : 'path')
