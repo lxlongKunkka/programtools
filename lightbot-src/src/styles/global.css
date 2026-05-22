@@ -144,7 +144,7 @@ button {
 /* ── Stage zoom controls ── */
 .lb-zoom-controls {
   position: absolute;
-  bottom: 12px;
+  top: 12px;
   right: 12px;
   display: flex;
   align-items: center;
