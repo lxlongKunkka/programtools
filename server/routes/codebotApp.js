@@ -616,7 +616,7 @@ router.delete('/codebot/admin/level/:levelId', authenticateToken, async (req, re
 // POST /codebot/levels/:levelId/complete — 登录用户提交/更新最优成绩
 router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, res) => {
   const { levelId } = req.params
-  const { totalCommands, executionSteps } = req.body
+  const { totalCommands, executionSteps, solution } = req.body
 
   if (typeof totalCommands !== 'number' || typeof executionSteps !== 'number'
       || !Number.isInteger(totalCommands) || !Number.isInteger(executionSteps)
@@ -643,11 +643,12 @@ router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, 
         existing.totalCommands = totalCommands
         existing.executionSteps = executionSteps
         existing.completedAt = new Date()
+        if (solution !== undefined) existing.solution = solution
         await existing.save()
         saved = true
       }
     } else {
-      await CodebotResult.create({ userId, username, levelId, totalCommands, executionSteps })
+      await CodebotResult.create({ userId, username, levelId, totalCommands, executionSteps, solution })
       saved = true
     }
 

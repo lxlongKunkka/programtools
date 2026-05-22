@@ -378,7 +378,7 @@ export const useGameStore = create<GameStore>()(
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
               },
-              body: JSON.stringify({ totalCommands, executionSteps }),
+              body: JSON.stringify({ totalCommands, executionSteps, solution: prog }),
             })
               .then((r) => r.json())
               .then((data: { ok: boolean; isNewBest?: boolean; demotedCount?: number }) => {

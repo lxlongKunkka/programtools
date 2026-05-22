@@ -12,6 +12,7 @@ const schema = new mongoose.Schema({
   levelId:        { type: String, required: true },
   totalCommands:  { type: Number, required: true }, // main + f1 + f2 顶层积木总数
   executionSteps: { type: Number, required: true }, // 机器人实际动作步数 (move/turn/jump/pickup)
+  solution:       { type: mongoose.Schema.Types.Mixed }, // 对应最优成绩的 ProgramDocument（可空）
   completedAt:    { type: Date, default: Date.now },
 })
 
