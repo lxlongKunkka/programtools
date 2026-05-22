@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Application, Container, Graphics, Text } from 'pixi.js'
 import type { RobotActionClip } from '../../animation/robot-actions'
 import { createRobotPresenter, effectFromRobotAction, type RobotAnimationEffect, type RobotPresenter } from './robot-presenter'
@@ -121,6 +121,10 @@ export function GameScene() {
   const currentRobotAction = useGameStore((state) => state.currentRobotAction)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const sceneRef = useRef<SceneRefs | null>(null)
+  const [zoom, setZoom] = useState(1.0)
+  const zoomRef = useRef(1.0)
+  const applyFitRef = useRef<((w: number, h: number) => void) | null>(null)
+  const containerSizeRef = useRef({ w: 0, h: 0 })
 
   const levelMetrics = useMemo(() => {
     // Use the bounding box of non-void tiles so small levels (e.g. SWF levels with
@@ -473,11 +477,13 @@ export function GameScene() {
       // Scale and centre the PixiJS stage so the full level fits inside the container.
       // The canvas is always sized to the container; the stage transform handles the zoom.
       const applyFitLayout = (w: number, h: number) => {
-        const fitScale = Math.min(w / levelMetrics.width, h / levelMetrics.height)
+        containerSizeRef.current = { w, h }
+        const fitScale = Math.min(w / levelMetrics.width, h / levelMetrics.height) * zoomRef.current
         app.stage.scale.set(fitScale)
         app.stage.x = (w - levelMetrics.width  * fitScale) / 2
         app.stage.y = (h - levelMetrics.height * fitScale) / 2
       }
+      applyFitRef.current = applyFitLayout
 
       await app.init({
         width: cW,
@@ -567,9 +573,20 @@ export function GameScene() {
     scene.syncTarget(world, runStatus, currentRobotAction)
   }, [currentRobotAction, runStatus, world])
 
+  useEffect(() => {
+    zoomRef.current = zoom
+    const { w, h } = containerSizeRef.current
+    if (w > 0 && h > 0) applyFitRef.current?.(w, h)
+  }, [zoom])
+
   return (
     <section className="lb-stage-card">
       <div className="lb-stage-canvas" ref={hostRef} />
+      <div className="lb-zoom-controls">
+        <button className="lb-zoom-btn" onClick={() => setZoom(z => Math.max(0.5, parseFloat((z - 0.25).toFixed(2))))} title="缩小">－</button>
+        <span className="lb-zoom-label">{Math.round(zoom * 100)}%</span>
+        <button className="lb-zoom-btn" onClick={() => setZoom(z => Math.min(3.0, parseFloat((z + 0.25).toFixed(2))))} title="放大">＋</button>
+      </div>
     </section>
   )
 }
