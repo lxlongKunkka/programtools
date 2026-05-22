@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@pixi/react": "^8.0.5",
-    "nodemailer": "^6.9.0",
     "@supabase/supabase-js": "^2.106.0",
     "clsx": "^2.1.1",
+    "mobile-drag-drop": "^3.0.0-rc.0",
+    "nodemailer": "^6.9.0",
     "pixi.js": "^8.18.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
