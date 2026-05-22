@@ -585,6 +585,10 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               <span key={i} className={`lb-win-star${i < stars ? ' lb-win-star--lit' : ''}`}>★</span>
             ))}
           </div>
+          <div className="lb-win-qr">
+            <img src={WECHAT_QR_SRC} alt={WECHAT_QR_LABEL} className="lb-win-qr-img" />
+            <span className="lb-win-qr-text">{WECHAT_QR_LABEL}</span>
+          </div>
           {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
           {hasLeaderboard && (
             <div className="lb-leaderboard">
@@ -619,10 +623,6 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               )}
             </div>
           )}
-          <div className="lb-win-qr">
-            <img src={WECHAT_QR_SRC} alt={WECHAT_QR_LABEL} className="lb-win-qr-img" />
-            <span className="lb-win-qr-text">{WECHAT_QR_LABEL}</span>
-          </div>
           <div className="lb-win-actions">
             <button className="lb-win-retry-btn" onClick={resetWorld}>↺ 再试</button>
             {hasNext
