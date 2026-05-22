@@ -530,10 +530,10 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const program       = useGameStore((state) => state.program)
 
   const mainBlocks = program.main.length
+  const myTotalCommands = program.main.length
+    + (program.functions?.f1?.length ?? 0)
+    + (program.functions?.f2?.length ?? 0)
   const executionLog = useGameStore((state) => state.executionLog)
-  const myExecutionSteps = executionLog.filter(
-    (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
-  ).length
 
   const world       = useGameStore((state) => state.world)
 
@@ -548,12 +548,12 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   type LeaderboardEntry = { rank: number; username: string; totalCommands: number; executionSteps: number }
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
-  // 动态星级：对比排行榜第一名步数（排行榜加载中或无记录时默认1星）
+  // 动态星级：对比排行榜第一名积木数（排行榜加载中或无记录时默认1星）
   const stars = leaderboardLoading || leaderboard.length === 0
     ? 1
-    : myExecutionSteps <= leaderboard[0].executionSteps
+    : myTotalCommands <= leaderboard[0].totalCommands
       ? 3
-      : myExecutionSteps <= leaderboard[0].executionSteps + 2
+      : myTotalCommands <= leaderboard[0].totalCommands + 2
         ? 2
         : 1
 
@@ -616,8 +616,8 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
                   </thead>
                   <tbody>
                     {(() => {
-                      const bestSteps = Math.min(...leaderboard.map((e) => e.executionSteps))
-                      const entryStars = (s: number) => s <= bestSteps ? 3 : s <= bestSteps + 2 ? 2 : 1
+                      const bestCmds = Math.min(...leaderboard.map((e) => e.totalCommands))
+                      const entryStars = (c: number) => c <= bestCmds ? 3 : c <= bestCmds + 2 ? 2 : 1
                       return leaderboard.map((entry) => (
                         <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
                           <td className="lb-leaderboard-rank">
@@ -626,7 +626,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
                           <td className="lb-leaderboard-user">{entry.username}</td>
                           <td>{entry.totalCommands}</td>
                           <td>{entry.executionSteps}</td>
-                          <td className="lb-leaderboard-stars">{'★'.repeat(entryStars(entry.executionSteps))}{'☆'.repeat(3 - entryStars(entry.executionSteps))}</td>
+                          <td className="lb-leaderboard-stars">{'★'.repeat(entryStars(entry.totalCommands))}{'☆'.repeat(3 - entryStars(entry.totalCommands))}</td>
                         </tr>
                       ))
                     })()}
