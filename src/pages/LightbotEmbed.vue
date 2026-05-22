@@ -19,16 +19,17 @@
 
     <!-- 右上角角标栏：主页 | 排行榜 | 我的关卡 | 用户名 | 登录 -->
     <div v-if="!inEditorMode" class="lightbot-corner-bar">
-      <a class="lightbot-corner-btn lightbot-corner-home" href="https://ai.acjudge.com" title="返回主页">🏠 主页</a>
+      <a class="lightbot-corner-btn lightbot-corner-home" href="https://ai.acjudge.com" title="返回主页">🏠<span class="btn-text"> 主页</span></a>
       <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
-        🏆 排行榜
+        🏆<span class="btn-text"> 排行榜</span>
       </button>
       <button v-if="username" class="lightbot-corner-btn" @click="togglePanel" :title="panelOpen ? '关闭我的关卡' : '我的关卡'">
-        {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
+        <span v-if="panelOpen">✕<span class="btn-text"> 关闭</span></span>
+        <span v-else>📚<span class="btn-text"> 我的关卡</span></span>
       </button>
-      <span v-if="username" class="lightbot-corner-user">👤 {{ username }}</span>
+      <span v-if="username" class="lightbot-corner-user">👤<span class="btn-text"> {{ username }}</span></span>
       <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login" @click="goToLogin" title="登录以保存关卡进度">
-        登录
+        <span class="btn-text">登录</span><span class="btn-icon-only">👤</span>
       </button>
     </div>
 
@@ -352,6 +353,24 @@ export default {
 .lightbot-corner-login:hover {
   background: rgba(60, 120, 240, 1);
   color: #fff;
+}
+
+/* 移动端：只显示 emoji，隐藏文字 */
+.btn-icon-only { display: none; }
+@media (max-width: 520px) {
+  .lightbot-corner-bar {
+    top: 8px;
+    right: 8px;
+    gap: 5px;
+  }
+  .lightbot-corner-btn,
+  .lightbot-corner-user {
+    padding: 5px 9px;
+    font-size: 15px;
+    gap: 0;
+  }
+  .btn-text { display: none; }
+  .btn-icon-only { display: inline; }
 }
 
 /* ── 面板 ── */
