@@ -15,6 +15,7 @@ server/logs/*.log
 logs/
 *.log
 server/temp_gesp/
+server/temp_quiz_issue_review/*.json
 
 # OS
 .DS_Store
@@ -36,5 +37,5 @@ lightbot-src/node_modules/
 lightbot-src/dist/
 lightbot-src/.env.local
 
-# APK °²×°°ü£¨Ìå»ý´ó£¬²»Èë¿â£©
+# APK ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¬²ï¿½ï¿½ï¿½â£©
 *.apk
