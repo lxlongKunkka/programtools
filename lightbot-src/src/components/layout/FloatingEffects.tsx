@@ -2,13 +2,13 @@
 
 // 7 朵云：不同高度 / 大小 / 速度，从屏幕右侧漂向左侧
 const CLOUDS: { id: number; top: string; scale: number; dur: number; delay: number; opacity: number }[] = [
-  { id: 1, top:  '4%', scale: 1.30, dur: 42, delay:   0, opacity: 0.62 },
-  { id: 2, top: '13%', scale: 0.80, dur: 56, delay: -12, opacity: 0.48 },
-  { id: 3, top:  '2%', scale: 1.05, dur: 35, delay: -25, opacity: 0.58 },
-  { id: 4, top: '21%', scale: 1.55, dur: 62, delay: -38, opacity: 0.42 },
-  { id: 5, top:  '8%', scale: 0.70, dur: 48, delay: -18, opacity: 0.52 },
-  { id: 6, top: '17%', scale: 1.20, dur: 51, delay:  -6, opacity: 0.46 },
-  { id: 7, top:  '6%', scale: 0.90, dur: 40, delay: -31, opacity: 0.54 },
+  { id: 1, top: '18%', scale: 1.30, dur: 42, delay:   0, opacity: 0.62 },
+  { id: 2, top: '28%', scale: 0.80, dur: 56, delay: -12, opacity: 0.48 },
+  { id: 3, top: '15%', scale: 1.05, dur: 35, delay: -25, opacity: 0.58 },
+  { id: 4, top: '38%', scale: 1.55, dur: 62, delay: -38, opacity: 0.42 },
+  { id: 5, top: '22%', scale: 0.70, dur: 48, delay: -18, opacity: 0.52 },
+  { id: 6, top: '33%', scale: 1.20, dur: 51, delay:  -6, opacity: 0.46 },
+  { id: 7, top: '20%', scale: 0.90, dur: 40, delay: -31, opacity: 0.54 },
 ]
 
 // 24 条雨滴：细线条，极低透明度，营造淡淡下雨氛围
