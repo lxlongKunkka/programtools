@@ -10,6 +10,7 @@ import { CmdBlock, TextCmdBlock, nodeToIcon } from './cmd-sprites'
 import { BLOCK_DRAG_KEY } from './BlockArea'
 import { CommunityLevelsBrowser } from './CommunityLevelsBrowser'
 import { supabaseEnabled } from '../../utils/supabase'
+import { AdminStatsPanel } from '../admin/AdminStatsPanel'
 
 
 // TODO: 将 /qrcode.png 替换为你的微信二维码图片（放到 public/ 目录下）
@@ -374,6 +375,7 @@ export function LevelNavBar() {
   const isTestingCustomLevel    = useAppStore((s) => s.isTestingCustomLevel)
   const setIsTestingCustomLevel = useAppStore((s) => s.setIsTestingCustomLevel)
   const isAdmin                 = useAppStore((s) => s.isAdmin)
+  const [showStats, setShowStats] = useState(false)
 
   const isCustomLevel    = level.id.startsWith('custom-')
   const loadFromConfig  = useLevelEditorStore((s) => s.loadFromConfig)
@@ -473,10 +475,18 @@ export function LevelNavBar() {
                 title="删除此关卡"
               >🗑️</button>
             )}
+            {isAdmin && (
+              <button
+                className="lb-level-nav-btn lb-admin-log-btn"
+                onClick={() => setShowStats(true)}
+                title="查看统计日志"
+              >📊</button>
+            )}
           </>
         )}
       </div>
       {showCommunity && <CommunityLevelsBrowser onClose={() => setShowCommunity(false)} />}
+      {showStats && <AdminStatsPanel onClose={() => setShowStats(false)} />}
       {showPicker && (
         <>
           <div className="lb-level-picker-backdrop" onClick={() => setShowPicker(false)} />
