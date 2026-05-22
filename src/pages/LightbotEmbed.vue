@@ -17,8 +17,9 @@
       @load="handleLoad"
     ></iframe>
 
-    <!-- 右上角角标栏：排行榜 | 我的关卡 | 用户名 | 登录 -->
+    <!-- 右上角角标栏：主页 | 排行榜 | 我的关卡 | 用户名 | 登录 -->
     <div v-if="!inEditorMode" class="lightbot-corner-bar">
+      <a class="lightbot-corner-btn lightbot-corner-home" href="https://ai.acjudge.com" title="返回主页">🏠 主页</a>
       <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
         🏆 排行榜
       </button>
@@ -335,6 +336,15 @@ export default {
 .lightbot-corner-btn:hover {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.lightbot-corner-home {
+  text-decoration: none;
+  background: rgba(60, 60, 60, 0.7);
+  color: #e2e8f0;
+}
+.lightbot-corner-home:hover {
+  background: rgba(80, 80, 80, 0.9);
+  color: #fff;
 }
 .lightbot-corner-login {
   background: rgba(79, 140, 255, 0.92);
