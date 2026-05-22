@@ -35,3 +35,6 @@ server/teachers.json
 lightbot-src/node_modules/
 lightbot-src/dist/
 lightbot-src/.env.local
+
+# APK 安装包（体积大，不入库）
+*.apk
