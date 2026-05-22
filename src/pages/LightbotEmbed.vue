@@ -17,7 +17,7 @@
       @load="handleLoad"
     ></iframe>
 
-    <!-- 右上角角标栏：排行榜 | 我的关卡 | 用户名 -->
+    <!-- 右上角角标栏：排行榜 | 我的关卡 | 用户名 | 登录 -->
     <div v-if="!inEditorMode" class="lightbot-corner-bar">
       <button class="lightbot-corner-btn" @click="openLeaderboard" title="查看本关排行榜">
         🏆 排行榜
@@ -26,6 +26,9 @@
         {{ panelOpen ? '✕ 关闭' : '📚 我的关卡' }}
       </button>
       <span v-if="username" class="lightbot-corner-user">👤 {{ username }}</span>
+      <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login" @click="goToLogin" title="登录以保存关卡进度">
+        登录
+      </button>
     </div>
 
     <!-- 我的关卡面板 -->
@@ -189,6 +192,10 @@ export default {
       }
     },
 
+    goToLogin() {
+      this.$router.push('/login?redirect=/lightbot')
+    },
+
     confirmDeleteLevel(level) {
       this.deleteTarget = level
     },
@@ -328,6 +335,15 @@ export default {
 .lightbot-corner-btn:hover {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.lightbot-corner-login {
+  background: rgba(79, 140, 255, 0.92);
+  color: #fff;
+  font-weight: 600;
+}
+.lightbot-corner-login:hover {
+  background: rgba(60, 120, 240, 1);
+  color: #fff;
 }
 
 /* ── 面板 ── */
