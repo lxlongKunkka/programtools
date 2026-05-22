@@ -428,6 +428,7 @@ export default {
   }
   .desktop-only { display: none !important; }
   .mobile-only { display: inline-flex; }
+  .action-btn.delete { display: none; }
 }
 
 /* 手机额外微调（极窄屏） */
