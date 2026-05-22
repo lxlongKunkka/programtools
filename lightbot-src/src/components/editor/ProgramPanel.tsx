@@ -611,19 +611,25 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
                       <th>玩家</th>
                       <th title="主程序+子程序积木总数">积木</th>
                       <th title="机器人执行步数">步数</th>
+                      <th title="星级评定">★</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((entry) => (
-                      <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
-                        <td className="lb-leaderboard-rank">
-                          {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
-                        </td>
-                        <td className="lb-leaderboard-user">{entry.username}</td>
-                        <td>{entry.totalCommands}</td>
-                        <td>{entry.executionSteps}</td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const bestSteps = Math.min(...leaderboard.map((e) => e.executionSteps))
+                      const entryStars = (s: number) => s <= bestSteps ? 3 : s <= bestSteps + 2 ? 2 : 1
+                      return leaderboard.map((entry) => (
+                        <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
+                          <td className="lb-leaderboard-rank">
+                            {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                          </td>
+                          <td className="lb-leaderboard-user">{entry.username}</td>
+                          <td>{entry.totalCommands}</td>
+                          <td>{entry.executionSteps}</td>
+                          <td className="lb-leaderboard-stars">{'★'.repeat(entryStars(entry.executionSteps))}{'☆'.repeat(3 - entryStars(entry.executionSteps))}</td>
+                        </tr>
+                      ))
+                    })()}
                   </tbody>
                 </table>
               )}

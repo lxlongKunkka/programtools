@@ -765,6 +765,13 @@ button {
   white-space: nowrap;
 }
 
+.lb-leaderboard-stars {
+  color: #f59e0b;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
 
 .lb-hex-btn {
   background: none;

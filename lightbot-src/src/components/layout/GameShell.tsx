@@ -79,21 +79,27 @@ export function GameShell() {
                     <th>玩家</th>
                     <th title="主程序+子程序积木总数">积木数</th>
                     <th title="机器人执行步数">执行步</th>
+                    <th title="星级评定">★</th>
                     <th title="最优成绩创建时间">通关时间</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lbData.map((entry) => (
-                    <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
-                      <td className="lb-leaderboard-rank">
-                        {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
-                      </td>
-                      <td className="lb-leaderboard-user">{entry.username}</td>
-                      <td>{entry.totalCommands}</td>
-                      <td>{entry.executionSteps}</td>
-                      <td className="lb-leaderboard-date">{fmtDate(entry.completedAt)}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const bestSteps = Math.min(...lbData.map((e) => e.executionSteps))
+                    const entryStars = (s: number) => s <= bestSteps ? 3 : s <= bestSteps + 2 ? 2 : 1
+                    return lbData.map((entry) => (
+                      <tr key={entry.rank} className={entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}>
+                        <td className="lb-leaderboard-rank">
+                          {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                        </td>
+                        <td className="lb-leaderboard-user">{entry.username}</td>
+                        <td>{entry.totalCommands}</td>
+                        <td>{entry.executionSteps}</td>
+                        <td className="lb-leaderboard-stars">{"★".repeat(entryStars(entry.executionSteps))}{"☆".repeat(3 - entryStars(entry.executionSteps))}</td>
+                        <td className="lb-leaderboard-date">{fmtDate(entry.completedAt)}</td>
+                      </tr>
+                    ))
+                  })()}
                 </tbody>
               </table>
             )}
