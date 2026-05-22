@@ -24,6 +24,18 @@ import {
 } from '../editor/editor.helpers'
 import { countProgramNodes } from '../editor/editor.utils'
 
+/** 从 JWT 中读取 userId，用于检测账号切换后使本地进度缓存失效 */
+function resolveCurrentUserId(): string | null {
+  try {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return null
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return String(payload?.id ?? payload?.userId ?? '') || null
+  } catch { return null }
+}
+
 function applyEvent(world: WorldState, event: ExecutionEvent): WorldState {
   switch (event.type) {
     case 'cursor':
@@ -95,6 +107,8 @@ type GameStore = {
   customLevelSolutionSteps: number
   /** 最近一次提交排行榜成绩的结果（null = 未提交 / 未登录） */
   winMeta: { isNewBest: boolean; demotedCount: number } | null
+  /** 持久化进度时记录的账号 userId，切换账号后自动失效缓存 */
+  savedUserId: string | null
 }
 
 export const useGameStore = create<GameStore>()(
@@ -116,6 +130,7 @@ export const useGameStore = create<GameStore>()(
   levelsLoaded: false,
   customLevelSolutionSteps: 0,
   winMeta: null,
+  savedUserId: resolveCurrentUserId(),
   loadLevels: async () => {
     try {
       // 解析 JWT 取 userId（排除自己的关卡不出现在「社区关卡」）
@@ -396,9 +411,16 @@ export const useGameStore = create<GameStore>()(
   partialize: (state) => ({
     levelIndex:      state.levelIndex,
     completedLevels: state.completedLevels,
+    savedUserId:     resolveCurrentUserId(), // 存储时带上当前 userId
   }),
-  // rehydrate 后 level/world 会在 loadLevels() 完成时重建，这里只做安全重置
-  onRehydrateStorage: () => (_state) => { /* levels are loaded async in App.tsx */ },
+  // rehydrate 完成后，检查缓存属于哪个账号，不一致则清除进度
+  onRehydrateStorage: () => (state) => {
+    if (!state) return
+    const currentUserId = resolveCurrentUserId()
+    if (state.savedUserId !== currentUserId) {
+      useGameStore.setState({ completedLevels: [], levelIndex: 0, savedUserId: currentUserId })
+    }
+  },
 },
   )
 )
