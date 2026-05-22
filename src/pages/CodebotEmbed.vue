@@ -31,9 +31,19 @@
       <button v-if="!username" class="codebot-corner-btn codebot-corner-login desktop-only" @click="goToLogin" title="登录以保存关卡进度">
         登录
       </button>
-      <!-- 手机端汉堡堡按鈕 -->
+      <!-- 手机端菜单按钮 -->
       <button class="codebot-corner-btn mobile-menu-btn mobile-only" @click="mobileMenuOpen = !mobileMenuOpen" :class="{ active: mobileMenuOpen }">
-        <span class="hamburger-icon"></span>
+        <!-- 菜单图标 -->
+        <svg v-if="!mobileMenuOpen" class="menu-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+        <!-- 关闭图标 -->
+        <svg v-else class="menu-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6"  x2="6"  y2="18"/>
+          <line x1="6"  y1="6"  x2="18" y2="18"/>
+        </svg>
       </button>
     </div>
 
@@ -437,31 +447,12 @@ export default {
   background: rgba(255, 255, 255, 0.96);
 }
 
-/* 汉堡图标：三条横线 */
-.hamburger-icon,
-.hamburger-icon::before,
-.hamburger-icon::after {
-  display: block;
+.menu-svg-icon {
   width: 20px;
-  height: 2px;
-  background: #1e293b;
-  border-radius: 2px;
-  transition: transform 0.2s, opacity 0.2s;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
 }
-.hamburger-icon {
-  position: relative;
-}
-.hamburger-icon::before,
-.hamburger-icon::after {
-  content: '';
-  position: absolute;
-  left: 0;
-}
-.hamburger-icon::before { top: -7px; }
-.hamburger-icon::after  { top: 7px; }
-.mobile-menu-btn.active .hamburger-icon { background: transparent; }
-.mobile-menu-btn.active .hamburger-icon::before { transform: rotate(45deg) translate(5px, 5px); }
-.mobile-menu-btn.active .hamburger-icon::after  { transform: rotate(-45deg) translate(5px, -5px); }
 
 /* 下拉菜单遮罩和内容 */
 .mobile-menu-overlay {
