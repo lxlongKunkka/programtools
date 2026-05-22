@@ -55,7 +55,7 @@ const routes = [
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
-  { path: '/lightbot', component: LightbotGame, meta: { requiresAuth: true, hideMobileBottomNav: true } },
+  { path: '/lightbot', component: LightbotGame, meta: { hideMobileBottomNav: true } },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 
