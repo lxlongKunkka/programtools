@@ -100,6 +100,11 @@ async function getSettings() {
 }
 
 router.beforeEach(async (to, from, next) => {
+  // bot.acjudge.com 专用入口：根路径直接进入 lightbot
+  if (window.location.hostname === 'bot.acjudge.com' && to.path === '/') {
+    return next('/lightbot')
+  }
+
   const userStr = localStorage.getItem('user_info')
   let user = null
   try {
