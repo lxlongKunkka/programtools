@@ -530,12 +530,10 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const program       = useGameStore((state) => state.program)
 
   const mainBlocks = program.main.length
-  const rec = level.constraints?.recommendedSteps
-  const max = level.constraints?.maxMainBlocks
-  const mid = (rec !== undefined && max !== undefined) ? Math.floor((rec + max) / 2) : undefined
-  const stars = rec !== undefined && mainBlocks <= rec ? 3
-    : mid !== undefined && mainBlocks <= mid ? 2
-    : 1
+  const executionLog = useGameStore((state) => state.executionLog)
+  const myExecutionSteps = executionLog.filter(
+    (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
+  ).length
 
   const world       = useGameStore((state) => state.world)
 
@@ -550,6 +548,14 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   type LeaderboardEntry = { rank: number; username: string; totalCommands: number; executionSteps: number }
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
+  // 动态星级：对比排行榜第一名步数（排行榜加载中或无记录时默认1星）
+  const stars = leaderboardLoading || leaderboard.length === 0
+    ? 1
+    : myExecutionSteps <= leaderboard[0].executionSteps
+      ? 3
+      : myExecutionSteps <= leaderboard[0].executionSteps + 2
+        ? 2
+        : 1
 
   useEffect(() => {
     if (!isWin || !hasLeaderboard) { setLeaderboard([]); return }
