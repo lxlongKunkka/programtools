@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react'
 
+/** 将时间戳或 ISO 字符串格式化为东8区时间 yyyy-MM-dd HH:mm */
+function fmtCst(value: number | string | null | undefined): string {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).replace(/\//g, '-')
+}
+
 interface DailyRow { day: string; game_start: number; level_complete: number; unique_ips: number }
 interface RecentResult { username: string; levelId: string; totalCommands: number; executionSteps: number; completedAt: string | null }
 interface RecentEvent { t: number | null; ip: string | null; levelId: string | null; username: string | null }
@@ -98,7 +110,7 @@ export function AdminStatsPanel({ onClose }: { onClose: () => void }) {
                     <td>{r.levelId}</td>
                     <td>{r.totalCommands}</td>
                     <td>{r.executionSteps}</td>
-                    <td>{r.completedAt ? r.completedAt.slice(0, 16).replace('T', ' ') : '—'}</td>
+                    <td>{fmtCst(r.completedAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -111,7 +123,7 @@ export function AdminStatsPanel({ onClose }: { onClose: () => void }) {
               <tbody>
                 {data.recent_events.map((ev, i) => (
                   <tr key={i}>
-                    <td>{ev.t ? new Date(ev.t).toISOString().slice(0, 16).replace('T', ' ') : '—'}</td>
+                    <td>{fmtCst(ev.t)}</td>
                     <td>{ev.ip ?? '—'}</td>
                     <td>{ev.username ?? '—'}</td>
                     <td>{ev.levelId ?? '—'}</td>
