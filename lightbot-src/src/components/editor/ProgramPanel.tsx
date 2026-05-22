@@ -539,6 +539,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const levelIndex    = useGameStore((state) => state.levelIndex)
   const loadLevel     = useGameStore((state) => state.loadLevel)
   const level         = useGameStore((state) => state.level)
+  const winMeta       = useGameStore((state) => state.winMeta)
   const program       = useGameStore((state) => state.program)
 
   const mainBlocks = program.main.length
@@ -642,6 +643,12 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
           </div>
           {myLevelEntry && (
             <div className="lb-win-subheading">本关排名：第 {myLevelEntry.rank} 名，获得 {myLevelEntry.stars} 星</div>
+          )}
+          {winMeta?.isNewBest && winMeta.demotedCount > 0 && (
+            <div className="lb-win-new-best">🔥 全服最优解！你让 {winMeta.demotedCount} 位玩家的星级下降了！</div>
+          )}
+          {winMeta?.isNewBest && winMeta.demotedCount === 0 && (
+            <div className="lb-win-new-best">🥇 你是本关第一个完成的玩家！</div>
           )}
           {myOverallEntry && (
             <div className="lb-win-subheading">总排行：第 {myOverallEntry.rank} 名，累计 {myOverallEntry.totalStars} 星</div>

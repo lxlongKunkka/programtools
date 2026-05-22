@@ -738,6 +738,23 @@ button {
 .lb-win-next-btn:hover { opacity: 0.9; transform: scale(1.03); }
 .lb-win-all-done { font-size: 1rem; color: #ffd700; font-weight: 700; }
 
+.lb-win-new-best {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(239,68,68,0.75), rgba(249,115,22,0.75));
+  border-radius: 20px;
+  padding: 6px 16px;
+  margin: 4px 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  animation: lb-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.88; transform: scale(1.03); }
+}
+
 /* ── 关卡排行榜 ── */
 .lb-leaderboard {
   width: 100%;

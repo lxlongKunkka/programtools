@@ -93,6 +93,8 @@ type GameStore = {
   loadLevels: () => Promise<void>
   /** 编辑器测试通关自定义关卡时的执行步数（0 表示尚未通关） */
   customLevelSolutionSteps: number
+  /** 最近一次提交排行榜成绩的结果（null = 未提交 / 未登录） */
+  winMeta: { isNewBest: boolean; demotedCount: number } | null
 }
 
 export const useGameStore = create<GameStore>()(
@@ -113,6 +115,7 @@ export const useGameStore = create<GameStore>()(
   eventIndex: 0,
   levelsLoaded: false,
   customLevelSolutionSteps: 0,
+  winMeta: null,
   loadLevels: async () => {
     try {
       // 解析 JWT 取 userId（排除自己的关卡不出现在「社区关卡」）
@@ -286,6 +289,7 @@ export const useGameStore = create<GameStore>()(
       executionLog: [],
       eventIndex: 0,
       customLevelSolutionSteps: 0, // 切换新版关卡时重置解题状态
+      winMeta: null,
     })
   },
   stepProgram: () => {
@@ -353,14 +357,21 @@ export const useGameStore = create<GameStore>()(
             const executionSteps = result.events.filter(
               (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
             ).length
-            void fetch(`/api/codebot/levels/${encodeURIComponent(current.level.id)}/complete`, {
+            fetch(`/api/codebot/levels/${encodeURIComponent(current.level.id)}/complete`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
               },
               body: JSON.stringify({ totalCommands, executionSteps }),
-            }).catch(() => {/* 静默失败 */})
+            })
+              .then((r) => r.json())
+              .then((data: { ok: boolean; isNewBest?: boolean; demotedCount?: number }) => {
+                if (data.ok) {
+                  set({ winMeta: { isNewBest: data.isNewBest ?? false, demotedCount: data.demotedCount ?? 0 } })
+                }
+              })
+              .catch(() => {/* 静默失败 */})
           }
         }
       }

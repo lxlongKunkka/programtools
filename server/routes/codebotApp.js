@@ -627,7 +627,14 @@ router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, 
   try {
     const userId = req.user.id
     const username = req.user.username || req.user.name || String(userId)
+
+    // 提交前：查本关当前全服最佳（排除自己）
+    const globalBestEntry = await CodebotResult.findOne({ levelId, userId: { $ne: userId } })
+      .sort({ totalCommands: 1 }).select('totalCommands').lean()
+    const previousBest = globalBestEntry?.totalCommands ?? null
+
     const existing = await CodebotResult.findOne({ userId, levelId })
+    let saved = false
     if (existing) {
       const isBetter =
         totalCommands < existing.totalCommands ||
@@ -637,11 +644,30 @@ router.post('/codebot/levels/:levelId/complete', authenticateToken, async (req, 
         existing.executionSteps = executionSteps
         existing.completedAt = new Date()
         await existing.save()
+        saved = true
       }
     } else {
       await CodebotResult.create({ userId, username, levelId, totalCommands, executionSteps })
+      saved = true
     }
-    res.json({ ok: true })
+
+    // 计算"被你拉低星级"的人数
+    let isNewBest = false
+    let demotedCount = 0
+    if (saved && previousBest !== null && totalCommands < previousBest) {
+      isNewBest = true
+      // 旧 3 星范围：totalCommands <= previousBest；新 3 星：<= 我的新成绩
+      // 被降级者：totalCommands in (我的成绩, previousBest]
+      demotedCount = await CodebotResult.countDocuments({
+        levelId,
+        userId: { $ne: userId },
+        totalCommands: { $gt: totalCommands, $lte: previousBest },
+      })
+    } else if (saved && previousBest === null) {
+      isNewBest = true  // 本关第一个提交的人
+    }
+
+    res.json({ ok: true, isNewBest, demotedCount })
   } catch (error) {
     console.error('[codebot-app] submit-complete failed:', error)
     res.status(500).json({ ok: false, error: '提交失败' })
