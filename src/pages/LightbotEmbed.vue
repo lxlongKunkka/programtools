@@ -339,12 +339,10 @@ export default {
 }
 .lightbot-corner-home {
   text-decoration: none;
-  background: rgba(60, 60, 60, 0.7);
-  color: #e2e8f0;
 }
 .lightbot-corner-home:hover {
-  background: rgba(80, 80, 80, 0.9);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .lightbot-corner-login {
   background: rgba(79, 140, 255, 0.92);
