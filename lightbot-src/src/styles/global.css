@@ -2471,6 +2471,52 @@ button {
   color: #4f46e5;
 }
 
+/* ── Topbar 汉堡菜单 ── */
+.lb-topbar-menu {
+  position: relative;
+}
+.lb-topbar-hamburger {
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(16,24,40,0.12);
+  background: rgba(255,255,255,0.55);
+  color: #334155;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.lb-topbar-hamburger:hover { background: rgba(255,255,255,0.85); }
+.lb-topbar-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid rgba(16,24,40,0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.14);
+  padding: 4px;
+  z-index: 200;
+}
+.lb-topbar-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.lb-topbar-dropdown-item:hover { background: #f1f5f9; }
+
 /* ── 管理员统计面板 ── */
 .lb-stats-panel {
   background: #0f172a;
@@ -3309,7 +3355,17 @@ button {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     justify-content: flex-start;
+    gap: 5px;
+    padding: 8px 10px;
   }
+  .lb-program-panel--win .lb-win-confetti,
+  .lb-program-panel--fail .lb-win-confetti { font-size: 1.3rem; }
+  .lb-program-panel--win .lb-win-heading,
+  .lb-program-panel--fail .lb-win-heading { font-size: 1rem; }
+  .lb-program-panel--win .lb-win-star,
+  .lb-program-panel--fail .lb-win-star { font-size: 1.2rem; }
+  .lb-program-panel--win .lb-win-qr,
+  .lb-program-panel--fail .lb-win-qr { padding: 3px 0; gap: 4px; }
   .lb-program-panel--win .lb-win-actions,
   .lb-program-panel--fail .lb-win-actions {
     position: sticky;

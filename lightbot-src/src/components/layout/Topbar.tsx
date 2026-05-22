@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAppStore } from '../../app/app.store'
 import { AdminStatsPanel } from '../admin/AdminStatsPanel'
 
@@ -6,6 +6,19 @@ export function Topbar() {
   const isAdmin  = useAppStore((s) => s.isAdmin)
   const username = useAppStore((s) => s.username)
   const [showStats, setShowStats] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
 
   return (
     <header className="lb-topbar">
@@ -28,9 +41,25 @@ export function Topbar() {
           </span>
         )}
         {isAdmin && (
-          <button className="lb-admin-trigger lb-admin-log-btn" onClick={() => setShowStats(true)} title="查看统计日志">
-            📊 日志
-          </button>
+          <div className="lb-topbar-menu" ref={menuRef}>
+            <button
+              className="lb-topbar-hamburger"
+              onClick={() => setMenuOpen(v => !v)}
+              title="更多操作"
+            >
+              ☰
+            </button>
+            {menuOpen && (
+              <div className="lb-topbar-dropdown">
+                <button
+                  className="lb-topbar-dropdown-item"
+                  onClick={() => { setShowStats(true); setMenuOpen(false) }}
+                >
+                  📊 管理员日志
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
       {showStats && <AdminStatsPanel onClose={() => setShowStats(false)} />}
