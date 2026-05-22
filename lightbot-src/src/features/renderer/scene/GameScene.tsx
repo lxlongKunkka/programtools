@@ -125,6 +125,8 @@ export function GameScene() {
   const zoomRef = useRef(1.0)
   const applyFitRef = useRef<((w: number, h: number) => void) | null>(null)
   const containerSizeRef = useRef({ w: 0, h: 0 })
+  const sectionRef = useRef<HTMLElement | null>(null)
+  const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null)
 
   const levelMetrics = useMemo(() => {
     // Use the bounding box of non-void tiles so small levels (e.g. SWF levels with
@@ -579,8 +581,38 @@ export function GameScene() {
     if (w > 0 && h > 0) applyFitRef.current?.(w, h)
   }, [zoom])
 
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const getTouchDist = (touches: TouchList) => {
+      const dx = touches[0].clientX - touches[1].clientX
+      const dy = touches[0].clientY - touches[1].clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    }
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2)
+        pinchRef.current = { startDist: getTouchDist(e.touches), startZoom: zoomRef.current }
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || !pinchRef.current) return
+      e.preventDefault()
+      const scale = getTouchDist(e.touches) / pinchRef.current.startDist
+      const next = Math.min(3.0, Math.max(0.5, parseFloat((pinchRef.current.startZoom * scale).toFixed(2))))
+      setZoom(next)
+    }
+    const onTouchEnd = () => { pinchRef.current = null }
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
+
   return (
-    <section className="lb-stage-card">
+    <section className="lb-stage-card" ref={sectionRef}>
       <div className="lb-stage-canvas" ref={hostRef} />
       <div className="lb-zoom-controls">
         <button className="lb-zoom-btn" onClick={() => setZoom(z => Math.max(0.5, parseFloat((z - 0.25).toFixed(2))))} title="缩小">－</button>
