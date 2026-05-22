@@ -67,7 +67,7 @@
       </table>
 
       <!-- 最近通关记录（登录用户） -->
-      <h3>最近通关记录（登录用户）</h3>
+      <h3>最近通关记录（登录用户，最优成绩）</h3>
       <table class="lb-table">
         <thead>
           <tr>
@@ -85,6 +85,27 @@
             <td>{{ r.levelId }}</td>
             <td>{{ r.totalCommands }}</td>
             <td>{{ r.executionSteps }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 最近通关事件（全部用户，含匿名） -->
+      <h3>最近通关事件（全部用户，含匿名）</h3>
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>用户</th>
+            <th>关卡</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(ev, i) in data.recent_events" :key="i">
+            <td class="lb-date">{{ fmtTime(ev.t) }}</td>
+            <td :class="ev.username ? '' : 'lb-anon'">{{ ev.username || '匿名' }}</td>
+            <td>{{ ev.levelId }}</td>
+            <td class="lb-ip">{{ ev.ip }}</td>
           </tr>
         </tbody>
       </table>
@@ -127,9 +148,9 @@ export default {
     }
   },
   methods: {
-    fmtTime(iso) {
-      if (!iso) return '-'
-      const d = new Date(iso)
+    fmtTime(val) {
+      if (!val) return '-'
+      const d = typeof val === 'number' ? new Date(val) : new Date(val)
       return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     },
     barWidth(count) {
@@ -197,6 +218,8 @@ h3 { font-size: 1.05rem; margin: 28px 0 10px; color: #334155; }
   color: #475569;
 }
 .lb-table tr:hover td { background: #f8fafc; }
+.lb-anon { color: #94a3b8; font-style: italic; }
+.lb-ip { font-size: 0.78rem; color: #94a3b8; }
 
 .lb-bar-wrap {
   display: flex;

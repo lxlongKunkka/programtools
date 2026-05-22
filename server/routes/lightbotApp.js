@@ -2,8 +2,9 @@ import express from 'express'
 import fs from 'fs'
 import path from 'path'
 import nodemailer from 'nodemailer'
+import jwt from 'jsonwebtoken'
 import { fileURLToPath } from 'url'
-import { MAIL_CONFIG } from '../config.js'
+import { MAIL_CONFIG, JWT_SECRET } from '../config.js'
 import { authenticateToken } from '../middleware/auth.js'
 import LightbotUserLevel from '../models/LightbotUserLevel.js'
 import LightbotLevel from '../models/LightbotLevel.js'
@@ -74,10 +75,23 @@ router.get('/lightbot/levels', async (_req, res) => {
 
 router.post('/track', (req, res) => {
   try {
+    // 尝试从 Authorization header 中提取 username（登录用户）
+    let username = null
+    const authHeader = req.headers['authorization']
+    const token = authHeader && authHeader.split(' ')[1]
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET)
+        username = decoded.username || null
+      } catch {
+        // token 无效/过期，忽略
+      }
+    }
     appendNdjson(EVENTS_FILE, {
       t: Date.now(),
       ip: getRequesterIp(req),
       ...(req.body || {}),
+      ...(username ? { username } : {}),
     })
   } catch (error) {
     console.error('[lightbot-app] track failed:', error)
@@ -475,6 +489,18 @@ router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
       .limit(30)
       .lean()
 
+    // 最近 50 条通关事件（来自 NDJSON，含匿名用户）
+    const recentEvents = events
+      .filter(ev => ev.event === 'level_complete')
+      .sort((a, b) => (b.t || 0) - (a.t || 0))
+      .slice(0, 50)
+      .map(ev => ({
+        t: ev.t || null,
+        ip: ev.ip ? ev.ip.replace(/(\d+\.\d+)\.\d+\.\d+/, '$1.*.*') : null,
+        levelId: ev.levelId || null,
+        username: ev.username || null,
+      }))
+
     res.json({
       ok: true,
       total_events: events.length,
@@ -492,6 +518,7 @@ router.get('/lightbot/admin/stats', authenticateToken, async (req, res) => {
         executionSteps: r.executionSteps,
         completedAt: r.completedAt ? r.completedAt.toISOString() : null,
       })),
+      recent_events: recentEvents,
     })
   } catch (error) {
     console.error('[lightbot-app] admin/stats failed:', error)
