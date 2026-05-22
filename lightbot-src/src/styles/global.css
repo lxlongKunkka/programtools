@@ -2912,7 +2912,12 @@ button {
   }
   .lb-program-panel.lb-program-panel--win,
   .lb-program-panel.lb-program-panel--fail {
-    max-height: 48vh;
+    max-height: 55vh;
+  }
+  /* 通关/失败时，win-screen 用自然高度，让面板滚动容器感知溢出 */
+  .lb-program-panel--win .lb-win-screen,
+  .lb-program-panel--fail .lb-win-screen {
+    flex: none;
   }
 
   /* 折叠把手在手机上隐藏（面板常驻，不需要折叠） */
@@ -2941,6 +2946,10 @@ button {
   .lb-cmd-block { transform: scale(0.88); transform-origin: center bottom; }
   .lb-admin-modal { width: min(320px, 96vw); }
   .lb-program-panel { max-height: 28vh; }
+  .lb-program-panel.lb-program-panel--win,
+  .lb-program-panel.lb-program-panel--fail {
+    max-height: 52vh;
+  }
 }
 
 /* ── Floating ambient effects: clouds + light rain ─────────────────────── */
