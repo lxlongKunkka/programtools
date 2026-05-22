@@ -409,7 +409,8 @@ export default {
 .desktop-only { display: inline-flex; }
 .mobile-only { display: none; }
 
-@media (max-width: 520px) {
+/* 平板 / 手机：宽度 ≤ 1024px 或触屏设备 → 汉堡菜单 */
+@media (max-width: 1024px), (pointer: coarse) {
   .codebot-corner-bar {
     top: 8px;
     right: 8px;
@@ -417,6 +418,14 @@ export default {
   }
   .desktop-only { display: none !important; }
   .mobile-only { display: inline-flex; }
+}
+
+/* 手机额外微调（极窄屏） */
+@media (max-width: 520px) {
+  .codebot-corner-bar {
+    top: 6px;
+    right: 6px;
+  }
 }
 
 /* 手机端汉堡堡按鈕 */
