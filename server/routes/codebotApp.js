@@ -47,6 +47,18 @@ function sanitizeLevelId(levelId) {
   return String(levelId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '')
 }
 
+function isAdminUser(req) {
+  return req.user?.role === 'admin' || req.user?.priv === -1
+}
+
+function parseLevelContent(content) {
+  const parsed = JSON.parse(String(content || '{}'))
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid level content')
+  }
+  return parsed
+}
+
 function maybeCreateMailer() {
   if (!MAIL_CONFIG.host || !MAIL_CONFIG.user || !MAIL_CONFIG.pass || !MAIL_CONFIG.to) {
     return null
@@ -221,6 +233,62 @@ router.post('/save-level', authenticateToken, async (req, res) => {
   }
 })
 
+router.put('/codebot/admin/level/:levelId', authenticateToken, async (req, res) => {
+  try {
+    if (!isAdminUser(req)) {
+      return res.status(403).json({ error: '需要管理员权限' })
+    }
+
+    const levelId = sanitizeLevelId(req.params.levelId)
+    const content = String(req.body?.content || '')
+    const solutionSteps = Number(req.body?.solutionSteps ?? 0)
+    if (!levelId || !content) {
+      return res.status(400).json({ error: '缺少 levelId 或 content' })
+    }
+
+    if (solutionSteps < 1) {
+      return res.status(400).json({ error: '请先测试并通关关卡，再保存到数据库' })
+    }
+
+    const cfg = parseLevelContent(content)
+    cfg.id = levelId
+
+    const officialLevel = await CodebotLevel.findOne({ id: levelId })
+    if (officialLevel) {
+      officialLevel.title = String(cfg.title || officialLevel.title || '').trim() || officialLevel.title
+      officialLevel.teachingGoal = String(cfg.teachingGoal || '')
+      officialLevel.availableBlocks = Array.isArray(cfg.availableBlocks) ? cfg.availableBlocks : officialLevel.availableBlocks
+      officialLevel.grid = Array.isArray(cfg.grid) ? cfg.grid : officialLevel.grid
+      officialLevel.robot = cfg.robot && typeof cfg.robot === 'object' ? cfg.robot : officialLevel.robot
+      officialLevel.winCondition = cfg.winCondition && typeof cfg.winCondition === 'object' ? cfg.winCondition : officialLevel.winCondition
+      officialLevel.chapter = cfg.chapter && typeof cfg.chapter === 'object' ? cfg.chapter : officialLevel.chapter
+      officialLevel.constraints = {
+        ...(officialLevel.constraints || {}),
+        ...(cfg.constraints && typeof cfg.constraints === 'object' ? cfg.constraints : {}),
+      }
+      if (Array.isArray(cfg.hints)) {
+        officialLevel.hints = cfg.hints
+      }
+      await officialLevel.save()
+      return res.json({ ok: true, from: 'official' })
+    }
+
+    const userLevel = await CodebotUserLevel.findOne({ levelId })
+    if (userLevel) {
+      userLevel.title = String(cfg.title || extractTitle(content)).trim() || userLevel.title
+      userLevel.content = JSON.stringify(cfg, null, 2)
+      userLevel.solutionSteps = Math.max(userLevel.solutionSteps ?? 0, solutionSteps)
+      await userLevel.save()
+      return res.json({ ok: true, from: 'user' })
+    }
+
+    return res.status(404).json({ error: '关卡不存在' })
+  } catch (error) {
+    console.error('[codebot-app] admin save-level failed:', error)
+    return res.status(500).json({ error: '保存关卡失败' })
+  }
+})
+
 router.post('/delete-level', authenticateToken, async (req, res) => {
   try {
     const levelId = sanitizeLevelId(req.body?.levelId)
@@ -368,8 +436,7 @@ router.delete('/codebot/my-levels/:id', authenticateToken, async (req, res) => {
 // 管理员删除任意关卡（官方关卡或用户关卡）
 router.delete('/codebot/admin/level/:levelId', authenticateToken, async (req, res) => {
   try {
-    const isAdminUser = req.user.role === 'admin' || req.user.priv === -1
-    if (!isAdminUser) {
+    if (!isAdminUser(req)) {
       return res.status(403).json({ error: '需要管理员权限' })
     }
 

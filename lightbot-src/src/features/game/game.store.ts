@@ -371,7 +371,7 @@ export const useGameStore = create<GameStore>()(
       set({ runStatus: 'idle', currentRobotAction: createIdleRobotAction() })
     }
     // 自定义关卡通关时，记录解题步数（仅计机器人实际动作步数）
-    if (level.id.startsWith('custom-') && result.events.some((e) => e.type === 'complete')) {
+    if (level.chapter?.id === 'custom' && result.events.some((e) => e.type === 'complete')) {
       const steps = result.events.filter(
         (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
       ).length

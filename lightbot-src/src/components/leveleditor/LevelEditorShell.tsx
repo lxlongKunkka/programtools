@@ -28,6 +28,7 @@ export function LevelEditorShell() {
   const loadCustomLevel = useGameStore((s) => s.loadCustomLevel)
   const loadLevel        = useGameStore((s) => s.loadLevel)
   const addUserLevel     = useGameStore((s) => s.addUserLevel)
+  const updateLevel      = useGameStore((s) => s.updateLevel)
   const levels           = useGameStore((s) => s.levels)
   const customLevelSolutionSteps = useGameStore((s) => s.customLevelSolutionSteps)
 
@@ -51,6 +52,7 @@ export function LevelEditorShell() {
   const [authorName, setAuthorName] = useState('')
   // 用户是否已登录（有 JWT 令牌）
   const [isLoggedIn] = useState(() => !!localStorage.getItem('auth_token'))
+  const isAdminEditingExistingLevel = isAdmin && metadata.chapter?.id !== undefined && metadata.chapter.id !== 'custom'
 
   function validate(): string | null {
     if (!metadata.title.trim()) return '请输入关卡名称'
@@ -95,7 +97,7 @@ export function LevelEditorShell() {
       setValidationError('请先点击》测试《通关关卡，再保存到服务器')
       return
     }
-    if (customLevelSolutionSteps < 10) {
+    if (!isAdminEditingExistingLevel && customLevelSolutionSteps < 10) {
       setValidationError(`关卡解法步数（${customLevelSolutionSteps}步）不足 10 步，请增加关卡复杂度`)
       return
     }
@@ -103,9 +105,16 @@ export function LevelEditorShell() {
     const cfg = toLevelConfig()
     const content = JSON.stringify(cfg, null, 2)
     try {
-      const res = await fetch('/api/save-level', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const token = localStorage.getItem('auth_token')
+      const endpoint = isAdminEditingExistingLevel
+        ? `/api/codebot/admin/level/${encodeURIComponent(cfg.id)}`
+        : '/api/save-level'
+      const res = await fetch(endpoint, {
+        method: isAdminEditingExistingLevel ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ levelId: cfg.id, content, solutionSteps: customLevelSolutionSteps }),
       })
       const ct = res.headers.get('content-type') ?? ''
@@ -115,8 +124,14 @@ export function LevelEditorShell() {
       }
       const data = await res.json() as { ok?: boolean; path?: string; error?: string }
       if (data.ok) {
-        addUserLevel(cfg)
-        setShareMsg('✓ 已保存！关卡已出现在游戏列表「🎮 我的关卡」中')
+        if (isAdminEditingExistingLevel) {
+          const existingLevel = levels.find((item) => item.id === cfg.id)
+          updateLevel(existingLevel ? { ...existingLevel, ...cfg } : cfg)
+          setShareMsg('✓ 已保存到数据库，当前关卡已更新')
+        } else {
+          addUserLevel(cfg)
+          setShareMsg('✓ 已保存！关卡已出现在游戏列表「🎮 我的关卡」中')
+        }
         setTimeout(() => setShareMsg(''), 4000)
       } else {
         setValidationError(data.error ?? '保存失败')
@@ -232,7 +247,7 @@ export function LevelEditorShell() {
           )}
           {isLoggedIn && (
             <button className="lb-editor-action-btn lb-editor-action-btn--download" onClick={() => void handleSave()}>
-              💾 保存
+              {isAdminEditingExistingLevel ? '💾 保存到数据库' : '💾 保存'}
             </button>
           )}
           {isAdmin && (
