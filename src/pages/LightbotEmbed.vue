@@ -27,7 +27,7 @@
         <span v-if="panelOpen">✕<span class="btn-text"> 关闭</span></span>
         <span v-else>📚<span class="btn-text"> 我的关卡</span></span>
       </button>
-      <span v-if="username" class="lightbot-corner-user">👤<span class="btn-text"> {{ username }}</span></span>
+      <span v-if="username" class="lightbot-corner-btn lightbot-corner-user" @click="confirmLogout" title="点击退出登录">👤<span class="btn-text"> {{ username }}</span></span>
       <button v-if="!username" class="lightbot-corner-btn lightbot-corner-login" @click="goToLogin" title="登录以保存关卡进度">
         <span class="btn-text">登录</span><span class="btn-icon-only">👤</span>
       </button>
@@ -93,6 +93,16 @@
         </div>
       </div>
     </div>
+    <!-- 退出登录确认弹窗 -->
+    <div v-if="showLogoutDialog" class="delete-overlay" @click.self="showLogoutDialog = false">
+      <div class="delete-dialog">
+        <p>确认退出登录？</p>
+        <div class="delete-dialog-btns">
+          <button @click="showLogoutDialog = false">取消</button>
+          <button class="danger" @click="doLogout">退出</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -113,6 +123,7 @@ export default {
       shareNoticeTimer: null,
       username: '',
       inEditorMode: false,
+      showLogoutDialog: false,
     }
   },
   mounted() {
@@ -196,6 +207,19 @@ export default {
 
     goToLogin() {
       this.$router.push('/login?redirect=/lightbot')
+    },
+
+    confirmLogout() {
+      this.showLogoutDialog = true
+    },
+
+    doLogout() {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_info')
+      this.username = ''
+      this.showLogoutDialog = false
+      this.panelOpen = false
+      this.levels = []
     },
 
     confirmDeleteLevel(level) {
@@ -344,6 +368,13 @@ export default {
 .lightbot-corner-home:hover {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.lightbot-corner-user {
+  cursor: pointer;
+}
+.lightbot-corner-user:hover {
+  background: rgba(255, 220, 220, 0.92);
+  color: #c0392b;
 }
 .lightbot-corner-login {
   background: rgba(79, 140, 255, 0.92);
