@@ -371,6 +371,7 @@ export function LevelNavBar() {
   const loadLevel     = useGameStore((state) => state.loadLevel)
   const level         = useGameStore((state) => state.level)
   const completedLevels = useGameStore((state) => state.completedLevels)
+  const levelStars = useGameStore((state) => state.levelStars)
   const setAppMode    = useAppStore((s) => s.setAppMode)
   const isTestingCustomLevel    = useAppStore((s) => s.isTestingCustomLevel)
   const setIsTestingCustomLevel = useAppStore((s) => s.setIsTestingCustomLevel)
@@ -545,6 +546,7 @@ export function LevelNavBar() {
                 {chapter.indices.map(i => {
                   const l = levels[i]
                   const done = completedLevels.includes(i)
+                  const starCount = levelStars[l.id]
                   return (
                     <button
                       key={l.id}
@@ -553,7 +555,7 @@ export function LevelNavBar() {
                     >
                       <span className="lb-level-card-badge">{done ? '✓' : i + 1}</span>
                       <span className="lb-level-card-title">{l.title}</span>
-                      {done && <span className="lb-level-card-stars">⭐⭐⭐</span>}
+                      {done && <span className="lb-level-card-stars">{'⭐'.repeat(starCount ?? 3)}</span>}
                     </button>
                   )
                 })}

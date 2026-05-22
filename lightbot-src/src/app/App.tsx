@@ -35,6 +35,31 @@ function AppContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelsLoaded])
 
+  // 关卡加载完成后，从服务端同步通关记录（支持换设备显示进度）
+  useEffect(() => {
+    if (!levelsLoaded) return
+    const token = localStorage.getItem('auth_token')
+    if (!token) return
+    fetch('/api/codebot/my-completions', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then((data: { ok: boolean; completions: Array<{ levelId: string; stars: number }> }) => {
+        if (!data.ok || !Array.isArray(data.completions) || data.completions.length === 0) return
+        const { levels } = useGameStore.getState()
+        const idxMap = new Map(levels.map((l, i) => [l.id, i]))
+        const newIndices = data.completions
+          .map(c => idxMap.get(c.levelId))
+          .filter((i): i is number => i !== undefined)
+        const stars: Record<string, number> = {}
+        data.completions.forEach(c => { stars[c.levelId] = c.stars })
+        useGameStore.setState(state => ({
+          completedLevels: Array.from(new Set([...state.completedLevels, ...newIndices])),
+          levelStars: stars,
+        }))
+      })
+      .catch(() => {}) // 静默失败
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelsLoaded])
+
   // 通知父页面（Vue）当前模式，用于隐藏角标栏
   useEffect(() => {
     window.parent?.postMessage({ type: 'app-mode', mode: appMode }, '*')
@@ -45,7 +70,7 @@ function AppContent() {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'auth_token' && e.newValue === null) {
         // 清除关卡进度，使选关界面不再显示已通关/星级
-        useGameStore.setState({ completedLevels: [], savedUserId: null })
+        useGameStore.setState({ completedLevels: [], levelStars: {}, savedUserId: null })
       }
     }
     window.addEventListener('storage', handleStorage)

@@ -206,8 +206,7 @@ function maybeCreateMailer() {
 }
 
 // ── 官方关卡列表 ────────────────────────────────────────────────────────────
-router.get('/codebot/levels', async (_req, res) => {
-  try {
+router.get('/codebot/levels', async (_req, res) => {  try {
     const levels = await CodebotLevel.find({}, { _id: 0, __v: 0 })
       .sort({ sortOrder: 1 })
       .lean()
@@ -215,6 +214,33 @@ router.get('/codebot/levels', async (_req, res) => {
   } catch (err) {
     console.error('[codebot] GET /codebot/levels error:', err)
     res.status(500).json({ ok: false, error: 'Failed to load levels' })
+  }
+})
+
+// GET /codebot/my-completions — 当前用户所有通关记录及实时星级
+router.get('/codebot/my-completions', authenticateToken, async (req, res) => {
+  try {
+    const myResults = await CodebotResult.find(
+      { userId: req.user.id },
+      { levelId: 1, totalCommands: 1 }
+    ).lean()
+    if (myResults.length === 0) return res.json({ ok: true, completions: [] })
+
+    const levelIds = myResults.map(r => r.levelId)
+    const bests = await CodebotResult.aggregate([
+      { $match: { levelId: { $in: levelIds } } },
+      { $group: { _id: '$levelId', best: { $min: '$totalCommands' } } },
+    ])
+    const bestMap = new Map(bests.map(b => [b._id, b.best]))
+
+    const completions = myResults.map(r => ({
+      levelId: r.levelId,
+      stars: starsForCommands(r.totalCommands, bestMap.get(r.levelId) ?? r.totalCommands),
+    }))
+    res.json({ ok: true, completions })
+  } catch (err) {
+    console.error('[codebot] my-completions failed:', err)
+    res.status(500).json({ ok: false, error: 'Failed to load completions' })
   }
 })
 

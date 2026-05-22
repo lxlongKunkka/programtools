@@ -75,6 +75,8 @@ type GameStore = {
   level: LevelConfig
   lesson: LessonConfig
   completedLevels: number[]
+  /** levelId → 星级（从服务端同步，不持久化） */
+  levelStars: Record<string, number>
   program: ProgramDocument
   selectedTarget: BranchTarget
   world: WorldState
@@ -119,6 +121,7 @@ export const useGameStore = create<GameStore>()(
   level: beginnerLevel,
   lesson: beginnerLesson,
   completedLevels: [],
+  levelStars: {},
   program: emptyProgramDocument,
   selectedTarget: defaultBranchTarget,
   world: createWorldState(beginnerLevel),
