@@ -157,6 +157,10 @@ button {
   z-index: 10;
   user-select: none;
 }
+/* 触屏设备：用双指捏合缩放，隐藏按钮 */
+@media (pointer: coarse) {
+  .lb-zoom-controls { display: none; }
+}
 .lb-zoom-btn {
   width: 26px;
   height: 26px;
@@ -1457,7 +1461,7 @@ button {
   filter: saturate(0.9) contrast(1.02);
 }
 
-.lb-stage-card > *:not(.lb-stage-panel-art) {
+.lb-stage-card > *:not(.lb-stage-panel-art):not(.lb-zoom-controls) {
   position: relative;
   z-index: 1;
 }
