@@ -394,6 +394,33 @@ export function LevelNavBar() {
 
   const hasNavLeaderboard = !isCustomLevel
 
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      const tagName = target.tagName
+      return target.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT'
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      if (showPicker || showCommunity || showStats || isCustomLevel) return
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+      if (isEditableTarget(e.target)) return
+
+      if (e.key === 'ArrowLeft' && levelIndex > 0) {
+        e.preventDefault()
+        loadLevel(levelIndex - 1)
+      }
+
+      if (e.key === 'ArrowRight' && levelIndex < levels.length - 1) {
+        e.preventDefault()
+        loadLevel(levelIndex + 1)
+      }
+    }
+
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [showPicker, showCommunity, showStats, isCustomLevel, levelIndex, levels.length, loadLevel])
+
   const loadMySolutionNav = async () => {
     const token = localStorage.getItem('auth_token')
     if (!token) return
