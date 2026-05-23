@@ -129,7 +129,7 @@ async function main() {
   await mongoose.connect(MONGODB_URI)
   console.log(`[import] 已连接 MongoDB: ${MONGODB_URI}`)
 
-  const CodebotLevel = mongoose.model('CodebotLevel', schema)
+  const CodebotLevel = mongoose.model('CodebotLevel', schema, 'lightbotlevels')
   const CodebotResult = mongoose.model('CodebotResult', resultSchema, 'lightbotresults')
 
   const officialLevelIds = levels.map(level => level.id)
