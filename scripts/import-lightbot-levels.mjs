@@ -133,9 +133,29 @@ async function main() {
   const CodebotResult = mongoose.model('CodebotResult', resultSchema, 'lightbotresults')
 
   const officialLevelIds = levels.map(level => level.id)
-  const removedLevels = await CodebotLevel.deleteMany({ id: { $regex: /^swf-/, $nin: officialLevelIds } })
-  const removedResults = await CodebotResult.deleteMany({ levelId: { $regex: /^swf-/, $nin: officialLevelIds } })
-  console.log(`[import] 已删除过期官方关卡: ${removedLevels.deletedCount}，过期成绩: ${removedResults.deletedCount}`)
+  const explicitlyRemovedIds = Array.from(REMOVED_LEVEL_IDS)
+  const removedNamedLevels = explicitlyRemovedIds.length > 0
+    ? await CodebotLevel.deleteMany({ id: { $in: explicitlyRemovedIds } })
+    : { deletedCount: 0 }
+  const removedNamedResults = explicitlyRemovedIds.length > 0
+    ? await CodebotResult.deleteMany({ levelId: { $in: explicitlyRemovedIds } })
+    : { deletedCount: 0 }
+  const staleOfficialLevels = await CodebotLevel.deleteMany({
+    $and: [
+      { id: { $regex: /^swf-/ } },
+      { id: { $nin: officialLevelIds } },
+    ],
+  })
+  const staleOfficialResults = await CodebotResult.deleteMany({
+    $and: [
+      { levelId: { $regex: /^swf-/ } },
+      { levelId: { $nin: officialLevelIds } },
+    ],
+  })
+  console.log(
+    `[import] 已删除指定官方关卡: ${removedNamedLevels.deletedCount}，指定成绩: ${removedNamedResults.deletedCount}；` +
+    `已删除过期官方关卡: ${staleOfficialLevels.deletedCount}，过期成绩: ${staleOfficialResults.deletedCount}`
+  )
 
   let upserted = 0
   let skipped = 0
