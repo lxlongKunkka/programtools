@@ -385,14 +385,14 @@ export function LevelNavBar() {
     return () => window.removeEventListener('message', onMessage)
   }, [])
 
-  const isCustomLevel    = level.id.startsWith('custom-')
+  const isCustomLevel    = level.chapter?.id === 'custom'
   const setProgram      = useGameStore((s) => s.setProgram)
   const resetWorld      = useGameStore((s) => s.resetWorld)
   const [solLoading, setSolLoading] = useState(false)
   const loadFromConfig  = useLevelEditorStore((s) => s.loadFromConfig)
   const resetEditor     = useLevelEditorStore((s) => s.reset)
 
-  const hasNavLeaderboard = level.chapter?.id !== 'custom' && !isCustomLevel
+  const hasNavLeaderboard = !isCustomLevel
 
   const loadMySolutionNav = async () => {
     const token = localStorage.getItem('auth_token')

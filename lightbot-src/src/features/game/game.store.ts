@@ -290,7 +290,7 @@ export const useGameStore = create<GameStore>()(
       ...cfg,
       chapter: { id: 'custom', title: '🛠 自定义关卡', order: 99 },
     }
-    const existingIdx = levels.findIndex((l) => l.id.startsWith('custom-'))
+    const existingIdx = levels.findIndex((l) => l.chapter?.id === 'custom')
     const newLevels =
       existingIdx >= 0
         ? [...levels.slice(0, existingIdx), customCfg, ...levels.slice(existingIdx + 1)]
