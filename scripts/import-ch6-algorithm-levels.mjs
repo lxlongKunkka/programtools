@@ -60,6 +60,28 @@ function setCell(grid, x, y, kind = 'path', height = 0) {
   grid[y][x] = { height, kind }
 }
 
+function setIfVoid(grid, x, y, kind = 'path', height = 0) {
+  const cell = grid[y]?.[x]
+  if (!cell || cell.kind !== 'void') return
+  grid[y][x] = { height, kind }
+}
+
+function applyHazards(grid, hazards = []) {
+  for (const hazard of hazards) {
+    setIfVoid(grid, hazard.x, hazard.y, hazard.kind, hazard.height ?? 0)
+  }
+}
+
+function cloneGrid(grid) {
+  return grid.map(row => row.map(cell => ({ ...cell })))
+}
+
+function decorateLevel(level, hazards = []) {
+  const grid = cloneGrid(level.grid)
+  applyHazards(grid, hazards)
+  return { ...level, grid }
+}
+
 function lineCoins(start, end, skip = []) {
   const values = []
   for (let x = start; x <= end; x++) {
@@ -78,6 +100,12 @@ function buildCombLevel(config) {
       setCell(grid, toothX, y, kind)
     }
   }
+  const hazards = []
+  for (const toothX of config.teeth) {
+    hazards.push({ x: toothX === 1 ? 2 : toothX - 1, y: config.spineY - 1, kind: 'obstacle' })
+    hazards.push({ x: toothX >= 6 ? toothX - 1 : toothX + 1, y: Math.max(0, config.spineY - Math.min(config.toothLength, 2)), kind: 'trap' })
+  }
+  applyHazards(grid, hazards)
   return {
     id: config.id,
     title: config.title,
@@ -108,6 +136,15 @@ function buildSnakeLevel(config) {
       for (let cy = fromY + 1; cy < toY; cy++) setCell(grid, connectorX, cy, 'path')
     }
   }
+  const hazards = []
+  for (let index = 0; index < config.rows.length; index++) {
+    const y = config.rows[index]
+    const sideY = y === 0 ? y + 1 : y - 1
+    for (const x of [2, 4, 6]) {
+      hazards.push({ x, y: sideY, kind: x === 4 ? 'trap' : 'obstacle' })
+    }
+  }
+  applyHazards(grid, hazards)
   return {
     id: config.id,
     title: config.title,
@@ -140,6 +177,14 @@ function buildCrossLevel(config) {
       setCell(grid, x, y, step === branch.length ? 'coin' : 'path')
     }
   }
+  applyHazards(grid, [
+    { x: cx - 1, y: cy - 1, kind: 'trap' },
+    { x: cx + 1, y: cy - 1, kind: 'obstacle' },
+    { x: cx - 1, y: cy + 1, kind: 'obstacle' },
+    { x: cx + 1, y: cy + 1, kind: 'trap' },
+    { x: cx - config.armLength, y: cy - 1, kind: 'obstacle' },
+    { x: cx + config.armLength, y: cy + 1, kind: 'obstacle' },
+  ])
   return {
     id: config.id,
     title: config.title,
@@ -170,6 +215,18 @@ function buildStairLevel(config) {
       setCell(grid, config.turnX, y, 'path', config.turnHeight)
     }
   }
+  const hazards = []
+  const sideY = config.y < 8 ? config.y + 1 : config.y - 1
+  for (let index = 1; index < config.heights.length; index++) {
+    hazards.push({ x: config.startX + index, y: sideY, kind: index % 2 === 0 ? 'trap' : 'obstacle' })
+  }
+  if (config.returnHeights) {
+    const returnSideY = config.returnY > 0 ? config.returnY - 1 : config.returnY + 1
+    for (let index = 0; index < config.returnHeights.length; index++) {
+      hazards.push({ x: config.returnStartX + index, y: returnSideY, kind: index % 2 === 0 ? 'obstacle' : 'trap' })
+    }
+  }
+  applyHazards(grid, hazards)
   return {
     id: config.id,
     title: config.title,
@@ -210,6 +267,17 @@ function buildRingLevel(config) {
       for (let x = Math.min(gate.x1, gate.x2); x <= Math.max(gate.x1, gate.x2); x++) setCell(grid, x, gate.y1, 'path')
     }
   }
+  applyHazards(grid, [
+    { x: config.inner.left - 1, y: config.inner.top - 1, kind: 'obstacle' },
+    { x: config.inner.right + 1, y: config.inner.top - 1, kind: 'trap' },
+    { x: config.inner.left - 1, y: config.inner.bottom + 1, kind: 'trap' },
+    { x: config.inner.right + 1, y: config.inner.bottom + 1, kind: 'obstacle' },
+    ...config.gates.map((gate, index) => ({
+      x: gate.x1 === gate.x2 ? gate.x1 + (index % 2 === 0 ? 1 : -1) : Math.floor((gate.x1 + gate.x2) / 2),
+      y: gate.x1 === gate.x2 ? Math.floor((gate.y1 + gate.y2) / 2) : gate.y1 + (index % 2 === 0 ? 1 : -1),
+      kind: index % 2 === 0 ? 'trap' : 'obstacle',
+    })),
+  ])
   return {
     id: config.id,
     title: config.title,
@@ -642,8 +710,65 @@ const ringConfigs = [
   sortOrder: 342 + index,
 }))
 
+const decoratedBaseLevels = [
+  decorateLevel(baseLevels[0], [
+    { x: 4, y: 4, kind: 'trap' },
+    { x: 3, y: 4, kind: 'obstacle' },
+    { x: 5, y: 4, kind: 'obstacle' },
+  ]),
+  decorateLevel(baseLevels[1], [
+    { x: 1, y: 4, kind: 'obstacle' },
+    { x: 3, y: 4, kind: 'trap' },
+    { x: 5, y: 4, kind: 'trap' },
+    { x: 7, y: 4, kind: 'obstacle' },
+  ]),
+  decorateLevel(baseLevels[2], [
+    { x: 2, y: 3, kind: 'trap' },
+    { x: 4, y: 3, kind: 'obstacle' },
+    { x: 5, y: 5, kind: 'trap' },
+  ]),
+  decorateLevel(baseLevels[3], [
+    { x: 2, y: 4, kind: 'obstacle' },
+    { x: 6, y: 4, kind: 'trap' },
+    { x: 5, y: 4, kind: 'obstacle' },
+  ]),
+  decorateLevel(baseLevels[4], [
+    { x: 4, y: 2, kind: 'obstacle' },
+    { x: 2, y: 3, kind: 'trap' },
+    { x: 6, y: 5, kind: 'trap' },
+  ]),
+  decorateLevel(baseLevels[5], [
+    { x: 3, y: 3, kind: 'trap' },
+    { x: 5, y: 3, kind: 'obstacle' },
+    { x: 3, y: 5, kind: 'obstacle' },
+    { x: 5, y: 5, kind: 'trap' },
+  ]),
+  decorateLevel(baseLevels[6], [
+    { x: 2, y: 1, kind: 'obstacle' },
+    { x: 4, y: 1, kind: 'trap' },
+    { x: 6, y: 1, kind: 'obstacle' },
+    { x: 4, y: 5, kind: 'trap' },
+  ]),
+  decorateLevel(baseLevels[7], [
+    { x: 2, y: 1, kind: 'trap' },
+    { x: 4, y: 3, kind: 'obstacle' },
+    { x: 6, y: 5, kind: 'trap' },
+  ]),
+  decorateLevel(baseLevels[8], [
+    { x: 3, y: 1, kind: 'obstacle' },
+    { x: 5, y: 2, kind: 'trap' },
+    { x: 6, y: 4, kind: 'obstacle' },
+  ]),
+  decorateLevel(baseLevels[9], [
+    { x: 2, y: 2, kind: 'obstacle' },
+    { x: 6, y: 2, kind: 'trap' },
+    { x: 2, y: 6, kind: 'trap' },
+    { x: 6, y: 6, kind: 'obstacle' },
+  ]),
+]
+
 const levels = [
-  ...baseLevels,
+  ...decoratedBaseLevels,
   ...combConfigs,
   ...snakeConfigs,
   ...crossConfigs,
