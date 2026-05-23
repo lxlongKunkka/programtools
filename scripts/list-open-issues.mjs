@@ -1,0 +1,11 @@
+import { MongoClient } from 'mongodb';
+const uri = 'mongodb://programtools:896b825efdb92b30989538ed3a6b167f324d4e2081adf040d91eadfd0be35b03@localhost:27017/programtools';
+const client = await MongoClient.connect(uri);
+const db = client.db('programtools');
+const issues = db.collection('quizquestionissues');
+const open = await issues.find({ status: { $in: ['pending','reviewing'] } }).sort({ createdAt: 1 }).toArray();
+console.log('Open issues count:', open.length);
+open.forEach(i => console.log(JSON.stringify({ id: String(i._id), questionUid: i.questionUid, desc: (i.description||'').slice(0,80), status: i.status, createdAt: i.createdAt })));
+const stats = await issues.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]).toArray();
+console.log('Stats:', JSON.stringify(stats));
+await client.close();
