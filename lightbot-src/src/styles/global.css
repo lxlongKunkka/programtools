@@ -663,10 +663,12 @@ button {
 /* ── Win screen ── */
 .lb-win-screen {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   padding: 16px 10px;
   background: linear-gradient(160deg, rgba(8,40,20,0.98) 0%, rgba(10,30,70,0.98) 100%);
@@ -674,6 +676,8 @@ button {
   border-radius: 12px;
   animation: lb-win-in 0.35s cubic-bezier(0.22,1,0.36,1);
 }
+/* 失败画面：内容少，恢复垂直居中 */
+.lb-fail-screen { justify-content: center; }
 /* 失败画面：覆盖通关画面的绿色调为红橙色调 */
 .lb-fail-screen {
   background: linear-gradient(160deg, rgba(50,10,10,0.98) 0%, rgba(30,10,50,0.98) 100%);
