@@ -809,6 +809,7 @@ router.get('/codebot/admin/stats', authenticateToken, async (req, res) => {
         levelId: ev.levelId || null,
         username: ev.username || null,
         totalCommands: ev.totalCommands ?? null,
+        bestCommands: ev.levelId ? (bestMap.get(ev.levelId) ?? null) : null,
         stars: (ev.totalCommands != null && ev.levelId)
           ? starsForCommands(ev.totalCommands, bestMap.get(ev.levelId) ?? ev.totalCommands)
           : null,
