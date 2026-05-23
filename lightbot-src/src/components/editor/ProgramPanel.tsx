@@ -4,7 +4,7 @@ import { useAppStore } from '../../app/app.store'
 import { useLevelEditorStore } from '../../features/leveleditor/leveleditor.store'
 import type { RootArea, BlockBlueprint, InsertTarget } from '../../features/editor/editor.helpers'
 import { conditionOptions } from '../../features/editor/editor.helpers'
-import { countProgramNodes } from '../../features/editor/editor.utils'
+
 import type { ProgramNode, ProgramDocument, ConditionNode } from '../../domain/program/ast.types'
 import { CmdBlock, TextCmdBlock, nodeToIcon } from './cmd-sprites'
 import { BLOCK_DRAG_KEY } from './BlockArea'
@@ -600,9 +600,16 @@ export function LevelNavBar() {
   )
 }
 
-export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
+export type WinData = {
+  stars: number
+  myLevelEntry: { rank: number; stars: number } | null
+  myOverallEntry: { rank: number; totalStars: number } | null
+}
+
+export function ProgramPanel({ mobileOpen = false, onMobileToggle, winData }: {
   mobileOpen?: boolean
   onMobileToggle?: () => void
+  winData?: WinData
 }) {
   const resetWorld    = useGameStore((state) => state.resetWorld)
   const runStatus     = useGameStore((state) => state.runStatus)
@@ -614,84 +621,12 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
   const program       = useGameStore((state) => state.program)
 
   const mainBlocks = program.main.length
-  const myTotalCommands = countProgramNodes(program)
 
   const world       = useGameStore((state) => state.world)
 
   const isWin   = runStatus === 'complete'
   const isFail  = !isWin && !!world.failureReason
   const hasNext = levelIndex < levels.length - 1
-  // 有排行榜的条件：非编辑器临时测试关卡（chapter.id !== 'custom'）
-  const hasLeaderboard = level.chapter?.id !== 'custom'
-
-  // 排行榜状态
-  type LeaderboardEntry = {
-    rank: number
-    userId?: number
-    username: string
-    totalCommands: number
-    executionSteps: number
-    completedAt?: string | null
-    stars: number
-    isCurrentUser?: boolean
-  }
-  type OverallLeaderboardEntry = {
-    rank: number
-    userId: number
-    username: string
-    totalStars: number
-    levelsCompleted: number
-    threeStarLevels: number
-    twoStarLevels: number
-    oneStarLevels: number
-    isCurrentUser?: boolean
-  }
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [leaderboardLoading, setLeaderboardLoading] = useState(false)
-  const [myLevelEntry, setMyLevelEntry] = useState<LeaderboardEntry | null>(null)
-  const [myOverallEntry, setMyOverallEntry] = useState<OverallLeaderboardEntry | null>(null)
-
-  // 动态星级：优先使用服务端按当前榜首重算后的本人星级
-  const stars = myLevelEntry?.stars ?? (leaderboardLoading || leaderboard.length === 0
-    ? 1
-    : myTotalCommands <= leaderboard[0].totalCommands
-      ? 3
-      : myTotalCommands <= leaderboard[0].totalCommands + 2
-        ? 2
-        : 1)
-
-  useEffect(() => {
-    if (!isWin || !hasLeaderboard) {
-      setLeaderboard([])
-      setMyLevelEntry(null)
-      setMyOverallEntry(null)
-      return
-    }
-    setLeaderboardLoading(true)
-    const token = localStorage.getItem('auth_token')
-    const headers = token ? { Authorization: `Bearer ${token}` } : undefined
-    // 延迟 600ms 等待本次成绩提交完成
-    const timer = setTimeout(() => {
-      Promise.all([
-        fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`, { headers })
-          .then((r) => r.json() as Promise<{ ok: boolean; data: LeaderboardEntry[]; myEntry?: LeaderboardEntry | null }>),
-        fetch('/api/codebot/leaderboard/overall', { headers })
-          .then((r) => r.json() as Promise<{ ok: boolean; data: OverallLeaderboardEntry[]; myEntry?: OverallLeaderboardEntry | null }>),
-      ])
-        .then(([levelJson, overallJson]) => {
-          if (levelJson.ok) {
-            setLeaderboard(levelJson.data)
-            setMyLevelEntry(levelJson.myEntry ?? null)
-          }
-          if (overallJson.ok) {
-            setMyOverallEntry(overallJson.myEntry ?? null)
-          }
-        })
-        .catch(() => {})
-        .finally(() => setLeaderboardLoading(false))
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [hasLeaderboard, isWin, level.id])
 
   return (
     <div className={`lb-program-panel${mobileOpen ? ' lb-program-panel--mobile-open' : ''}${isWin ? ' lb-program-panel--win' : ''}${isFail ? ' lb-program-panel--fail' : ''}`}>
@@ -705,17 +640,16 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
       {/* ── 过关画面 ── */}
       {isWin && (
         <div className="lb-win-screen">
-          <div className="lb-win-left">
           <div className="lb-win-confetti">🎉</div>
           <div className="lb-win-heading">第 {levelIndex + 1} 关完成！</div>
           <div className="lb-win-subheading">{level.title}</div>
           <div className="lb-win-stars">
             {Array.from({ length: 3 }, (_, i) => (
-              <span key={i} className={`lb-win-star${i < stars ? ' lb-win-star--lit' : ''}`}>★</span>
+              <span key={i} className={`lb-win-star${i < (winData?.stars ?? 1) ? ' lb-win-star--lit' : ''}`}>★</span>
             ))}
           </div>
-          {myLevelEntry && (
-            <div className="lb-win-subheading">本关排名：第 {myLevelEntry.rank} 名，获得 {myLevelEntry.stars} 星</div>
+          {winData?.myLevelEntry && (
+            <div className="lb-win-subheading">本关排名：第 {winData.myLevelEntry.rank} 名，获得 {winData.myLevelEntry.stars} 星</div>
           )}
           {winMeta?.isNewBest && winMeta.demotedCount > 0 && (
             <div className="lb-win-new-best">🔥 全服最优解！你让 {winMeta.demotedCount} 位玩家的星级下降了！</div>
@@ -723,8 +657,8 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
           {winMeta?.isNewBest && winMeta.demotedCount === 0 && (
             <div className="lb-win-new-best">🥇 你是本关第一个完成的玩家！</div>
           )}
-          {myOverallEntry && (
-            <div className="lb-win-subheading">总排行：第 {myOverallEntry.rank} 名，累计 {myOverallEntry.totalStars} 星</div>
+          {winData?.myOverallEntry && (
+            <div className="lb-win-subheading">总排行：第 {winData.myOverallEntry.rank} 名，累计 {winData.myOverallEntry.totalStars} 星</div>
           )}
           <div className="lb-win-qr">
             <img src={WECHAT_QR_SRC} alt={WECHAT_QR_LABEL} className="lb-win-qr-img" />
@@ -737,52 +671,12 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               : <span className="lb-win-all-done">🏆 全部完成！</span>
             }
           </div>
-          </div>{/* lb-win-left */}
-          {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
-          {hasLeaderboard && (
-            <div className="lb-win-right lb-leaderboard">
-              <div className="lb-leaderboard-title">🏆 本关排行榜</div>
-              {leaderboardLoading ? (
-                <div className="lb-leaderboard-loading">加载中…</div>
-              ) : leaderboard.length === 0 ? (
-                <div className="lb-leaderboard-empty">暂无记录，你是第一个！</div>
-              ) : (
-                <table className="lb-leaderboard-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>玩家</th>
-                      <th title="主程序+子程序积木总数">积木</th>
-                      <th title="机器人执行步数">步数</th>
-                      <th title="星级评定">★</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      return leaderboard.map((entry) => (
-                        <tr key={entry.rank} className={`${entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}${entry.isCurrentUser ? ' lb-leaderboard-row--me' : ''}`}>
-                          <td className="lb-leaderboard-rank">
-                            {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
-                          </td>
-                          <td className="lb-leaderboard-user">{entry.username}{entry.isCurrentUser ? '（我）' : ''}</td>
-                          <td>{entry.totalCommands}</td>
-                          <td>{entry.executionSteps}</td>
-                          <td className="lb-leaderboard-stars">{'★'.repeat(entry.stars)}{'☆'.repeat(3 - entry.stars)}</td>
-                        </tr>
-                      ))
-                    })()}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
         </div>
       )}
 
       {/* ── 失败画面 ── */}
       {isFail && (
         <div className="lb-win-screen lb-fail-screen">
-          <div className="lb-win-left">
           <div className="lb-win-confetti">😓</div>
           <div className="lb-win-heading">挑战失败</div>
           <div className="lb-win-subheading">{world.failureReason}</div>
@@ -793,7 +687,6 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
           <div className="lb-win-actions">
             <button className="lb-win-next-btn" onClick={resetWorld}>↺ 再试一次</button>
           </div>
-          </div>{/* lb-win-left */}
         </div>
       )}
 

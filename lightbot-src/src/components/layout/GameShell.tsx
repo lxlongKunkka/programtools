@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { GameScene } from '../../features/renderer/scene/GameScene'
 import { BlockArea } from '../editor/BlockArea'
-import { ProgramPanel, LevelNavBar } from '../editor/ProgramPanel'
+import { ProgramPanel, LevelNavBar, type WinData } from '../editor/ProgramPanel'
+import { countProgramNodes } from '../../features/editor/editor.utils'
 import { CodeView } from '../editor/CodeView'
 import { FloatingEffects } from './FloatingEffects'
 import { useGameStore } from '../../features/game/game.store'
@@ -36,6 +37,11 @@ function fmtDate(iso?: string | null) {
 export function GameShell() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const level = useGameStore((s) => s.level)
+  const runStatus = useGameStore((s) => s.runStatus)
+  const program = useGameStore((s) => s.program)
+  const isWin = runStatus === 'complete'
+  const hasLeaderboard = level.chapter?.id !== 'custom'
+  const myTotalCommands = countProgramNodes(program)
 
   const [lbOpen, setLbOpen]       = useState(false)
   const [lbData, setLbData]       = useState<LevelLbEntry[]>([])
@@ -80,6 +86,52 @@ export function GameShell() {
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [level.id])
+
+  const [winLeaderboard, setWinLeaderboard] = useState<LevelLbEntry[]>([])
+  const [winLbLoading, setWinLbLoading] = useState(false)
+  const [winMyLevelEntry, setWinMyLevelEntry] = useState<LevelLbEntry | null>(null)
+  const [winMyOverallEntry, setWinMyOverallEntry] = useState<OverallLbEntry | null>(null)
+
+  const winStars = winMyLevelEntry?.stars ?? (winLbLoading || winLeaderboard.length === 0
+    ? 1
+    : myTotalCommands <= winLeaderboard[0].totalCommands
+      ? 3
+      : myTotalCommands <= winLeaderboard[0].totalCommands + 2
+        ? 2
+        : 1)
+
+  useEffect(() => {
+    if (!isWin || !hasLeaderboard) {
+      setWinLeaderboard([])
+      setWinMyLevelEntry(null)
+      setWinMyOverallEntry(null)
+      return
+    }
+    setWinLbLoading(true)
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+    const timer = setTimeout(() => {
+      Promise.all([
+        fetch(`/api/codebot/levels/${encodeURIComponent(level.id)}/leaderboard`, { headers })
+          .then((r) => r.json() as Promise<{ ok: boolean; data: LevelLbEntry[]; myEntry?: LevelLbEntry | null }>),
+        fetch('/api/codebot/leaderboard/overall', { headers })
+          .then((r) => r.json() as Promise<{ ok: boolean; data: OverallLbEntry[]; myEntry?: OverallLbEntry | null }>),
+      ])
+        .then(([levelJson, overallJson]) => {
+          if (levelJson.ok) { setWinLeaderboard(levelJson.data); setWinMyLevelEntry(levelJson.myEntry ?? null) }
+          if (overallJson.ok) { setWinMyOverallEntry(overallJson.myEntry ?? null) }
+        })
+        .catch(() => {})
+        .finally(() => setWinLbLoading(false))
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [isWin, hasLeaderboard, level.id])
+
+  const winData: WinData = {
+    stars: winStars,
+    myLevelEntry: winMyLevelEntry,
+    myOverallEntry: winMyOverallEntry,
+  }
 
   return (
     <main className="lb-shell lb-shell--game">
@@ -186,7 +238,7 @@ export function GameShell() {
         </div>
       )}
 
-      <ProgramPanel mobileOpen={mobilePanelOpen} onMobileToggle={() => setMobilePanelOpen(v => !v)} />
+      <ProgramPanel mobileOpen={mobilePanelOpen} onMobileToggle={() => setMobilePanelOpen(v => !v)} winData={winData} />
       <div className="lb-level-nav-bar">
         <LevelNavBar />
       </div>
@@ -194,15 +246,53 @@ export function GameShell() {
         <GameScene />
       </div>
       <div className="lb-code-sidebar">
-        <CodeView />
-        <a href={TIKU_URL} target="_blank" rel="noopener noreferrer" className="lb-tiku-banner">
-          <span className="lb-tiku-banner-icon">📚</span>
-          <span className="lb-tiku-banner-body">
-            <span className="lb-tiku-banner-title">去学习网站练习</span>
-            <span className="lb-tiku-banner-sub">ai.acjudge.com</span>
-          </span>
-          <span className="lb-tiku-banner-arrow">›</span>
-        </a>
+        {isWin && hasLeaderboard ? (
+          <div className="lb-win-sidebar">
+            <div className="lb-leaderboard-title">🏆 本关排行榜</div>
+            {winLbLoading ? (
+              <div className="lb-leaderboard-loading">加载中…</div>
+            ) : winLeaderboard.length === 0 ? (
+              <div className="lb-leaderboard-empty">暂无记录，你是第一个！</div>
+            ) : (
+              <table className="lb-leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>玩家</th>
+                    <th title="积木总数">积木</th>
+                    <th title="执行步数">步数</th>
+                    <th title="星级">★</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {winLeaderboard.map((entry) => (
+                    <tr key={entry.rank} className={`${entry.rank <= 3 ? 'lb-leaderboard-top3' : ''}${entry.isCurrentUser ? ' lb-leaderboard-row--me' : ''}`}>
+                      <td className="lb-leaderboard-rank">
+                        {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
+                      </td>
+                      <td className="lb-leaderboard-user">{entry.username}{entry.isCurrentUser ? '（我）' : ''}</td>
+                      <td>{entry.totalCommands}</td>
+                      <td>{entry.executionSteps}</td>
+                      <td className="lb-leaderboard-stars">{'\u2605'.repeat(entry.stars)}{'☆'.repeat(3 - entry.stars)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
+          <>
+            <CodeView />
+            <a href={TIKU_URL} target="_blank" rel="noopener noreferrer" className="lb-tiku-banner">
+              <span className="lb-tiku-banner-icon">📚</span>
+              <span className="lb-tiku-banner-body">
+                <span className="lb-tiku-banner-title">去学习网站练习</span>
+                <span className="lb-tiku-banner-sub">ai.acjudge.com</span>
+              </span>
+              <span className="lb-tiku-banner-arrow">›</span>
+            </a>
+          </>
+        )}
       </div>
       <BlockArea />
     </main>

@@ -668,7 +668,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
   padding: 16px 10px;
   background: linear-gradient(160deg, rgba(8,40,20,0.98) 0%, rgba(10,30,70,0.98) 100%);
@@ -700,9 +700,6 @@ button {
   from { transform: scale(0.88); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
-/* 通关/失败画面左右布局包裹：手机端 display:contents 让子元素直通父容器 */
-.lb-win-left { display: contents; }
-.lb-win-right { display: contents; }
 .lb-win-confetti { font-size: 2rem; animation: lb-bounce 0.6s ease-out; }
 @keyframes lb-bounce {
   0%,100% { transform: translateY(0); }
@@ -860,42 +857,23 @@ button {
   font-size: 0.96rem;
 }
 
-/* 桌面端（>900px）过关画面双栏布局 */
-@media (min-width: 901px) {
-  /* 通关画面：左侧祝贺+操作，右侧排行榜 */
-  .lb-win-screen:not(.lb-fail-screen) {
-    flex-direction: row;
-    align-items: stretch;
-    overflow-y: hidden;
-    gap: 14px;
-    padding: 14px;
-  }
-  /* 左侧：弹性撑满，内容垂直居中，超出可滚动 */
-  .lb-win-left {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    overflow-y: auto;
-  }
-  /* 右侧排行榜：固定宽，覆盖 .lb-leaderboard 的尺寸限制 */
-  .lb-win-right {
-    width: 280px;
-    min-width: 200px;
-    max-width: none;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    margin: 0;
-    padding: 12px 14px;
-  }
-}
 
+.lb-win-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 12px 14px;
+}
+.lb-win-sidebar .lb-leaderboard-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #7ecfa0;
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
 
 .lb-hex-btn {
   background: none;
