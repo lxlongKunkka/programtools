@@ -1,6 +1,6 @@
 /**
  * scripts/import-ch6-algorithm-levels.mjs
- * 导入「算法思维」第6章的10个手工设计关卡
+ * 导入「算法思维」第5章的50个手工设计关卡
  *
  * 用法：node scripts/import-ch6-algorithm-levels.mjs
  */
@@ -48,7 +48,8 @@ function row(str) {
 }
 
 const VOID_ROW = row('V V V V V V V V V')
-const CHAPTER = { id: 'custom-ch6', title: '算法思维', order: 6 }
+const CHAPTER = { id: 'custom-ch5', title: '算法思维', order: 14 }
+const OFFICIAL_LEVEL_COUNT = 51
 
 function makeVoidGrid() {
   return Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => ({ height: 0, kind: 'void' })))
@@ -648,12 +649,23 @@ const levels = [
   ...crossConfigs,
   ...stairConfigs,
   ...ringConfigs,
-]
+].map((level, index) => ({
+  ...level,
+  id: `custom-ch5-${String(index + 1).padStart(3, '0')}`,
+  title: level.title.replace(/^第6-/, '第5-'),
+  chapter: CHAPTER,
+  sortOrder: OFFICIAL_LEVEL_COUNT + index,
+}))
 
 async function main() {
   console.log(`[import-ch6] 连接数据库 ${MONGODB_URI.replace(/\/\/[^@]+@/, '//<creds>@')} …`)
   await mongoose.connect(MONGODB_URI)
   const CodebotLevel = mongoose.model('CodebotLevel', schema, 'lightbotlevels')
+
+  const deleteResult = await CodebotLevel.deleteMany({
+    id: { $regex: /^custom-ch(5|6)-/ },
+  })
+  console.log(`[import-ch6] 已删除旧自定义关卡: ${deleteResult.deletedCount}`)
 
   let upserted = 0
   let skipped = 0
