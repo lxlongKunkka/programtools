@@ -705,6 +705,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
       {/* ── 过关画面 ── */}
       {isWin && (
         <div className="lb-win-screen">
+          <div className="lb-win-left">
           <div className="lb-win-confetti">🎉</div>
           <div className="lb-win-heading">第 {levelIndex + 1} 关完成！</div>
           <div className="lb-win-subheading">{level.title}</div>
@@ -735,11 +736,11 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
               ? <button className="lb-win-next-btn" onClick={() => loadLevel(levelIndex + 1)}>下一关 ▶</button>
               : <span className="lb-win-all-done">🏆 全部完成！</span>
             }
-
           </div>
+          </div>{/* lb-win-left */}
           {/* 排行榜（官方关卡 + 用户发布关卡，排除编辑器临时测试） */}
           {hasLeaderboard && (
-            <div className="lb-leaderboard">
+            <div className="lb-win-right lb-leaderboard">
               <div className="lb-leaderboard-title">🏆 本关排行榜</div>
               {leaderboardLoading ? (
                 <div className="lb-leaderboard-loading">加载中…</div>
@@ -781,6 +782,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
       {/* ── 失败画面 ── */}
       {isFail && (
         <div className="lb-win-screen lb-fail-screen">
+          <div className="lb-win-left">
           <div className="lb-win-confetti">😓</div>
           <div className="lb-win-heading">挑战失败</div>
           <div className="lb-win-subheading">{world.failureReason}</div>
@@ -791,6 +793,7 @@ export function ProgramPanel({ mobileOpen = false, onMobileToggle }: {
           <div className="lb-win-actions">
             <button className="lb-win-next-btn" onClick={resetWorld}>↺ 再试一次</button>
           </div>
+          </div>{/* lb-win-left */}
         </div>
       )}
 

@@ -700,6 +700,9 @@ button {
   from { transform: scale(0.88); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
+/* 通关/失败画面左右布局包裹：手机端 display:contents 让子元素直通父容器 */
+.lb-win-left { display: contents; }
+.lb-win-right { display: contents; }
 .lb-win-confetti { font-size: 2rem; animation: lb-bounce 0.6s ease-out; }
 @keyframes lb-bounce {
   0%,100% { transform: translateY(0); }
@@ -855,6 +858,42 @@ button {
   letter-spacing: 1px;
   white-space: nowrap;
   font-size: 0.96rem;
+}
+
+/* 桌面端（>900px）过关画面双栏布局 */
+@media (min-width: 901px) {
+  /* 通关画面：左侧祝贺+操作，右侧排行榜 */
+  .lb-win-screen:not(.lb-fail-screen) {
+    flex-direction: row;
+    align-items: stretch;
+    overflow-y: hidden;
+    gap: 14px;
+    padding: 14px;
+  }
+  /* 左侧：弹性撑满，内容垂直居中，超出可滚动 */
+  .lb-win-left {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    overflow-y: auto;
+  }
+  /* 右侧排行榜：固定宽，覆盖 .lb-leaderboard 的尺寸限制 */
+  .lb-win-right {
+    width: 280px;
+    min-width: 200px;
+    max-width: none;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    margin: 0;
+    padding: 12px 14px;
+  }
 }
 
 
