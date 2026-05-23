@@ -1554,10 +1554,11 @@ export default {
       const groupObj = this.groups.find(g => g.name === groupName)
       const language = groupObj ? (groupObj.language || 'C++') : 'C++'
 
-      const chapterContent = this.editingChapter.content
+      // Only inject lesson plan (markdown) as reference; skip if chapter already has an HTML PPT
+      const chapterContent = (this.editingChapter.contentType !== 'html') ? (this.editingChapter.content || '') : ''
       const requirements = this.aiRequirements
 
-      console.log('[generatePPT] chapterContent length:', chapterContent ? chapterContent.length : 0)
+      console.log('[generatePPT] contentType:', this.editingChapter.contentType, '| chapterContent length:', chapterContent ? chapterContent.length : 0)
       console.log('[generatePPT] chapterContent preview:', chapterContent ? chapterContent.slice(0, 200) : '(empty)')
       let chapterList = []
       let currentChapterIndex = -1
@@ -2051,14 +2052,14 @@ export default {
             this.aiLoadingMap[chapterId] = true
             this.aiStatusMap[chapterId] = '正在后台生成 PPT...'
             
-            // 始终从服务端拉取最新内容
+            // 始终从服务端拉取最新内容，但只在是教案(markdown)时才传入，避免旧 PPT HTML 被当作教案参考
             let chapterContent = ''
             try {
                 const res = await request(`/api/course/chapter/${chapterId}`)
-                if (res && res.content) chapterContent = res.content
+                if (res && res.content && res.contentType !== 'html') chapterContent = res.content
             } catch (e) { console.warn('Failed to fetch chapter content', e) }
             
-            console.log(`[batchGeneratePPTs] chapter "${chapterTitle}" content length:`, chapterContent.length)
+            console.log(`[batchGeneratePPTs] chapter "${chapterTitle}" contentType from server, lesson plan length:`, chapterContent.length)
             
             await request('/api/generate-ppt/background', {
               method: 'POST',
