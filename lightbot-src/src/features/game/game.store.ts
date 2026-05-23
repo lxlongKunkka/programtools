@@ -365,13 +365,13 @@ export const useGameStore = create<GameStore>()(
         } : {}),
       })
       if (event.type === 'complete') {
-        trackEvent('level_complete', { levelId: current.level.id })
+        const totalCommands = countProgramNodes(current.program)
+        trackEvent('level_complete', { levelId: current.level.id, totalCommands })
         // 提交排行榜成绩（非临时测试关卡，即 chapter.id !== 'custom'；需登录）
         if (current.level.chapter?.id !== 'custom') {
           const token = localStorage.getItem('auth_token')
           if (token) {
             const prog = current.program
-            const totalCommands = countProgramNodes(prog)
             const executionSteps = result.events.filter(
               (e) => e.type === 'move' || e.type === 'turn' || e.type === 'jump' || e.type === 'pickup'
             ).length

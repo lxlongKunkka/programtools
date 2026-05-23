@@ -14,7 +14,7 @@ function fmtCst(value: number | string | null | undefined): string {
 
 interface DailyRow { day: string; game_start: number; level_complete: number; unique_ips: number }
 interface RecentResult { username: string; levelId: string; totalCommands: number; executionSteps: number; completedAt: string | null }
-interface RecentEvent { t: number | null; ip: string | null; levelId: string | null; username: string | null }
+interface RecentEvent { t: number | null; ip: string | null; levelId: string | null; username: string | null; totalCommands: number | null; stars: number | null }
 
 interface StatsData {
   total_events: number
@@ -119,7 +119,7 @@ export function AdminStatsPanel({ onClose }: { onClose: () => void }) {
 
           {data && tab === 'events' && (
             <table className="lb-stats-table">
-              <thead><tr><th>时间</th><th>IP</th><th>用户</th><th>关卡</th></tr></thead>
+              <thead><tr><th>时间</th><th>IP</th><th>用户</th><th>关卡</th><th>积木</th><th>星级</th></tr></thead>
               <tbody>
                 {data.recent_events.map((ev, i) => (
                   <tr key={i}>
@@ -127,6 +127,8 @@ export function AdminStatsPanel({ onClose }: { onClose: () => void }) {
                     <td>{ev.ip ?? '—'}</td>
                     <td>{ev.username ?? '—'}</td>
                     <td>{ev.levelId ?? '—'}</td>
+                    <td>{ev.totalCommands ?? '—'}</td>
+                    <td>{ev.stars != null ? '★'.repeat(ev.stars) + '☆'.repeat(3 - ev.stars) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

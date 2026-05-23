@@ -793,6 +793,12 @@ router.get('/codebot/admin/stats', authenticateToken, async (req, res) => {
       .lean()
 
     // 最近 50 条通关事件（来自 NDJSON，含匿名用户）
+    // 为计算星级，需要每个关卡的最佳积木数
+    const bestPerLevel = await CodebotResult.aggregate([
+      { $group: { _id: '$levelId', best: { $min: '$totalCommands' } } }
+    ])
+    const bestMap = new Map(bestPerLevel.map(b => [b._id, b.best]))
+
     const recentEvents = events
       .filter(ev => ev.event === 'level_complete')
       .sort((a, b) => (b.t || 0) - (a.t || 0))
@@ -802,6 +808,10 @@ router.get('/codebot/admin/stats', authenticateToken, async (req, res) => {
         ip: ev.ip ? ev.ip.replace(/(\d+\.\d+)\.\d+\.\d+/, '$1.*.*') : null,
         levelId: ev.levelId || null,
         username: ev.username || null,
+        totalCommands: ev.totalCommands ?? null,
+        stars: (ev.totalCommands != null && ev.levelId)
+          ? starsForCommands(ev.totalCommands, bestMap.get(ev.levelId) ?? ev.totalCommands)
+          : null,
       }))
 
     res.json({
