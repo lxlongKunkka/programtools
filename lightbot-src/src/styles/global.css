@@ -637,6 +637,7 @@ button {
   flex-shrink: 0;
 }
 .lb-level-card-title { flex: 1; font-size: 0.82rem; color: #c8d8f0; }
+.lb-level-card-author { font-size: 0.72rem; color: #7a9abf; opacity: 0.85; }
 .lb-level-card-stars { font-size: 0.75rem; }
 .lb-level-picker-chapter { display: flex; flex-direction: column; gap: 4px; }
 .lb-level-picker-chapter-title {

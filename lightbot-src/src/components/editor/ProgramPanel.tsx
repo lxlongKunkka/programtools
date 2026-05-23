@@ -582,7 +582,10 @@ export function LevelNavBar() {
                       onClick={() => { loadLevel(i); setShowPicker(false) }}
                     >
                       <span className="lb-level-card-badge">{done ? '✓' : i + 1}</span>
-                      <span className="lb-level-card-title">{l.title}</span>
+                      <span className="lb-level-card-title">
+                        {l.title}
+                        {l._author && <span className="lb-level-card-author"> · {l._author}</span>}
+                      </span>
                       {done && <span className="lb-level-card-stars">{'⭐'.repeat(starCount ?? 3)}</span>}
                     </button>
                   )

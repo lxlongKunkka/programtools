@@ -16,6 +16,7 @@ export type TileConfig = {
 export type LevelConfig = {
   id: string
   title: string
+  _author?: string   // 社区关卡作者（后端注入）
   chapter?: {
     id: string
     title: string
