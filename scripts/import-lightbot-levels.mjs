@@ -1,6 +1,6 @@
 /**
  * scripts/import-lightbot-levels.mjs
- * 一次性脚本：将 lightbot 源码中的 51 个官方关卡 JSON 导入 MongoDB programtools 数据库
+ * 一次性脚本：将 lightbot 源码中的 50 个官方关卡 JSON 导入 MongoDB programtools 数据库
  *
  * 用法：
  *   node scripts/import-lightbot-levels.mjs
@@ -17,6 +17,7 @@ import { resolve, join } from 'path'
 
 const LIGHTBOT_SRC = process.env.LIGHTBOT_SRC || 'D:/webapp/lightbot/src/content/levels'
 const MONGODB_URI = process.env.APP_MONGODB_URI || 'mongodb://localhost:27017/programtools'
+const REMOVED_LEVEL_IDS = new Set(['swf-02-001'])
 
 // ── Schema（与 server/models/CodebotLevel.js 保持一致）────────────────────
 
@@ -48,6 +49,19 @@ const schema = new mongoose.Schema(
     },
     hints:     [String],
     sortOrder: { type: Number, default: 0 },
+  },
+  { _id: true },
+)
+
+const resultSchema = new mongoose.Schema(
+  {
+    userId: Number,
+    username: String,
+    levelId: String,
+    totalCommands: Number,
+    executionSteps: Number,
+    solution: mongoose.Schema.Types.Mixed,
+    completedAt: Date,
   },
   { _id: true },
 )
@@ -87,7 +101,7 @@ async function main() {
   files.sort((a, b) => a.file.localeCompare(b.file))
 
   // 提取有效关卡（必须有 id, title, grid, robot）
-  const levels = files
+  const rawLevels = files
     .map(({ file, data }) => {
       if (!data.id || !data.title || !data.grid || !data.robot) {
         console.warn(`  [skip] ${file} — 缺少必要字段 (id/title/grid/robot)`)
@@ -97,6 +111,18 @@ async function main() {
     })
     .filter(Boolean)
 
+  const levels = rawLevels
+    .filter(level => !REMOVED_LEVEL_IDS.has(level.id))
+    .map(level => ({ ...level }))
+
+  let chapter2Index = 0
+  for (const level of levels) {
+    if (level.chapter?.id === 'swf-ch2') {
+      chapter2Index += 1
+      level.title = `第2-${chapter2Index}关`
+    }
+  }
+
   console.log(`[import] 有效关卡: ${levels.length} 个`)
 
   // 连接 MongoDB
@@ -104,6 +130,12 @@ async function main() {
   console.log(`[import] 已连接 MongoDB: ${MONGODB_URI}`)
 
   const CodebotLevel = mongoose.model('CodebotLevel', schema)
+  const CodebotResult = mongoose.model('CodebotResult', resultSchema, 'lightbotresults')
+
+  const officialLevelIds = levels.map(level => level.id)
+  const removedLevels = await CodebotLevel.deleteMany({ id: { $regex: /^swf-/, $nin: officialLevelIds } })
+  const removedResults = await CodebotResult.deleteMany({ levelId: { $regex: /^swf-/, $nin: officialLevelIds } })
+  console.log(`[import] 已删除过期官方关卡: ${removedLevels.deletedCount}，过期成绩: ${removedResults.deletedCount}`)
 
   let upserted = 0
   let skipped = 0

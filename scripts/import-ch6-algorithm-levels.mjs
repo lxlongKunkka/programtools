@@ -49,7 +49,7 @@ function row(str) {
 
 const VOID_ROW = row('V V V V V V V V V')
 const CHAPTER = { id: 'custom-ch5', title: '算法思维', order: 14 }
-const OFFICIAL_LEVEL_COUNT = 51
+const OFFICIAL_LEVEL_COUNT = 50
 
 function makeVoidGrid() {
   return Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => ({ height: 0, kind: 'void' })))
