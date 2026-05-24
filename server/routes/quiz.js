@@ -141,6 +141,8 @@ function normalizeSubmittedAnswer(answer, type) {
   if (type === 'judge') {
     const normalized = text.toLowerCase()
     if (normalized === 'true' || normalized === 'false') return normalized
+    if (normalized === 'a') return 'true'
+    if (normalized === 'b') return 'false'
     return text.toUpperCase()
   }
   return text.toUpperCase()
