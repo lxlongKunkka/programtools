@@ -258,9 +258,11 @@ export default {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user_info')
       this.username = ''
+      this.isAdmin = false
       this.showLogoutDialog = false
       this.panelOpen = false
       this.levels = []
+      this.showShareNotice('已退出登录')
     },
 
     confirmDeleteLevel(level) {
