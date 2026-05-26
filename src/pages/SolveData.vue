@@ -1100,7 +1100,7 @@ export default {
       this.serverPureCode = task.serverPureCode || ''
       this.problemMeta = task.problemMeta || null
       this.reportHtml = task.reportHtml || ''
-    },
+      this.cpretResults = null
     
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
