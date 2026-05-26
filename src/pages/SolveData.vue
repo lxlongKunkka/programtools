@@ -341,8 +341,17 @@
         <span>🗂️ NFLSOJ 比赛列表（第 {{ nflsojModalPage }} / {{ nflsojModalTotalPages }} 页）</span>
         <button class="btn-ghost btn-sm" @click="showNflsojModal = false">✕</button>
       </div>
+      <div class="nflsoj-search-bar">
+        <input
+          v-model="nflsojFilterKeyword"
+          class="nflsoj-search-input"
+          placeholder="🔍 按比赛名称或编号筛选..."
+          @keydown.esc="nflsojFilterKeyword = ''"
+        />
+        <span v-if="nflsojFilterKeyword" class="nflsoj-filter-count">{{ nflsojFilteredContests.length }} / {{ nflsojModalContests.length }}</span>
+      </div>
       <div class="nflsoj-modal-toolbar">
-        <button class="btn-secondary btn-sm" @click="nflsojSelectAll">全选本页</button>
+        <button class="btn-secondary btn-sm" @click="nflsojSelectAll">全选当前结果</button>
         <button class="btn-ghost btn-sm" @click="nflsojClearSelected">清除选择</button>
         <span class="flex-spacer"></span>
         <button class="btn-ghost btn-sm" :disabled="nflsojModalPage <= 1 || isLoadingNflsojList" @click="loadNflsojContestPage(nflsojModalPage - 1)">◀ 上一页</button>
@@ -351,12 +360,12 @@
       <div class="nflsoj-contest-list">
         <div v-if="isLoadingNflsojList" class="nflsoj-loading">⏳ 加载中...</div>
         <template v-else>
-          <label v-for="c in nflsojModalContests" :key="c.id" class="nflsoj-contest-row">
+          <label v-for="c in nflsojFilteredContests" :key="c.id" class="nflsoj-contest-row">
             <input type="checkbox" :checked="!!nflsojModalSelected[c.id]" @change="nflsojToggle(c.id, $event.target.checked)" />
             <span class="nflsoj-contest-id">#{{ c.id }}</span>
             <span class="nflsoj-contest-title">{{ c.title }}</span>
           </label>
-          <div v-if="!nflsojModalContests.length" class="nflsoj-loading">暂无比赛</div>
+          <div v-if="!nflsojFilteredContests.length" class="nflsoj-loading">{{ nflsojFilterKeyword ? '没有匹配的比赛' : '暂无比赛' }}</div>
         </template>
       </div>
       <div class="nflsoj-modal-footer">
@@ -454,6 +463,7 @@ export default {
       isLoadingNflsojList: false,
       isImportingNflsoj: false,
       nflsojImportStatus: '',
+      nflsojFilterKeyword: '',
       
       // 进度条状态
       showStepIndicators: false,
@@ -628,6 +638,13 @@ export default {
     },
     nflsojModalHasMore() {
       return this.nflsojModalPage < this.nflsojModalTotalPages
+    },
+    nflsojFilteredContests() {
+      const kw = this.nflsojFilterKeyword.trim().toLowerCase()
+      if (!kw) return this.nflsojModalContests
+      return this.nflsojModalContests.filter(c =>
+        c.title.toLowerCase().includes(kw) || c.id.includes(kw)
+      )
     }
   },
   methods: {
@@ -1828,7 +1845,7 @@ export default {
 
     nflsojSelectAll() {
       const sel = { ...this.nflsojModalSelected }
-      this.nflsojModalContests.forEach(c => { sel[c.id] = true })
+      this.nflsojFilteredContests.forEach(c => { sel[c.id] = true })
       this.nflsojModalSelected = sel
     },
 
@@ -3342,4 +3359,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 .nflsoj-selected-count { font-size: 12px; color: #6b7280; flex: 1; }
 .nflsoj-import-status { font-size: 12px; color: #4f46e5; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nflsoj-search-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+.nflsoj-search-input { flex: 1; padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; outline: none; }
+.nflsoj-search-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.12); }
+.nflsoj-filter-count { font-size: 12px; color: #6b7280; white-space: nowrap; }
 </style>
