@@ -1101,8 +1101,7 @@ export default {
       this.problemMeta = task.problemMeta || null
       this.reportHtml = task.reportHtml || ''
       this.cpretResults = null
-    
-    updateCurrentTask(field, value) {
+    },
       if (this.tasks[this.currentTaskIndex]) {
         const normalizedValue = field === 'manualCode' ? stripFreopenStatements(value) : value
         // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
