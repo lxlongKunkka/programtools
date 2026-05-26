@@ -1100,7 +1100,7 @@ export default {
       this.serverPureCode = task.serverPureCode || ''
       this.problemMeta = task.problemMeta || null
       this.reportHtml = task.reportHtml || ''
-      this.cpretResults = null
+      this.cpretResults = task.cpretResults ?? null
     },
 
     updateCurrentTask(field, value) {
@@ -1687,6 +1687,7 @@ export default {
         const q = this.problemText.slice(0, 2000)
         const data = await request(`/api/atcoder/cpret?q=${encodeURIComponent(q)}`)
         this.cpretResults = data.results || []
+        this.updateCurrentTask('cpretResults', this.cpretResults)
       } catch (e) {
         this.showToastMessage(`检索失败: ${e.message || e}`)
         this.cpretResults = []

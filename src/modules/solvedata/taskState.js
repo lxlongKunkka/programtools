@@ -25,6 +25,7 @@ export function createEmptyTask(overrides = {}) {
     additionalFile: null,
     problemMeta: null,
     reportHtml: '',
+    cpretResults: null,
     ...overrides,
   }
 }
