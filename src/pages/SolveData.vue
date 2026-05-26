@@ -629,6 +629,7 @@ export default {
     nflsojModalHasMore() {
       return this.nflsojModalPage < this.nflsojModalTotalPages
     }
+  },
   methods: {
     createTaskId() {
       return createTaskId()
