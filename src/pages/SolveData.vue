@@ -88,6 +88,9 @@
       <button class="btn-secondary btn-sm" @click="downloadPendingRawMaterials" :disabled="isBatchRunning || !hasPendingRawMaterialTasks">
         📥 下载未生成素材
       </button>
+      <button class="btn-secondary btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning || isBatchCpretSearching">
+        {{ isBatchCpretSearching ? '⏳ 检索中...' : '🔍 一键检索所有原题' }}
+      </button>
     </div>
   </div>
 
@@ -398,6 +401,7 @@ export default {
       // 批量模式相关数据
       isBatchMode: true,
       isBatchRunning: false,
+      isBatchCpretSearching: false,
       batchMode: 'code_data', // code_data, code_data_report, report_only
       showBatchImport: false,
       batchImportText: '',
@@ -1701,6 +1705,26 @@ export default {
       if (!url) return
       const line = `\n原题链接：[${r.title}](${url})（${r.source}）`
       this.problemText = (this.problemText || '').trimEnd() + line
+    },
+
+    async batchSearchAllCpret() {
+      if (this.isBatchCpretSearching) return
+      const targets = this.tasks
+        .map((t, i) => ({ t, i }))
+        .filter(({ t }) => t.problemText?.trim())
+      if (!targets.length) {
+        this.showToastMessage('没有可检索的任务')
+        return
+      }
+      this.isBatchCpretSearching = true
+      let done = 0
+      for (const { i } of targets) {
+        await this._fetchCpretResults(i)
+        done++
+        this.showToastMessage(`检索原题：${done} / ${targets.length}`)
+      }
+      this.isBatchCpretSearching = false
+      this.showToastMessage(`全部检索完成，共 ${targets.length} 个任务`)
     },
 
     // 内部方法：后台检索原题，不影响 UI 的 isCpretSearching 状态
