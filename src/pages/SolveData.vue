@@ -1860,6 +1860,8 @@ export default {
       this.nflsojImportStatus = ''
       this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
     },
+
+    async generateCode() {
       if (!this.problemText.trim()) {
         this.showToastMessage('请先输入题目描述')
         return
