@@ -1922,9 +1922,9 @@ export default {
         // 等待 CPRet 检索完成（通常与翻译同步进行，已基本结束）
         await cpretPromise
 
-        // 如果已有 CPRet 检索结果，将原题链接附加到翻译末尾，并更新 problemMeta.sourceUrl
+        // 如果已有 CPRet 检索结果且相似度 ≥ 85%，将原题链接附加到翻译末尾，并更新 problemMeta.sourceUrl
         const topCpretResult = this.tasks[targetIndex]?.cpretResults?.[0]
-        if (topCpretResult?.url) {
+        if (topCpretResult?.url && (topCpretResult.score ?? 0) >= 0.85) {
           const currentTranslation = this.tasks[targetIndex]?.translationText || ''
           if (currentTranslation && !currentTranslation.includes(topCpretResult.url)) {
             const scoreLabel = topCpretResult.score ? `，相似度 ${(topCpretResult.score * 100).toFixed(0)}%` : ''
