@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { PORT, YUN_API_KEY, DEBUG_LOG, ALLOWED_ORIGINS, TRUST_PROXY } from './config.js'
+import { PORT, YUN_API_KEY, YUN_API_KEY_CLAUDE, DEBUG_LOG, ALLOWED_ORIGINS, TRUST_PROXY } from './config.js'
 import { requestLogger, debugLog } from './utils/logger.js'
 import { createServer } from 'http'
 import { setupSocket } from './socket/index.js'
@@ -27,6 +27,8 @@ import { startDailyReportJob } from './cron/dailyReport.js'
 
 if (YUN_API_KEY) debugLog('YUN_API_KEY loaded: [REDACTED]')
 else debugLog('YUN_API_KEY not found in server/.env')
+if (YUN_API_KEY_CLAUDE) debugLog('YUN_API_KEY_CLAUDE loaded: [REDACTED]')
+else debugLog('YUN_API_KEY_CLAUDE not set, Claude calls will fall back to YUN_API_KEY')
 
 import { protectStatic } from './middleware/auth.js'
 import path from 'path'

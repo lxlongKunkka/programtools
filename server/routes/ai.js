@@ -11,7 +11,7 @@ import JSZip from 'jszip'
 import User from '../models/User.js'
 import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
-import { YUN_API_KEY, YUN_API_URL, DIRS, MAIL_CONFIG, HYDRO_CONFIG } from '../config.js'
+import { YUN_API_KEY, YUN_API_KEY_CLAUDE, YUN_API_URL, DIRS, MAIL_CONFIG, HYDRO_CONFIG, pickApiKey } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
 import { isCosConfigured, uploadTextToCos } from '../utils/cosClient.js'
 import { proxyImageToCos } from '../utils/cosUploader.js'
@@ -433,7 +433,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     const textForModel = String(text)
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
@@ -481,12 +481,12 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     try {
         let jsonStr = content.trim()
         
-        // 1. 尝试提取 Markdown 代码块中的 JSON
+        // 1. 尝试提取 Markdown 代码块中�?JSON
         const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/i)
         if (jsonBlockMatch) {
             jsonStr = jsonBlockMatch[1].trim()
         } else {
-            // 2. 如果没有代码块，尝试寻找最外层的 {}
+            // 2. 如果没有代码块，尝试寻找最外层�?{}
             const firstBrace = content.indexOf('{')
             const lastBrace = content.lastIndexOf('}')
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -507,7 +507,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
             resultText = content
         }
     } catch (e) {
-        // JSON 解析失败，尝试正则提取作为兜底
+        // JSON 解析失败，尝试正则提取作为兜�?
         let recovered = false
         try {
             const translationMatch = content.match(/"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
@@ -567,9 +567,9 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     }
 
     try {
-      // 如果是 JSON 模式且成功提取了 translation，我们信任 AI 的 Markdown 格式，
-      // 不再进行 wrapLatexIfNeeded 等可能破坏格式的处理，
-      // 仅做必要的清理（如 input/output 块的合并）
+      // 如果�?JSON 模式且成功提取了 translation，我们信�?AI �?Markdown 格式�?
+      // 不再进行 wrapLatexIfNeeded 等可能破坏格式的处理�?
+      // 仅做必要的清理（�?input/output 块的合并�?
       let fixed = resultText
 
       if (!isJson) {
@@ -579,7 +579,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
       fixed = fixed.replace(/(```)\s*(#+\s+)/g, '$1\n\n$2')
       fixed = fixed.replace(/([^\n])\s*(##+\s+)/g, '$1\n\n$2')
 
-      // 如果没有从 JSON 中提取到元数据，尝试从文本中提取
+      // 如果没有�?JSON 中提取到元数据，尝试从文本中提取
       if (!isJson || (!meta.title && meta.tags.length === 0)) {
         try {
             // Extract title: First line starting with #
@@ -612,7 +612,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
             }
 
             // Extract tags: Content after ### 算法标签
-            // 兼容多种格式：
+            // 兼容多种格式�?
             // 1. ### 算法标签 \n Level1 数学1
             // 2. **算法标签** \n Level1 数学1
             // 3. 算法标签 \n Level1 数学1
@@ -622,7 +622,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
             // Split by common separators (space, comma, newline) and clean up
             meta.tags = tagsText.split(/[\s,，、]+/)
                 .map(t => t.trim())
-                .filter(t => t && !t.startsWith('**') && t !== '无' && !/^level\d+$/i.test(t)) 
+                .filter(t => t && !t.startsWith('**') && t !== '�? && !/^level\d+$/i.test(t)) 
             }
         } catch (e) {
             console.warn('Failed to extract meta from translation:', e)
@@ -695,7 +695,7 @@ function parseTranslationContent(content) {
         meta.title = t
       }
       const tagM = fixed.match(/(?:###|\*\*|)\s*算法标签(?:\*\*|)\s*\n+([\s\S]*?)(?:\n#|\n\n|$)/)
-      if (tagM) meta.tags = tagM[1].trim().split(/[\s,，、]+/).map(t=>t.trim()).filter(t=>t&&!t.startsWith('**')&&t!=='无'&&!/^level\d+$/i.test(t))
+      if (tagM) meta.tags = tagM[1].trim().split(/[\s,，、]+/).map(t=>t.trim()).filter(t=>t&&!t.startsWith('**')&&t!=='�?&&!/^level\d+$/i.test(t))
     } catch {}
   }
   return { result: fixed, meta }
@@ -715,11 +715,11 @@ function htmlToText(html) {
     .replace(/\n{3,}/g,'\n\n').trim()
 }
 
-// 流式翻译接口（SSE）
+// 流式翻译接口（SSE�?
 router.post('/translate/stream', authenticateToken, checkModelPermission, async (req, res) => {
   const { text, model } = req.body
   if (!text) { res.status(400).end(); return }
-  const apiKey = YUN_API_KEY
+  const apiKey = pickApiKey(req.body.model)
   if (!apiKey) { res.status(500).end(); return }
 
   res.setHeader('Content-Type', 'text/event-stream')
@@ -730,7 +730,7 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
   const send = (obj) => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`) } catch {} }
 
   // 提取图片占位符，避免 AI 删除图片链接
-  // 故意用 AI 不可能误识别为 markdown 语法的格式
+  // 故意�?AI 不可能误识别�?markdown 语法的格�?
   const imageMap = {}
   let imgCount = 0
   const textWithPlaceholders = String(text).replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (m, alt, url) => {
@@ -740,7 +740,7 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
   })
 
   const restoreImages = (str) => {
-    // 用正则一次性恢复：同时兼容 AI 保留完整 IMGPH0IMGPH 和只留 IMGPH0 的情况
+    // 用正则一次性恢复：同时兼容 AI 保留完整 IMGPH0IMGPH 和只�?IMGPH0 的情�?
     return str.replace(/IMGPH(\d+)IMGPH|IMGPH(\d+)(?!\d)/g, (match, a, b) => {
       const idx = a !== undefined ? a : b
       const key = `IMGPH${idx}IMGPH`
@@ -777,7 +777,7 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
     resp.data.on('end', () => {
       try {
         const { result, meta } = parseTranslationContent(fullContent)
-        // 恢复图片占位符
+        // 恢复图片占位�?
         const restoredResult = restoreImages(result)
         const restoredEnglish = restoreImages(meta.english || '')
         if (imgCount > 0) {
@@ -794,13 +794,13 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
   }
 })
 
-// 从 URL 抓取题目内容（Codeforces / AtCoder）
+// �?URL 抓取题目内容（Codeforces / AtCoder�?
 router.get('/translate/fetch-url', authenticateToken, checkModelPermission, async (req, res) => {
   const { url } = req.query
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
   const isCodeforces = /codeforces\.com/i.test(url)
   const isAtCoder = /atcoder\.jp/i.test(url)
-  if (!isCodeforces && !isAtCoder) return res.status(400).json({ error: '仅支持 Codeforces 和 AtCoder 链接' })
+  if (!isCodeforces && !isAtCoder) return res.status(400).json({ error: '仅支�?Codeforces �?AtCoder 链接' })
 
   try {
     const resp = await axios.get(url, {
@@ -829,13 +829,13 @@ function parseMarkdownWithImages(text) {
   const imageMap = {}
   // 匹配 Base64 图片
   const base64Regex = /!\[(.*?)\]\((data:image\/.*?;base64,.*?)\)/g
-  // 匹配网络 URL 图片（http/https）
+  // 匹配网络 URL 图片（http/https�?
   const urlRegex = /!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g
   let lastIndex = 0
   let match
   let imgCount = 0
 
-  // 先处理 Base64 图片
+  // 先处�?Base64 图片
   while ((match = base64Regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: 'text', text: text.substring(lastIndex, match.index) })
@@ -859,7 +859,7 @@ function parseMarkdownWithImages(text) {
 
   console.log(`[图片提取] Base64 图片数量: ${imgCount}`)
 
-  // 重置正则索引，处理网络 URL 图片
+  // 重置正则索引，处理网�?URL 图片
   base64Regex.lastIndex = 0
   const baseImgCount = imgCount
   while ((match = urlRegex.exec(text)) !== null) {
@@ -870,7 +870,7 @@ function parseMarkdownWithImages(text) {
     const placeholder = `[[IMG_${imgCount}]]`
     imageMap[placeholder] = match[0] // Store the full markdown image tag
 
-    // Insert placeholder text (网络图片不用传给模型看，因为可能访问受限）
+    // Insert placeholder text (网络图片不用传给模型看，因为可能访问受限�?
     parts.push({ type: 'text', text: placeholder })
 
     imgCount++
@@ -895,7 +895,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const { content: userContent, imageMap } = parseMarkdownWithImages(text)
@@ -932,7 +932,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     }
 
     // Restore images from placeholders
-    console.log('[AI优化] 开始恢复图片，占位符数量:', Object.keys(imageMap).length)
+    console.log('[AI优化] 开始恢复图片，占位符数�?', Object.keys(imageMap).length)
     let restoreCount = 0
     for (const [placeholder, originalImage] of Object.entries(imageMap)) {
       // Use a global replace in case of model repeated the placeholder (unlikely but possible)
@@ -956,7 +956,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
   }
 })
 
-// 从 Markdown 题解中提取纯净 AC 代码（与前端 extractPureCode 保持同步）
+// �?Markdown 题解中提取纯净 AC 代码（与前端 extractPureCode 保持同步�?
 function extractPureCode(content) {
   if (!content) return ''
   let code = ''
@@ -966,7 +966,7 @@ function extractPureCode(content) {
     /```java\s*\n([\s\S]*?)```/i,
     /```\s*\n([\s\S]*?)```/
   ]
-  // 优先级1：起止双标记
+  // 优先�?：起止双标记
   const startMarker = '<!-- AC_CODE_START -->'
   const endMarker = '<!-- AC_CODE_END -->'
   const si = content.indexOf(startMarker)
@@ -975,7 +975,7 @@ function extractPureCode(content) {
     const region = (ei !== -1 && ei > si) ? content.substring(si + startMarker.length, ei) : content.substring(si + startMarker.length)
     for (const p of codeBlockPatterns) { const m = region.match(p); if (m?.[1]) { code = m[1].trim(); break } }
   }
-  // 优先级2：旧式单标记
+  // 优先�?：旧式单标记
   if (!code) {
     const mi = content.indexOf('<!-- AC_CODE -->')
     if (mi !== -1) {
@@ -983,9 +983,9 @@ function extractPureCode(content) {
       for (const p of codeBlockPatterns) { const m = after.match(p); if (m?.[1]) { code = m[1].trim(); break } }
     }
   }
-  // 优先级3：固定节标题
+  // 优先�?：固定节标题
   if (!code) {
-    for (const title of ['## 4. 核心代码', '## 核心代码', '## 代码实现', '## 完整代码', '## AC代码', '## 参考代码', '## 标准代码', '### 代码实现', '### 完整代码']) {
+    for (const title of ['## 4. 核心代码', '## 核心代码', '## 代码实现', '## 完整代码', '## AC代码', '## 参考代�?, '## 标准代码', '### 代码实现', '### 完整代码']) {
       const idx = content.indexOf(title)
       if (idx !== -1) {
         const next = content.indexOf('\n## ', idx + title.length)
@@ -995,7 +995,7 @@ function extractPureCode(content) {
       }
     }
   }
-  // 优先级4（兜底）：最后一个代码块
+  // 优先�?（兜底）：最后一个代码块
   if (!code) {
     for (const p of [/```(?:cpp|c\+\+)\s*\n([\s\S]*?)```/ig, /```(?:python|py)\s*\n([\s\S]*?)```/ig, /```java\s*\n([\s\S]*?)```/ig, /```\s*\n([\s\S]*?)```/g]) {
       const matches = [...content.matchAll(p)]
@@ -1019,10 +1019,10 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
-    // 优先使用动态 Prompt，如果未导入则回退到静态 Prompt
+    // 优先使用动�?Prompt，如果未导入则回退到静�?Prompt
     const prompt = (typeof getSolutionPrompt === 'function') 
       ? getSolutionPrompt(language || 'C++', requireAC) 
       : SOLUTION_PROMPT
@@ -1088,9 +1088,9 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
     let { text } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    // [Fix] 修复 AC 代码被识别为 Unknown Status 的问题
+    // [Fix] 修复 AC 代码被识别为 Unknown Status 的问�?
     if (text && text.includes('状态是: Unknown Status')) {
-      // 尝试解析 record URL 并获取真实状态
+      // 尝试解析 record URL 并获取真实状�?
       const recordMatch = text.match(/\/d\/([^\/]+)\/record\/([a-f0-9]{24})/)
       let resolved = false
       
@@ -1111,16 +1111,16 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
           }
       }
       
-      // Fallback: 如果无法解析或获取失败，且依然是 Unknown Status，由于用户反馈通常是 AC 代码误判，
+      // Fallback: 如果无法解析或获取失败，且依然是 Unknown Status，由于用户反馈通常�?AC 代码误判�?
       // 我们这里暂时不做自动 AC 处理，而是改为更中性的描述，或者保持原样但加上提示
-      // 但根据用户要求 "并非把unknown直接翻译为AC"，如果解析失败，我们保留 Unknown Status 或改为 "Status Check Failed"
+      // 但根据用户要�?"并非把unknown直接翻译为AC"，如果解析失败，我们保留 Unknown Status 或改�?"Status Check Failed"
       if (!resolved && text.includes('状态是: Unknown Status')) {
-         text = text.replace('状态是: Unknown Status', '状态是: Unknown Status (无法获取评测详情，请检查链接)')
+         text = text.replace('状态是: Unknown Status', '状态是: Unknown Status (无法获取评测详情，请检查链�?')
       }
     }
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
@@ -1184,20 +1184,20 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
 
     const lang = language || 'C++'
     const cleanedAcCode = stripFreopenStatements(acCode || '')
-    // 若提供了 AC 代码，切换到讲解/注释模式；否则使用独立解题（CoT）模式
+    // 若提供了 AC 代码，切换到讲解/注释模式；否则使用独立解题（CoT）模�?
     const hasAcCode = cleanedAcCode && cleanedAcCode.trim()
     const prompt = hasAcCode ? getSolveWithCodePrompt(lang) : getSolvePrompt(lang)
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     let userContent = text
     if (hasAcCode) {
-      // AC 代码讲解模式：将代码附在题目后
-      userContent = `${text}\n\n---\n## 参考 AC 代码\n\n\`\`\`${lang.toLowerCase()}\n${cleanedAcCode.trim()}\n\`\`\``
+      // AC 代码讲解模式：将代码附在题目�?
+      userContent = `${text}\n\n---\n## 参�?AC 代码\n\n\`\`\`${lang.toLowerCase()}\n${cleanedAcCode.trim()}\n\`\`\``
     } else if (referenceText && referenceText.trim()) {
-      // 向后兼容：保留旧的 referenceText 拼接
+      // 向后兼容：保留旧�?referenceText 拼接
       userContent = `${text}\n\n---\n## 参考思路（官方题解）\n\n${referenceText.trim()}`
     }
 
@@ -1267,11 +1267,11 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
     if (!problem) return res.status(400).json({ error: 'Missing problem data' })
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
 
     // Construct the user content from the problem object
-    let userContent = `题目：${problem.stem}\n`
+    let userContent = `题目�?{problem.stem}\n`
     if (problem.options && problem.options.length > 0) {
         userContent += `选项：\n`
         problem.options.forEach((opt, idx) => {
@@ -1372,7 +1372,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
     let testpointTable = ''
     let tableMatch = String(text).match(/\|\s*测试点\s*\|[\s\S]{0,2000}?\|\s*约束条件\s*\|[\s\S]{0,2000}?\|/)
     if (!tableMatch) {
-      tableMatch = String(text).match(/\|\s*(Testcase|Test Point|测试点)[^|]*\|[\s\S]{0,2000}?\|\s*(Constraint|约束)[^|]*\|[\s\S]{0,2000}?\|/i)
+      tableMatch = String(text).match(/\|\s*(Testcase|Test Point|测试�?[^|]*\|[\s\S]{0,2000}?\|\s*(Constraint|约束)[^|]*\|[\s\S]{0,2000}?\|/i)
     }
     if (tableMatch) {
       testpointTable = tableMatch[0]
@@ -1392,13 +1392,13 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
       }
       extraConstraintPrompt = `\n\n【测试点分组与约束】\n请严格按照下表的分组和约束条件生成数据脚本：\n- 必须严格生成 ${groupCount || 20} 组测试点，编号与分组需与表格一致，不可多也不可少。\n- 每组数据需满足对应约束条件。\n- 每组脚本需用注释标明分组编号和约束。\n${testpointTable}\n`
     } else {
-      extraConstraintPrompt = '\n\n【没有分组表格时】请仔细阅读题目描述中的数据范围和约束条件，自动合理分组测试点（如小数据、大数据、边界、特殊情况等），必须严格生成20组测试点，每组数据需覆盖不同范围和典型情况，脚本需包含分组编号和分组注释。'
+      extraConstraintPrompt = '\n\n【没有分组表格时】请仔细阅读题目描述中的数据范围和约束条件，自动合理分组测试点（如小数据、大数据、边界、特殊情况等），必须严格生成20组测试点，每组数据需覆盖不同范围和典型情况，脚本需包含分组编号和分组注释�?
     }
 
     const prompt = getDataGenPrompt(extraConstraintPrompt, cyaronDocs, code)
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
@@ -1469,69 +1469,69 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
       // gesp2
       '循环嵌套','暴力枚举','模拟','数学函数',
       // gesp3
-      '位运算','进制转换','一维数组','字符串',
+      '位运�?,'进制转换','一维数�?,'字符�?,
       // gesp4
-      '函数','结构体','二维数组','递推','排序','算法复杂度',
+      '函数','结构�?,'二维数组','递推','排序','算法复杂�?,
       // gesp5
-      '数论基础','素数筛','质因数分解','高精度','链表','前缀和','差分','二分','三分','贪心','分治','递归','STL',
+      '数论基础','素数�?,'质因数分�?,'高精�?,'链表','前缀�?,'差分','二分','三分','贪心','分治','递归','STL',
       // gesp6
-      '栈','队列','树形结构','DFS','BFS','DP','线性DP','背包DP',
+      '�?,'队列','树形结构','DFS','BFS','DP','线性DP','背包DP',
       // gesp7
-      '哈希','图论基础','DFS进阶','BFS进阶','双指针','区间DP','树上DP','二维DP',
+      '哈希','图论基础','DFS进阶','BFS进阶','双指�?,'区间DP','树上DP','二维DP',
       // gesp8
-      '组合数学','倍增','LCA','树的直径','最小生成树','单源最短路径','floyd','并查集','优先队列','拓扑排序','树的重心','树上差分','容斥原理','离散化','ST表','差分约束',
+      '组合数学','倍增','LCA','树的直径','最小生成树','单源最短路�?,'floyd','并查�?,'优先队列','拓扑排序','树的重心','树上差分','容斥原理','离散�?,'ST�?,'差分约束',
       // gesp9 (CSP-S)
-      'KMP','Z函数','字典树','AC自动机','回文串',
-      '构造','反悔贪心','环','扫描线','搜索进阶','次短路',
+      'KMP','Z函数','字典�?,'AC自动�?,'回文�?,
+      '构�?,'反悔贪心','�?,'扫描�?,'搜索进阶','次短�?,
       '状压DP','数位DP','概率DP','期望DP','换根DP','计数DP','单调队列优化DP','斜率优化DP','树上背包DP',
-      '单调栈','单调队列','线性基','树状数组','线段树','笛卡尔树','平衡树','树链剖分','分块','莫队','离线算法',
-      '强连通分量','双连通分量','欧拉路','2-SAT','二分图','网络流',
-      'CDQ分治','整体二分','博弈论','矩阵快速幂','高斯消元','计算几何','概率论基础','卡特兰数','扩展GCD','中国剩余定理',
+      '单调�?,'单调队列','线性基','树状数组','线段�?,'笛卡尔树','平衡�?,'树链剖分','分块','莫队','离线算法',
+      '强连通分�?,'双连通分�?,'欧拉�?,'2-SAT','二分�?,'网络�?,
+      'CDQ分治','整体二分','博弈�?,'矩阵快速幂','高斯消元','计算几何','概率论基础','卡特兰数','扩展GCD','中国剩余定理',
       // gesp10 (NOI)
-      '后缀数组','后缀自动机','四边形不等式优化DP','WQS二分',
-      '可合并堆','可持久化数据结构','块状链表','点分治','树上启发式合并','虚树',
-      '费用流','半平面交','原根','狄利克雷卷积','莫比乌斯反演','FFT','NTT',
-      '斯特林数','母函数','Burnside引理'
+      '后缀数组','后缀自动�?,'四边形不等式优化DP','WQS二分',
+      '可合并堆','可持久化数据结构','块状链表','点分�?,'树上启发式合�?,'虚树',
+      '费用�?,'半平面交','原根','狄利克雷卷积','莫比乌斯反演','FFT','NTT',
+      '斯特林数','母函�?,'Burnside引理'
     ]
     const ALLOWED_TAGS = [...LEVEL_TAGS, ...KNOWLEDGE_TAGS]
 
     const prompt = `你是算法题目分类专家。请阅读以下算法题目，完成两个任务：
-    1. 选出：**1个等级标签** + **1~3个知识点标签**
+    1. 选出�?*1个等级标�?* + **1~3个知识点标签**
     2. 生成一个简洁的中文标题（不超过20字）
 
     ## 严格规则
     - 标签**必须从下方列表中原文选取**，禁止自造、简化或合并标签
-    - 错误示例：❌ "图论"（不存在）→ 正确：✅ "图论基础" 或 "强连通分量" 或 "二分图" 等具体算法
-    - 错误示例：❌ "动态规划"（应用 "DP" 或 "线性DP" 等）
+    - 错误示例：❌ "图论"（不存在）→ 正确：✅ "图论基础" �?"强连通分�? �?"二分�? 等具体算�?
+    - 错误示例：❌ "动态规�?（应�?"DP" �?"线性DP" 等）
     - 知识点标签要尽量精确，选最能描述核心算法的标签
 
-    ## 等级标签（必选1个）
-    gesp1-8 = GESP认证各级（由易到难），gesp9 = CSP-S提高级，gesp10 = NOI及以上
+    ## 等级标签（必�?个）
+    gesp1-8 = GESP认证各级（由易到难），gesp9 = CSP-S提高级，gesp10 = NOI及以�?
     可选：${JSON.stringify(LEVEL_TAGS)}
 
-    ## 知识点标签（按等级分组，选1-3个）
+    ## 知识点标签（按等级分组，�?-3个）
     gesp1: 顺序结构, 条件结构, 循环结构, 数学基础
     gesp2: 循环嵌套, 暴力枚举, 模拟, 数学函数
-    gesp3: 位运算, 进制转换, 一维数组, 字符串
-    gesp4: 函数, 结构体, 二维数组, 递推, 排序, 算法复杂度
-    gesp5: 数论基础, 素数筛, 质因数分解, 高精度, 链表, 前缀和, 差分, 二分, 三分, 贪心, 分治, 递归, STL
-    gesp6: 栈, 队列, 树形结构, DFS, BFS, DP, 线性DP, 背包DP
-    gesp7: 哈希, 图论基础, DFS进阶, BFS进阶, 双指针, 区间DP, 树上DP, 二维DP
-    gesp8: 组合数学, 倍增, LCA, 树的直径, 最小生成树, 单源最短路径, floyd, 并查集, 优先队列, 拓扑排序, 树的重心, 树上差分, 容斥原理, 离散化, ST表, 差分约束
-    gesp9: KMP, Z函数, 字典树, AC自动机, 回文串, 构造, 反悔贪心, 环, 扫描线, 搜索进阶, 次短路, 状压DP, 数位DP, 概率DP, 期望DP, 换根DP, 计数DP, 单调队列优化DP, 斜率优化DP, 树上背包DP, 单调栈, 单调队列, 线性基, 树状数组, 线段树, 笛卡尔树, 平衡树, 树链剖分, 分块, 莫队, 离线算法, 强连通分量, 双连通分量, 欧拉路, 2-SAT, 二分图, 网络流, CDQ分治, 整体二分, 博弈论, 矩阵快速幂, 高斯消元, 计算几何, 概率论基础, 卡特兰数, 扩展GCD, 中国剩余定理
-    gesp10: 后缀数组, 后缀自动机, 四边形不等式优化DP, WQS二分, 可合并堆, 可持久化数据结构, 块状链表, 点分治, 树上启发式合并, 虚树, 费用流, 半平面交, 原根, 狄利克雷卷积, 莫比乌斯反演, FFT, NTT, 斯特林数, 母函数, Burnside引理
+    gesp3: 位运�? 进制转换, 一维数�? 字符�?
+    gesp4: 函数, 结构�? 二维数组, 递推, 排序, 算法复杂�?
+    gesp5: 数论基础, 素数�? 质因数分�? 高精�? 链表, 前缀�? 差分, 二分, 三分, 贪心, 分治, 递归, STL
+    gesp6: �? 队列, 树形结构, DFS, BFS, DP, 线性DP, 背包DP
+    gesp7: 哈希, 图论基础, DFS进阶, BFS进阶, 双指�? 区间DP, 树上DP, 二维DP
+    gesp8: 组合数学, 倍增, LCA, 树的直径, 最小生成树, 单源最短路�? floyd, 并查�? 优先队列, 拓扑排序, 树的重心, 树上差分, 容斥原理, 离散�? ST�? 差分约束
+    gesp9: KMP, Z函数, 字典�? AC自动�? 回文�? 构�? 反悔贪心, �? 扫描�? 搜索进阶, 次短�? 状压DP, 数位DP, 概率DP, 期望DP, 换根DP, 计数DP, 单调队列优化DP, 斜率优化DP, 树上背包DP, 单调�? 单调队列, 线性基, 树状数组, 线段�? 笛卡尔树, 平衡�? 树链剖分, 分块, 莫队, 离线算法, 强连通分�? 双连通分�? 欧拉�? 2-SAT, 二分�? 网络�? CDQ分治, 整体二分, 博弈�? 矩阵快速幂, 高斯消元, 计算几何, 概率论基础, 卡特兰数, 扩展GCD, 中国剩余定理
+    gesp10: 后缀数组, 后缀自动�? 四边形不等式优化DP, WQS二分, 可合并堆, 可持久化数据结构, 块状链表, 点分�? 树上启发式合�? 虚树, 费用�? 半平面交, 原根, 狄利克雷卷积, 莫比乌斯反演, FFT, NTT, 斯特林数, 母函�? Burnside引理
 
     ## 输出格式
-    只返回 JSON，例如：
-    {"tags": ["gesp9", "强连通分量", "拓扑排序"], "title": "图的强连通分量缩点"}
-    不要包含任何其他文字或 Markdown 格式。
+    只返�?JSON，例如：
+    {"tags": ["gesp9", "强连通分�?, "拓扑排序"], "title": "图的强连通分量缩�?}
+    不要包含任何其他文字�?Markdown 格式�?
 
-    题目内容：
+    题目内容�?
     ${text.slice(0, 2000)}
     `
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
 
     const messages = [
@@ -1600,12 +1600,12 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     let contentInput = text
     if (solution) {
-      contentInput += `\n\n【参考题解/分析】\n${solution}\n\n请结合题目描述和参考题解，更准确地总结题目名称和算法标签。`
+      contentInput += `\n\n【参考题�?分析】\n${solution}\n\n请结合题目描述和参考题解，更准确地总结题目名称和算法标签。`
     }
 
     const messages = [
@@ -1641,7 +1641,7 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
 
     let result = { title: '', tags: [] }
     try {
-      // 尝试提取 JSON 块
+      // 尝试提取 JSON �?
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[1] || jsonMatch[0])
@@ -1676,7 +1676,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     }
 
     const { problem, code, reference, solutionPlan, model, level, language } = req.body
-    if ((!problem && !solutionPlan)) return res.status(400).json({ error: '缺少 problem 或 solutionPlan 字段' })
+    if ((!problem && !solutionPlan)) return res.status(400).json({ error: '缺少 problem �?solutionPlan 字段' })
 
     let userContent = '';
     if (solutionPlan) {
@@ -1702,11 +1702,11 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     prompt = prompt.replace('{{code_example}}', codeExample)
 
     if (targetLang === 'C++' && level && parseInt(level) <= 2) {
-      userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
+      userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学�?STL 容器（如 vector）。请在生�?C++ 代码时，**务必使用静态数�?*（如 int a[1005]），**严禁使用 std::vector**。`;
     }
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
     const messages = [
@@ -1761,7 +1761,7 @@ router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermi
     const { problem, code, model } = req.body;
     if (!problem) return res.status(400).json({ error: 'Missing problem field' });
 
-    const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+    const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提�?}`;
 
     const messages = [
         { role: 'system', content: SOLUTION_PROMPT },
@@ -1807,7 +1807,7 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
 
-          const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+          const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提�?}`;
 
           const messages = [
               { role: 'system', content: SOLUTION_PROMPT },
@@ -2027,7 +2027,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 
           // Add constraint for Level 2 and below (Only for C++)
           if (targetLang === 'C++' && level && parseInt(level) <= 2) {
-             userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
+             userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学�?STL 容器（如 vector）。请在生�?C++ 代码时，**务必使用静态数�?*（如 int a[1005]），**严禁使用 std::vector**。`;
           }
 
           const messages = [
@@ -2312,13 +2312,13 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
     const { topic, context, level, requirements, model, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
-    let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}\n额外要求：${requirements || '无'}`
+    let userPrompt = `主题�?{topic}\n难度�?{level || 'Level 1'}\n额外要求�?{requirements || '�?}`
     if (context) {
-        userPrompt = `所属知识点：${context}\n` + userPrompt
+        userPrompt = `所属知识点�?{context}\n` + userPrompt
     }
     
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     
     const targetLang = language || 'C++';
     let codeLang = 'cpp';
@@ -2381,7 +2381,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
 
     // Inject Chapter Content (Lesson Plan)
     if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-        systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 ✅ ❌ ⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid 或 ASCII 图）。\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 15000)}\n===教案结束===\n`
+        systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量�?逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 �?�?⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid �?ASCII 图）。\n- 可以增加"课堂思�?�?常见错误"�?小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开�?==\n${chapterContent.slice(0, 15000)}\n===教案结束===\n`
     }
 
     // Inject Chapter Context
@@ -2389,7 +2389,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
         const current = (currentChapterIndex !== undefined && currentChapterIndex >= 0) ? currentChapterIndex + 1 : '?'
         
         let contextInfo = `\n\n【重要：课程上下文信息】\n`
-        contextInfo += `本节课是系列课程 "${context}" 中的第 ${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
+        contextInfo += `本节课是系列课程 "${context}" 中的�?${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
         contextInfo += `完整的章节列表如下：\n${chapterList.map((t, i) => `${i+1}. ${t}`).join('\n')}\n`
         contextInfo += `\n请根据此上下文规划内容：\n`
         contextInfo += `1. **避免重复**：如果前面的章节已经讲过基础概念（如定义、语法），本节课应快速回顾或直接进入进阶内容。\n`
@@ -2400,7 +2400,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     }
 
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -2441,7 +2441,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
     const { topic, level, model, mode, existingChapters, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
-    let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+    let userPrompt = `主题�?{topic}\n难度�?{level || 'Level 1'}`
 
     // Add existing chapters context if available
     if (existingChapters && Array.isArray(existingChapters) && existingChapters.length > 0) {
@@ -2455,7 +2455,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
     }
     
     const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
+    const apiKey = pickApiKey(req.body.model)
     
     let systemPrompt = TOPIC_PLAN_PROMPT
     if (mode === 'description') {
@@ -2631,13 +2631,13 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
-              systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量名/逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 ✅ ❌ ⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid 或 ASCII 图）。\n- 可以增加"课堂思考"、"常见错误"、"小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开始===\n${chapterContent.slice(0, 15000)}\n===教案结束===\n`
+              systemPrompt += `\n\n【教案内容（创作参考）】\n以下是本节课的教案，请以此为**内容基础**进行 PPT 创作：\n- 教案中的知识点、例题、代码示例必须完整呈现，代码变量�?逻辑/注释不得修改，例题题目不得替换。\n- **不要照搬教案原文**，请用更简洁、直观的 PPT 语言重新表述知识点，化长段落为要点。\n- **善用 emoji 图标**让幻灯片更生动直观：在标题、要点前适当使用 emoji（如 �?�?⚠️ 💡 🔑 📌 🚀 🔁 🧩 📊 🎯 等）来区分类型、突出重点。\n- 多概念对比时使用**对比表格**（不使用 Mermaid �?ASCII 图）。\n- 可以增加"课堂思�?�?常见错误"�?小结"等有助于教学的幻灯片。\n- PPT 章节结构与教案保持基本一致。\n\n===教案开�?==\n${chapterContent.slice(0, 15000)}\n===教案结束===\n`
           }
 
           if (chapterList && Array.isArray(chapterList) && chapterList.length > 0) {
               const current = (currentChapterIndex !== undefined && currentChapterIndex >= 0) ? currentChapterIndex + 1 : '?'
               let contextInfo = `\n\n【重要：课程上下文信息】\n`
-              contextInfo += `本节课是系列课程 "${context}" 中的第 ${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
+              contextInfo += `本节课是系列课程 "${context}" 中的�?${current} 个主题（仅供参考难度定位，**请勿在PPT中显示“第${current}节”或总章节数**）。\n`
               contextInfo += `完整的章节列表如下：\n${chapterList.map((t, i) => `${i+1}. ${t}`).join('\n')}\n`
               contextInfo += `\n请根据此上下文规划内容：\n`
               contextInfo += `1. **避免重复**：如果前面的章节已经讲过基础概念（如定义、语法），本节课应快速回顾或直接进入进阶内容。\n`
@@ -2832,7 +2832,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   }
               }
               if (chapterFound) {
-                  // Atomic update for PPT — use actual DB ids (not stale frontend ids)
+                  // Atomic update for PPT �?use actual DB ids (not stale frontend ids)
                   try {
                       if (foundTopicId && foundChapterId) {
                           const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId) 
@@ -2944,13 +2944,13 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
             .replace('{{code_lang}}', codeLang);
           
           let userPrompt = `请为 "${context}" 课程中的 "${topic}" 章节编写一份详细的教案。`
-          userPrompt += `\n难度等级：${level}`
+          userPrompt += `\n难度等级�?{level}`
           if (requirements) {
-              userPrompt += `\n额外要求：${requirements}`
+              userPrompt += `\n额外要求�?{requirements}`
           }
           const isPlaceholder = (existingContent || '').includes('正在生成') || (existingContent || '').includes('生成失败')
           if (existingContent && existingContent.trim().length > 50 && !isPlaceholder) {
-              userPrompt += `\n\n【当前已有教案（请参考并在此基础上改进/完善，保留原有结构的优点）】\n${existingContent.slice(0, 6000)}`
+              userPrompt += `\n\n【当前已有教案（请参考并在此基础上改�?完善，保留原有结构的优点）】\n${existingContent.slice(0, 6000)}`
           }
 
           const messages = [
@@ -3122,7 +3122,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           
-          let userPrompt = `主题：${topic}\n难度：${level || 'Level 1'}`
+          let userPrompt = `主题�?{topic}\n难度�?{level || 'Level 1'}`
 
           if (existingChapters && Array.isArray(existingChapters) && existingChapters.length > 0) {
               userPrompt += `\n\n当前已存在的章节信息如下（请参考这些内容生成更精确的描述，避免重复或矛盾）：\n`
@@ -3201,7 +3201,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                               if (typeof item === 'string') {
                                   title = item;
                               } else if (typeof item === 'object' && item !== null) {
-                                  title = item.title || '未命名章节';
+                                  title = item.title || '未命名章�?;
                                   content = item.content || '';
                               }
 
@@ -3225,7 +3225,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                       clientKey,
                       type: mode === 'description' ? 'topic-desc' : 'topic-chapters',
                       status: 'success',
-                      message: mode === 'description' ? '知识点描述生成完成' : '章节列表生成完成'
+                      message: mode === 'description' ? '知识点描述生成完�? : '章节列表生成完成'
                   });
               }
           }
