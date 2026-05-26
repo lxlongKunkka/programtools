@@ -4,7 +4,7 @@ import { load } from 'cheerio'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
-import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
+import { fetchNflsojContest, fetchNflsojProblem, fetchNflsojContestList } from './nflsoj.js'
 import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem, fetchHydroNflsoiProblemBank } from './hydro_nflsoi.js'
 import { fetchMnaContest, fetchMnaProblem } from './mna.js'
 
@@ -915,6 +915,18 @@ router.get('/cpret', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('[cpret] search error:', err.message)
     res.status(500).json({ error: `检索失败: ${err.message}` })
+  }
+})
+
+// GET /api/atcoder/nflsoj-contest-list?page=N — 获取 NFLSOJ 比赛列表（分页）
+router.get('/nflsoj-contest-list', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1)
+  try {
+    const result = await fetchNflsojContestList(page)
+    res.json(result)
+  } catch (err) {
+    console.error('[nflsoj] contest-list error:', err.message)
+    res.status(500).json({ error: `获取比赛列表失败: ${err.message}` })
   }
 })
 

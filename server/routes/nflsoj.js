@@ -812,4 +812,39 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * 抓取 NFLSOJ 比赛列表（分页）
+ * SYZOJ v2 的 /contests?page=N
+ */
+export async function fetchNflsojContestList(page = 1) {
+  const html = await nflsojGet(`/contests?page=${page}`)
+  const $ = load(html)
+  const seen = new Set()
+  const contests = []
+
+  // 从表格中提取比赛链接（格式: /contest/2341）
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || ''
+    const m = href.match(/^\/contest\/(\d+)$/)
+    if (!m) return
+    const id = m[1]
+    if (seen.has(id)) return
+    seen.add(id)
+    const title = $(el).text().trim()
+    if (!title) return
+    contests.push({ id, title, url: `${NFLSOJ_BASE}/contest/${id}` })
+  })
+
+  // 检测最大页码
+  const pageNums = []
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || ''
+    const m = href.match(/[?&]page=(\d+)/)
+    if (m) pageNums.push(parseInt(m[1]))
+  })
+  const totalPages = pageNums.length ? Math.max(page, ...pageNums) : page
+
+  return { contests, currentPage: page, hasMore: page < totalPages, totalPages }
+}
+
 export default router

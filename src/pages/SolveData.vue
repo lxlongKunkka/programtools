@@ -91,6 +91,9 @@
       <button class="btn-secondary btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning || isBatchCpretSearching">
         {{ isBatchCpretSearching ? '⏳ 检索中...' : '🔍 一键检索所有原题' }}
       </button>
+      <button class="btn-secondary btn-sm" @click="openNflsojModal" :disabled="isBatchRunning">
+        🗂️ NFLSOJ 比赛列表
+      </button>
     </div>
   </div>
 
@@ -330,6 +333,42 @@
       </div><!-- /step-content -->
     </div><!-- /detail-panel -->
   </div><!-- /main-layout -->
+
+  <!-- NFLSOJ 批量导入比赛模态框 -->
+  <div v-if="showNflsojModal" class="modal-overlay" @click.self="showNflsojModal = false">
+    <div class="nflsoj-modal">
+      <div class="nflsoj-modal-header">
+        <span>🗂️ NFLSOJ 比赛列表（第 {{ nflsojModalPage }} / {{ nflsojModalTotalPages }} 页）</span>
+        <button class="btn-ghost btn-sm" @click="showNflsojModal = false">✕</button>
+      </div>
+      <div class="nflsoj-modal-toolbar">
+        <button class="btn-secondary btn-sm" @click="nflsojSelectAll">全选本页</button>
+        <button class="btn-ghost btn-sm" @click="nflsojClearSelected">清除选择</button>
+        <span class="flex-spacer"></span>
+        <button class="btn-ghost btn-sm" :disabled="nflsojModalPage <= 1 || isLoadingNflsojList" @click="loadNflsojContestPage(nflsojModalPage - 1)">◀ 上一页</button>
+        <button class="btn-ghost btn-sm" :disabled="!nflsojModalHasMore || isLoadingNflsojList" @click="loadNflsojContestPage(nflsojModalPage + 1)">下一页 ▶</button>
+      </div>
+      <div class="nflsoj-contest-list">
+        <div v-if="isLoadingNflsojList" class="nflsoj-loading">⏳ 加载中...</div>
+        <template v-else>
+          <label v-for="c in nflsojModalContests" :key="c.id" class="nflsoj-contest-row">
+            <input type="checkbox" :checked="!!nflsojModalSelected[c.id]" @change="nflsojToggle(c.id, $event.target.checked)" />
+            <span class="nflsoj-contest-id">#{{ c.id }}</span>
+            <span class="nflsoj-contest-title">{{ c.title }}</span>
+          </label>
+          <div v-if="!nflsojModalContests.length" class="nflsoj-loading">暂无比赛</div>
+        </template>
+      </div>
+      <div class="nflsoj-modal-footer">
+        <span class="nflsoj-selected-count">已选 {{ nflsojSelectedCount }} 个比赛</span>
+        <span v-if="isImportingNflsoj" class="nflsoj-import-status">{{ nflsojImportStatus }}</span>
+        <button class="btn-primary btn-sm" @click="importSelectedNflsojContests" :disabled="nflsojSelectedCount === 0 || isImportingNflsoj">
+          {{ isImportingNflsoj ? '⏳ 导入中...' : '导入选中比赛 →' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 </template>
 
@@ -406,6 +445,15 @@ export default {
       showBatchImport: false,
       batchImportText: '',
       currentTaskIndex: 0,
+      // NFLSOJ 比赛列表模态框
+      showNflsojModal: false,
+      nflsojModalPage: 1,
+      nflsojModalContests: [],
+      nflsojModalTotalPages: 1,
+      nflsojModalSelected: {},
+      isLoadingNflsojList: false,
+      isImportingNflsoj: false,
+      nflsojImportStatus: '',
       
       // 进度条状态
       showStepIndicators: false,
@@ -574,8 +622,13 @@ export default {
     },
     currentTaskHasRawMaterials() {
       return hasTaskRawMaterials(this.tasks[this.currentTaskIndex])
+    },
+    nflsojSelectedCount() {
+      return Object.values(this.nflsojModalSelected).filter(Boolean).length
+    },
+    nflsojModalHasMore() {
+      return this.nflsojModalPage < this.nflsojModalTotalPages
     }
-  },
   methods: {
     createTaskId() {
       return createTaskId()
@@ -1746,8 +1799,66 @@ export default {
       }
     },
 
-    
-    async generateCode() {
+    // ─── NFLSOJ 比赛列表模态框 ──────────────────────────────────────────────────
+    async openNflsojModal() {
+      this.showNflsojModal = true
+      if (!this.nflsojModalContests.length) {
+        await this.loadNflsojContestPage(1)
+      }
+    },
+
+    async loadNflsojContestPage(page) {
+      this.isLoadingNflsojList = true
+      try {
+        const data = await request(`/api/atcoder/nflsoj-contest-list?page=${page}`)
+        this.nflsojModalContests = data.contests || []
+        this.nflsojModalPage = data.currentPage || page
+        this.nflsojModalTotalPages = data.totalPages || 1
+      } catch (e) {
+        this.showToastMessage(`加载比赛列表失败: ${e.message}`)
+      } finally {
+        this.isLoadingNflsojList = false
+      }
+    },
+
+    nflsojToggle(id, checked) {
+      this.nflsojModalSelected = { ...this.nflsojModalSelected, [id]: checked }
+    },
+
+    nflsojSelectAll() {
+      const sel = { ...this.nflsojModalSelected }
+      this.nflsojModalContests.forEach(c => { sel[c.id] = true })
+      this.nflsojModalSelected = sel
+    },
+
+    nflsojClearSelected() {
+      this.nflsojModalSelected = {}
+    },
+
+    async importSelectedNflsojContests() {
+      const ids = Object.entries(this.nflsojModalSelected)
+        .filter(([, v]) => v)
+        .map(([id]) => id)
+      if (!ids.length) return
+      this.isImportingNflsoj = true
+      let totalAdded = 0
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        const contest = this.nflsojModalContests.find(c => c.id === id)
+        const contestTitle = contest?.title || `#${id}`
+        this.nflsojImportStatus = `(${i + 1}/${ids.length}) ${contestTitle}`
+        try {
+          const url = `http://nflsoi.cc:20035/contest/${id}`
+          const result = await this.importTasksFromUrl(url)
+          totalAdded += result?.added || 0
+        } catch (e) {
+          console.warn(`[nflsoj modal] 比赛 ${id} 导入失败:`, e.message)
+        }
+      }
+      this.isImportingNflsoj = false
+      this.nflsojImportStatus = ''
+      this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
+    },
       if (!this.problemText.trim()) {
         this.showToastMessage('请先输入题目描述')
         return
@@ -3189,4 +3300,43 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .main-layout { flex-direction: column; padding: 8px; }
   .task-list-panel { width: 100%; min-width: auto; max-height: 180px; }
 }
+
+/* ─── NFLSOJ 比赛列表模态框 ─────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.nflsoj-modal {
+  background: #fff; border-radius: 10px; width: 520px; max-width: 95vw;
+  max-height: 80vh; display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.nflsoj-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid #e5e7eb;
+  font-weight: 600; font-size: 14px;
+}
+.nflsoj-modal-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-bottom: 1px solid #e5e7eb;
+}
+.flex-spacer { flex: 1; }
+.nflsoj-contest-list {
+  flex: 1; overflow-y: auto; padding: 4px 12px;
+}
+.nflsoj-loading { padding: 16px 0; color: #6b7280; font-size: 13px; text-align: center; }
+.nflsoj-contest-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 4px;
+  cursor: pointer; font-size: 13px; border-radius: 4px;
+}
+.nflsoj-contest-row:hover { background: #f3f4f6; }
+.nflsoj-contest-row input[type=checkbox] { flex-shrink: 0; cursor: pointer; }
+.nflsoj-contest-id { color: #9ca3af; font-size: 11px; min-width: 48px; flex-shrink: 0; }
+.nflsoj-contest-title { flex: 1; }
+.nflsoj-modal-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-top: 1px solid #e5e7eb;
+}
+.nflsoj-selected-count { font-size: 12px; color: #6b7280; flex: 1; }
+.nflsoj-import-status { font-size: 12px; color: #4f46e5; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
