@@ -883,4 +883,38 @@ function getNodeText($, node) {
   return result
 }
 
+// GET /api/atcoder/cpret?q=...&n=5
+// 通过 cpret.online 以题目文本检索原题
+router.get('/cpret', authenticateToken, async (req, res) => {
+  const q = (req.query.q || '').trim()
+  if (!q) return res.status(400).json({ error: '查询内容不能为空' })
+  if (q.length > 3000) return res.status(400).json({ error: '查询内容过长（最多 3000 字符）' })
+  const n = Math.min(parseInt(req.query.n) || 5, 10)
+  try {
+    const resp = await axios.get('https://cpret.online/', {
+      params: { q, lang: 'zh' },
+      headers: { 'User-Agent': HEADERS['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' },
+      timeout: 20000
+    })
+    const $ = load(resp.data)
+    const results = []
+    $('li.problem').each((i, el) => {
+      if (i >= n) return false
+      const titleEl = $(el).find('.title a')
+      const detailHref = $(el).find('a.detail_link').attr('href') || ''
+      results.push({
+        title: titleEl.text().trim(),
+        url: titleEl.attr('href') || '',
+        source: $(el).find('.source').text().trim(),
+        score: parseFloat($(el).find('.score').text()) || 0,
+        detailUrl: detailHref ? `https://cpret.online${detailHref}` : ''
+      })
+    })
+    res.json({ results })
+  } catch (err) {
+    console.error('[cpret] search error:', err.message)
+    res.status(500).json({ error: `检索失败: ${err.message}` })
+  }
+})
+
 export default router

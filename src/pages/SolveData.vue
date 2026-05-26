@@ -187,6 +187,23 @@
 
         <!-- 题目描述 -->
         <template v-if="activeTab === 'problem'">
+          <div class="tab-action-bar">
+            <button @click="searchCpret" :disabled="isCpretSearching || !problemText.trim()" class="btn-secondary btn-sm">
+              {{ isCpretSearching ? '⏳ 检索中...' : '🔍 检索原题' }}
+            </button>
+            <button v-if="cpretResults" @click="cpretResults = null" class="btn-ghost btn-sm">✕ 清除</button>
+            <span v-if="cpretResults" class="cpret-count-hint">
+              {{ cpretResults.length ? `找到 ${cpretResults.length} 个相似题目` : '未找到相似题目' }}
+            </span>
+          </div>
+          <div v-if="cpretResults && cpretResults.length" class="cpret-results-bar">
+            <div v-for="(r, i) in cpretResults" :key="i" class="cpret-result-row">
+              <span class="cpret-score">{{ (r.score * 100).toFixed(0) }}%</span>
+              <a :href="r.url || r.detailUrl" target="_blank" rel="noopener" class="cpret-result-title">{{ r.title }}</a>
+              <span class="cpret-source">{{ r.source }}</span>
+              <button @click="insertCpretLink(r)" class="btn-ghost btn-sm">插入</button>
+            </div>
+          </div>
           <textarea
             v-model="problemText"
             placeholder="请输入完整的题目描述，包括题意、输入格式、输出格式、数据范围等..."
@@ -344,7 +361,8 @@ export default {
       leftWidth: 40,
       isDragging: false,
       problemText: '',
-      codeOutput: '',
+      cpretResults: null,
+      isCpretSearching: false,
       dataOutput: '',
       selectedModel: getDefaultMainModel(),
       translationModel: getDefaultTranslationModel(),
@@ -1659,6 +1677,29 @@ export default {
     clearManualCode() {
       this.manualCode = ''
     },
+
+    async searchCpret() {
+      if (!this.problemText.trim()) return
+      this.isCpretSearching = true
+      this.cpretResults = null
+      try {
+        const q = this.problemText.slice(0, 2000)
+        const data = await request(`/api/atcoder/cpret?q=${encodeURIComponent(q)}`)
+        this.cpretResults = data.results || []
+      } catch (e) {
+        this.showToastMessage(`检索失败: ${e.message || e}`)
+        this.cpretResults = []
+      } finally {
+        this.isCpretSearching = false
+      }
+    },
+
+    insertCpretLink(r) {
+      const url = r.url || r.detailUrl
+      if (!url) return
+      const line = `\n原题链接：[${r.title}](${url})（${r.source}）`
+      this.problemText = (this.problemText || '').trimEnd() + line
+    },
     
     async generateCode() {
       if (!this.problemText.trim()) {
@@ -2927,6 +2968,48 @@ export default {
   box-sizing: border-box;
 }
 .content-textarea:focus { background: #fafeff; }
+
+.cpret-results-bar {
+  flex-shrink: 0;
+  max-height: 148px;
+  overflow-y: auto;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fbff;
+  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cpret-result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.cpret-score {
+  font-size: 11px;
+  color: #6b7280;
+  min-width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.cpret-result-title {
+  flex: 1;
+  color: #2563eb;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cpret-result-title:hover { text-decoration: underline; }
+.cpret-source {
+  font-size: 11px;
+  color: #9ca3af;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+.cpret-count-hint { font-size: 12px; color: #6b7280; }
 
 .reference-pane {
   flex: 1;
