@@ -25,8 +25,7 @@ export function extractStreamingFieldPreview(rawBuffer, fieldName, startOffset =
       if (next === 'n') preview += '\n'
       else if (next === '"') preview += '"'
       else if (next === '\\') preview += '\\'
-      else if (next === 't') preview += '\t'
-      else preview += next
+      else preview += '\\' + next
       index += 2
     } else if (partial[index] === '"') {
       break
