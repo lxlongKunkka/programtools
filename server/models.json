@@ -9,7 +9,6 @@
   { "id": "claude-opus-4-6", "name": "claude-opus-4-6", "role": "premium" },
   { "id": "claude-sonnet-4-6", "name": "claude-sonnet-4-6", "role": "premium" },
   { "id": "grok-4-fast", "name": "grok-4-fast", "role": "user" },
-  { "id": "gemini-3-flash-preview", "name": "gemini-3-flash-preview", "role": "user" },
   { "id": "gemini-3.5-flash", "name": "gemini-3.5-flash", "role": "user" },
   { "id": "gemini-2.5-flash", "name": "gemini-2.5-flash", "role": "user" }
 ]
