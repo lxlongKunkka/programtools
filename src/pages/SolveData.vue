@@ -1702,6 +1702,26 @@ export default {
       const line = `\n原题链接：[${r.title}](${url})（${r.source}）`
       this.problemText = (this.problemText || '').trimEnd() + line
     },
+
+    // 内部方法：后台检索原题，不影响 UI 的 isCpretSearching 状态
+    async _fetchCpretResults(targetIndex) {
+      const task = this.tasks[targetIndex]
+      if (!task) return null
+      const q = (task.problemText || '').slice(0, 2000).trim()
+      if (!q) return null
+      try {
+        const data = await request(`/api/atcoder/cpret?q=${encodeURIComponent(q)}`)
+        const results = data.results || []
+        this.saveToTask(targetIndex, 'cpretResults', results)
+        if (this.currentTaskIndex === targetIndex) {
+          this.cpretResults = results
+        }
+        return results
+      } catch (e) {
+        return null
+      }
+    },
+
     
     async generateCode() {
       if (!this.problemText.trim()) {
@@ -1827,6 +1847,12 @@ export default {
         } else {
           this.generationSteps.translate = 'success' // 已经有翻译了
         }
+
+        // 1b. 若尚无 CPRet 检索结果，与翻译/题解并行自动检索原题
+        let cpretPromise = Promise.resolve()
+        if (!this.tasks[targetIndex]?.cpretResults) {
+          cpretPromise = this._fetchCpretResults(targetIndex).catch(() => null)
+        }
         
         // 2. 并行生成题解 (不依赖翻译结果，使用原始内容)
         this.generationStatus = '正在并行生成：翻译 + 题解代码...'
@@ -1868,6 +1894,9 @@ export default {
             // 如果题解失败，也要确保翻译完成，以免状态错乱
             if (this.isTranslating) await translationPromise
         }
+
+        // 等待 CPRet 检索完成（通常与翻译同步进行，已基本结束）
+        await cpretPromise
 
         // 如果已有 CPRet 检索结果，将原题链接附加到翻译末尾，并更新 problemMeta.sourceUrl
         const topCpretResult = this.tasks[targetIndex]?.cpretResults?.[0]
