@@ -159,6 +159,7 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
   const exportTime = getBeijingExportTime()
   const zipOptions = createZipOptions(exportTime)
   const attachmentLinkLines = []
+  const sourceLinkLines = []
 
   for (let index = 0; index < completedTasks.length; index++) {
     const task = completedTasks[index]
@@ -226,10 +227,27 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
         String(task.additionalFile.sourceUrl).trim(),
       ].filter(Boolean).join('\n'))
     }
+
+    // 原题来源链接
+    const sourceUrl = task.problemMeta?.sourceUrl || task.cpretResults?.[0]?.url || ''
+    if (sourceUrl) {
+      folder.file('source_url.txt', sourceUrl, zipOptions)
+      const topCpret = task.cpretResults?.[0]
+      const infoLines = [`【${prefix}_${title}】`]
+      if (topCpret?.title) infoLines.push(`原题：${topCpret.title}`)
+      if (topCpret?.source) infoLines.push(`来源：${topCpret.source}`)
+      if (topCpret?.score) infoLines.push(`相似度：${(topCpret.score * 100).toFixed(0)}%`)
+      infoLines.push(`链接：${sourceUrl}`)
+      sourceLinkLines.push(infoLines.join('\n'))
+    }
   }
 
   if (attachmentLinkLines.length) {
     masterZip.file('attachment_links.txt', attachmentLinkLines.join('\n\n'), zipOptions)
+  }
+
+  if (sourceLinkLines.length) {
+    masterZip.file('原题链接.txt', sourceLinkLines.join('\n\n'), zipOptions)
   }
 
   masterZip.file('run_all_tasks.bat', buildBatchRunAllBat(), zipOptions)
