@@ -1868,7 +1868,22 @@ export default {
             // 如果题解失败，也要确保翻译完成，以免状态错乱
             if (this.isTranslating) await translationPromise
         }
-        
+
+        // 如果已有 CPRet 检索结果，将原题链接附加到翻译末尾，并更新 problemMeta.sourceUrl
+        const topCpretResult = this.tasks[targetIndex]?.cpretResults?.[0]
+        if (topCpretResult?.url) {
+          const currentTranslation = this.tasks[targetIndex]?.translationText || ''
+          if (currentTranslation && !currentTranslation.includes(topCpretResult.url)) {
+            const scoreLabel = topCpretResult.score ? `，相似度 ${(topCpretResult.score * 100).toFixed(0)}%` : ''
+            const appendLine = `\n\n---\n**原题参考**：[${topCpretResult.title}](${topCpretResult.url})（${topCpretResult.source}${scoreLabel}）`
+            this.saveToTask(targetIndex, 'translationText', currentTranslation.trimEnd() + appendLine)
+          }
+          if (!this.tasks[targetIndex]?.problemMeta?.sourceUrl) {
+            const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
+            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, sourceUrl: topCpretResult.url })
+          }
+        }
+
         // 3. 准备并行请求：报告 + 数据生成 + 元数据生成
         this.generationStatus = '正在并行生成：解题报告 + 数据脚本 + 元数据...'
         let parallelRequests = []
