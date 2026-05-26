@@ -1,8 +1,8 @@
 const DEFAULT_MAIN_MODEL = 'o4-mini'
 const MAIN_MODEL_STORAGE_KEY = 'programtools_default_main_model'
-const DEFAULT_TRANSLATION_MODEL = 'gemini-3-flash-preview'
+const DEFAULT_TRANSLATION_MODEL = 'gemini-3.5-flash'
 const TRANSLATION_MODEL_STORAGE_KEY = 'programtools_default_translation_model'
-const DEFAULT_REPORT_MODEL = 'gemini-3-flash-preview'
+const DEFAULT_REPORT_MODEL = 'gemini-3.5-flash'
 const REPORT_MODEL_STORAGE_KEY = 'programtools_default_report_model'
 
 function readStoredPreference(key) {

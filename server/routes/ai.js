@@ -442,7 +442,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.1,
       max_tokens: 32767
@@ -750,9 +750,9 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
 
   try {
     const resp = await axios.post(YUN_API_URL, {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages: [{ role: 'system', content: TRANSLATE_PROMPT }, { role: 'user', content: textWithPlaceholders }],
-      temperature: 0.1, max_tokens: 32767, stream: true
+      temperature: 0.1, max_tokens: 8192, stream: true
     }, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       responseType: 'stream', timeout: 600000
@@ -906,7 +906,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.1,
       max_tokens: 32767
@@ -1033,7 +1033,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.5,
       max_tokens: 32767
@@ -1129,7 +1129,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.3,
       max_tokens: 32767
@@ -1207,7 +1207,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.2,
       max_tokens: 32767
@@ -1286,7 +1286,7 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.1,
       max_tokens: 32767
@@ -1407,7 +1407,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.3,
       max_tokens: 32767
@@ -1539,7 +1539,7 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.1,
       max_tokens: 1000
@@ -1614,7 +1614,7 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.3,
       max_tokens: 1000
@@ -1715,7 +1715,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.3,
       max_tokens: 32767
@@ -1769,7 +1769,7 @@ router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermi
     ];
 
     const payload = {
-        model: model || 'gemini-3-flash-preview',
+        model: model || 'gemini-3.5-flash',
         messages,
         temperature: 0.5,
         max_tokens: 16000
@@ -1815,7 +1815,7 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
           ];
 
           const payload = {
-              model: model || 'gemini-3-flash-preview',
+              model: model || 'gemini-3.5-flash',
               messages,
               temperature: 0.5,
               max_tokens: 16000
@@ -2036,7 +2036,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           ];
 
           const payload = {
-              model: model || 'gemini-3-flash-preview',
+              model: model || 'gemini-3.5-flash',
               messages,
               temperature: 0.3,
               max_tokens: 32767
@@ -2336,7 +2336,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.7,
       max_tokens: 16000
@@ -2408,7 +2408,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     ]
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.3,
       max_tokens: 16000
@@ -2478,7 +2478,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
     console.log(`[TopicPlan] Generating with mode=${mode}, topic=${topic}`)
 
     const payload = {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages,
       temperature: 0.7,
       max_tokens: 4000
@@ -2652,7 +2652,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           ]
 
           const payload = {
-            model: model || 'gemini-3-flash-preview',
+            model: model || 'gemini-3.5-flash',
             messages,
             temperature: 0.3,
             max_tokens: 16000
@@ -2682,7 +2682,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               
               try {
                   const continueResp = await axios.post(YUN_API_URL, {
-                      model: model || 'gemini-3-flash-preview',
+                      model: model || 'gemini-3.5-flash',
                       messages,
                       temperature: 0.3,
                       max_tokens: 16000
@@ -2959,7 +2959,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           ]
 
           const payload = {
-            model: model || 'gemini-3-flash-preview',
+            model: model || 'gemini-3.5-flash',
             messages,
             temperature: 0.7,
             max_tokens: 16000
@@ -3145,7 +3145,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
           ]
 
           const payload = {
-            model: model || 'gemini-3-flash-preview',
+            model: model || 'gemini-3.5-flash',
             messages,
             temperature: 0.7,
             max_tokens: 4000
@@ -3294,7 +3294,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // Fix: Pass 'C++' as language, and append content separately
     const solutionPrompt = getSolutionPrompt('C++') + `\n\n题目内容：\n${content}`
     const solutionRes = await axios.post(YUN_API_URL, {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages: [{ role: 'user', content: solutionPrompt }],
       temperature: 0.7
     }, {
@@ -3353,7 +3353,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // 2. Generate HTML Report
     const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
     const reportRes = await axios.post(YUN_API_URL, {
-      model: model || 'gemini-3-flash-preview',
+      model: model || 'gemini-3.5-flash',
       messages: [{ role: 'user', content: reportPrompt }],
       temperature: 0.7
     }, {
