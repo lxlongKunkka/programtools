@@ -384,6 +384,7 @@
 <script>
 import { nextTick } from 'vue'
 import request from '../utils/request'
+import { retryRequest } from '../utils/request'
 import { getModels } from '../utils/models'
 import { getDefaultMainModel, getDefaultReportModel, getDefaultTranslationModel, resolvePreferredModel, setDefaultMainModel, setDefaultReportModel, setDefaultTranslationModel } from '../utils/modelPreferences'
 import TaskListPanel from '../modules/solvedata/components/TaskListPanel.vue'
@@ -2021,9 +2022,14 @@ export default {
           language: this.language,
         })
 
-        const solutionPromise = request(solutionRequest.endpoint, {
+        const solutionPromise = retryRequest(solutionRequest.endpoint, {
           method: 'POST',
           body: JSON.stringify(solutionRequest.payload)
+        }, {
+          maxRetries: 3,
+          onRetry: (attempt, max, delay) => {
+            this.generationStatus = `⚠️ 题解生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+          }
         }).then(res => {
           this.generationSteps.solution = 'success'
           return res
@@ -2102,13 +2108,18 @@ export default {
         
         this.generationSteps.data = 'processing'
         parallelRequests.push(
-          request('/api/generate-data', {
+          retryRequest('/api/generate-data', {
             method: 'POST',
             body: JSON.stringify({
               text: textForDataAll,
               model: this.selectedModel,
               code: dataInputs.code
             })
+          }, {
+            maxRetries: 3,
+            onRetry: (attempt, max, delay) => {
+              this.generationStatus = `⚠️ 数据脚本生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+            }
           }).then(res => {
               this.generationSteps.data = 'success'
               // 立即更新数据脚本显示
@@ -2128,7 +2139,7 @@ export default {
         if (shouldGenerateMeta) {
             this.generationSteps.meta = 'processing'
             parallelRequests.push(
-              request('/api/generate-problem-meta', {
+              retryRequest('/api/generate-problem-meta', {
                 method: 'POST',
                 body: JSON.stringify(buildMetaRequestPayload({
                   task: this.tasks[targetIndex],
@@ -2136,7 +2147,7 @@ export default {
                   solution: this.tasks[targetIndex]?.codeOutput,
                   model: this.getMetaReportModel(),
                 }))
-              }).then(res => {
+              }, { maxRetries: 2 }).then(res => {
                   this.generationSteps.meta = 'success'
                   // 立即更新元数据
                   if (res) {
@@ -2490,7 +2501,15 @@ export default {
         })
 
         this.generationStatus = '正在渲染解题报告...'
-        const res = await request.post('/api/solution-report', reportPayload)
+        const res = await retryRequest('/api/solution-report', {
+          method: 'POST',
+          body: JSON.stringify(reportPayload)
+        }, {
+          maxRetries: 3,
+          onRetry: (attempt, max, delay) => {
+            this.generationStatus = `⚠️ 报告生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+          }
+        })
         
         if (res.html) {
           this.saveToTask(taskIdx, 'reportHtml', res.html)

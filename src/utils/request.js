@@ -99,4 +99,38 @@ request.put = (url, data, options = {}) => request(url, {
 
 request.delete = (url, options) => request(url, { ...options, method: 'DELETE' })
 
+/**
+ * 带自动重试的 AI 接口调用
+ * - 对 5xx、网络错误自动重试（指数退避）
+ * - 429 限速时等待更长时间
+ * - 4xx 客户端错误（除 429）立即报错，不重试
+ * @param {string} url
+ * @param {object} options - 与 request() 相同
+ * @param {object} retryOptions
+ * @param {number} retryOptions.maxRetries - 最大重试次数（默认 3）
+ * @param {number} retryOptions.baseDelay  - 首次重试延迟 ms（默认 2000）
+ * @param {Function} retryOptions.onRetry  - (attempt, maxRetries, delayMs, errMsg) => void
+ */
+export async function retryRequest(url, options = {}, { maxRetries = 3, baseDelay = 2000, onRetry } = {}) {
+  let lastErr
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await request(url, options)
+    } catch (err) {
+      lastErr = err
+      const status = err.response?.status
+      // 4xx 客户端错误不重试（429 限速除外）
+      if (status && status >= 400 && status < 500 && status !== 429) throw err
+      if (attempt < maxRetries) {
+        const delay = status === 429 ? 8000 : baseDelay * attempt
+        onRetry?.(attempt, maxRetries, delay, err.message)
+        await new Promise(r => setTimeout(r, delay))
+      }
+    }
+  }
+  throw lastErr
+}
+
+request.retry = (url, options, retryOptions) => retryRequest(url, options, retryOptions)
+
 export default request
