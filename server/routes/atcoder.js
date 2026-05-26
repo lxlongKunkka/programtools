@@ -898,16 +898,17 @@ router.get('/cpret', authenticateToken, async (req, res) => {
     })
     const $ = load(resp.data)
     const results = []
-    $('li.problem').each((i, el) => {
+    $('ul.list-group li.list-group-item').each((i, el) => {
       if (i >= n) return false
-      const titleEl = $(el).find('.title a')
-      const detailHref = $(el).find('a.detail_link').attr('href') || ''
+      const links = $(el).find('a')
+      const titleLink = links.first()
+      const detailLink = links.eq(1)
       results.push({
-        title: titleEl.text().trim(),
-        url: titleEl.attr('href') || '',
-        source: $(el).find('.source').text().trim(),
-        score: parseFloat($(el).find('.score').text()) || 0,
-        detailUrl: detailHref ? `https://cpret.online${detailHref}` : ''
+        title: titleLink.text().trim(),
+        url: titleLink.attr('href') || '',
+        source: $(el).find('small.text-muted').text().trim(),
+        score: parseFloat($(el).find('.score-badge').text()) || 0,
+        detailUrl: detailLink.attr('href') ? `https://cpret.online${detailLink.attr('href')}` : ''
       })
     })
     res.json({ results })
