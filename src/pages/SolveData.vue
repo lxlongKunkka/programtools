@@ -1241,7 +1241,10 @@ export default {
 
     // 将某个字段值写入指定任务。若该任务正是当前正在查看的任务，
     // 则写入响应式属性（触发 watcher → UI 刷新）；否则直接写 tasks[] 避免污染当前视图。
-    saveToTask(taskIndex, field, value) {
+    saveToTask(taskIndex, field, value, expectedTaskId = null) {
+      // Guard: if an expected task ID is provided, verify the task hasn't been replaced
+      // This prevents stale async responses from overwriting a different task at the same index
+      if (expectedTaskId !== null && this.tasks[taskIndex]?.id !== expectedTaskId) return
       const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
         ? stripFreopenStatements(value)
         : value
@@ -1885,6 +1888,7 @@ export default {
         return
       }
       const targetIndex = this.currentTaskIndex
+      const targetTaskId = this.tasks[targetIndex]?.id  // guard against clear+reimport races
       if (this.tasks[targetIndex]?.status === 'processing') {
         this.showToastMessage('该任务正在生成中，请等待完成')
         return
@@ -1949,11 +1953,11 @@ export default {
         for (const res of responses) {
            if (!res || !res.data) continue
            if (res.type === 'code' && res.data.result) {
-              this.saveToTask(targetIndex, 'codeOutput', res.data.result)
-              if (res.data.pureCode) this.saveToTask(targetIndex, 'serverPureCode', res.data.pureCode)
+              this.saveToTask(targetIndex, 'codeOutput', res.data.result, targetTaskId)
+              if (res.data.pureCode) this.saveToTask(targetIndex, 'serverPureCode', res.data.pureCode, targetTaskId)
            } else if (res.type === 'meta') {
               const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data))
+              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data), targetTaskId)
            }
         }
         this.generationStatus = '✅ 题解代码生成完成'
@@ -1974,6 +1978,7 @@ export default {
       }
       
       const targetIndex = this.currentTaskIndex
+      const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
       this.isGenerating = 'all'
       this.generationStatus = '正在初始化生成任务...'
       this.dataOutput = ''
@@ -2052,8 +2057,8 @@ export default {
         
         // 处理题解结果
         if (solutionRes && solutionRes.result) {
-            this.saveToTask(targetIndex, 'codeOutput', solutionRes.result)
-            if (solutionRes.pureCode) this.saveToTask(targetIndex, 'serverPureCode', solutionRes.pureCode)
+            this.saveToTask(targetIndex, 'codeOutput', solutionRes.result, targetTaskId)
+            if (solutionRes.pureCode) this.saveToTask(targetIndex, 'serverPureCode', solutionRes.pureCode, targetTaskId)
             
             // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
             if (this.isTranslating) {
@@ -2075,11 +2080,11 @@ export default {
           if (currentTranslation && !currentTranslation.includes(topCpretResult.url)) {
             const scoreLabel = topCpretResult.score ? `，相似度 ${(topCpretResult.score * 100).toFixed(0)}%` : ''
             const appendLine = `\n\n---\n**原题参考**：[${topCpretResult.title}](${topCpretResult.url})（${topCpretResult.source}${scoreLabel}）`
-            this.saveToTask(targetIndex, 'translationText', currentTranslation.trimEnd() + appendLine)
+            this.saveToTask(targetIndex, 'translationText', currentTranslation.trimEnd() + appendLine, targetTaskId)
           }
           if (!this.tasks[targetIndex]?.problemMeta?.sourceUrl) {
             const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, sourceUrl: topCpretResult.url })
+            this.saveToTask(targetIndex, 'problemMeta', { ...existingMeta, sourceUrl: topCpretResult.url }, targetTaskId)
           }
         }
 
@@ -2133,7 +2138,7 @@ export default {
               this.generationSteps.data = 'success'
               // 立即更新数据脚本显示
               if (res && res.result) {
-                  this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.result))
+                  this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.result), targetTaskId)
               }
               return { type: 'data', data: res }
           }).catch(() => {
@@ -2163,7 +2168,7 @@ export default {
                       try {
                           const meta = res
                           const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-                          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta))
+                          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta), targetTaskId)
                       } catch (e) { console.error('Meta update error', e) }
                   }
                   return { type: 'meta', data: res }
@@ -2187,14 +2192,14 @@ export default {
             
             if (res.type === 'data') {
                 if (res.data && res.data.result) {
-                    this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
+                    this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result), targetTaskId)
                 }
             } else if (res.type === 'meta') {
                 if (res.data) {
                     try {
                         const meta = res.data
                         const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-                    this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta))
+                    this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, meta), targetTaskId)
                     } catch (e) {
                         console.error('解析元数据失败', e)
                     }
@@ -2227,6 +2232,7 @@ export default {
     async generateData() {
       // すべての入力を await より前に tasks[] から確定する（タスク切り替え競合防止）
       const targetIndex = this.currentTaskIndex
+      const targetTaskId = this.tasks[targetIndex]?.id  // guard against clear+reimport races
       const taskSnapshot = this.tasks[targetIndex]
       const dataInputs = resolveDataGenerationInput({
         taskSnapshot,
@@ -2286,10 +2292,10 @@ export default {
         for (const res of responses) {
            if (!res || !res.data) continue
            if (res.type === 'data' && res.data.result) {
-              this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result))
+              this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.data.result), targetTaskId)
            } else if (res.type === 'meta') {
               const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data))
+              this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res.data), targetTaskId)
            }
         }
         this.generationStatus = '✅ 数据脚本生成完成'
