@@ -2480,6 +2480,7 @@ export default {
     async generateReportInline(targetIndex = null) {
       const taskIdx = (targetIndex !== null && targetIndex !== undefined) ? targetIndex : this.currentTaskIndex
       const taskSnap = this.tasks[taskIdx]
+      const expectedTaskId = taskSnap?.id  // guard against index shift when tasks are added/removed
       const isCurrentTask = () => this.currentTaskIndex === taskIdx
 
       if (!taskSnap?.problemText?.trim()) {
@@ -2513,8 +2514,8 @@ export default {
               body: JSON.stringify(solutionRequest.payload)
                 })
                 if (solutionRes && solutionRes.result) {
-                    this.saveToTask(taskIdx, 'codeOutput', solutionRes.result)
-                    if (solutionRes.pureCode) this.saveToTask(taskIdx, 'serverPureCode', solutionRes.pureCode)
+                    this.saveToTask(taskIdx, 'codeOutput', solutionRes.result, expectedTaskId)
+                    if (solutionRes.pureCode) this.saveToTask(taskIdx, 'serverPureCode', solutionRes.pureCode, expectedTaskId)
                     codeContent = solutionRes.result
                 }
             } catch (err) {
@@ -2550,7 +2551,7 @@ export default {
         })
         
         if (res.html) {
-          this.saveToTask(taskIdx, 'reportHtml', res.html)
+          this.saveToTask(taskIdx, 'reportHtml', res.html, expectedTaskId)
           this.showToastMessage('✅ 解题报告生成成功')
           if (isCurrentTask()) this.generationStatus = '✅ 解题报告生成成功'
           if (isCurrentTask()) setTimeout(() => { if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' }, 3000)
