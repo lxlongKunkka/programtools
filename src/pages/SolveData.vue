@@ -1281,6 +1281,11 @@ export default {
         console.log(`[saveToTask] codeOutput taskIdx=${actualIndex} currentIdx=${this.currentTaskIndex} path=${path} len=${String(normalizedValue).length} id=${expectedTaskId}`)
       }
       if (actualIndex === this.currentTaskIndex) {
+        // 同时直接写入 tasks[]，防止 watcher 异步触发时 currentTaskIndex 已切换导致数据写错任务
+        // watcher 仍会触发以刷新 UI，但实际数据由此处的直接写入保障
+        if (this.tasks[actualIndex]) {
+          this.tasks[actualIndex][field] = normalizedValue
+        }
         this[field] = normalizedValue
       } else if (this.tasks[actualIndex]) {
         this.tasks[actualIndex][field] = normalizedValue
