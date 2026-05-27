@@ -597,6 +597,11 @@ export default {
         // 移除 <!-- AC_CODE --> 标记，避免在界面上显示
         return this.codeOutput.replace(/<!--\s*AC_CODE\s*-->/g, '')
       }
+      // codeOutput 为空时，优先用 serverPureCode（AI 注释版），避免退化成无注释的原始代码
+      if (this.serverPureCode && this.serverPureCode.trim()) {
+        const lang = this.language === 'C++' ? 'cpp' : 'python'
+        return '```' + lang + '\n' + stripFreopenStatements(this.serverPureCode) + '\n```'
+      }
       if (this.manualCode && this.manualCode.trim()) {
         return '```\n' + stripFreopenStatements(this.manualCode) + '\n```'
       }
