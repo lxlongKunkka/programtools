@@ -1892,7 +1892,7 @@ export default {
       // await 前先快照所有响应式输入，防止用户切换任务后读到错误内容
       const taskSnap = this.tasks[targetIndex]
       const problemText = taskSnap?.problemText || this.problemText
-      const manualCode = taskSnap?.manualCode || ''
+      const manualCode = taskSnap?.manualCode || this.manualCode || ''
       const isExplainMode = !!manualCode.trim()
       const solutionModel = this.getSolveDataModel(targetIndex)
       
@@ -1903,11 +1903,16 @@ export default {
       this.activeTab = 'code'
       
       try {
-        // 确保有翻译文本，保证后续的元数据基于译文
+        // 确保有翻译文本，保证后续的元数据基于译文；翻译失败不应阻断题解代码的生成
         if (!(this.tasks[targetIndex]?.translationText?.trim())) {
           this.generationStatus = '正在自动翻译题目...'
-          await this.autoTranslate(targetIndex)
-          this.generationStatus = '翻译完成，正在生成题解代码...'
+          try {
+            await this.autoTranslate(targetIndex)
+            this.generationStatus = '翻译完成，正在生成题解代码...'
+          } catch (translateErr) {
+            console.warn('Auto-translate failed (non-fatal):', translateErr.message)
+            this.generationStatus = '翻译失败，继续生成题解代码...'
+          }
         }
         
         const requests = []
