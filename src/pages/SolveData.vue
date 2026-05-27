@@ -1202,6 +1202,9 @@ export default {
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
         const normalizedValue = field === 'manualCode' ? stripFreopenStatements(value) : value
+        if (field === 'codeOutput') {
+          console.log(`[updateCurrentTask] codeOutput currentIdx=${this.currentTaskIndex} len=${String(normalizedValue).length} taskId=${this.tasks[this.currentTaskIndex]?.id}`)
+        }
         // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
         if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
             this.tasks[this.currentTaskIndex].status === 'completed' && 
@@ -1273,6 +1276,10 @@ export default {
       const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
         ? stripFreopenStatements(value)
         : value
+      if (field === 'codeOutput') {
+        const path = actualIndex === this.currentTaskIndex ? 'watcher' : 'direct'
+        console.log(`[saveToTask] codeOutput taskIdx=${actualIndex} currentIdx=${this.currentTaskIndex} path=${path} len=${String(normalizedValue).length} id=${expectedTaskId}`)
+      }
       if (actualIndex === this.currentTaskIndex) {
         this[field] = normalizedValue
       } else if (this.tasks[actualIndex]) {
@@ -2136,8 +2143,11 @@ export default {
         let parallelRequests = []
 
         // 3a. 解题报告
-        // 读取 tasks[targetIndex] 而非 this.codeOutput（防止用户已切换任务）
-        const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && this.tasks[targetIndex]?.codeOutput
+        // 当 targetIndex === currentTaskIndex 时，tasks[targetIndex].codeOutput 可能因 Vue watcher
+        // 异步刷新而仍为空（saveToTask 走的是 this.codeOutput = val → watcher → tasks[i].codeOutput = val）。
+        // 对当前任务使用响应式 this.codeOutput；对后台任务直接读 tasks[targetIndex].codeOutput。
+        const codeForReport = targetIndex === this.currentTaskIndex ? this.codeOutput : this.tasks[targetIndex]?.codeOutput
+        const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && codeForReport
         
         if (shouldGenerateReport) {
             steps.report = 'processing'
@@ -2192,16 +2202,19 @@ export default {
         
         // 3b. 元数据生成
         // 翻译完成后 problemMeta 通常已有 tags，此时跳过；仅在缺失时补充
-        const shouldGenerateMeta = !this.hasValidMeta
+        // 使用目标任务自己的 meta 判断，而非 this.hasValidMeta（后者读当前视图任务的 problemMeta）
+        const shouldGenerateMeta = !hasValidTaskMeta(this.tasks[targetIndex])
         if (shouldGenerateMeta) {
             steps.meta = 'processing'
+            // solution 同 shouldGenerateReport 处理：当前任务走 this.codeOutput，后台任务走 tasks[].codeOutput
+            const codeForMeta = targetIndex === this.currentTaskIndex ? this.codeOutput : this.tasks[targetIndex]?.codeOutput
             parallelRequests.push(
               retryRequest('/api/generate-problem-meta', {
                 method: 'POST',
                 body: JSON.stringify(buildMetaRequestPayload({
                   task: this.tasks[targetIndex],
-                  fallbackText: this.problemText,
-                  solution: this.tasks[targetIndex]?.codeOutput,
+                  fallbackText: this.tasks[targetIndex]?.problemText || '',
+                  solution: codeForMeta,
                   model: this.getMetaReportModel(),
                 }))
               }, { maxRetries: 2 }).then(res => {
