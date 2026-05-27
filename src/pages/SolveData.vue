@@ -266,7 +266,7 @@
         <!-- 解题代码 -->
         <template v-else-if="activeTab === 'code'">
           <div class="tab-action-bar">
-            <button @click="generateCode" :disabled="isGenerating === 'code' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
+            <button @click="generateCode" :disabled="isGenerating === 'code' || tasks[currentTaskIndex]?.status === 'processing'" class="btn-primary btn-sm">
               {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成题解代码' }}
             </button>
             <button @click="copyPureCode" class="btn-secondary btn-sm">📋 复制代码</button>
@@ -296,7 +296,7 @@
         <!-- 数据脚本 -->
         <template v-else-if="activeTab === 'data'">
           <div class="tab-action-bar">
-            <button @click="generateData" :disabled="isGenerating === 'data' || isGenerating === 'all' || isBatchRunning" class="btn-primary btn-sm">
+            <button @click="generateData" :disabled="isGenerating === 'data' || tasks[currentTaskIndex]?.status === 'processing'" class="btn-primary btn-sm">
               {{ isGenerating === 'data' ? '⏳ 生成中...' : '📊 生成数据脚本' }}
             </button>
             <button @click="copyDataCode" class="btn-secondary btn-sm">📋 复制代码</button>
@@ -1885,6 +1885,10 @@ export default {
         return
       }
       const targetIndex = this.currentTaskIndex
+      if (this.tasks[targetIndex]?.status === 'processing') {
+        this.showToastMessage('该任务正在生成中，请等待完成')
+        return
+      }
       // await 前先快照所有响应式输入，防止用户切换任务后读到错误内容
       const taskSnap = this.tasks[targetIndex]
       const problemText = taskSnap?.problemText || this.problemText
