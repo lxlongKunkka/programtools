@@ -141,8 +141,8 @@
           <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
         </div>
         <div class="detail-actions">
-          <button @click="generateAll" :disabled="isGenerating || isBatchRunning" class="btn-primary btn-sm">
-            {{ isGenerating ? '⏳ 生成中...' : '⚡ 一键生成' }}
+          <button @click="generateAll" :disabled="tasks[currentTaskIndex]?.status === 'processing' || isBatchRunning" class="btn-primary btn-sm">
+            {{ tasks[currentTaskIndex]?.status === 'processing' ? '⏳ 生成中...' : '⚡ 一键生成' }}
           </button>
           <button @click="downloadCurrentRawMaterials" :disabled="!currentTaskHasRawMaterials" class="btn-secondary btn-sm">
             📥 下载原始素材
@@ -1979,6 +1979,10 @@ export default {
     async generateAll() {
       if (!this.problemText.trim()) {
         this.showToastMessage('请先输入题目描述')
+        return
+      }
+      if (this.isGenerating) {
+        this.showToastMessage('当前任务正在生成中')
         return
       }
       
