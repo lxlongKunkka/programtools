@@ -431,6 +431,7 @@ export default {
       activeTab: 'problem',
       editorialText: '',
       manualCode: '',
+      codeOutput: '',
       referenceText: '',
       isTranslating: false,
       translationText: '',
