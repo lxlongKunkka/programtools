@@ -1675,7 +1675,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       return res.status(500).json({ error: 'Server configuration error: Prompt missing' })
     }
 
-    const { problem, code, reference, solutionPlan, model, level, language } = req.body
+    const { problem, code, reference, solutionPlan, model, level, language, tags } = req.body
     if ((!problem && !solutionPlan)) return res.status(400).json({ error: '缺少 problem 或 solutionPlan 字段' })
 
     let userContent = '';
@@ -1686,6 +1686,9 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
         userContent = `题目描述：\n${problem}\n\n代码：\n${codeContent}`;
         if (reference && reference.trim()) {
             userContent += `\n\n参考思路/提示：\n${reference.trim()}`;
+        }
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+            userContent += `\n\n知识点标签（请在总结页"核心知识点"中直接使用以下标签，无需自行推断）：${tags.join('、')}`;
         }
     }
 

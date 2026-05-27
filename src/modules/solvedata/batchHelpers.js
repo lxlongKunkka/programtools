@@ -24,12 +24,15 @@ export async function runBatchTasks({
 
   for (const { index } of pendingEntries) {
     await switchTask(index)
-    markTaskStatus(index, 'processing')
 
     try {
       if (batchMode === 'report_only') {
+        // report_only: generateReportForBatch doesn't manage task status itself
+        markTaskStatus(index, 'processing')
         await handleReportOnlyTask(index)
       } else {
+        // standard mode: generateAll manages status internally (sets 'processing' on entry)
+        // DO NOT mark as 'processing' here — it would trigger generateAll's early-return guard
         await handleStandardTask(index)
       }
 

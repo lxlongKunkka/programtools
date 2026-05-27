@@ -109,6 +109,7 @@ export function buildSolutionReportPayload({
     code: pureCode,
     reference: solutionPlan || task.referenceText || referenceFallback,
     solutionPlan,
+    tags: (task.problemMeta?.tags && task.problemMeta.tags.length) ? task.problemMeta.tags : [],
     model,
     language,
   }
