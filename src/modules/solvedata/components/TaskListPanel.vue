@@ -28,7 +28,7 @@
                   <span class="task-status-dot" :class="task.status"></span>
                   {{ getTaskStatusText(task) }}
                 </span>
-                <span class="task-progress-text">{{ getCompletedStepCount(task) }}/4 步</span>
+                <span class="task-progress-text">{{ getCompletedStepCount(getEffectiveTask(task, index)) }}/4 步</span>
               </div>
             </div>
             <div class="task-actions">
@@ -42,10 +42,10 @@
             </div>
           </div>
           <div class="step-dots">
-            <span class="dot" :class="{ done: !!task.translationText }" title="翻译">译</span>
-            <span class="dot" :class="{ done: !!task.codeOutput }" title="题解">解</span>
-            <span class="dot" :class="{ done: !!task.dataOutput }" title="数据">数</span>
-            <span class="dot" :class="{ done: !!task.reportHtml }" title="报告">报</span>
+            <span class="dot" :class="{ done: !!getEffectiveTask(task, index).translationText }" title="翻译">译</span>
+            <span class="dot" :class="{ done: !!getEffectiveTask(task, index).codeOutput }" title="题解">解</span>
+            <span class="dot" :class="{ done: !!getEffectiveTask(task, index).dataOutput }" title="数据">数</span>
+            <span class="dot" :class="{ done: !!getEffectiveTask(task, index).reportHtml }" title="报告">报</span>
           </div>
         </div>
       </div>
@@ -67,12 +67,22 @@ export default {
       type: Number,
       required: true,
     },
+    liveCurrentTaskFields: {
+      type: Object,
+      default: null,
+    },
   },
   methods: {
     getTaskTitle,
     getTaskStatusText,
     formatIndex(index) {
       return String(index + 1).padStart(2, '0')
+    },
+    getEffectiveTask(task, index) {
+      if (index === this.currentTaskIndex && this.liveCurrentTaskFields) {
+        return { ...task, ...this.liveCurrentTaskFields }
+      }
+      return task
     },
     getCompletedStepCount(task) {
       return [task?.translationText, task?.codeOutput, task?.dataOutput, task?.reportHtml]

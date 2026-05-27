@@ -104,6 +104,7 @@
     <TaskListPanel
       :tasks="tasks"
       :current-task-index="currentTaskIndex"
+      :live-current-task-fields="liveCurrentTaskFields"
       @add-task="addNewTask"
       @clear-completed="clearCompletedTasks"
       @clear-all="clearAllTasks"
@@ -568,6 +569,14 @@ export default {
     }
   },
   computed: {
+    liveCurrentTaskFields() {
+      return {
+        translationText: this.translationText,
+        codeOutput: this.codeOutput,
+        dataOutput: this.dataOutput,
+        reportHtml: this.reportHtml,
+      }
+    },
     modelOptions() {
       if (Array.isArray(this.models) && this.models.length > 0) return this.models
       return [
