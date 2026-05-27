@@ -1198,7 +1198,7 @@ export default {
     switchTask(index) {
       if (index === this.currentTaskIndex) return
       const snap = this.tasks.map((t, i) => `[${i}]co=${t.codeOutput?.length ?? 0},sp=${t.serverPureCode?.length ?? 0}`).join(' ')
-      console.log(`[switchTask] ${this.currentTaskIndex}→${index} | ${snap}`)
+      console.log(`[switchTask] ${this.currentTaskIndex}→${index} this.co=${this.codeOutput?.length ?? 0} | ${snap}`)
       this.currentTaskIndex = index
       this.loadTask(index)
     },
@@ -1210,11 +1210,14 @@ export default {
       // 暂停 watcher 以免触发 updateCurrentTask
       // 但由于 Vue 2/3 响应式机制，直接赋值会触发 watcher
       // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
+      console.log(`[loadTask:pre] idx=${index} this.co=${this.codeOutput?.length ?? 0} this.sp=${this.serverPureCode?.length ?? 0} task.co=${task.codeOutput?.length ?? 0} task.sp=${task.serverPureCode?.length ?? 0}`)
       this.problemText = task.problemText || ''
       this.editorialText = task.editorialText || ''
       this.manualCode = stripFreopenStatements(task.manualCode || '')
       this.referenceText = task.referenceText || ''
+      console.log(`[loadTask:assign-co] idx=${index} before=${this.codeOutput?.length ?? 0} assign=${task.codeOutput?.length ?? 0}`)
       this.codeOutput = task.codeOutput || ''
+      console.log(`[loadTask:post-co] idx=${index} after=${this.codeOutput?.length ?? 0}`)
       this.dataOutput = task.dataOutput || ''
       this.translationText = task.translationText || ''
       this.translationEnglish = task.translationEnglish || ''
@@ -1305,9 +1308,9 @@ export default {
       const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
         ? stripFreopenStatements(value)
         : value
-      if (field === 'codeOutput') {
+      if (field === 'codeOutput' || field === 'serverPureCode') {
         const path = actualIndex === this.currentTaskIndex ? 'watcher' : 'direct'
-        console.log(`[saveToTask] codeOutput taskIdx=${actualIndex} currentIdx=${this.currentTaskIndex} path=${path} len=${String(normalizedValue).length} id=${expectedTaskId}`)
+        console.log(`[saveToTask] ${field} taskIdx=${actualIndex} currentIdx=${this.currentTaskIndex} path=${path} len=${String(normalizedValue).length} id=${expectedTaskId}`)
       }
       if (actualIndex === this.currentTaskIndex) {
         // 同时直接写入 tasks[]，防止 watcher 异步触发时 currentTaskIndex 已切换导致数据写错任务
