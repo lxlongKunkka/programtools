@@ -970,7 +970,7 @@ export default {
     },
 
     getSolveDataModel(taskIndex = this.currentTaskIndex) {
-      return this.isExplainCodeMode(taskIndex) ? this.translationModel : this.selectedModel
+      return this.selectedModel
     },
 
     getMetaReportModel() {
