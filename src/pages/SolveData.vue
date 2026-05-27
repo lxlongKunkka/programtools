@@ -518,6 +518,13 @@ export default {
     if (savedUrl) this.fetchUrl = savedUrl
 
     this.consumePendingExtensionImport()
+
+    // ─── DEBUG: 同步捕获 codeOutput 每次被赋值的时机与调用栈 ───────────────────
+    this.$watch('codeOutput', function (val, old) {
+      const stack = new Error().stack?.split('\n').slice(2, 6).join(' | ')
+      console.log(`[SW:codeOutput] ${old?.length ?? 0}→${val?.length ?? 0} curIdx=${this.currentTaskIndex} taskId=${this.tasks[this.currentTaskIndex]?.id} | ${stack}`)
+    }, { flush: 'sync' })
+    // ─────────────────────────────────────────────────────────────────────────
   },
   beforeUnmount() {
     window.removeEventListener('message', this.handleExtensionImportMessage)
@@ -1172,6 +1179,7 @@ export default {
     
     switchTask(index) {
       if (index === this.currentTaskIndex) return
+      console.log(`[switchTask] ${this.currentTaskIndex}→${index}`)
       this.currentTaskIndex = index
       this.loadTask(index)
     },
@@ -1197,13 +1205,15 @@ export default {
       this.cpretResults = task.cpretResults ?? null
       // 如果切换到的任务有步骤状态（如正在后台生成），显示步骤条
       this.showStepIndicators = Object.keys(task.generationSteps || {}).length > 0
+      console.log(`[loadTask] idx=${index} codeOutput.len=${task.codeOutput?.length ?? 0} taskId=${task.id}`)
     },
 
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
         const normalizedValue = field === 'manualCode' ? stripFreopenStatements(value) : value
         if (field === 'codeOutput') {
-          console.log(`[updateCurrentTask] codeOutput currentIdx=${this.currentTaskIndex} len=${String(normalizedValue).length} taskId=${this.tasks[this.currentTaskIndex]?.id}`)
+          const stack = new Error().stack?.split('\n').slice(2, 5).join(' | ')
+          console.log(`[updateCurrentTask] codeOutput currentIdx=${this.currentTaskIndex} len=${String(normalizedValue).length} taskId=${this.tasks[this.currentTaskIndex]?.id} | ${stack}`)
         }
         // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
         if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
