@@ -1262,16 +1262,21 @@ export default {
     // 将某个字段值写入指定任务。若该任务正是当前正在查看的任务，
     // 则写入响应式属性（触发 watcher → UI 刷新）；否则直接写 tasks[] 避免污染当前视图。
     saveToTask(taskIndex, field, value, expectedTaskId = null) {
-      // Guard: if an expected task ID is provided, verify the task hasn't been replaced
-      // This prevents stale async responses from overwriting a different task at the same index
-      if (expectedTaskId !== null && this.tasks[taskIndex]?.id !== expectedTaskId) return
+      // 通过 ID 定位任务的当前索引，避免删除/重排后索引错位导致数据写入错任务或丢失
+      // 如果提供了 expectedTaskId，以 ID 为准查找实际位置，而不信任可能已过时的 taskIndex
+      let actualIndex = taskIndex
+      if (expectedTaskId !== null) {
+        const found = this.tasks.findIndex(t => t.id === expectedTaskId)
+        if (found === -1) return  // 任务已被删除，丢弃结果
+        actualIndex = found
+      }
       const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
         ? stripFreopenStatements(value)
         : value
-      if (taskIndex === this.currentTaskIndex) {
+      if (actualIndex === this.currentTaskIndex) {
         this[field] = normalizedValue
-      } else if (this.tasks[taskIndex]) {
-        this.tasks[taskIndex][field] = normalizedValue
+      } else if (this.tasks[actualIndex]) {
+        this.tasks[actualIndex][field] = normalizedValue
       }
     },
 
@@ -2004,8 +2009,11 @@ export default {
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
-      // isCurrentTask() 动态判断：支持用户在生成期间切换任务视图
-      const isCurrentTask = () => targetIndex === this.currentTaskIndex
+      // isCurrentTask() 用 ID 查找当前位置，支持删除后索引发生移位的场景
+      const isCurrentTask = () => {
+        const idx = this.tasks.findIndex(t => t.id === targetTaskId)
+        return idx !== -1 && idx === this.currentTaskIndex
+      }
       this._runningGenerateAllCount = (this._runningGenerateAllCount || 0) + 1
       this.isGenerating = 'all'
       
@@ -2244,20 +2252,17 @@ export default {
         
         if (isCurrentTask()) this.generationStatus = '全部生成完成！'
         this.showToastMessage('一键生成全部完成')
-        // 更新任务状态为已完成
-        if (this.tasks[targetIndex]) {
-          this.tasks[targetIndex].status = 'completed'
-        }
+        // 通过 ID 找到任务当前位置，更新状态（防止删除后索引错位）
+        const doneIdx = this.tasks.findIndex(t => t.id === targetTaskId)
+        if (doneIdx !== -1) this.tasks[doneIdx].status = 'completed'
         return true
         
       } catch (error) {
         console.error('Generate all failed:', error)
         if (isCurrentTask()) this.generationStatus = '❌ 生成出错: ' + error.message
         this.showToastMessage('一键生成失败: ' + error.message)
-        // 更新任务状态为失败
-        if (this.tasks[targetIndex]) {
-          this.tasks[targetIndex].status = 'failed'
-        }
+        const failIdx = this.tasks.findIndex(t => t.id === targetTaskId)
+        if (failIdx !== -1) this.tasks[failIdx].status = 'failed'
         return false
       } finally {
         this._runningGenerateAllCount = Math.max(0, (this._runningGenerateAllCount || 0) - 1)
