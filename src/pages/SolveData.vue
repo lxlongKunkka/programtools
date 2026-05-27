@@ -558,11 +558,21 @@ export default {
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
     referenceText(val) { this.updateCurrentTask('referenceText', val) },
     fetchUrl(val) { localStorage.setItem('solve_fetch_url', val) },
-    codeOutput(val) { this.updateCurrentTask('codeOutput', val) },
+    codeOutput(val) {
+      // 守卫：如果 tasks[currentTaskIndex].codeOutput 已与 val 一致（来自 loadTask 或 saveToTask watcher-path 的直接写入），
+      // 则跳过冗余写回，防止 pre-flush 在 currentTaskIndex 已切换后污染错误任务
+      if (this.tasks[this.currentTaskIndex]?.codeOutput === val) return
+      this.updateCurrentTask('codeOutput', val)
+    },
     dataOutput(val) { this.updateCurrentTask('dataOutput', val) },
     translationText(val) { this.updateCurrentTask('translationText', val) },
     translationEnglish(val) { this.updateCurrentTask('translationEnglish', val) },
-    serverPureCode(val) { this.updateCurrentTask('serverPureCode', val) },
+    serverPureCode(val) {
+      // 同上，saveToTask/loadTask 已直接写入 tasks[]，watcher 无需重复写回
+      const normalized = stripFreopenStatements(val)
+      if (this.tasks[this.currentTaskIndex]?.serverPureCode === normalized) return
+      this.updateCurrentTask('serverPureCode', val)
+    },
     reportHtml(val) { this.updateCurrentTask('reportHtml', val) },
     problemMeta: {
       handler(val) {
@@ -1187,7 +1197,8 @@ export default {
     
     switchTask(index) {
       if (index === this.currentTaskIndex) return
-      console.log(`[switchTask] ${this.currentTaskIndex}→${index}`)
+      const snap = this.tasks.map((t, i) => `[${i}]co=${t.codeOutput?.length ?? 0},sp=${t.serverPureCode?.length ?? 0}`).join(' ')
+      console.log(`[switchTask] ${this.currentTaskIndex}→${index} | ${snap}`)
       this.currentTaskIndex = index
       this.loadTask(index)
     },
@@ -2039,6 +2050,7 @@ export default {
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
+      console.log(`[generateAll:start] targetIdx=${targetIndex} taskId=${targetTaskId} curIdx=${this.currentTaskIndex}`)
       // isCurrentTask() 用 ID 查找当前位置，支持删除后索引发生移位的场景
       const isCurrentTask = () => {
         const idx = this.tasks.findIndex(t => t.id === targetTaskId)
@@ -2305,6 +2317,8 @@ export default {
         if (this._runningGenerateAllCount === 0) {
           this.isGenerating = false
         }
+        const snapEnd = this.tasks.map((t, i) => `[${i}]co=${t.codeOutput?.length ?? 0},sp=${t.serverPureCode?.length ?? 0}`).join(' ')
+        console.log(`[generateAll:end] targetIdx=${targetIndex} taskId=${targetTaskId} curIdx=${this.currentTaskIndex} | ${snapEnd}`)
       }
     },
     
