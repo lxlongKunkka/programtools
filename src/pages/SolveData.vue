@@ -1255,11 +1255,6 @@ export default {
         : value
       if (taskIndex === this.currentTaskIndex) {
         this[field] = normalizedValue
-        // Also update tasks array synchronously so TaskListPanel badges reflect immediately
-        // (without this, badges depend on async watcher → updateCurrentTask chain and lag by 1 tick)
-        if (this.tasks[taskIndex]) {
-          this.tasks[taskIndex][field] = normalizedValue
-        }
       } else if (this.tasks[taskIndex]) {
         this.tasks[taskIndex][field] = normalizedValue
       }
