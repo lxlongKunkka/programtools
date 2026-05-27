@@ -1995,6 +1995,12 @@ export default {
         this.showToastMessage('当前任务正在生成中')
         return
       }
+      // 防止并发：另一个任务正在执行 generateAll 时拒绝新的请求
+      // （数据写入虽有 targetTaskId guard 保护，但 UI 全局字段无法安全共享）
+      if ((this._runningGenerateAllCount || 0) > 0) {
+        this.showToastMessage('已有任务正在生成中，请等待完成后再试')
+        return
+      }
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
