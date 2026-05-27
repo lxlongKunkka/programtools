@@ -1990,13 +1990,14 @@ export default {
         this.showToastMessage('请先输入题目描述')
         return
       }
-      if (this.isGenerating) {
+      if (this.tasks[this.currentTaskIndex]?.status === 'processing') {
         this.showToastMessage('当前任务正在生成中')
         return
       }
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
+      this._runningGenerateAllCount = (this._runningGenerateAllCount || 0) + 1
       this.isGenerating = 'all'
       this.generationStatus = '正在初始化生成任务...'
       this.dataOutput = ''
@@ -2243,7 +2244,10 @@ export default {
         }
         return false
       } finally {
-        this.isGenerating = false
+        this._runningGenerateAllCount = Math.max(0, (this._runningGenerateAllCount || 0) - 1)
+        if (this._runningGenerateAllCount === 0) {
+          this.isGenerating = false
+        }
       }
     },
     
@@ -2476,6 +2480,7 @@ export default {
     async generateReportInline(targetIndex = null) {
       const taskIdx = (targetIndex !== null && targetIndex !== undefined) ? targetIndex : this.currentTaskIndex
       const taskSnap = this.tasks[taskIdx]
+      const isCurrentTask = () => this.currentTaskIndex === taskIdx
 
       if (!taskSnap?.problemText?.trim()) {
         this.showToastMessage('请先输入题目描述')
@@ -2483,8 +2488,8 @@ export default {
       }
       
       this.isGeneratingReport = true
-      this.generationStatus = '正在生成解题报告...'
-      this.activeTab = 'report'
+      if (isCurrentTask()) this.generationStatus = '正在生成解题报告...'
+      if (isCurrentTask()) this.activeTab = 'report'
       
       try {
         // 从 tasks[taskIdx] 读取，避免任务切换后读到错误内容
@@ -2493,7 +2498,7 @@ export default {
         // 如果没有代码内容，先自动生成题解
         if (!codeContent) {
             this.showToastMessage('正在自动生成题解思路...')
-            this.generationStatus = '正在自动生成题解思路...'
+            if (isCurrentTask()) this.generationStatus = '正在自动生成题解思路...'
             try {
             const promptText = buildReportAutoSolutionPrompt(taskSnap)
             const solutionRequest = buildSolutionRequestConfig({
@@ -2533,26 +2538,26 @@ export default {
           codeFallbackMessage: '用户未提供代码，请根据题目描述生成标准 AC 代码（C++），并添加详细中文注释。',
         })
 
-        this.generationStatus = '正在渲染解题报告...'
+        if (isCurrentTask()) this.generationStatus = '正在渲染解题报告...'
         const res = await retryRequest('/api/solution-report', {
           method: 'POST',
           body: JSON.stringify(reportPayload)
         }, {
           maxRetries: 3,
           onRetry: (attempt, max, delay) => {
-            this.generationStatus = `⚠️ 报告生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+            if (isCurrentTask()) this.generationStatus = `⚠️ 报告生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
           }
         })
         
         if (res.html) {
           this.saveToTask(taskIdx, 'reportHtml', res.html)
           this.showToastMessage('✅ 解题报告生成成功')
-          this.generationStatus = '✅ 解题报告生成成功'
-          setTimeout(() => { if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' }, 3000)
+          if (isCurrentTask()) this.generationStatus = '✅ 解题报告生成成功'
+          if (isCurrentTask()) setTimeout(() => { if(this.generationStatus === '✅ 解题报告生成成功') this.generationStatus = '' }, 3000)
         }
       } catch (e) {
         console.error('Generate report error:', e)
-        this.generationStatus = '❌ 生成报告失败: ' + e.message
+        if (isCurrentTask()) this.generationStatus = '❌ 生成报告失败: ' + e.message
         this.showToastMessage('生成报告失败: ' + e.message)
         throw e
       } finally {
