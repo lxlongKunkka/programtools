@@ -1820,12 +1820,13 @@ export default {
     async _fetchCpretResults(targetIndex) {
       const task = this.tasks[targetIndex]
       if (!task) return null
+      const targetTaskId = task.id
       const q = (task.problemText || '').slice(0, 2000).trim()
       if (!q) return null
       try {
         const data = await request(`/api/atcoder/cpret?q=${encodeURIComponent(q)}`)
         const results = data.results || []
-        this.saveToTask(targetIndex, 'cpretResults', results)
+        this.saveToTask(targetIndex, 'cpretResults', results, targetTaskId)
         if (this.currentTaskIndex === targetIndex) {
           this.cpretResults = results
         }
@@ -2334,6 +2335,7 @@ export default {
     async generateTitle() {
       const targetIndex = this.currentTaskIndex
       const taskSnap = this.tasks[targetIndex]
+      const targetTaskId = taskSnap?.id
       if (!(taskSnap?.problemText?.trim())) {
         this.showToastMessage('请先输入题目描述')
         return
@@ -2370,7 +2372,7 @@ export default {
         
         if (res && res.title && res.title.trim()) {
           const existingMeta = this.tasks[targetIndex]?.problemMeta || {}
-          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res))
+          this.saveToTask(targetIndex, 'problemMeta', mergeGeneratedMeta(existingMeta, res), targetTaskId)
           this.showToastMessage('✅ 标题已更新: ' + res.title)
         } else {
           console.warn('[generateTitle] AI 未返回标题，原始内容:', res?.rawContent)
