@@ -520,20 +520,6 @@ export default {
 
     this.consumePendingExtensionImport()
 
-    // ─── DEBUG: 同步捕获 codeOutput/serverPureCode/displayCode 每次被赋值的时机 ───
-    this.$watch('codeOutput', function (val, old) {
-      const stack = new Error().stack?.split('\n').slice(2, 6).join(' | ')
-      console.log(`[SW:codeOutput] ${old?.length ?? 0}→${val?.length ?? 0} curIdx=${this.currentTaskIndex} taskId=${this.tasks[this.currentTaskIndex]?.id} | ${stack}`)
-    }, { flush: 'sync' })
-    this.$watch('serverPureCode', function (val, old) {
-      const stack = new Error().stack?.split('\n').slice(2, 6).join(' | ')
-      console.log(`[SW:serverPureCode] ${old?.length ?? 0}→${val?.length ?? 0} curIdx=${this.currentTaskIndex} taskId=${this.tasks[this.currentTaskIndex]?.id} | ${stack}`)
-    }, { flush: 'sync' })
-    this.$watch('displayCode', function (val, old) {
-      const preview = val ? val.slice(0, 60).replace(/\n/g, '↵') : '(empty)'
-      console.log(`[SW:displayCode] ${old?.length ?? 0}→${val?.length ?? 0} curIdx=${this.currentTaskIndex} taskId=${this.tasks[this.currentTaskIndex]?.id} | codeOut=${this.codeOutput?.length ?? 0} srvCode=${this.serverPureCode?.length ?? 0} | ${preview}`)
-    }, { flush: 'sync' })
-    // ─────────────────────────────────────────────────────────────────────────
   },
   beforeUnmount() {
     window.removeEventListener('message', this.handleExtensionImportMessage)
@@ -1198,8 +1184,6 @@ export default {
     
     switchTask(index) {
       if (index === this.currentTaskIndex) return
-      const snap = this.tasks.map((t, i) => `[${i}]co=${t.codeOutput?.length ?? 0},sp=${t.serverPureCode?.length ?? 0}`).join(' ')
-      console.log(`[switchTask] ${this.currentTaskIndex}→${index} this.co=${this.codeOutput?.length ?? 0} | ${snap}`)
       this.currentTaskIndex = index
       this.loadTask(index)
     },
@@ -1211,14 +1195,11 @@ export default {
       // 暂停 watcher 以免触发 updateCurrentTask
       // 但由于 Vue 2/3 响应式机制，直接赋值会触发 watcher
       // 我们在 updateCurrentTask 中检查是否一致来避免死循环，或者接受这次冗余更新
-      console.log(`[loadTask:pre] idx=${index} this.co=${this.codeOutput?.length ?? 0} this.sp=${this.serverPureCode?.length ?? 0} task.co=${task.codeOutput?.length ?? 0} task.sp=${task.serverPureCode?.length ?? 0}`)
       this.problemText = task.problemText || ''
       this.editorialText = task.editorialText || ''
       this.manualCode = stripFreopenStatements(task.manualCode || '')
       this.referenceText = task.referenceText || ''
-      console.log(`[loadTask:assign-co] idx=${index} before=${this.codeOutput?.length ?? 0} assign=${task.codeOutput?.length ?? 0}`)
       this.codeOutput = task.codeOutput || ''
-      console.log(`[loadTask:post-co] idx=${index} after=${this.codeOutput?.length ?? 0}`)
       this.dataOutput = task.dataOutput || ''
       this.translationText = task.translationText || ''
       this.translationEnglish = task.translationEnglish || ''
@@ -1228,16 +1209,11 @@ export default {
       this.cpretResults = task.cpretResults ?? null
       // 如果切换到的任务有步骤状态（如正在后台生成），显示步骤条
       this.showStepIndicators = Object.keys(task.generationSteps || {}).length > 0
-      console.log(`[loadTask] idx=${index} codeOutput.len=${task.codeOutput?.length ?? 0} serverPureCode.len=${task.serverPureCode?.length ?? 0} taskId=${task.id}`)
     },
 
     updateCurrentTask(field, value) {
       if (this.tasks[this.currentTaskIndex]) {
         const normalizedValue = field === 'manualCode' ? stripFreopenStatements(value) : value
-        if (field === 'codeOutput' || field === 'serverPureCode') {
-          const stack = new Error().stack?.split('\n').slice(2, 5).join(' | ')
-          console.log(`[updateCurrentTask] ${field} currentIdx=${this.currentTaskIndex} len=${String(normalizedValue).length} taskId=${this.tasks[this.currentTaskIndex]?.id} | ${stack}`)
-        }
         // 如果修改了输入且值真的发生变化，重置状态为 pending (除非正在运行)
         if ((field === 'problemText' || field === 'manualCode' || field === 'referenceText') && 
             this.tasks[this.currentTaskIndex].status === 'completed' && 
@@ -1309,10 +1285,6 @@ export default {
       const normalizedValue = field === 'manualCode' || field === 'serverPureCode'
         ? stripFreopenStatements(value)
         : value
-      if (field === 'codeOutput' || field === 'serverPureCode') {
-        const path = actualIndex === this.currentTaskIndex ? 'watcher' : 'direct'
-        console.log(`[saveToTask] ${field} taskIdx=${actualIndex} currentIdx=${this.currentTaskIndex} path=${path} len=${String(normalizedValue).length} id=${expectedTaskId}`)
-      }
       if (actualIndex === this.currentTaskIndex) {
         // 同时直接写入 tasks[]，防止 watcher 异步触发时 currentTaskIndex 已切换导致数据写错任务
         // watcher 仍会触发以刷新 UI，但实际数据由此处的直接写入保障
@@ -1744,7 +1716,6 @@ export default {
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
                       const newMeta = mergeTranslationMeta(existingMeta, ev.meta)
                       this.saveToTask(taskIndex, 'problemMeta', newMeta)
-                      if (isOnTask()) console.log('从翻译结果中提取到元数据:', newMeta)
                     }
                     if (isOnTask()) this.isTranslationStale = false
                   } else if (ev.type === 'error') {
@@ -2054,7 +2025,6 @@ export default {
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
-      console.log(`[generateAll:start] targetIdx=${targetIndex} taskId=${targetTaskId} curIdx=${this.currentTaskIndex}`)
       // isCurrentTask() 用 ID 查找当前位置，支持删除后索引发生移位的场景
       const isCurrentTask = () => {
         const idx = this.tasks.findIndex(t => t.id === targetTaskId)
@@ -2155,7 +2125,8 @@ export default {
                 await translationPromise
             }
         } else {
-            // 如果题解失败，也要确保翻译完成，以免状态错乱
+            // 解题代码为空（API 返回空结果），标记步骤失败
+            steps.solution = 'failed'
             if (this.isTranslating) await translationPromise
         }
 
@@ -2278,7 +2249,6 @@ export default {
         
         // 等待所有并行任务完成
         const results = await Promise.all(parallelRequests)
-        console.log('Parallel generation results:', results)
         
         // 处理结果
         for (const res of results) {
@@ -2302,11 +2272,13 @@ export default {
             }
         }
         
-        if (isCurrentTask()) this.generationStatus = '全部生成完成！'
-        this.showToastMessage('一键生成全部完成')
+        const solutionOk = steps.solution === 'success'
+        if (isCurrentTask()) this.generationStatus = solutionOk ? '全部生成完成！' : '⚠️ 解题代码未生成，其余步骤已完成'
+        if (solutionOk) this.showToastMessage('一键生成全部完成')
+        else this.showToastMessage('⚠️ 解题代码生成失败，请重试')
         // 通过 ID 找到任务当前位置，更新状态（防止删除后索引错位）
         const doneIdx = this.tasks.findIndex(t => t.id === targetTaskId)
-        if (doneIdx !== -1) this.tasks[doneIdx].status = 'completed'
+        if (doneIdx !== -1) this.tasks[doneIdx].status = solutionOk ? 'completed' : 'failed'
         return true
         
       } catch (error) {
@@ -2321,8 +2293,6 @@ export default {
         if (this._runningGenerateAllCount === 0) {
           this.isGenerating = false
         }
-        const snapEnd = this.tasks.map((t, i) => `[${i}]co=${t.codeOutput?.length ?? 0},sp=${t.serverPureCode?.length ?? 0}`).join(' ')
-        console.log(`[generateAll:end] targetIdx=${targetIndex} taskId=${targetTaskId} curIdx=${this.currentTaskIndex} | ${snapEnd}`)
       }
     },
     
@@ -2735,8 +2705,6 @@ export default {
       this.isGenerating = 'run'
       
       try {
-        console.log('=== 开始提取代码 ===')
-        
         // 1. 提取标准程序代码
         const bestCodeContent = this.getBestCodeContent(this.codeOutput, this.manualCode)
         
@@ -2757,8 +2725,6 @@ export default {
           this.showToastMessage(errorMsg)
           return
         }
-        
-        console.log('✓ 代码提取成功')
         
         const JSZip = await loadJsZip()
         const zip = new JSZip()
@@ -2795,7 +2761,6 @@ export default {
         zip.file('run.bat', batScript, zipOptions)
         
         // 生成 problem.yaml 文件
-        console.log('当前 problemMeta:', this.problemMeta)
         const yamlContent = this.generateProblemYaml()
         zip.file('problem.yaml', yamlContent, zipOptions)
 
