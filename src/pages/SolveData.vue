@@ -162,11 +162,11 @@
           {{ generationStatus }}
         </div>
         <div v-if="showStepIndicators" class="generation-steps">
-          <div class="step-item" :class="generationSteps.translate"><div class="step-dot"></div><span>翻译</span></div>
-          <div class="step-item" :class="generationSteps.solution"><div class="step-dot"></div><span>题解</span></div>
-          <div class="step-item" :class="generationSteps.report"><div class="step-dot"></div><span>PPT报告</span></div>
-          <div class="step-item" :class="generationSteps.data"><div class="step-dot"></div><span>数据</span></div>
-          <div class="step-item" :class="generationSteps.meta"><div class="step-dot"></div><span>元数据</span></div>
+          <div class="step-item" :class="currentGenerationSteps.translate"><div class="step-dot"></div><span>翻译</span></div>
+          <div class="step-item" :class="currentGenerationSteps.solution"><div class="step-dot"></div><span>题解</span></div>
+          <div class="step-item" :class="currentGenerationSteps.report"><div class="step-dot"></div><span>PPT报告</span></div>
+          <div class="step-item" :class="currentGenerationSteps.data"><div class="step-dot"></div><span>数据</span></div>
+          <div class="step-item" :class="currentGenerationSteps.meta"><div class="step-dot"></div><span>元数据</span></div>
         </div>
       </div>
 
@@ -576,6 +576,10 @@ export default {
         dataOutput: this.dataOutput,
         reportHtml: this.reportHtml,
       }
+    },
+    // 读取当前任务的步骤状态（per-task，支持并行生成时切换任务查看各自进度）
+    currentGenerationSteps() {
+      return this.tasks[this.currentTaskIndex]?.generationSteps || {}
     },
     modelOptions() {
       if (Array.isArray(this.models) && this.models.length > 0) return this.models
@@ -1191,6 +1195,8 @@ export default {
       this.problemMeta = task.problemMeta || null
       this.reportHtml = task.reportHtml || ''
       this.cpretResults = task.cpretResults ?? null
+      // 如果切换到的任务有步骤状态（如正在后台生成），显示步骤条
+      this.showStepIndicators = Object.keys(task.generationSteps || {}).length > 0
     },
 
     updateCurrentTask(field, value) {
@@ -1995,29 +2001,30 @@ export default {
         this.showToastMessage('当前任务正在生成中')
         return
       }
-      // 防止并发：另一个任务正在执行 generateAll 时拒绝新的请求
-      // （数据写入虽有 targetTaskId guard 保护，但 UI 全局字段无法安全共享）
-      if ((this._runningGenerateAllCount || 0) > 0) {
-        this.showToastMessage('已有任务正在生成中，请等待完成后再试')
-        return
-      }
       
       const targetIndex = this.currentTaskIndex
       const targetTaskId = this.tasks[targetIndex]?.id  // capture task ID to guard against clear+reimport races
+      // isCurrentTask() 动态判断：支持用户在生成期间切换任务视图
+      const isCurrentTask = () => targetIndex === this.currentTaskIndex
       this._runningGenerateAllCount = (this._runningGenerateAllCount || 0) + 1
       this.isGenerating = 'all'
-      this.generationStatus = '正在初始化生成任务...'
-      this.dataOutput = ''
-      this.reportHtml = '' // 清空旧的解题报告
-      this.showStepIndicators = true
+      
+      // 初始化 UI——仅当生成的是当前视图任务时才清空显示区（允许并行生成其他任务）
+      if (isCurrentTask()) {
+        this.generationStatus = '正在初始化生成任务...'
+        this.dataOutput = ''
+        this.reportHtml = '' // 清空旧的解题报告
+        this.showStepIndicators = true
+      }
       
       // 更新当前任务状态为处理中
       if (this.tasks[targetIndex]) {
         this.tasks[targetIndex].status = 'processing'
       }
       
-      // 重置所有步骤状态
-      this.generationSteps = createInitialGenerationSteps()
+      // 重置本任务的步骤状态（per-task，不影响其他任务的步骤显示）
+      this.tasks[targetIndex].generationSteps = createInitialGenerationSteps()
+      const steps = this.tasks[targetIndex].generationSteps
       
       // 注意：这里不清空 translationText，因为如果已经有了就不需要重新生成
       // this.translationText = '' 
@@ -2026,22 +2033,24 @@ export default {
       const manualContent = this.manualCode.trim()
       const solutionModel = this.getSolveDataModel(targetIndex)
       
-      this.codeOutput = ''
-      this.serverPureCode = ''
-      this.activeTab = 'code'
+      if (isCurrentTask()) {
+        this.codeOutput = ''
+        this.serverPureCode = ''
+        this.activeTab = 'code'
+      }
       
       try {
         // 1. 准备翻译任务 (如果需要，并行执行)
         let translationPromise = Promise.resolve()
         if (!(this.tasks[targetIndex]?.translationText?.trim()) || this.isTranslationStale) {
-          this.generationSteps.translate = 'processing'
+          steps.translate = 'processing'
           translationPromise = this.autoTranslate(targetIndex).then(() => {
-            this.generationSteps.translate = 'success'
+            steps.translate = 'success'
           }).catch(() => {
-            this.generationSteps.translate = 'failed'
+            steps.translate = 'failed'
           })
         } else {
-          this.generationSteps.translate = 'success' // 已经有翻译了
+          steps.translate = 'success' // 已经有翻译了
         }
 
         // 1b. 若尚无 CPRet 检索结果，与翻译/题解并行自动检索原题
@@ -2051,8 +2060,8 @@ export default {
         }
         
         // 2. 并行生成题解 (不依赖翻译结果，使用原始内容)
-        this.generationStatus = '正在并行生成：翻译 + 题解代码...'
-        this.generationSteps.solution = 'processing'
+        if (isCurrentTask()) this.generationStatus = '正在并行生成：翻译 + 题解代码...'
+        steps.solution = 'processing'
 
         // 有 AC 代码时走 /api/solve（解读注释模式），否则走 /api/solution（自主生成模式）
         const solutionRequest = buildSolutionRequestConfig({
@@ -2068,13 +2077,13 @@ export default {
         }, {
           maxRetries: 3,
           onRetry: (attempt, max, delay) => {
-            this.generationStatus = `⚠️ 题解生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+            if (isCurrentTask()) this.generationStatus = `⚠️ 题解生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
           }
         }).then(res => {
-          this.generationSteps.solution = 'success'
+          steps.solution = 'success'
           return res
         }).catch(err => {
-          this.generationSteps.solution = 'failed'
+          steps.solution = 'failed'
           throw err
         })
         
@@ -2088,7 +2097,7 @@ export default {
             
             // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
             if (this.isTranslating) {
-                this.generationStatus = '题解就绪，正在等待翻译完成...'
+                if (isCurrentTask()) this.generationStatus = '题解就绪，正在等待翻译完成...'
                 await translationPromise
             }
         } else {
@@ -2115,7 +2124,7 @@ export default {
         }
 
         // 3. 准备并行请求：报告 + 数据生成 + 元数据生成
-        this.generationStatus = '正在并行生成：解题报告 + 数据脚本 + 元数据...'
+        if (isCurrentTask()) this.generationStatus = '正在并行生成：解题报告 + 数据脚本 + 元数据...'
         let parallelRequests = []
 
         // 3a. 解题报告
@@ -2123,17 +2132,17 @@ export default {
         const shouldGenerateReport = (!this.isBatchMode || this.batchMode !== 'code_data') && this.tasks[targetIndex]?.codeOutput
         
         if (shouldGenerateReport) {
-            this.generationSteps.report = 'processing'
+            steps.report = 'processing'
             // 并行执行报告生成
             parallelRequests.push(
                 this.generateReportInline(targetIndex).then(() => {
-                    this.generationSteps.report = 'success'
+                    steps.report = 'success'
                 }).catch(() => {
-                    this.generationSteps.report = 'failed'
+                    steps.report = 'failed'
                 })
             )
         } else {
-            this.generationSteps.report = 'skipped' // 当前模式不生成报告
+            steps.report = 'skipped' // 当前模式不生成报告
         }
         
         // 3a. 数据生成 - 从 tasks[targetIndex] 读取代码，防止任务切换竞态
@@ -2146,7 +2155,7 @@ export default {
         })
         const textForDataAll = dataInputs.text
         
-        this.generationSteps.data = 'processing'
+        steps.data = 'processing'
         parallelRequests.push(
           retryRequest('/api/generate-data', {
             method: 'POST',
@@ -2158,17 +2167,17 @@ export default {
           }, {
             maxRetries: 3,
             onRetry: (attempt, max, delay) => {
-              this.generationStatus = `⚠️ 数据脚本生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
+              if (isCurrentTask()) this.generationStatus = `⚠️ 数据脚本生成失败，${delay / 1000}s 后重试 (${attempt}/${max})...`
             }
           }).then(res => {
-              this.generationSteps.data = 'success'
+              steps.data = 'success'
               // 立即更新数据脚本显示
               if (res && res.result) {
                   this.saveToTask(targetIndex, 'dataOutput', this.cleanDataOutput(res.result), targetTaskId)
               }
               return { type: 'data', data: res }
           }).catch(() => {
-              this.generationSteps.data = 'failed'
+              steps.data = 'failed'
               return { type: 'data', error: true }
           })
         )
@@ -2177,7 +2186,7 @@ export default {
         // 翻译完成后 problemMeta 通常已有 tags，此时跳过；仅在缺失时补充
         const shouldGenerateMeta = !this.hasValidMeta
         if (shouldGenerateMeta) {
-            this.generationSteps.meta = 'processing'
+            steps.meta = 'processing'
             parallelRequests.push(
               retryRequest('/api/generate-problem-meta', {
                 method: 'POST',
@@ -2188,7 +2197,7 @@ export default {
                   model: this.getMetaReportModel(),
                 }))
               }, { maxRetries: 2 }).then(res => {
-                  this.generationSteps.meta = 'success'
+                  steps.meta = 'success'
                   // 立即更新元数据
                   if (res) {
                       try {
@@ -2199,12 +2208,12 @@ export default {
                   }
                   return { type: 'meta', data: res }
               }).catch(() => {
-                  this.generationSteps.meta = 'failed'
+                  steps.meta = 'failed'
                   return { type: 'meta', error: true }
               })
             )
         } else {
-            this.generationSteps.meta = 'success' // 不需要生成
+            steps.meta = 'success' // 不需要生成
         }
         
         // 等待所有并行任务完成
@@ -2233,7 +2242,7 @@ export default {
             }
         }
         
-        this.generationStatus = '全部生成完成！'
+        if (isCurrentTask()) this.generationStatus = '全部生成完成！'
         this.showToastMessage('一键生成全部完成')
         // 更新任务状态为已完成
         if (this.tasks[targetIndex]) {
@@ -2243,7 +2252,7 @@ export default {
         
       } catch (error) {
         console.error('Generate all failed:', error)
-        this.generationStatus = '❌ 生成出错: ' + error.message
+        if (isCurrentTask()) this.generationStatus = '❌ 生成出错: ' + error.message
         this.showToastMessage('一键生成失败: ' + error.message)
         // 更新任务状态为失败
         if (this.tasks[targetIndex]) {
