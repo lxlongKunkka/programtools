@@ -79,6 +79,11 @@ function nflsojHeaders(cookies) {
   }
 }
 
+/** 检测 SYZOJ 返回的 HTTP 200 权限拒绝页（如 group not included）*/
+function isNflsojAccessDenied(html) {
+  return /group not included|cannot enter|permission denied|no permission|You do not have permission/i.test(html)
+}
+
 /** 使用指定账号发出请求，不自动回退到其他账号 */
 async function nflsojGetAs(path, idx) {
   const cookies = await getNflsojSession(idx)
@@ -671,10 +676,13 @@ export async function fetchNflsojProblem(url) {
     try {
       const candidate = await nflsojGetAs(`/contest/${contestId}/problem/${problemNumber}`, idx)
       const hasMore = accounts.slice(idx + 1).some(a => a.user)
-      if (!hasMore || parseProblemContent(load(candidate)).trim()) {
-        html = candidate; break
+      const denied = isNflsojAccessDenied(candidate)
+      const empty = !parseProblemContent(load(candidate)).trim()
+      if ((denied || empty) && hasMore) {
+        console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）${denied ? `无第${problemNumber}题权限（group not included）` : '题目内容为空'}，尝试备用账号...`)
+        continue
       }
-      console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）题目内容为空，尝试备用账号...`)
+      html = candidate; break
     } catch (err) {
       const hasMore = accounts.slice(idx + 1).some(a => a.user)
       if (!hasMore) throw err
