@@ -221,6 +221,35 @@ function extractCodeFromSubmissionHtml(html) {
   }
 }
 
+/**
+ * 从 HTML 中提取 `const varName = [...]` 的 JSON 数组字符串。
+ * 使用平衡括号解析，正确处理 JSON 字符串内容中的 `];` 序列（如 C++ 代码）。
+ * @returns {string|null} JSON 数组字符串（以 [ 开头、] 结尾），或 null
+ */
+function extractJsonArray(html, varName) {
+  const prefix = `const ${varName} = [`
+  const startIdx = html.indexOf(prefix)
+  if (startIdx === -1) return null
+  const arrStart = startIdx + prefix.length - 1  // position of '['
+  let depth = 0
+  let inString = false
+  for (let i = arrStart; i < html.length; i++) {
+    const ch = html[i]
+    if (inString) {
+      if (ch === '\\') { i++; continue }  // skip escaped char
+      if (ch === '"') inString = false
+    } else {
+      if (ch === '"') { inString = true; continue }
+      if (ch === '[') depth++
+      else if (ch === ']') {
+        depth--
+        if (depth === 0) return html.substring(arrStart, i + 1)
+      }
+    }
+  }
+  return null
+}
+
 // ─── 题目内容解析（cheerio）───────────────────────────────────────────────────
 
 /**
@@ -757,51 +786,81 @@ export async function fetchNflsojProblem(url) {
 
 /**
  * 从排行榜页面提取 AC 代码（首选方式）
- * SYZOJ 排行榜嵌入 const ranklist = [...]; 每条含每题最佳提交 ID
+ * 支持两种格式：
+ *   1. SYZOJ 标准格式：const ranklist = [...]（其他 OJ 常见）
+ *   2. NFLSOJ 自定义格式：表格中 __showCode onclick 链接（每列对应一道题）
  */
 async function fetchNflsojAcCodeFromRanklist(contestId, problemNumber) {
   const html = await nflsojGet(`/contest/${contestId}/ranklist`)
 
-  // 尝试多种 SYZOJ 版本的嵌入格式
-  const rankMatch = html.match(/const\s+ranklist\s*=\s*(\[[\s\S]*?\])\s*;/)
-  if (!rankMatch) return null
-
-  let ranklist
-  try { ranklist = JSON.parse(rankMatch[1]) } catch { return null }
-  if (!Array.isArray(ranklist) || !ranklist.length) return null
-
-  const probKey = String(problemNumber)
-
-  // 收集所有满分（100分）提交 ID，优先 C++
-  const candidates = []
-  for (const entry of ranklist) {
-    // SYZOJ 不同版本的字段名略有差异，兼容处理
-    const details = (
-      entry.score?.details ||
-      entry.problemStatus ||
-      entry.problems ||
-      (entry.detail && entry.detail[probKey] !== undefined ? entry.detail : null) ||
-      {}
-    )
-    const prob = details[probKey]
-    if (!prob) continue
-    const score = prob.score ?? prob.totalScore ?? prob.result
-    const subId = prob.submissionId || prob.submission_id || prob.id
-    if (score === 100 && subId) {
-      candidates.push({ subId, language: prob.language || '' })
-    }
+  // ── 方式 A：SYZOJ 标准 JSON 嵌入（const ranklist = [...]）──
+  const rankJsonStr = extractJsonArray(html, 'ranklist')
+  if (rankJsonStr) {
+    try {
+      const ranklist = JSON.parse(rankJsonStr)
+      if (Array.isArray(ranklist) && ranklist.length) {
+        const probKey = String(problemNumber)
+        const candidates = []
+        for (const entry of ranklist) {
+          const details = (
+            entry.score?.details ||
+            entry.problemStatus ||
+            entry.problems ||
+            (entry.detail && entry.detail[probKey] !== undefined ? entry.detail : null) ||
+            {}
+          )
+          const prob = details[probKey]
+          if (!prob) continue
+          const score = prob.score ?? prob.totalScore ?? prob.result
+          const subId = prob.submissionId || prob.submission_id || prob.id
+          if (score === 100 && subId) {
+            candidates.push({ subId, language: prob.language || '' })
+          }
+        }
+        candidates.sort((a, b) => {
+          const aC = /[Cc]\+\+|cpp/i.test(a.language) ? -1 : 1
+          const bC = /[Cc]\+\+|cpp/i.test(b.language) ? -1 : 1
+          return aC - bC
+        })
+        for (const { subId } of candidates.slice(0, 3)) {
+          try {
+            const subHtml = await nflsojGet(`/submission/${subId}`)
+            const code = extractCodeFromSubmissionHtml(subHtml)
+            if (code) return code
+          } catch { /* 单条失败继续下一条 */ }
+        }
+      }
+    } catch { /* JSON 解析失败，降级到方式 B */ }
   }
 
-  if (!candidates.length) return null
+  // ── 方式 B：NFLSOJ 自定义表格（表头含 /contest/ID/problem/N 链接，单元格含 __showCode onclick）──
+  const $ = load(html)
+  const table = $('table').first()
+  if (!table.length) return null
 
-  // 优先 C++
-  candidates.sort((a, b) => {
-    const aC = /[Cc]\+\+|cpp/i.test(a.language) ? -1 : 1
-    const bC = /[Cc]\+\+|cpp/i.test(b.language) ? -1 : 1
-    return aC - bC
+  // 找到第 problemNumber 题对应的列索引
+  let probColIdx = -1
+  table.find('thead th, thead td').each((i, th) => {
+    if ($(th).find(`a[href*="/contest/${contestId}/problem/${problemNumber}"]`).length) {
+      probColIdx = i
+    }
+  })
+  if (probColIdx === -1) return null
+
+  // 收集该列所有 AC 提交 ID（有 __showCode 且内含 + 表示 Accepted）
+  const subIds = []
+  table.find('tbody tr').each((_, row) => {
+    const cell = $(row).find('td').eq(probColIdx)
+    if (!cell.length) return
+    const link = cell.find('a[onclick*="__showCode"]')
+    if (!link.length) return
+    if (!cell.text().includes('+')) return  // + = Accepted in ACM mode
+    const onclick = link.attr('onclick') || ''
+    const m = onclick.match(/\/submission\/(\d+)/)
+    if (m) subIds.push(m[1])
   })
 
-  for (const { subId } of candidates.slice(0, 3)) {
+  for (const subId of subIds.slice(0, 3)) {
     try {
       const subHtml = await nflsojGet(`/submission/${subId}`)
       const code = extractCodeFromSubmissionHtml(subHtml)
@@ -829,11 +888,11 @@ export async function fetchNflsojAcCode(contestId, problemNumber) {
 
   // ── 方式二：从提交列表页提取（需有查看权限）
   const listHtml = await nflsojGet(`/contest/${contestId}/submissions?problem_id=${problemNumber}&status=Accepted`)
-  const itemMatch = listHtml.match(/const itemList = (\[[\s\S]*?\]);/)
-  if (!itemMatch) throw new Error('NFLSOJ：无法解析提交列表（itemList）')
+  const itemJsonStr = extractJsonArray(listHtml, 'itemList')
+  if (!itemJsonStr) throw new Error('NFLSOJ：无法解析提交列表（itemList）')
 
   let items
-  try { items = JSON.parse(itemMatch[1]) } catch { throw new Error('NFLSOJ：提交列表 JSON 解析失败') }
+  try { items = JSON.parse(itemJsonStr) } catch { throw new Error('NFLSOJ：提交列表 JSON 解析失败') }
 
   if (!items.length) return null
 
