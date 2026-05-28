@@ -128,13 +128,15 @@ async function nflsojGetBinary(path) {
     if (r.status === 404) throw new Error('NFLSOJ 附加文件不存在（404）')
     if (r.status >= 400) throw new Error(`NFLSOJ 下载失败，HTTP ${r.status}`)
 
-  // 尝试从 Content-Disposition 解析文件名
-  const cd = r.headers['content-disposition'] || ''
-  let filename = 'additional_file.zip'
-  const fnMatch = cd.match(/filename\*?=(?:UTF-8'')?"?([^"\s;]+)"?/i)
-  if (fnMatch) filename = decodeURIComponent(fnMatch[1])
+    // 尝试从 Content-Disposition 解析文件名
+    const cd = r.headers['content-disposition'] || ''
+    let filename = 'additional_file.zip'
+    const fnMatch = cd.match(/filename\*?=(?:UTF-8'')?"?([^"\s;]+)"?/i)
+    if (fnMatch) filename = decodeURIComponent(fnMatch[1])
 
-  return { buffer: Buffer.from(r.data), filename }
+    return { buffer: Buffer.from(r.data), filename }
+  }
+  throw new Error('NFLSOJ 未配置任何账号，请在 server/.env 中配置 NFLSOJ_USER')
 }
 
 // ─── URL 解析 ─────────────────────────────────────────────────────────────────
