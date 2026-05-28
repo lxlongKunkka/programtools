@@ -79,9 +79,9 @@ function nflsojHeaders(cookies) {
   }
 }
 
-/** 检测 SYZOJ 返回的 HTTP 200 权限拒绝页（如 group not included）*/
+/** 检测 SYZOJ 返回的 HTTP 200 权限拒绝页（如 group not included，或中文"您没有权限"）*/
 function isNflsojAccessDenied(html) {
-  return /group not included|cannot enter|permission denied|no permission|You do not have permission/i.test(html)
+  return /group not included|cannot enter|permission denied|no permission|You do not have permission|您没有权限/i.test(html)
 }
 
 /** 使用指定账号发出请求，不自动回退到其他账号 */
