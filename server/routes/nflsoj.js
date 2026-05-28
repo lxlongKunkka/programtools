@@ -104,17 +104,27 @@ async function nflsojGetAs(path, idx) {
   return r.data
 }
 
-/** 通用请求（403 时自动回退到备用账号）*/
+/** 通用请求（403 或 "group not included" 时自动回退到备用账号）*/
 async function nflsojGet(path) {
   for (let idx = 0; idx < accounts.length; idx++) {
     if (!accounts[idx].user) continue
     try {
-      return await nflsojGetAs(path, idx)
+      const html = await nflsojGetAs(path, idx)
+      if (isNflsojAccessDenied(html)) {
+        const next = accounts.slice(idx + 1).find(a => a.user)
+        if (next) {
+          console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问（group not included），尝试备用账号...`)
+          continue
+        }
+        // 所有账号均无权，返回原始响应让上层决定如何处理
+        return html
+      }
+      return html
     } catch (err) {
       if (err.statusCode === 403) {
         const next = accounts.slice(idx + 1).find(a => a.user)
         if (next) {
-          console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问，尝试备用账号...`)
+          console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问（403），尝试备用账号...`)
           continue
         }
       }
