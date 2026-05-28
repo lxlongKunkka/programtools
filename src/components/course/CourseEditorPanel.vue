@@ -704,24 +704,32 @@ export default {
 
 这里是章节的正文内容。支持 **Markdown** 语法。
 
-#### 常用资源嵌入示例 (请根据需要修改路径)
+#### 常用资源嵌入示例 (复制下方代码块并修改路径后使用)
 
 **1. 嵌入视频 (Video)**
+\`\`\`html
 <video controls width="100%" controlsList="nodownload">
   <source src="/public/courseware/level1/videos/example.mp4" type="video/mp4">
   您的浏览器不支持 video 标签。
 </video>
+\`\`\`
 
 **2. 嵌入 PDF 文档**
+\`\`\`html
 <iframe src="/public/courseware/level1/pdfs/example.pdf" width="100%" height="600px" frameborder="0">
 </iframe>
+\`\`\`
 
 **3. 嵌入 HTML 课件**
+\`\`\`html
 <iframe src="/public/courseware/level1/topic1/example.html" width="100%" height="600px" frameborder="0">
 </iframe>
+\`\`\`
 
 **4. 嵌入 Bilibili 视频**
+\`\`\`html
 <iframe src="//player.bilibili.com/player.html?bvid=BV1GJ411x7h7&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" width="100%" height="500px"> </iframe>
+\`\`\`
 `
 
       const newChapter = {
