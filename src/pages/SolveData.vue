@@ -453,7 +453,7 @@ export default {
       isBatchMode: true,
       isBatchRunning: false,
       isBatchCpretSearching: false,
-      batchMode: 'code_data', // code_data, code_data_report, report_only
+      batchMode: localStorage.getItem('solvedata_batch_mode') || 'code_data', // code_data, code_data_report, report_only
       showBatchImport: false,
       batchImportText: '',
       currentTaskIndex: 0,
@@ -545,6 +545,7 @@ export default {
     manualCode(val) { this.updateCurrentTask('manualCode', val) },
     referenceText(val) { this.updateCurrentTask('referenceText', val) },
     fetchUrl(val) { localStorage.setItem('solve_fetch_url', val) },
+    batchMode(val) { localStorage.setItem('solvedata_batch_mode', val) },
     codeOutput(val) {
       // 守卫：如果 tasks[currentTaskIndex].codeOutput 已与 val 一致（来自 loadTask 或 saveToTask watcher-path 的直接写入），
       // 则跳过冗余写回，防止 pre-flush 在 currentTaskIndex 已切换后污染错误任务
