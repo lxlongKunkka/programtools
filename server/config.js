@@ -79,6 +79,8 @@ export const HTOJ_PWD = process.env.HTOJ_PWD || ''
 // NFLSOJ (nflsoi.cc:20035, SYZOJ 框架) 账号，用于抓取比赛题目和 AC 代码
 export const NFLSOJ_USER = process.env.NFLSOJ_USER || ''
 export const NFLSOJ_PWD = process.env.NFLSOJ_PWD || ''
+export const NFLSOJ_USER2 = process.env.NFLSOJ_USER2 || ''
+export const NFLSOJ_PWD2 = process.env.NFLSOJ_PWD2 || ''
 
 // 梦熊联盟 (mna.wang, SYZOJ 风格) 账号，用于抓取比赛题目、附件和 AC 代码
 export const MNA_USER = process.env.MNA_USER || ''

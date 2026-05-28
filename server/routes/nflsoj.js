@@ -13,7 +13,7 @@ import crypto from 'crypto'
 import path from 'path'
 import { load } from 'cheerio'
 import { authenticateToken } from '../middleware/auth.js'
-import { NFLSOJ_USER, NFLSOJ_PWD } from '../config.js'
+import { NFLSOJ_USER, NFLSOJ_PWD, NFLSOJ_USER2, NFLSOJ_PWD2 } from '../config.js'
 import { uploadImageToCos } from '../utils/cosUploader.js'
 
 const router = express.Router()
@@ -22,20 +22,24 @@ const NFLSOJ_BASE = 'http://nflsoi.cc:20035'
 const SYZOJ_SALT = 'syzoj2_xxx'
 
 // ─── 会话缓存（SYZOJ 使用 connect.sid + login cookie）─────────────────────────
-let cachedCookies = ''
-let sessionExpireAt = 0  // Unix ms
+// 支持两个账号，部分题目仅特定账号可见时自动回退到备用账号
+const accounts = [
+  { user: NFLSOJ_USER,  pwd: NFLSOJ_PWD,  cookies: '', expireAt: 0 },
+  { user: NFLSOJ_USER2, pwd: NFLSOJ_PWD2, cookies: '', expireAt: 0 },
+]
 
-/** 登录并缓存 session cookie */
-async function getNflsojSession() {
+/** 登录指定账号并缓存 session cookie */
+async function getNflsojSession(idx = 0) {
+  const acct = accounts[idx]
   const now = Date.now()
-  if (cachedCookies && now < sessionExpireAt) return cachedCookies
+  if (acct.cookies && now < acct.expireAt) return acct.cookies
 
-  if (!NFLSOJ_USER || !NFLSOJ_PWD) {
-    throw new Error('未配置 NFLSOJ_USER / NFLSOJ_PWD，请在 server/.env 中配置')
+  if (!acct.user || !acct.pwd) {
+    throw new Error(`未配置 NFLSOJ 账号${idx + 1}，请在 server/.env 中配置 NFLSOJ_USER${idx > 0 ? idx + 1 : ''}`)
   }
 
-  const hashedPwd = crypto.createHash('md5').update(NFLSOJ_PWD + SYZOJ_SALT).digest('hex')
-  const body = new URLSearchParams({ username: NFLSOJ_USER, password: hashedPwd }).toString()
+  const hashedPwd = crypto.createHash('md5').update(acct.pwd + SYZOJ_SALT).digest('hex')
+  const body = new URLSearchParams({ username: acct.user, password: hashedPwd }).toString()
 
   const r = await axios.post(`${NFLSOJ_BASE}/api/login`, body, {
     headers: {
@@ -50,19 +54,19 @@ async function getNflsojSession() {
 
   // 解析 set-cookie
   const setCookies = r.headers['set-cookie'] || []
-  if (!setCookies.length) throw new Error('NFLSOJ 登录失败：未返回 cookie')
+  if (!setCookies.length) throw new Error(`NFLSOJ 账号${idx + 1} 登录失败：未返回 cookie`)
 
   // 验证 error_code（1 = 成功，1001 = 用户不存在，1002 = 密码错误）
   let body2
   try { body2 = typeof r.data === 'string' ? JSON.parse(r.data) : r.data } catch { body2 = r.data }
   if (body2?.error_code && body2.error_code !== 1) {
-    throw new Error(`NFLSOJ 登录失败：error_code=${body2.error_code}`)
+    throw new Error(`NFLSOJ 账号${idx + 1} 登录失败：error_code=${body2.error_code}`)
   }
 
-  cachedCookies = setCookies.map(c => c.split(';')[0]).join('; ')
-  sessionExpireAt = now + 4 * 60 * 60 * 1000  // 缓存 4 小时
-  console.log('[nflsoj] 登录成功，session 已缓存')
-  return cachedCookies
+  acct.cookies = setCookies.map(c => c.split(';')[0]).join('; ')
+  acct.expireAt = now + 4 * 60 * 60 * 1000  // 缓存 4 小时
+  console.log(`[nflsoj] 账号${idx + 1}（${acct.user}）登录成功，session 已缓存`)
+  return acct.cookies
 }
 
 /** 构造请求 Headers */
@@ -75,34 +79,54 @@ function nflsojHeaders(cookies) {
   }
 }
 
-/** 通用请求（自动带 session）*/
+/** 通用请求（自动带 session，403 时自动回退到备用账号）*/
 async function nflsojGet(path) {
-  const cookies = await getNflsojSession()
-  const r = await axios.get(NFLSOJ_BASE + path, {
-    headers: nflsojHeaders(cookies),
-    responseType: 'text',
-    transformResponse: [d => d],
-    validateStatus: s => s < 600,
-    timeout: 15000
-  })
-  if (r.status === 403) throw new Error('NFLSOJ 无权访问（403），请更新账号权限')
-  if (r.status === 404) throw new Error(`NFLSOJ 页面不存在（404）: ${path}`)
-  if (r.status >= 400) throw new Error(`NFLSOJ 请求失败，HTTP ${r.status}`)
-  return r.data
+  for (let idx = 0; idx < accounts.length; idx++) {
+    if (!accounts[idx].user) continue
+    const cookies = await getNflsojSession(idx)
+    const r = await axios.get(NFLSOJ_BASE + path, {
+      headers: nflsojHeaders(cookies),
+      responseType: 'text',
+      transformResponse: [d => d],
+      validateStatus: s => s < 600,
+      timeout: 15000
+    })
+    if (r.status === 403) {
+      const next = accounts.slice(idx + 1).find(a => a.user)
+      if (next) {
+        console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问，尝试备用账号...`)
+        continue
+      }
+      throw new Error('NFLSOJ 无权访问（403），所有账号均无权限')
+    }
+    if (r.status === 404) throw new Error(`NFLSOJ 页面不存在（404）: ${path}`)
+    if (r.status >= 400) throw new Error(`NFLSOJ 请求失败，HTTP ${r.status}`)
+    return r.data
+  }
+  throw new Error('NFLSOJ 未配置任何账号，请在 server/.env 中配置 NFLSOJ_USER')
 }
 
 /** 二进制下载（用于附加文件）, 返回 { buffer: Buffer, filename: string } */
 async function nflsojGetBinary(path) {
-  const cookies = await getNflsojSession()
-  const r = await axios.get(NFLSOJ_BASE + path, {
-    headers: nflsojHeaders(cookies),
-    responseType: 'arraybuffer',
-    validateStatus: s => s < 600,
-    timeout: 30000
-  })
-  if (r.status === 403) throw new Error('NFLSOJ 无权下载附加文件（403）')
-  if (r.status === 404) throw new Error('NFLSOJ 附加文件不存在（404）')
-  if (r.status >= 400) throw new Error(`NFLSOJ 下载失败，HTTP ${r.status}`)
+  for (let idx = 0; idx < accounts.length; idx++) {
+    if (!accounts[idx].user) continue
+    const cookies = await getNflsojSession(idx)
+    const r = await axios.get(NFLSOJ_BASE + path, {
+      headers: nflsojHeaders(cookies),
+      responseType: 'arraybuffer',
+      validateStatus: s => s < 600,
+      timeout: 30000
+    })
+    if (r.status === 403) {
+      const next = accounts.slice(idx + 1).find(a => a.user)
+      if (next) {
+        console.log(`[nflsoj] 账号${idx + 1} 无权下载附加文件，尝试备用账号...`)
+        continue
+      }
+      throw new Error('NFLSOJ 无权下载附加文件（403），所有账号均无权限')
+    }
+    if (r.status === 404) throw new Error('NFLSOJ 附加文件不存在（404）')
+    if (r.status >= 400) throw new Error(`NFLSOJ 下载失败，HTTP ${r.status}`)
 
   // 尝试从 Content-Disposition 解析文件名
   const cd = r.headers['content-disposition'] || ''
@@ -805,8 +829,10 @@ router.get('/ac-code', authenticateToken, async (req, res) => {
 /** GET /api/nflsoj/status — 检查 session 是否有效 */
 router.get('/status', authenticateToken, async (req, res) => {
   try {
-    const cookies = await getNflsojSession()
-    res.json({ ok: true, user: NFLSOJ_USER, expiresAt: new Date(sessionExpireAt).toISOString() })
+    const cookies = await getNflsojSession(0)
+    const status = { ok: true, user: accounts[0].user, expiresAt: new Date(accounts[0].expireAt).toISOString() }
+    if (accounts[1].user) status.account2 = { user: accounts[1].user, configured: true }
+    res.json(status)
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message })
   }
