@@ -79,29 +79,42 @@ function nflsojHeaders(cookies) {
   }
 }
 
-/** 通用请求（自动带 session，403 时自动回退到备用账号）*/
+/** 使用指定账号发出请求，不自动回退到其他账号 */
+async function nflsojGetAs(path, idx) {
+  const cookies = await getNflsojSession(idx)
+  const r = await axios.get(NFLSOJ_BASE + path, {
+    headers: nflsojHeaders(cookies),
+    responseType: 'text',
+    transformResponse: [d => d],
+    validateStatus: s => s < 600,
+    timeout: 15000
+  })
+  if (r.status === 403) {
+    const err = new Error(`NFLSOJ 无权访问（403）: ${path}`)
+    err.statusCode = 403
+    throw err
+  }
+  if (r.status === 404) throw new Error(`NFLSOJ 页面不存在（404）: ${path}`)
+  if (r.status >= 400) throw new Error(`NFLSOJ 请求失败，HTTP ${r.status}`)
+  return r.data
+}
+
+/** 通用请求（403 时自动回退到备用账号）*/
 async function nflsojGet(path) {
   for (let idx = 0; idx < accounts.length; idx++) {
     if (!accounts[idx].user) continue
-    const cookies = await getNflsojSession(idx)
-    const r = await axios.get(NFLSOJ_BASE + path, {
-      headers: nflsojHeaders(cookies),
-      responseType: 'text',
-      transformResponse: [d => d],
-      validateStatus: s => s < 600,
-      timeout: 15000
-    })
-    if (r.status === 403) {
-      const next = accounts.slice(idx + 1).find(a => a.user)
-      if (next) {
-        console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问，尝试备用账号...`)
-        continue
+    try {
+      return await nflsojGetAs(path, idx)
+    } catch (err) {
+      if (err.statusCode === 403) {
+        const next = accounts.slice(idx + 1).find(a => a.user)
+        if (next) {
+          console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）无权访问，尝试备用账号...`)
+          continue
+        }
       }
-      throw new Error('NFLSOJ 无权访问（403），所有账号均无权限')
+      throw err
     }
-    if (r.status === 404) throw new Error(`NFLSOJ 页面不存在（404）: ${path}`)
-    if (r.status >= 400) throw new Error(`NFLSOJ 请求失败，HTTP ${r.status}`)
-    return r.data
   }
   throw new Error('NFLSOJ 未配置任何账号，请在 server/.env 中配置 NFLSOJ_USER')
 }
@@ -585,40 +598,62 @@ export async function fetchNflsojContest(url) {
   const contestId = parseNflsojContestId(url)
   if (!contestId) throw new Error('无法从 URL 中解析 NFLSOJ 比赛 ID')
 
-  const html = await nflsojGet(`/contest/${contestId}`)
+  for (let idx = 0; idx < accounts.length; idx++) {
+    if (!accounts[idx].user) continue
 
-  // 提取比赛标题："S+图论综合 - 比赛 - NFLSOJ" → "S+图论综合"
-  const titleMatch = html.match(/<title>([^<]+)<\/title>/)
-  const rawTitle = titleMatch?.[1]?.trim() || ''
-  const contestTitle = rawTitle.split(' - ')[0]?.trim() || `NFLSOJ-${contestId}`
+    let html
+    try {
+      html = await nflsojGetAs(`/contest/${contestId}`, idx)
+    } catch (err) {
+      const hasMore = accounts.slice(idx + 1).some(a => a.user)
+      if (hasMore) {
+        console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）请求比赛失败，尝试备用账号...`)
+        continue
+      }
+      throw err
+    }
 
-  // 提取题目链接和名称
-  const problemMap = new Map()
-  const linkRe = /href="(\/contest\/\d+\/problem\/(\d+))"[^>]*>([^<]+)<\/a>/g
-  let m
-  while ((m = linkRe.exec(html)) !== null) {
-    const problemNumber = m[2]
-    const label = m[3].trim()
-    if (!problemMap.has(problemNumber)) {
-      problemMap.set(problemNumber, {
-        label,
-        title: label,
-        url: `${NFLSOJ_BASE}/contest/${contestId}/problem/${problemNumber}`,
-        problemNumber,
-      })
+    // 提取比赛标题："S+图论综合 - 比赛 - NFLSOJ" → "S+图论综合"
+    const titleMatch = html.match(/<title>([^<]+)<\/title>/)
+    const rawTitle = titleMatch?.[1]?.trim() || ''
+    const contestTitle = rawTitle.split(' - ')[0]?.trim() || `NFLSOJ-${contestId}`
+
+    // 提取题目链接和名称
+    const problemMap = new Map()
+    const linkRe = /href="(\/contest\/\d+\/problem\/(\d+))"[^>]*>([^<]+)<\/a>/g
+    let m
+    while ((m = linkRe.exec(html)) !== null) {
+      const problemNumber = m[2]
+      const label = m[3].trim()
+      if (!problemMap.has(problemNumber)) {
+        problemMap.set(problemNumber, {
+          label,
+          title: label,
+          url: `${NFLSOJ_BASE}/contest/${contestId}/problem/${problemNumber}`,
+          problemNumber,
+        })
+      }
+    }
+
+    const problems = [...problemMap.values()].sort((a, b) => Number(a.problemNumber) - Number(b.problemNumber))
+
+    if (problems.length === 0) {
+      const hasMore = accounts.slice(idx + 1).some(a => a.user)
+      if (hasMore) {
+        console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）未找到题目列表（可能无权限），尝试备用账号...`)
+        continue
+      }
+      throw new Error('未找到题目列表，比赛可能不存在或无权访问')
+    }
+
+    return {
+      contestId,
+      contestTitle,
+      problems,
+      url: `${NFLSOJ_BASE}/contest/${contestId}`,
     }
   }
-
-  const problems = [...problemMap.values()].sort((a, b) => Number(a.problemNumber) - Number(b.problemNumber))
-
-  if (problems.length === 0) throw new Error('未找到题目列表，比赛可能不存在或无权访问')
-
-  return {
-    contestId,
-    contestTitle,
-    problems,
-    url: `${NFLSOJ_BASE}/contest/${contestId}`,
-  }
+  throw new Error('NFLSOJ 未配置任何账号')
 }
 
 /**
@@ -629,7 +664,24 @@ export async function fetchNflsojProblem(url) {
   if (!ids) throw new Error('无法从 URL 中解析 NFLSOJ 题目地址，格式应为 /contest/:id/problem/:n')
   const { contestId, problemNumber } = ids
 
-  const html = await nflsojGet(`/contest/${contestId}/problem/${problemNumber}`)
+  // 尝试各账号获取题目页面（403 或内容为空时切换备用账号）
+  let html = null
+  for (let idx = 0; idx < accounts.length; idx++) {
+    if (!accounts[idx].user) continue
+    try {
+      const candidate = await nflsojGetAs(`/contest/${contestId}/problem/${problemNumber}`, idx)
+      const hasMore = accounts.slice(idx + 1).some(a => a.user)
+      if (!hasMore || parseProblemContent(load(candidate)).trim()) {
+        html = candidate; break
+      }
+      console.log(`[nflsoj] 账号${idx + 1}（${accounts[idx].user}）题目内容为空，尝试备用账号...`)
+    } catch (err) {
+      const hasMore = accounts.slice(idx + 1).some(a => a.user)
+      if (!hasMore) throw err
+      console.log(`[nflsoj] 账号${idx + 1} 请求题目失败，尝试备用账号...`)
+    }
+  }
+  if (html === null) throw new Error('NFLSOJ 未配置任何账号')
   const $ = load(html)
 
   // 提取题目标题：优先从页面 DOM 中取题目名，回退到 <title> 第一段
