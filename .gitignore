@@ -28,6 +28,12 @@ server/sessions/
 # Ignore accidental lock file copy inside node_modules
 node_modules/.package-lock.json
 
+# excalidraw build/patch artifacts (source snapshots, not referenced by any code)
+public/excalidraw_patch/
+public/excalidraw_patch2/
+public/excalidraw_scripts/
+public/excalidraw-0.18.1.zip
+
 # Ignore runtime sensitive data
 server/premium_users.json
 server/teachers.json
