@@ -1470,7 +1470,7 @@ export default {
         })
 
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 未生成素材已打包下载', '')
+        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 未生成素材已打包下载', this.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || '')
       } catch (error) {
         console.error('Pending raw materials download failed', error)
         this.showToastMessage('未生成素材下载失败: ' + error.message)
@@ -2785,8 +2785,9 @@ export default {
           zip.file('problem_zh.md', limitPrefixSingle + this.problemText + sampleSuffix, zipOptions)
         }
         if (this.translationEnglish && this.translationEnglish.trim()) {
-          const enContent = this.problemMeta?.sourceUrl
-            ? `原题链接：${this.problemMeta.sourceUrl}\n\n${this.translationEnglish}`
+          const problemSourceUrl = this.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl
+          const enContent = problemSourceUrl
+            ? `原题链接：${problemSourceUrl}\n\n${this.translationEnglish}`
             : this.translationEnglish
           zip.file('problem_en.md', enContent + sampleSuffix, zipOptions)
         }
