@@ -147,6 +147,7 @@ export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabe
         ...(htojLabel ? { htojLabel } : {}),
         ...(timeLimit ? { timeLimit } : {}),
         ...(memoryLimit ? { memoryLimit } : {}),
+        ...(url ? { fetchUrl: url } : {}),
       },
     }),
     editorial,

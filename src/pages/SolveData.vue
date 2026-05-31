@@ -140,6 +140,7 @@
           >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ formatAdditionalFileSize(tasks[currentTaskIndex].additionalFile) }})</span>
           <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱ {{ problemMeta.timeLimit }}ms</span>
           <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
+          <a v-if="problemMeta?.fetchUrl || problemMeta?.sourceUrl" :href="problemMeta.fetchUrl || problemMeta.sourceUrl" target="_blank" rel="noopener" class="problem-limit-badge source-url-badge" title="查看原题">🔗 原题</a>
         </div>
         <div class="detail-actions">
           <button @click="generateAll" :disabled="tasks[currentTaskIndex]?.status === 'processing' || isBatchRunning" class="btn-primary btn-sm">
@@ -1441,7 +1442,7 @@ export default {
         })
 
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 批量导出: ${zipName}`, '✅ 批量导出成功')
+        this.sendPackageEmail(blob, zipName, `SolveData 批量导出: ${zipName}`, '✅ 批量导出成功', '')
       } catch (e) {
         console.error('Batch download failed', e)
         this.showToastMessage('批量下载失败: ' + e.message)
@@ -1469,7 +1470,7 @@ export default {
         })
 
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 未生成素材已打包下载')
+        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 未生成素材已打包下载', '')
       } catch (error) {
         console.error('Pending raw materials download failed', error)
         this.showToastMessage('未生成素材下载失败: ' + error.message)
@@ -1497,7 +1498,7 @@ export default {
         })
 
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 原始素材已打包下载')
+        this.sendPackageEmail(blob, zipName, `SolveData 原始素材包: ${zipName}`, '✅ 原始素材已打包下载', this.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || '')
       } catch (error) {
         console.error('Current raw materials download failed', error)
         this.showToastMessage('原始素材下载失败: ' + error.message)
@@ -1515,7 +1516,7 @@ export default {
       URL.revokeObjectURL(url)
     },
 
-    async sendPackageEmail(blob, filename, subject, successToast = '') {
+    async sendPackageEmail(blob, filename, subject, successToast = '', sourceUrl = '') {
       try {
         const base64 = await blobToBase64(blob)
         fetch('/api/send-package', {
@@ -1524,7 +1525,7 @@ export default {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
           },
-          body: JSON.stringify({ filename, contentBase64: base64, subject })
+          body: JSON.stringify({ filename, contentBase64: base64, subject, sourceUrl })
         })
           .then(async res => {
             if (!res.ok) {
@@ -2814,7 +2815,7 @@ export default {
         const blob = await zip.generateAsync({ type: 'blob' })
         const zipName = `${problemTitle}.zip`
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 项目包: ${problemTitle}`)
+        this.sendPackageEmail(blob, zipName, `SolveData 项目包: ${problemTitle}`, '', this.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || '')
         
         this.toastMessage = '✅ 项目包已下载！<br>解压后双击 run.bat 或运行: python run.py';
         this.showToast = true;
@@ -3160,6 +3161,16 @@ export default {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+}
+.source-url-badge {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+  text-decoration: none;
+  cursor: pointer;
+}
+.source-url-badge:hover {
+  background: #dcfce7;
 }
 .detail-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 

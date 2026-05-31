@@ -663,6 +663,14 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
 
 function parseTranslationContent(content) {
   let resultText = '', meta = { title: '', tags: [] }, isJson = false
+  // AI often writes LaTeX backslash sequences (\times, \begin, \frac, \right) without JSON escaping.
+  // JSON.parse interprets \t as tab, \b as backspace, \f as form-feed, \r as carriage-return.
+  // Fix: when \t/\b/\f/\r is followed by a letter, treat it as a LaTeX command and double the backslash.
+  const fixLatexEscapes = (str) => str
+    .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
+    .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
+    .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
+    .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
   try {
     let jsonStr = content.trim()
     const jb = content.match(/```json\s*([\s\S]*?)\s*```/i)
@@ -670,7 +678,7 @@ function parseTranslationContent(content) {
       const f = content.indexOf('{'), l = content.lastIndexOf('}')
       if (f !== -1 && l > f) jsonStr = content.substring(f, l + 1)
     }
-    const obj = JSON.parse(jsonStr)
+    const obj = JSON.parse(fixLatexEscapes(jsonStr))
     if (obj.translation) {
       resultText = obj.translation; isJson = true
       if (obj.title) meta.title = obj.title
@@ -682,15 +690,15 @@ function parseTranslationContent(content) {
     try {
       const tm = content.match(/"translation"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
       if (tm) {
-        try { resultText = JSON.parse(`"${tm[1]}"`) }
-        catch { resultText = tm[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\t/g,'\t') }
+        try { resultText = JSON.parse(`"${fixLatexEscapes(tm[1])}"`) }
+        catch { resultText = tm[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\') }
         isJson = true; recovered = true
         const tit = content.match(/"title"\s*:\s*"([^"]*?)"/)
         if (tit) meta.title = tit[1]
         const tag = content.match(/"tags"\s*:\s*\[([\s\S]*?)\]/)
         if (tag) { try { meta.tags = JSON.parse(`[${tag[1]}]`) } catch { meta.tags = tag[1].split(',').map(t=>t.trim().replace(/^"|"$/g,'')) } }
         const eng = content.match(/"english"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
-        if (eng) { try { meta.english = JSON.parse(`"${eng[1]}"`) } catch { meta.english = eng[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\t/g,'\t') } }
+        if (eng) { try { meta.english = JSON.parse(`"${fixLatexEscapes(eng[1])}"`) } catch { meta.english = eng[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\') } }
       }
     } catch {}
     if (!recovered) resultText = content.replace(/^```json\s*/i,'').replace(/\s*```$/i,'')
@@ -2272,7 +2280,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 // Send package email route (moved from admin to allow user access)
 router.post('/send-package', authenticateToken, async (req, res) => {
   try {
-    const { filename, contentBase64, subject } = req.body;
+    const { filename, contentBase64, subject, sourceUrl } = req.body;
     
     // Get user info (for identification in email)
     const user = await User.findById(req.user.id);
@@ -2304,6 +2312,7 @@ router.post('/send-package', authenticateToken, async (req, res) => {
         <h2>Project Download Notification</h2>
         <p>User <strong>${username}</strong> has downloaded a project package.</p>
         <p>The project <strong>${filename}</strong> is attached to this email.</p>
+        ${sourceUrl ? `<p>原题链接：<a href="${sourceUrl}">${sourceUrl}</a></p>` : ''}
       `,
       attachments: [
         {
