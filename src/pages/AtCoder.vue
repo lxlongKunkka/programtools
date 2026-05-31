@@ -245,7 +245,7 @@ export default {
       selected: new Set(),
       currentTaskId: null,
       activeTab: 'content',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       modelOptions: [],
       language: 'C++',
 

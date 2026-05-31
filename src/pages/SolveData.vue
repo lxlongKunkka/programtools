@@ -610,7 +610,7 @@ export default {
         { id: 'o2-mini', name: 'o2-mini' },
         { id: 'o1-mini', name: 'o1-mini' },
         { id: 'grok-4-fast', name: 'grok-4-fast' },
-        { id: 'gemini-3-flash-preview', name: 'gemini-3-flash-preview' }
+        { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash' }
       ]
     },
     translationModelLabel() {
