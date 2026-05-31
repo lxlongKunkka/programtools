@@ -195,8 +195,9 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
     }
 
     if (task.translationEnglish) {
-      const englishContent = task.problemMeta?.sourceUrl
-        ? `原题链接：${task.problemMeta.sourceUrl}\n\n${task.translationEnglish}`
+      const problemSourceUrl = task.problemMeta?.fetchUrl || task.problemMeta?.sourceUrl || ''
+      const englishContent = problemSourceUrl
+        ? `原题链接：${problemSourceUrl}\n\n${task.translationEnglish}`
         : task.translationEnglish
       folder.file('problem_en.md', englishContent + sampleSuffix, zipOptions)
     }
@@ -229,15 +230,19 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
     }
 
     // 原题来源链接
-    const sourceUrl = task.problemMeta?.sourceUrl || task.cpretResults?.[0]?.url || ''
-    if (sourceUrl) {
-      folder.file('source_url.txt', sourceUrl, zipOptions)
-      const topCpret = task.cpretResults?.[0]
+    const fetchUrl = task.problemMeta?.fetchUrl || ''
+    const metaSourceUrl = task.problemMeta?.sourceUrl || ''
+    const topCpret = task.cpretResults?.[0]
+    const cpretUrl = topCpret?.url || ''
+    const primaryUrl = fetchUrl || metaSourceUrl
+    if (primaryUrl || cpretUrl) {
+      folder.file('source_url.txt', primaryUrl || cpretUrl, zipOptions)
       const infoLines = [`【${prefix}_${title}】`]
+      if (primaryUrl) infoLines.push(`题目链接：${primaryUrl}`)
       if (topCpret?.title) infoLines.push(`原题：${topCpret.title}`)
       if (topCpret?.source) infoLines.push(`来源：${topCpret.source}`)
       if (topCpret?.score) infoLines.push(`相似度：${(topCpret.score * 100).toFixed(0)}%`)
-      infoLines.push(`链接：${sourceUrl}`)
+      if (cpretUrl) infoLines.push(`链接：${cpretUrl}`)
       sourceLinkLines.push(infoLines.join('\n'))
     }
   }
@@ -259,6 +264,7 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
     blob,
     zipName,
     exportTime,
+    sourceLinkLines,
   }
 }
 

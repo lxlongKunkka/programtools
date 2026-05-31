@@ -2280,7 +2280,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
 // Send package email route (moved from admin to allow user access)
 router.post('/send-package', authenticateToken, async (req, res) => {
   try {
-    const { filename, contentBase64, subject, sourceUrl } = req.body;
+    const { filename, contentBase64, subject, sourceUrl, notes } = req.body;
     
     // Get user info (for identification in email)
     const user = await User.findById(req.user.id);
@@ -2313,6 +2313,7 @@ router.post('/send-package', authenticateToken, async (req, res) => {
         <p>User <strong>${username}</strong> has downloaded a project package.</p>
         <p>The project <strong>${filename}</strong> is attached to this email.</p>
         ${sourceUrl ? `<p>原题链接：<a href="${sourceUrl}">${sourceUrl}</a></p>` : ''}
+        ${notes ? `<pre style="background:#f5f5f5;padding:10px;border-radius:4px;white-space:pre-wrap;word-break:break-all">${notes.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>` : ''}
       `,
       attachments: [
         {

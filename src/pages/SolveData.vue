@@ -1425,7 +1425,7 @@ export default {
           return
         }
 
-        const { blob, zipName } = await createBatchExportBundle({
+        const { blob, zipName, sourceLinkLines } = await createBatchExportBundle({
           JSZip,
           completedTasks,
           helperApi: {
@@ -1442,7 +1442,8 @@ export default {
         })
 
         this.downloadBlob(blob, zipName)
-        this.sendPackageEmail(blob, zipName, `SolveData 批量导出: ${zipName}`, '✅ 批量导出成功', '')
+        const batchNotes = sourceLinkLines?.length ? sourceLinkLines.join('\n\n') : ''
+        this.sendPackageEmail(blob, zipName, `SolveData 批量导出: ${zipName}`, '✅ 批量导出成功', '', batchNotes)
       } catch (e) {
         console.error('Batch download failed', e)
         this.showToastMessage('批量下载失败: ' + e.message)
@@ -1516,7 +1517,7 @@ export default {
       URL.revokeObjectURL(url)
     },
 
-    async sendPackageEmail(blob, filename, subject, successToast = '', sourceUrl = '') {
+    async sendPackageEmail(blob, filename, subject, successToast = '', sourceUrl = '', notes = '') {
       try {
         const base64 = await blobToBase64(blob)
         fetch('/api/send-package', {
@@ -1525,7 +1526,7 @@ export default {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
           },
-          body: JSON.stringify({ filename, contentBase64: base64, subject, sourceUrl })
+          body: JSON.stringify({ filename, contentBase64: base64, subject, sourceUrl, notes })
         })
           .then(async res => {
             if (!res.ok) {
