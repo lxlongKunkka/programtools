@@ -18,13 +18,13 @@
 
     <!-- Editor Tab Navigation -->
     <div class="editor-tabs">
+      <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
       <button :class="['editor-tab', { active: activeTab === 'markdown' }]" @click="activeTab = 'markdown'" type="button">📄 Markdown 教案</button>
-      <button :class="['editor-tab', { active: activeTab === 'video' }]" @click="activeTab = 'video'" type="button">🎬 视频</button>
       <button :class="['editor-tab', { active: activeTab === 'html' }]" @click="activeTab = 'html'" type="button">🖥 HTML 课件</button>
       <button :class="['editor-tab', { active: activeTab === 'ppt' }]" @click="activeTab = 'ppt'" type="button">📊 Office PPT</button>
-      <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
-      <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
       <button :class="['editor-tab', { active: activeTab === 'resources' }]" @click="activeTab = 'resources'" type="button">🔗 关联资源</button>
+      <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
+      <button :class="['editor-tab', { active: activeTab === 'video' }]" @click="activeTab = 'video'" type="button">🎬 视频</button>
     </div>
 
     <!-- AI Assistant Section -->
