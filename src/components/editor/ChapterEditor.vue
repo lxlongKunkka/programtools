@@ -4,6 +4,14 @@
       <h2>{{ chapter.isNew ? '新建章节' : '编辑章节' }}</h2>
     </div>
 
+    <!-- Editor Tab Navigation -->
+    <div class="editor-tabs">
+      <button :class="['editor-tab', { active: activeTab === 'lesson' }]" @click="activeTab = 'lesson'" type="button">📝 教案</button>
+      <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
+      <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
+      <button :class="['editor-tab', { active: activeTab === 'resources' }]" @click="activeTab = 'resources'" type="button">🔗 关联资源</button>
+    </div>
+
     <!-- AI Assistant Section -->
     <div class="ai-assistant-box">
       <div class="ai-header">
@@ -24,6 +32,7 @@
       </div>
     </div>
 
+    <div v-show="activeTab === 'lesson'">
     <div class="form-row">
       <div class="form-group half">
         <label>Chapter ID:</label>
@@ -96,7 +105,9 @@
         </div>
       </div>
     </div>
+    </div><!-- end lesson tab -->
 
+    <div v-show="activeTab === 'resources'">
     <div class="form-group">
       <label>关联必做题目 ID (逗号分隔):</label>
       <input v-model="chapter.problemIdsStr" class="form-input" placeholder="例如: system:1001, 1002">
@@ -150,7 +161,9 @@
       <span class="hint">选做章节不会阻塞后续章节的解锁。</span>
     </div>
 
-    <!-- Preview Content (AI generated) -->
+    </div><!-- end resources tab -->
+
+    <div v-show="activeTab === 'preview'">
     <div class="form-group preview-review-group">
       <div class="label-row">
         <label>🔍 预习内容 (AI生成，Markdown)：</label>
@@ -165,7 +178,9 @@
       </div>
     </div>
 
-    <!-- Review Content (AI generated) -->
+    </div><!-- end preview tab -->
+
+    <div v-show="activeTab === 'review'">
     <div class="form-group preview-review-group">
       <div class="label-row">
         <label>📋 复习总结 (AI生成，Markdown)：</label>
@@ -179,6 +194,7 @@
         </div>
       </div>
     </div>
+    </div><!-- end review tab -->
   </div>
 </template>
 
@@ -210,7 +226,8 @@ export default {
   emits: ['update:aiRequirements'],
   data() {
     return {
-      showPreview: false
+      showPreview: false,
+      activeTab: 'lesson'
     }
   },
   computed: {
@@ -224,8 +241,8 @@ export default {
   },
   watch: {
     // Reset preview when switching to a different chapter
-    'chapter.id'() { this.showPreview = false },
-    'chapter._id'() { this.showPreview = false }
+    'chapter.id'() { this.showPreview = false; this.activeTab = 'lesson' },
+    'chapter._id'() { this.showPreview = false; this.activeTab = 'lesson' }
   },
   methods: {
     parseVideoEntries(text) {
@@ -365,5 +382,37 @@ export default {
   border-radius: 8px;
   padding: 12px;
   background: #f0f9ff;
+}
+.editor-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.editor-tab {
+  padding: 8px 20px;
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-right: 4px;
+  position: relative;
+  bottom: -2px;
+  transition: background 0.15s, color 0.15s;
+}
+.editor-tab.active {
+  background: #fff;
+  color: #2563eb;
+  border-color: #e2e8f0;
+  border-bottom-color: #fff;
+  z-index: 1;
+}
+.editor-tab:hover:not(.active) {
+  background: #f1f5f9;
+  color: #334155;
 }
 </style>
