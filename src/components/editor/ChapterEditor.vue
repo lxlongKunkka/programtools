@@ -21,6 +21,7 @@
       <button :class="['editor-tab', { active: activeTab === 'markdown' }]" @click="activeTab = 'markdown'" type="button">📄 Markdown 教案</button>
       <button :class="['editor-tab', { active: activeTab === 'video' }]" @click="activeTab = 'video'" type="button">🎬 视频</button>
       <button :class="['editor-tab', { active: activeTab === 'html' }]" @click="activeTab = 'html'" type="button">🖥 HTML 课件</button>
+      <button :class="['editor-tab', { active: activeTab === 'ppt' }]" @click="activeTab = 'ppt'" type="button">📊 Office PPT</button>
       <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
       <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
       <button :class="['editor-tab', { active: activeTab === 'resources' }]" @click="activeTab = 'resources'" type="button">🔗 关联资源</button>
@@ -99,10 +100,12 @@
       <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
     </div>
 
-    <!-- Section 2: Office PPT Upload to COS -->
-    <div style="margin-top: 16px; padding: 12px; background: #fff7ed; border-left: 4px solid #f97316; border-radius: 4px;">
-      <strong>📊 Office PPT (上传至 COS)</strong>
-      <div v-if="chapter.pptxUrl" style="margin-top: 10px;">
+    </div><!-- end html tab -->
+
+    <!-- Office PPT Tab -->
+    <div v-show="activeTab === 'ppt'">
+    <div style="padding: 12px; background: #fff7ed; border-left: 4px solid #f97316; border-radius: 4px;">
+      <div v-if="chapter.pptxUrl">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span style="font-size: 13px; color: #374151;">✅ 已上传：</span>
           <a :href="chapter.pptxUrl" target="_blank" style="font-size: 12px; color: #2563eb; word-break: break-all;">{{ chapter.pptxUrl }}</a>
@@ -113,10 +116,11 @@
         </div>
         <div v-if="showPptxPreview" style="margin-top: 10px;">
           <iframe :src="`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(chapter.pptxUrl)}`"
-                  style="width: 100%; height: 560px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                  style="width: 100%; height: 600px; border: 1px solid #e2e8f0; border-radius: 6px;"
                   allowfullscreen></iframe>
         </div>
       </div>
+      <div v-else style="margin-bottom: 8px; color: #92400e; font-size: 13px;">尚未上传 Office PPT 文件</div>
       <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <input ref="pptFileInput" type="file" accept=".pptx,.ppt,.pptm" @change="onPptFileSelected" style="display:none">
         <button @click="$refs.pptFileInput.click()" class="btn-small btn-preview" :disabled="pptUploading" type="button">📂 选择文件</button>
@@ -126,7 +130,7 @@
         </button>
       </div>
     </div>
-    </div><!-- end html tab -->
+    </div><!-- end ppt tab -->
 
     <div v-show="activeTab === 'resources'">
     <div class="form-group">
@@ -265,8 +269,8 @@ export default {
   },
   watch: {
     // Reset preview when switching to a different chapter
-    'chapter.id'() { this.showPreview = false; this.showPptxPreview = false; this.activeTab = 'markdown' },
-    'chapter._id'() { this.showPreview = false; this.showPptxPreview = false; this.activeTab = 'markdown' }
+    'chapter.id'() { this.showPreview = false; this.showPptxPreview = false; this.selectedPptFile = null; this.activeTab = 'markdown' },
+    'chapter._id'() { this.showPreview = false; this.showPptxPreview = false; this.selectedPptFile = null; this.activeTab = 'markdown' }
   },
   methods: {
     parseVideoEntries(text) {
