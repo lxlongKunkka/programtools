@@ -5,6 +5,7 @@
       <button v-if="currentTopic" @click="goBackToTopic" class="btn-back-topic">📚 {{ currentTopic.title }}</button>
       <span v-if="level && chapter" class="nav-title">{{ chapter.title }}</span>
       <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
+      <button v-if="canEdit && chapter" @click="copyPreviewLink" class="btn-copy-preview">📋 复制预习链接</button>
     </div>
 
     <div v-if="loading" class="loading">加载中...</div>
@@ -663,6 +664,30 @@ export default {
       localStorage.setItem('pending_edit_return', this.$route.fullPath)
       this.$router.push('/course')
     },
+
+    async copyPreviewLink() {
+      if (!this.chapter) return
+      const chapterId = this.chapter.id
+      const lid = this.$route.query.lid || ''
+      const base = window.location.origin
+      const url = lid
+        ? `${base}/course/${chapterId}?lid=${lid}`
+        : `${base}/course/${chapterId}`
+      const text = `📚 预习提醒\n\n同学们好！下节课我们将学习「${this.chapter.title}」，请提前预习：\n${url}\n\n（需先登录平台）`
+      try {
+        await navigator.clipboard.writeText(text)
+        this.showToastMessage('✅ 预习链接已复制，可直接粘贴到微信群')
+      } catch {
+        // fallback
+        const el = document.createElement('textarea')
+        el.value = text
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        this.showToastMessage('✅ 预习链接已复制，可直接粘贴到微信群')
+      }
+    },
     renderMath() {
       this.$nextTick(() => {
         const container = this.$el.querySelector('.markdown-scroll-wrapper')
@@ -1117,6 +1142,20 @@ export default {
   white-space: nowrap;
   font-size: 16px;
   color: #333;
+}
+.btn-copy-preview {
+  background: #27ae60;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-copy-preview:hover {
+  background: #1e8449;
 }
 
 .content-wrapper {
