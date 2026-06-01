@@ -4,9 +4,40 @@
       <h2>{{ chapter.isNew ? '新建章节' : '编辑章节' }}</h2>
     </div>
 
+    <!-- Basic Info (always visible) -->
+    <div class="form-row">
+      <div class="form-group half">
+        <label>Chapter ID:</label>
+        <input v-model="chapter.id" class="form-input disabled" disabled>
+      </div>
+      <div class="form-group half">
+        <label>标题:</label>
+        <input v-model="chapter.title" class="form-input">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>视频链接 (可选，每行一个):</label>
+      <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
+        placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
+        style="resize: vertical; font-family: monospace;"></textarea>
+      <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
+        <div><strong>可选格式：</strong></div>
+        <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
+        <div>2. 直接粘 iframe：支持整段多行 iframe，不必压成一行</div>
+        <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
+        <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
+      </div>
+      <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
+        <div v-for="(entry, i) in videoEntriesPreview" :key="entry.raw + '-' + i">
+          {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, i) }}：{{ getVideoPreviewText(entry.raw) }}
+        </div>
+      </div>
+    </div>
+
     <!-- Editor Tab Navigation -->
     <div class="editor-tabs">
-      <button :class="['editor-tab', { active: activeTab === 'lesson' }]" @click="activeTab = 'lesson'" type="button">📝 教案</button>
+      <button :class="['editor-tab', { active: activeTab === 'markdown' }]" @click="activeTab = 'markdown'" type="button">📄 Markdown 教案</button>
+      <button :class="['editor-tab', { active: activeTab === 'html' }]" @click="activeTab = 'html'" type="button">🖥 HTML 课件</button>
       <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
       <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
       <button :class="['editor-tab', { active: activeTab === 'resources' }]" @click="activeTab = 'resources'" type="button">🔗 关联资源</button>
@@ -32,74 +63,36 @@
       </div>
     </div>
 
-    <div v-show="activeTab === 'lesson'">
-    <div class="form-row">
-      <div class="form-group half">
-        <label>Chapter ID:</label>
-        <input v-model="chapter.id" class="form-input disabled" disabled>
-      </div>
-      <div class="form-group half">
-        <label>标题:</label>
-        <input v-model="chapter.title" class="form-input">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>视频链接 (可选，每行一个):</label>
-      <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
-        placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
-        style="resize: vertical; font-family: monospace;"></textarea>
-      <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
-        <div><strong>可选格式：</strong></div>
-        <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
-        <div>2. 直接粘 iframe：支持整段多行 iframe，不必压成一行</div>
-        <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
-        <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
-      </div>
-      <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
-        <div v-for="(entry, i) in videoEntriesPreview" :key="entry.raw + '-' + i">
-          {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, i) }}：{{ getVideoPreviewText(entry.raw) }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Content Type Sub-Tabs -->
-    <div class="content-type-tabs">
-      <button :class="['content-type-tab', { active: chapter.contentType !== 'html' }]"
-              @click="chapter.contentType = 'markdown'" type="button">📄 Markdown 教案</button>
-      <button :class="['content-type-tab', { active: chapter.contentType === 'html' }]"
-              @click="chapter.contentType = 'html'" type="button">🖥 HTML 课件 (PPT)</button>
-    </div>
-
-    <!-- Markdown Mode -->
-    <div v-show="chapter.contentType !== 'html'" class="split-view" style="height: 700px;">
+    <!-- Markdown Tab -->
+    <div v-show="activeTab === 'markdown'">
+    <div class="split-view" style="height: 700px;">
       <textarea v-model="chapter.content" class="form-input code-font" style="height: 100%;"
                 placeholder="在此输入教案/大纲内容..."></textarea>
       <div class="preview-box" style="height: 100%;">
         <MarkdownViewer :content="chapter.content" />
       </div>
     </div>
+    </div><!-- end markdown tab -->
 
-    <!-- HTML Mode -->
-    <div v-show="chapter.contentType === 'html'">
-      <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
-        <strong>PPT 课件路径：</strong>
-        <div style="margin-top: 8px;">
-          <input v-model="chapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
-        </div>
-      </div>
-      <div class="label-row" style="margin-bottom: 8px;">
-        <button v-if="isAdmin" @click="handleOpenInNewWindow" class="btn-small btn-preview"
-                style="margin-right: 8px;" type="button">新窗口打开</button>
-        <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
-          {{ showPreview ? '关闭预览' : '开启预览' }}
-        </button>
-      </div>
-      <div v-if="showPreview" class="preview-container-large">
-        <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
+    <!-- HTML Tab -->
+    <div v-show="activeTab === 'html'">
+    <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
+      <strong>PPT 课件路径：</strong>
+      <div style="margin-top: 8px;">
+        <input v-model="chapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
       </div>
     </div>
-    </div><!-- end lesson tab -->
+    <div class="label-row" style="margin-bottom: 8px;">
+      <button v-if="isAdmin" @click="handleOpenInNewWindow" class="btn-small btn-preview"
+              style="margin-right: 8px;" type="button">新窗口打开</button>
+      <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
+        {{ showPreview ? '关闭预览' : '开启预览' }}
+      </button>
+    </div>
+    <div v-if="showPreview" class="preview-container-large">
+      <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
+    </div>
+    </div><!-- end html tab -->
 
     <div v-show="activeTab === 'resources'">
     <div class="form-group">
@@ -221,7 +214,7 @@ export default {
   data() {
     return {
       showPreview: false,
-      activeTab: 'lesson'
+      activeTab: 'markdown'
     }
   },
   computed: {
@@ -235,8 +228,8 @@ export default {
   },
   watch: {
     // Reset preview when switching to a different chapter
-    'chapter.id'() { this.showPreview = false; this.activeTab = 'lesson' },
-    'chapter._id'() { this.showPreview = false; this.activeTab = 'lesson' }
+    'chapter.id'() { this.showPreview = false; this.activeTab = 'markdown' },
+    'chapter._id'() { this.showPreview = false; this.activeTab = 'markdown' }
   },
   methods: {
     parseVideoEntries(text) {
