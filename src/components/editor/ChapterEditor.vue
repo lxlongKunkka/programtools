@@ -63,46 +63,40 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label>内容类型:</label>
-      <select v-model="chapter.contentType" class="form-input">
-        <option value="markdown">Markdown 文本</option>
-        <option value="html">HTML 课件 (Iframe)</option>
-      </select>
+    <!-- Content Type Sub-Tabs -->
+    <div class="content-type-tabs">
+      <button :class="['content-type-tab', { active: chapter.contentType !== 'html' }]"
+              @click="chapter.contentType = 'markdown'" type="button">📄 Markdown 教案</button>
+      <button :class="['content-type-tab', { active: chapter.contentType === 'html' }]"
+              @click="chapter.contentType = 'html'" type="button">🖥 HTML 课件 (PPT)</button>
     </div>
 
-    <div class="form-group">
-      <div class="label-row">
-        <label>内容 ({{ chapter.contentType === 'html' ? 'HTML URL' : 'Markdown' }}):</label>
-        <div v-if="chapter.contentType === 'html'" style="display: inline-block;">
-          <button v-if="isAdmin" @click="handleOpenInNewWindow" class="btn-small btn-preview"
-                  style="margin-right: 8px;" type="button">新窗口打开</button>
-          <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
-            {{ showPreview ? '关闭预览' : '开启预览' }}
-          </button>
+    <!-- Markdown Mode -->
+    <div v-show="chapter.contentType !== 'html'" class="split-view" style="height: 700px;">
+      <textarea v-model="chapter.content" class="form-input code-font" style="height: 100%;"
+                placeholder="在此输入教案/大纲内容..."></textarea>
+      <div class="preview-box" style="height: 100%;">
+        <MarkdownViewer :content="chapter.content" />
+      </div>
+    </div>
+
+    <!-- HTML Mode -->
+    <div v-show="chapter.contentType === 'html'">
+      <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
+        <strong>PPT 课件路径：</strong>
+        <div style="margin-top: 8px;">
+          <input v-model="chapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
         </div>
       </div>
-
-      <!-- Markdown Mode -->
-      <div v-if="chapter.contentType === 'markdown'" class="split-view" style="height: 700px;">
-        <textarea v-model="chapter.content" class="form-input code-font" style="height: 100%;"
-                  placeholder="在此输入教案/大纲内容..."></textarea>
-        <div class="preview-box" style="height: 100%;">
-          <MarkdownViewer :content="chapter.content" />
-        </div>
+      <div class="label-row" style="margin-bottom: 8px;">
+        <button v-if="isAdmin" @click="handleOpenInNewWindow" class="btn-small btn-preview"
+                style="margin-right: 8px;" type="button">新窗口打开</button>
+        <button @click="showPreview = !showPreview" class="btn-small btn-preview" type="button">
+          {{ showPreview ? '关闭预览' : '开启预览' }}
+        </button>
       </div>
-
-      <!-- HTML Mode -->
-      <div v-if="chapter.contentType === 'html'">
-        <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
-          <strong>PPT 课件已生成</strong>
-          <div v-if="!showPreview" style="margin-top: 8px;">
-            <input v-model="chapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
-          </div>
-        </div>
-        <div v-if="showPreview" class="preview-container-large">
-          <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
-        </div>
+      <div v-if="showPreview" class="preview-container-large">
+        <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
       </div>
     </div>
     </div><!-- end lesson tab -->
@@ -413,6 +407,35 @@ export default {
 }
 .editor-tab:hover:not(.active) {
   background: #f1f5f9;
+  color: #334155;
+}
+.content-type-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  width: fit-content;
+}
+.content-type-tab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+.content-type-tab.active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.content-type-tab:hover:not(.active) {
+  background: #e2e8f0;
   color: #334155;
 }
 </style>
