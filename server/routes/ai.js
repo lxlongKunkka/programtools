@@ -28,6 +28,8 @@ import {
   SOLUTION_REPORT_PROMPT,
   META_PROMPT,
   LESSON_PLAN_PROMPT,
+  PREVIEW_CONTENT_PROMPT,
+  REVIEW_CONTENT_PROMPT,
   PPT_PROMPT,
   TOPIC_PLAN_PROMPT,
   TOPIC_DESC_PROMPT,
@@ -3130,6 +3132,162 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
               type: 'lesson-plan',
               status: 'error',
               message: '教案生成失败: ' + errMsg
+          });
+      }
+  })();
+});
+
+// Generate Preview Content Background
+router.post('/preview-content/background', authenticateToken, async (req, res) => {
+  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent } = req.body;
+  if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+  res.json({ status: 'processing', message: 'Preview content generation started in background' });
+  (async () => {
+      try {
+          const logMsg = `[Background] Starting Preview Content for chapter ${chapterId} (${topic})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
+          let targetLang = language || 'C++';
+          let codeLang = /python/i.test(targetLang) ? 'python' : 'cpp';
+          const systemPrompt = PREVIEW_CONTENT_PROMPT
+            .replace('{{language}}', targetLang)
+            .replace('{{code_lang}}', codeLang);
+          let userPrompt = `章节标题：${topic}\n所属主题：${context || ''}\n难度等级：${level || ''}`;
+          if (lessonContent && lessonContent.trim().length > 50) {
+              userPrompt += `\n\n【教案内容（请基于此生成预习导读）】\n${lessonContent.slice(0, 8000)}`;
+          }
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ];
+          const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
+          const resp = await axios.post(YUN_API_URL, payload, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
+            timeout: 120000
+          });
+          const content = resp.data?.choices?.[0]?.message?.content || '';
+          if (!content) throw new Error('AI returned empty response');
+          // Save to DB
+          const query = { $or: [{ 'topics.chapters.id': chapterId }, { 'topics.chapters._id': chapterId }] };
+          let courseLevel = await CourseLevel.findOne(query);
+          if (!courseLevel && mongoose.Types.ObjectId.isValid(chapterId)) {
+              courseLevel = await CourseLevel.findOne({ $or: [{ 'topics.chapters._id': new mongoose.Types.ObjectId(chapterId) }] });
+          }
+          if (courseLevel) {
+              let foundChapterId = null, foundTopicId = null;
+              for (const t of courseLevel.topics) {
+                  const ch = mongoose.Types.ObjectId.isValid(chapterId)
+                      ? t.chapters.find(c => c._id && c._id.toString() === chapterId)
+                      : t.chapters.find(c => c.id === chapterId);
+                  if (ch) {
+                      ch.previewContent = content;
+                      foundChapterId = ch._id ? ch._id.toString() : ch.id;
+                      foundTopicId = t._id ? t._id.toString() : null;
+                      break;
+                  }
+              }
+              if (foundChapterId && foundTopicId) {
+                  const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId)
+                      ? { "c._id": new mongoose.Types.ObjectId(foundChapterId) }
+                      : { "c.id": foundChapterId };
+                  await CourseLevel.updateOne(
+                      { _id: courseLevel._id },
+                      { $set: { "topics.$[t].chapters.$[c].previewContent": content } },
+                      { arrayFilters: [{ "t._id": new mongoose.Types.ObjectId(foundTopicId) }, chapterFilter] }
+                  );
+              } else {
+                  await courseLevel.save();
+              }
+              getIO().emit('ai_task_complete', {
+                  chapterId: foundChapterId || chapterId, clientKey,
+                  type: 'preview-content', status: 'success', message: '预习内容生成完成'
+              });
+          } else {
+              throw new Error('Database record not found for this chapter');
+          }
+      } catch (err) {
+          console.error('[Background] Error generating Preview Content:', err);
+          getIO().emit('ai_task_complete', {
+              chapterId, clientKey, type: 'preview-content', status: 'error',
+              message: '预习内容生成失败: ' + (err.message || String(err))
+          });
+      }
+  })();
+});
+
+// Generate Review Content Background
+router.post('/review-content/background', authenticateToken, async (req, res) => {
+  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent } = req.body;
+  if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
+  res.json({ status: 'processing', message: 'Review content generation started in background' });
+  (async () => {
+      try {
+          const logMsg = `[Background] Starting Review Content for chapter ${chapterId} (${topic})`;
+          console.log(logMsg);
+          try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
+          let targetLang = language || 'C++';
+          let codeLang = /python/i.test(targetLang) ? 'python' : 'cpp';
+          const systemPrompt = REVIEW_CONTENT_PROMPT
+            .replace('{{language}}', targetLang)
+            .replace('{{code_lang}}', codeLang);
+          let userPrompt = `章节标题：${topic}\n所属主题：${context || ''}\n难度等级：${level || ''}`;
+          if (lessonContent && lessonContent.trim().length > 50) {
+              userPrompt += `\n\n【教案内容（请基于此生成复习总结）】\n${lessonContent.slice(0, 8000)}`;
+          }
+          const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ];
+          const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
+          const resp = await axios.post(YUN_API_URL, payload, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
+            timeout: 120000
+          });
+          const content = resp.data?.choices?.[0]?.message?.content || '';
+          if (!content) throw new Error('AI returned empty response');
+          // Save to DB
+          const query = { $or: [{ 'topics.chapters.id': chapterId }, { 'topics.chapters._id': chapterId }] };
+          let courseLevel = await CourseLevel.findOne(query);
+          if (!courseLevel && mongoose.Types.ObjectId.isValid(chapterId)) {
+              courseLevel = await CourseLevel.findOne({ $or: [{ 'topics.chapters._id': new mongoose.Types.ObjectId(chapterId) }] });
+          }
+          if (courseLevel) {
+              let foundChapterId = null, foundTopicId = null;
+              for (const t of courseLevel.topics) {
+                  const ch = mongoose.Types.ObjectId.isValid(chapterId)
+                      ? t.chapters.find(c => c._id && c._id.toString() === chapterId)
+                      : t.chapters.find(c => c.id === chapterId);
+                  if (ch) {
+                      ch.reviewContent = content;
+                      foundChapterId = ch._id ? ch._id.toString() : ch.id;
+                      foundTopicId = t._id ? t._id.toString() : null;
+                      break;
+                  }
+              }
+              if (foundChapterId && foundTopicId) {
+                  const chapterFilter = mongoose.Types.ObjectId.isValid(foundChapterId)
+                      ? { "c._id": new mongoose.Types.ObjectId(foundChapterId) }
+                      : { "c.id": foundChapterId };
+                  await CourseLevel.updateOne(
+                      { _id: courseLevel._id },
+                      { $set: { "topics.$[t].chapters.$[c].reviewContent": content } },
+                      { arrayFilters: [{ "t._id": new mongoose.Types.ObjectId(foundTopicId) }, chapterFilter] }
+                  );
+              } else {
+                  await courseLevel.save();
+              }
+              getIO().emit('ai_task_complete', {
+                  chapterId: foundChapterId || chapterId, clientKey,
+                  type: 'review-content', status: 'success', message: '复习内容生成完成'
+              });
+          } else {
+              throw new Error('Database record not found for this chapter');
+          }
+      } catch (err) {
+          console.error('[Background] Error generating Review Content:', err);
+          getIO().emit('ai_task_complete', {
+              chapterId, clientKey, type: 'review-content', status: 'error',
+              message: '复习内容生成失败: ' + (err.message || String(err))
           });
       }
   })();

@@ -131,6 +131,8 @@
             :onGeneratePpt="generatePPT"
             :onGenerateSolutionPlan="generateSolutionPlan"
             :onGenerateSolutionReport="generateSolutionReport"
+            :onGeneratePreviewContent="generatePreviewContent"
+            :onGenerateReviewContent="generateReviewContent"
           />
 
         </div><!-- /editor-main-area -->
@@ -332,10 +334,11 @@ export default {
                         }
                     })
                 }
-                // Handle Chapter Content Generation (Lesson Plan, PPT, Solution)
+                // Handle Chapter Content Generation (Lesson Plan, PPT, Solution, Preview, Review)
                 // If currently viewing this chapter, refresh content
                 else if (this.selectedNode && this.selectedNode.type === 'chapter') {
-                    // Robust check for current chapter
+                    // Robust check for current chapter — strip suffix for preview/review clientKeys
+                    const baseChapterId = (key || '').replace(/-preview$|-review$/, '')
                     const isCurrent = (id) => {
                         if (!id) return false
                         const strId = String(id)
@@ -344,7 +347,7 @@ export default {
                                 String(this.editingChapter._id) === strId
                     }
 
-                    const isMatch = isCurrent(key) || isCurrent(data.chapterId)
+                    const isMatch = isCurrent(baseChapterId) || isCurrent(data.chapterId)
                     
                     if (isMatch) {
                             // For PPT tasks: backend sends back resourceUrl + real chapterId
@@ -359,10 +362,14 @@ export default {
                             if (data.resourceUrl) {
                                 this.editingChapter.resourceUrl = data.resourceUrl
                                 this.editingChapter.contentType = 'html'
-                                this.updateChapterInTree(data.chapterId || key, { 
+                                this.updateChapterInTree(data.chapterId || baseChapterId, { 
                                     contentType: 'html',
                                     resourceUrl: data.resourceUrl
                                 })
+                            } else if (data.type === 'preview-content') {
+                                this.editingChapter.previewContent = '正在刷新预习内容...'
+                            } else if (data.type === 'review-content') {
+                                this.editingChapter.reviewContent = '正在刷新复习内容...'
                             } else if (data.contentType === 'markdown') {
                                 this.editingChapter.contentType = 'markdown'
                                 // Set to loading state instead of empty
@@ -375,17 +382,17 @@ export default {
 
                             // Delay fetch slightly to ensure DB consistency
                             setTimeout(() => {
-                                this.fetchChapterContent(data.chapterId || key, true)
+                                this.fetchChapterContent(data.chapterId || baseChapterId, true)
                             }, 1000) // Increased delay to 1s to be safe
                     } else {
                         // Update tree node even if not selected
                         if (data.resourceUrl) {
-                            this.updateChapterInTree(data.chapterId || key, { 
+                            this.updateChapterInTree(data.chapterId || baseChapterId, { 
                                 contentType: 'html',
                                 resourceUrl: data.resourceUrl
                             })
                         } else if (data.contentType === 'markdown') {
-                            this.updateChapterInTree(data.chapterId || key, { 
+                            this.updateChapterInTree(data.chapterId || baseChapterId, { 
                                 contentType: 'markdown',
                                 content: '' // Clear content in tree to force re-fetch
                             })
@@ -610,6 +617,8 @@ export default {
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
                 this.editingChapter.videoUrl = fullChapter.videoUrl || ''
+                this.editingChapter.previewContent = fullChapter.previewContent || ''
+                this.editingChapter.reviewContent = fullChapter.reviewContent || ''
                 if (fullChapter.title) this.editingChapter.title = fullChapter.title
                 
                 // Update tree node
@@ -1493,8 +1502,6 @@ export default {
       
       // Capture context
       const chapterId = this.editingChapter._id || this.editingChapter.id
-      const levelId = this.editingLevelForChapter._id
-      const topicId = this.editingTopicForChapter._id
       const levelNum = this.editingLevelForChapter.level
       const topicTitle = this.editingTopicForChapter.title
       const chapterTitle = this.editingChapter.title
@@ -1514,30 +1521,100 @@ export default {
       this.editingChapter.content = '正在生成教案中，请稍候...'
       this.updateChapterInTree(chapterId, { contentType: 'markdown', content: '正在生成教案中，请稍候...' })
       
+      const commonParams = {
+        topic: chapterTitle,
+        context: topicTitle,
+        level: `Level ${levelNum}`,
+        model: model,
+        language: language,
+        chapterId: chapterId,
+        topicId: this.editingTopicForChapter._id,
+      }
+
       try {
-        await request('/api/lesson-plan/background', {
-          method: 'POST',
-          body: JSON.stringify({
-            topic: chapterTitle,
-            context: topicTitle,
-            level: `Level ${levelNum}`,
-            requirements: requirements,
-            model: model,
-            language: language,
-            chapterId: chapterId,
-            topicId: this.editingTopicForChapter._id,
-            clientKey: chapterId,
-            existingContent: existingContent
+        // Submit all 3 background tasks in parallel
+        await Promise.all([
+          request('/api/lesson-plan/background', {
+            method: 'POST',
+            body: JSON.stringify({ ...commonParams, clientKey: chapterId, requirements, existingContent })
+          }),
+          request('/api/preview-content/background', {
+            method: 'POST',
+            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-preview`, lessonContent: existingContent })
+          }),
+          request('/api/review-content/background', {
+            method: 'POST',
+            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-review`, lessonContent: existingContent })
           })
-        })
+        ])
         
-        this.showToastMessage(`"${chapterTitle}" 教案生成任务已提交后台，完成后会自动保存`)
-        this.aiStatusMap[chapterId] = '正在后台生成教案中...'
+        this.showToastMessage(`"${chapterTitle}" 预习/教案/复习生成任务已提交后台，完成后会自动保存`)
+        this.aiStatusMap[chapterId] = '正在后台生成三段内容...'
       } catch (e) {
         this.showToastMessage('提交失败: ' + e.message)
         this.aiLoadingMap[chapterId] = false
         this.aiStatusMap[chapterId] = ''
         this.editingChapter.content = '生成失败，请重试'
+      }
+    },
+
+    async generatePreviewContent() {
+      if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      try { await this.ensureChapterSaved() } catch (e) { return }
+      const chapterId = this.editingChapter._id || this.editingChapter.id
+      const levelNum = this.editingLevelForChapter.level
+      const topicTitle = this.editingTopicForChapter.title
+      const chapterTitle = this.editingChapter.title
+      const model = this.selectedModel
+      const groupName = this.editingLevelForChapter.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const lessonContent = this.editingChapter.content || ''
+      const clientKey = `${chapterId}-preview`
+      this.aiLoadingMap[clientKey] = true
+      this.aiStatusMap[clientKey] = '正在生成预习内容...'
+      this.editingChapter.previewContent = '正在生成预习内容，请稍候...'
+      try {
+        await request('/api/preview-content/background', {
+          method: 'POST',
+          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent })
+        })
+        this.showToastMessage(`"${chapterTitle}" 预习内容生成任务已提交后台`)
+      } catch (e) {
+        this.showToastMessage('提交失败: ' + e.message)
+        this.aiLoadingMap[clientKey] = false
+        this.aiStatusMap[clientKey] = ''
+        this.editingChapter.previewContent = ''
+      }
+    },
+
+    async generateReviewContent() {
+      if (!this.editingChapter.title) return this.showToastMessage('请先填写章节标题')
+      try { await this.ensureChapterSaved() } catch (e) { return }
+      const chapterId = this.editingChapter._id || this.editingChapter.id
+      const levelNum = this.editingLevelForChapter.level
+      const topicTitle = this.editingTopicForChapter.title
+      const chapterTitle = this.editingChapter.title
+      const model = this.selectedModel
+      const groupName = this.editingLevelForChapter.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const lessonContent = this.editingChapter.content || ''
+      const clientKey = `${chapterId}-review`
+      this.aiLoadingMap[clientKey] = true
+      this.aiStatusMap[clientKey] = '正在生成复习内容...'
+      this.editingChapter.reviewContent = '正在生成复习内容，请稍候...'
+      try {
+        await request('/api/review-content/background', {
+          method: 'POST',
+          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent })
+        })
+        this.showToastMessage(`"${chapterTitle}" 复习内容生成任务已提交后台`)
+      } catch (e) {
+        this.showToastMessage('提交失败: ' + e.message)
+        this.aiLoadingMap[clientKey] = false
+        this.aiStatusMap[clientKey] = ''
+        this.editingChapter.reviewContent = ''
       }
     },
 

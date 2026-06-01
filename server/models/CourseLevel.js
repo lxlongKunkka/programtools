@@ -12,7 +12,9 @@ const chapterSchema = new mongoose.Schema({
   homeworkIds: [{ type: String }], // Linked homework contests (e.g., "domainId:contestId")
   examIds: [{ type: String }], // Linked exam contests (e.g., "domainId:contestId")
   optional: { type: Boolean, default: false }, // Whether the chapter is optional
-  videoUrl: { type: String } // Video URL (COS or Bilibili) for student viewing
+  videoUrl: { type: String }, // Video URL (COS or Bilibili) for student viewing
+  previewContent: { type: String, default: '' }, // AI-generated preview content (Markdown, before class)
+  reviewContent: { type: String, default: '' }   // AI-generated review/summary content (Markdown, after class)
 })
 
 const topicSchema = new mongoose.Schema({

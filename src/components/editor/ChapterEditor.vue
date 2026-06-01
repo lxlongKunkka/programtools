@@ -16,7 +16,7 @@
       <div class="ai-controls" :class="{ disabled: aiLoading }">
         <input v-model="localAiRequirements" placeholder="输入额外要求 (例如: 多一些生活例子, 侧重C++语法...)" class="form-input ai-input">
         <div class="ai-buttons">
-          <button @click="onGenerateLessonPlan"    class="btn-ai"          :disabled="aiLoading">📝 生成教案</button>
+          <button @click="onGenerateLessonPlan"    class="btn-ai btn-ai-triple" :disabled="aiLoading">✨ 生成全部 (预习/教案/复习)</button>
           <button @click="onGeneratePpt"           class="btn-ai"          :disabled="aiLoading">📊 生成 PPT</button>
           <button @click="onGenerateSolutionPlan"  class="btn-ai btn-ai-blue" :disabled="aiLoading">📘 生成题解教案</button>
           <button @click="onGenerateSolutionReport" class="btn-ai"         :disabled="aiLoading">💡 生成题解PPT</button>
@@ -149,6 +149,36 @@
       </label>
       <span class="hint">选做章节不会阻塞后续章节的解锁。</span>
     </div>
+
+    <!-- Preview Content (AI generated) -->
+    <div class="form-group preview-review-group">
+      <div class="label-row">
+        <label>🔍 预习内容 (AI生成，Markdown)：</label>
+        <button @click="onGeneratePreviewContent" class="btn-small btn-ai-mini" :disabled="aiLoading" type="button">✨ 单独生成预习</button>
+      </div>
+      <div class="split-view" style="height: 400px;">
+        <textarea v-model="chapter.previewContent" class="form-input code-font" style="height: 100%;"
+                  placeholder="预习内容（AI生成后显示在此，也可手动编辑）..."></textarea>
+        <div class="preview-box" style="height: 100%;">
+          <MarkdownViewer :content="chapter.previewContent || ''" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Content (AI generated) -->
+    <div class="form-group preview-review-group">
+      <div class="label-row">
+        <label>📋 复习总结 (AI生成，Markdown)：</label>
+        <button @click="onGenerateReviewContent" class="btn-small btn-ai-mini" :disabled="aiLoading" type="button">✨ 单独生成复习</button>
+      </div>
+      <div class="split-view" style="height: 400px;">
+        <textarea v-model="chapter.reviewContent" class="form-input code-font" style="height: 100%;"
+                  placeholder="复习总结（AI生成后显示在此，也可手动编辑）..."></textarea>
+        <div class="preview-box" style="height: 100%;">
+          <MarkdownViewer :content="chapter.reviewContent || ''" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -173,7 +203,9 @@ export default {
     onGenerateLessonPlan:     { type: Function, default: () => {} },
     onGeneratePpt:            { type: Function, default: () => {} },
     onGenerateSolutionPlan:   { type: Function, default: () => {} },
-    onGenerateSolutionReport: { type: Function, default: () => {} }
+    onGenerateSolutionReport: { type: Function, default: () => {} },
+    onGeneratePreviewContent: { type: Function, default: () => {} },
+    onGenerateReviewContent:  { type: Function, default: () => {} }
   },
   emits: ['update:aiRequirements'],
   data() {
@@ -307,4 +339,31 @@ export default {
 
 <style>
 @import '../../styles/editor-common.css';
+
+.btn-ai-triple {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.btn-ai-triple:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+}
+.btn-ai-mini {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-ai-mini:hover:not(:disabled) {
+  background: #dcfce7;
+}
+.preview-review-group {
+  border: 1px solid #e0f2fe;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f0f9ff;
+}
 </style>

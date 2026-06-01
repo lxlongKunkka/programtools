@@ -25,9 +25,11 @@
 
         <!-- View mode toggle: shown when multiple content types exist -->
         <div v-if="availableTabs.length > 1" class="view-toggle-bar">
+          <button v-if="availableTabs.includes('preview')" :class="['btn-view-toggle', 'btn-view-preview', { active: viewMode === 'preview' }]" @click="viewMode = 'preview'">🔍 预习导读</button>
           <button v-if="availableTabs.includes('ppt')" :class="['btn-view-toggle', { active: viewMode === 'ppt' }]" @click="viewMode = 'ppt'">🖥 PPT 课件</button>
           <button v-if="availableTabs.includes('md')" :class="['btn-view-toggle', { active: viewMode === 'md' }]" @click="viewMode = 'md'">📄 教案</button>
           <button v-if="availableTabs.includes('video')" :class="['btn-view-toggle', { active: viewMode === 'video' }]" @click="viewMode = 'video'">🎬 视频</button>
+          <button v-if="availableTabs.includes('review')" :class="['btn-view-toggle', 'btn-view-review', { active: viewMode === 'review' }]" @click="viewMode = 'review'">📋 复习总结</button>
         </div>
 
         <!-- HTML Content Mode -->
@@ -45,6 +47,31 @@
              </button>
            </div>
            <iframe :src="getHtmlUrl(chapter.resourceUrl)" class="courseware-iframe" allowfullscreen></iframe>
+        </div>
+
+        <!-- Preview Content Mode -->
+        <div v-if="viewMode === 'preview'" :class="['markdown-content-container', { maximized: isMaximized }]">
+            <div class="watermark-container" v-if="userInfo && isMaximized">
+              <div class="watermark-text" v-for="n in 30" :key="n">{{ watermarkText }}</div>
+            </div>
+            <div class="controls-bar">
+              <span class="tab-label-badge tab-label-preview">🔍 课前预习</span>
+              <button @click="adjustFontSize(-2)" class="btn-control" title="减小字体">A-</button>
+              <button @click="adjustFontSize(2)" class="btn-control" title="增大字体">A+</button>
+              <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+                {{ isMaximized ? '退出全屏' : '全屏显示' }}
+              </button>
+            </div>
+            <div class="markdown-scroll-wrapper">
+                <div v-for="(stepHtml, index) in parsedPreviewSteps" :key="index">
+                  <div v-if="index < visiblePreviewSteps" class="markdown-content step-container" :style="{ fontSize: fontSize + 'px' }" v-html="stepHtml"></div>
+                </div>
+                <div v-if="parsedPreviewSteps.length > visiblePreviewSteps" class="step-action">
+                  <button @click="visiblePreviewSteps++" class="btn-next-step">
+                    点击继续阅读 ({{ visiblePreviewSteps }}/{{ parsedPreviewSteps.length }}) ↓
+                  </button>
+                </div>
+            </div>
         </div>
 
         <!-- Markdown Content Mode -->
@@ -154,6 +181,31 @@
               </button>
             </div>
           </template>
+        </div>
+
+        <!-- Review Content Mode -->
+        <div v-if="viewMode === 'review'" :class="['markdown-content-container', { maximized: isMaximized }]">
+            <div class="watermark-container" v-if="userInfo && isMaximized">
+              <div class="watermark-text" v-for="n in 30" :key="n">{{ watermarkText }}</div>
+            </div>
+            <div class="controls-bar">
+              <span class="tab-label-badge tab-label-review">📋 课后复习</span>
+              <button @click="adjustFontSize(-2)" class="btn-control" title="减小字体">A-</button>
+              <button @click="adjustFontSize(2)" class="btn-control" title="增大字体">A+</button>
+              <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+                {{ isMaximized ? '退出全屏' : '全屏显示' }}
+              </button>
+            </div>
+            <div class="markdown-scroll-wrapper">
+                <div v-for="(stepHtml, index) in parsedReviewSteps" :key="index">
+                  <div v-if="index < visibleReviewSteps" class="markdown-content step-container" :style="{ fontSize: fontSize + 'px' }" v-html="stepHtml"></div>
+                </div>
+                <div v-if="parsedReviewSteps.length > visibleReviewSteps" class="step-action">
+                  <button @click="visibleReviewSteps++" class="btn-next-step">
+                    点击继续阅读 ({{ visibleReviewSteps }}/{{ parsedReviewSteps.length }}) ↓
+                  </button>
+                </div>
+            </div>
         </div>
       </div>
       <div class="problems-section">
@@ -309,6 +361,8 @@ export default {
       fontSize: 18,
       checking: null,
       visibleSteps: 1,
+      visiblePreviewSteps: 1,
+      visibleReviewSteps: 1,
       contestInfo: {},      // { [id]: { title, score, attend } }
       checkingContest: null // id of contest being queried
     }
@@ -346,9 +400,11 @@ export default {
     availableTabs() {
       if (!this.chapter) return []
       const tabs = []
+      if (this.chapter.previewContent) tabs.push('preview')
       if (this.chapter.resourceUrl) tabs.push('ppt')
       if (this.chapter.content) tabs.push('md')
       if (this.videoEntries.length > 0) tabs.push('video')
+      if (this.chapter.reviewContent) tabs.push('review')
       return tabs
     },
     videoEntries() {
@@ -401,6 +457,14 @@ export default {
       }
 
       return steps
+    },
+    parsedPreviewSteps() {
+      if (!this.chapter?.previewContent) return []
+      return this.parseMarkdownSteps(this.chapter.previewContent)
+    },
+    parsedReviewSteps() {
+      if (!this.chapter?.reviewContent) return []
+      return this.parseMarkdownSteps(this.chapter.reviewContent)
     },
     totalProblems() {
       return this.chapter?.problemIds?.length || 0
@@ -838,6 +902,8 @@ export default {
             const chapterDetail = await request(`/api/course/chapter/${this.chapterId}${query}`)
             this.chapter = chapterDetail
             this.visibleSteps = 1
+            this.visiblePreviewSteps = 1
+            this.visibleReviewSteps = 1
             this.currentVideoIndex = 0
             if (chapterDetail.resourceUrl) {
               this.viewMode = 'ppt'
@@ -845,6 +911,8 @@ export default {
               this.viewMode = 'md'
             } else if (chapterDetail.videoUrl) {
               this.viewMode = 'video'
+            } else if (chapterDetail.previewContent) {
+              this.viewMode = 'preview'
             } else {
               this.viewMode = 'md'
             }
@@ -992,11 +1060,36 @@ export default {
         this.$nextTick(() => {
           const steps = document.querySelectorAll('.step-container')
           if (steps.length > 0) {
-            // Scroll the last visible step into view
             steps[this.visibleSteps - 1].scrollIntoView({ behavior: 'smooth', block: 'start' })
           }
         })
       }
+    },
+    parseMarkdownSteps(content) {
+      if (!content) return []
+      const steps = content.split(/\n\s*===\s*NEXT\s*===\s*\n/i).map(part => {
+        try {
+          const html = marked.parse(part, { breaks: true, mangle: false, headerIds: false })
+          return DOMPurify.sanitize(html, {
+            ADD_TAGS: ['iframe'],
+            ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+          })
+        } catch (e) {
+          return part
+        }
+      })
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        return steps.map(html =>
+          html.replace(/(src=["'])((\/public\/|\/api\/public\/)[^"']*)(["'])/g, (match, prefix, url, pathPrefix, suffix) => {
+            let finalUrl = url
+            if (finalUrl.startsWith('/public/')) finalUrl = '/api' + finalUrl
+            const separator = finalUrl.includes('?') ? '&' : '?'
+            return `${prefix}${finalUrl}${separator}token=${token}${suffix}`
+          })
+        )
+      }
+      return steps
     },
     goToNextChapter() {
       if (!this.level || !this.chapter) return
@@ -1634,6 +1727,29 @@ export default {
 .btn-view-toggle:hover:not(.active) {
   background: #e2e8f0;
   color: #334155;
+}
+.btn-view-preview.active {
+  background: #10b981;
+  border-color: #10b981;
+}
+.btn-view-review.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+.tab-label-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.tab-label-preview {
+  background: #d1fae5;
+  color: #065f46;
+}
+.tab-label-review {
+  background: #ede9fe;
+  color: #4c1d95;
 }
 
 /* Video content container */
