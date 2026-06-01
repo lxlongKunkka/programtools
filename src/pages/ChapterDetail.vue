@@ -27,6 +27,7 @@
         <div v-if="availableTabs.length > 1" class="view-toggle-bar">
           <button v-if="availableTabs.includes('preview')" :class="['btn-view-toggle', 'btn-view-preview', { active: viewMode === 'preview' }]" @click="viewMode = 'preview'">🔍 预习导读</button>
           <button v-if="availableTabs.includes('ppt')" :class="['btn-view-toggle', { active: viewMode === 'ppt' }]" @click="viewMode = 'ppt'">🖥 PPT 课件</button>
+          <button v-if="availableTabs.includes('pptx')" :class="['btn-view-toggle', { active: viewMode === 'pptx' }]" @click="viewMode = 'pptx'">📊 Office PPT</button>
           <button v-if="availableTabs.includes('md')" :class="['btn-view-toggle', { active: viewMode === 'md' }]" @click="viewMode = 'md'">📄 教案</button>
           <button v-if="availableTabs.includes('video')" :class="['btn-view-toggle', { active: viewMode === 'video' }]" @click="viewMode = 'video'">🎬 视频</button>
           <button v-if="availableTabs.includes('review')" :class="['btn-view-toggle', 'btn-view-review', { active: viewMode === 'review' }]" @click="viewMode = 'review'">📋 复习总结</button>
@@ -47,6 +48,22 @@
              </button>
            </div>
            <iframe :src="getHtmlUrl(chapter.resourceUrl)" class="courseware-iframe" allowfullscreen></iframe>
+        </div>
+
+        <!-- Office PPT Online Preview Mode -->
+        <div v-if="viewMode === 'pptx' && chapter.pptxUrl" :class="['html-content-container', { maximized: isMaximized }]">
+           <div class="watermark-container" v-if="userInfo">
+             <div class="watermark-text" v-for="n in 30" :key="n">
+               {{ watermarkText }}
+             </div>
+           </div>
+           <div class="controls-bar">
+             <button @click="isMaximized = !isMaximized" class="btn-control btn-maximize">
+               {{ isMaximized ? '退出全屏' : '全屏显示' }}
+             </button>
+           </div>
+           <iframe :src="`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(chapter.pptxUrl)}`"
+                   class="courseware-iframe" allowfullscreen></iframe>
         </div>
 
         <!-- Preview Content Mode -->
@@ -402,6 +419,7 @@ export default {
       const tabs = []
       if (this.chapter.previewContent) tabs.push('preview')
       if (this.chapter.resourceUrl) tabs.push('ppt')
+      if (this.chapter.pptxUrl) tabs.push('pptx')
       if (this.chapter.content) tabs.push('md')
       if (this.videoEntries.length > 0) tabs.push('video')
       if (this.chapter.reviewContent) tabs.push('review')

@@ -538,6 +538,8 @@ export default {
           contentType: chapter.contentType || 'markdown',
           resourceUrl: chapter.resourceUrl || '',
           videoUrl: chapter.videoUrl || '',
+          pptxUrl: chapter.pptxUrl || '',
+          pptxCosKey: chapter.pptxCosKey || '',
           isNew: !!chapter.isNew,
           content: chapter.content || ''
         }
@@ -617,6 +619,8 @@ export default {
                 this.editingChapter.contentType = fullChapter.contentType || 'markdown'
                 this.editingChapter.resourceUrl = fullChapter.resourceUrl || ''
                 this.editingChapter.videoUrl = fullChapter.videoUrl || ''
+                this.editingChapter.pptxUrl = fullChapter.pptxUrl || ''
+                this.editingChapter.pptxCosKey = fullChapter.pptxCosKey || ''
                 this.editingChapter.previewContent = fullChapter.previewContent || ''
                 this.editingChapter.reviewContent = fullChapter.reviewContent || ''
                 if (fullChapter.title) this.editingChapter.title = fullChapter.title
@@ -1315,6 +1319,10 @@ export default {
           contentType: this.editingChapter.contentType,
           resourceUrl: this.editingChapter.resourceUrl,
           videoUrl: this.editingChapter.videoUrl || '',
+          pptxUrl: this.editingChapter.pptxUrl || '',
+          pptxCosKey: this.editingChapter.pptxCosKey || '',
+          previewContent: this.editingChapter.previewContent || '',
+          reviewContent: this.editingChapter.reviewContent || '',
           problemIds: problemIds,
           optionalProblemIds: optionalProblemIds,
           homeworkIds: homeworkIds,

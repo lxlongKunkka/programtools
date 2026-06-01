@@ -37,6 +37,7 @@
     "katex": "^0.16.8",
     "marked": "^5.0.2",
     "mongoose": "^9.0.1",
+    "multer": "^2.1.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^8.0.3",
     "pdf-parse": "^2.4.5",

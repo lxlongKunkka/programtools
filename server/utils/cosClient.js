@@ -168,3 +168,30 @@ export async function uploadObjectToCos({ key, body, contentType, headers = {}, 
 export async function uploadTextToCos(key, content, contentType = 'text/html; charset=utf-8') {
   return uploadObjectToCos({ key, body: content, contentType })
 }
+
+export async function deleteObjectFromCos(key) {
+  if (!isCosConfigured()) {
+    throw new Error('COS not configured')
+  }
+
+  const requestHeaders = { Host: getBucketHost() }
+  requestHeaders.Authorization = buildAuthorization({
+    method: 'DELETE',
+    key,
+    headers: requestHeaders
+  })
+
+  const response = await axios.delete(getRequestUrl(key), {
+    headers: requestHeaders,
+    validateStatus: () => true
+  })
+
+  // 204 = deleted, 404 = already gone, both are acceptable
+  if (response.status !== 204 && response.status !== 200 && response.status !== 404) {
+    const error = new Error(`COS delete failed with status ${response.status}`)
+    error.status = response.status
+    throw error
+  }
+
+  return { status: response.status }
+}

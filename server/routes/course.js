@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import fs from 'fs'
 import path from 'path'
 import axios from 'axios'
+import multer from 'multer'
 import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
 import CourseGroup from '../models/CourseGroup.js'
@@ -15,11 +16,51 @@ import TeacherQuizFollow from '../models/TeacherQuizFollow.js'
 import CourseActivity from '../models/CourseActivity.js'
 import { GAME_ECONOMY_CONFIG, grantCoins } from '../services/gameEconomy.js'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
+import { isCosConfigured, uploadObjectToCos, buildCosObjectUrl, deleteObjectFromCos } from '../utils/cosClient.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const router = express.Router()
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } })
+
+// Upload PPT file to COS
+router.post('/upload-ppt', authenticateToken, requireRole(['admin', 'teacher']), upload.single('file'), async (req, res) => {
+  try {
+    if (!isCosConfigured()) return res.status(503).json({ error: 'COS not configured' })
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+    const { chapterId } = req.body
+    if (!chapterId) return res.status(400).json({ error: 'chapterId required' })
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.pptx'
+    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, '_')
+    const key = `pptx/${chapterId}/${Date.now()}-${safeName}`
+    const result = await uploadObjectToCos({
+      key,
+      body: req.file.buffer,
+      contentType: req.file.mimetype || 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      timeout: 120000
+    })
+    res.json({ url: result.url, key })
+  } catch (e) {
+    console.error('[upload-ppt]', e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Delete PPT file from COS
+router.delete('/delete-ppt', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
+  try {
+    if (!isCosConfigured()) return res.status(503).json({ error: 'COS not configured' })
+    const { key } = req.body
+    if (!key) return res.status(400).json({ error: 'COS key required' })
+    await deleteObjectFromCos(key)
+    res.json({ success: true })
+  } catch (e) {
+    console.error('[delete-ppt]', e)
+    res.status(500).json({ error: e.message })
+  }
+})
 
 // Helper: Resolve problem definition strings (e.g. "1001", "system:1001") to Document ObjectIds
 async function resolveProblemIds(problemIdStrings) {
@@ -3635,7 +3676,7 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
 // Update a Chapter in a Topic
 router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, content, contentType, resourceUrl, videoUrl, problemIds, optionalProblemIds, homeworkIds, examIds, optional } = req.body
+    const { title, content, contentType, resourceUrl, videoUrl, pptxUrl, pptxCosKey, previewContent, reviewContent, problemIds, optionalProblemIds, homeworkIds, examIds, optional } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -3669,6 +3710,18 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
     }
     if (Object.prototype.hasOwnProperty.call(req.body, 'videoUrl')) {
       targetChapter.videoUrl = videoUrl || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'pptxUrl')) {
+      targetChapter.pptxUrl = pptxUrl || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'pptxCosKey')) {
+      targetChapter.pptxCosKey = pptxCosKey || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'previewContent')) {
+      targetChapter.previewContent = previewContent || ''
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'reviewContent')) {
+      targetChapter.reviewContent = reviewContent || ''
     }
     if (Object.prototype.hasOwnProperty.call(req.body, 'problemIds')) {
       targetChapter.problemIds = Array.isArray(problemIds) ? problemIds.map(String) : []

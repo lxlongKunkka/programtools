@@ -15,28 +15,11 @@
         <input v-model="chapter.title" class="form-input">
       </div>
     </div>
-    <div class="form-group">
-      <label>视频链接 (可选，每行一个):</label>
-      <textarea v-model="chapter.videoUrl" class="form-input" rows="3"
-        placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
-        style="resize: vertical; font-family: monospace;"></textarea>
-      <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
-        <div><strong>可选格式：</strong></div>
-        <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
-        <div>2. 直接粘 iframe：支持整段多行 iframe，不必压成一行</div>
-        <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
-        <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
-      </div>
-      <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
-        <div v-for="(entry, i) in videoEntriesPreview" :key="entry.raw + '-' + i">
-          {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, i) }}：{{ getVideoPreviewText(entry.raw) }}
-        </div>
-      </div>
-    </div>
 
     <!-- Editor Tab Navigation -->
     <div class="editor-tabs">
       <button :class="['editor-tab', { active: activeTab === 'markdown' }]" @click="activeTab = 'markdown'" type="button">📄 Markdown 教案</button>
+      <button :class="['editor-tab', { active: activeTab === 'video' }]" @click="activeTab = 'video'" type="button">🎬 视频</button>
       <button :class="['editor-tab', { active: activeTab === 'html' }]" @click="activeTab = 'html'" type="button">🖥 HTML 课件</button>
       <button :class="['editor-tab', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'" type="button">🔍 预习</button>
       <button :class="['editor-tab', { active: activeTab === 'review' }]" @click="activeTab = 'review'" type="button">📋 复习</button>
@@ -74,10 +57,33 @@
     </div>
     </div><!-- end markdown tab -->
 
+    <!-- Video Tab -->
+    <div v-show="activeTab === 'video'">
+    <div class="form-group">
+      <label>视频链接 (可选，每行一个):</label>
+      <textarea v-model="chapter.videoUrl" class="form-input" rows="5"
+        placeholder="每行一个视频资源，支持 Bilibili 链接 / 纯 BV 号 / 直链视频（.mp4）/ embed 地址 / 整段 iframe 代码"
+        style="resize: vertical; font-family: monospace;"></textarea>
+      <div style="margin-top: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
+        <div><strong>可选格式：</strong></div>
+        <div>1. 直接填地址：https://example.com/embed/lesson-1</div>
+        <div>2. 直接粘 iframe：支持整段多行 iframe，不必压成一行</div>
+        <div>3. 自定义标题：第一课导学 | https://example.com/embed/lesson-1</div>
+        <div>4. 自定义标题 + iframe：第一课导学 | &lt;iframe src="https://example.com/embed/lesson-1" ...&gt;&lt;/iframe&gt;</div>
+      </div>
+      <div v-if="chapter.videoUrl" style="margin-top: 6px; font-size: 12px; color: #64748b;">
+        <div v-for="(entry, i) in videoEntriesPreview" :key="entry.raw + '-' + i">
+          {{ getVideoTypeIcon(entry.raw) }} {{ getVideoDisplayTitle(entry, i) }}：{{ getVideoPreviewText(entry.raw) }}
+        </div>
+      </div>
+    </div>
+    </div><!-- end video tab -->
+
     <!-- HTML Tab -->
     <div v-show="activeTab === 'html'">
+    <!-- Section 1: Local HTML courseware -->
     <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
-      <strong>PPT 课件路径：</strong>
+      <strong>HTML 课件路径：</strong>
       <div style="margin-top: 8px;">
         <input v-model="chapter.resourceUrl" class="form-input" placeholder="/public/courseware/bfs.html">
       </div>
@@ -91,6 +97,34 @@
     </div>
     <div v-if="showPreview" class="preview-container-large">
       <iframe :src="getPreviewUrl(chapter.resourceUrl)" class="preview-iframe"></iframe>
+    </div>
+
+    <!-- Section 2: Office PPT Upload to COS -->
+    <div style="margin-top: 16px; padding: 12px; background: #fff7ed; border-left: 4px solid #f97316; border-radius: 4px;">
+      <strong>📊 Office PPT (上传至 COS)</strong>
+      <div v-if="chapter.pptxUrl" style="margin-top: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 13px; color: #374151;">✅ 已上传：</span>
+          <a :href="chapter.pptxUrl" target="_blank" style="font-size: 12px; color: #2563eb; word-break: break-all;">{{ chapter.pptxUrl }}</a>
+          <button @click="togglePptxPreview" class="btn-small btn-preview" type="button">
+            {{ showPptxPreview ? '关闭预览' : '在线预览 PPT' }}
+          </button>
+          <button @click="deletePpt" class="btn-small" style="background:#fee2e2; border:1px solid #fca5a5; color:#b91c1c;" :disabled="pptUploading" type="button">🗑 删除 PPT</button>
+        </div>
+        <div v-if="showPptxPreview" style="margin-top: 10px;">
+          <iframe :src="`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(chapter.pptxUrl)}`"
+                  style="width: 100%; height: 560px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                  allowfullscreen></iframe>
+        </div>
+      </div>
+      <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <input ref="pptFileInput" type="file" accept=".pptx,.ppt,.pptm" @change="onPptFileSelected" style="display:none">
+        <button @click="$refs.pptFileInput.click()" class="btn-small btn-preview" :disabled="pptUploading" type="button">📂 选择文件</button>
+        <span v-if="selectedPptFile" style="font-size: 13px; color: #374151;">{{ selectedPptFile.name }}</span>
+        <button v-if="selectedPptFile" @click="uploadPpt" class="btn-small" style="background:#dcfce7; border:1px solid #86efac; color:#166534;" :disabled="pptUploading" type="button">
+          {{ pptUploading ? '上传中...' : '⬆ 上传到 COS' }}
+        </button>
+      </div>
     </div>
     </div><!-- end html tab -->
 
@@ -214,7 +248,10 @@ export default {
   data() {
     return {
       showPreview: false,
-      activeTab: 'markdown'
+      showPptxPreview: false,
+      activeTab: 'markdown',
+      pptUploading: false,
+      selectedPptFile: null
     }
   },
   computed: {
@@ -228,8 +265,8 @@ export default {
   },
   watch: {
     // Reset preview when switching to a different chapter
-    'chapter.id'() { this.showPreview = false; this.activeTab = 'markdown' },
-    'chapter._id'() { this.showPreview = false; this.activeTab = 'markdown' }
+    'chapter.id'() { this.showPreview = false; this.showPptxPreview = false; this.activeTab = 'markdown' },
+    'chapter._id'() { this.showPreview = false; this.showPptxPreview = false; this.activeTab = 'markdown' }
   },
   methods: {
     parseVideoEntries(text) {
@@ -335,6 +372,66 @@ export default {
         window.open(url, '_blank')
       } else {
         this.showToastMessage('无效的链接')
+      }
+    },
+    togglePptxPreview() {
+      this.showPptxPreview = !this.showPptxPreview
+    },
+    onPptFileSelected(e) {
+      this.selectedPptFile = e.target.files[0] || null
+    },
+    async uploadPpt() {
+      if (!this.selectedPptFile) return
+      const chapterId = this.chapter._id || this.chapter.id
+      if (!chapterId) {
+        this.showToastMessage('请先保存章节再上传 PPT')
+        return
+      }
+      this.pptUploading = true
+      try {
+        const formData = new FormData()
+        formData.append('file', this.selectedPptFile)
+        formData.append('chapterId', String(chapterId))
+        const token = localStorage.getItem('auth_token')
+        const resp = await fetch('/api/course/upload-ppt', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        })
+        const data = await resp.json()
+        if (!resp.ok) throw new Error(data.error || '上传失败')
+        this.chapter.pptxUrl = data.url
+        this.chapter.pptxCosKey = data.key
+        this.selectedPptFile = null
+        if (this.$refs.pptFileInput) this.$refs.pptFileInput.value = ''
+        this.showToastMessage('PPT 上传成功！')
+      } catch (e) {
+        this.showToastMessage('PPT 上传失败：' + e.message)
+      } finally {
+        this.pptUploading = false
+      }
+    },
+    async deletePpt() {
+      if (!this.chapter.pptxCosKey && !this.chapter.pptxUrl) return
+      if (!confirm('确定删除 COS 上的 PPT 文件？')) return
+      this.pptUploading = true
+      try {
+        const token = localStorage.getItem('auth_token')
+        const resp = await fetch('/api/course/delete-ppt', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: this.chapter.pptxCosKey })
+        })
+        const data = await resp.json()
+        if (!resp.ok) throw new Error(data.error || '删除失败')
+        this.chapter.pptxUrl = ''
+        this.chapter.pptxCosKey = ''
+        this.showPptxPreview = false
+        this.showToastMessage('PPT 已删除')
+      } catch (e) {
+        this.showToastMessage('删除失败：' + e.message)
+      } finally {
+        this.pptUploading = false
       }
     }
   }

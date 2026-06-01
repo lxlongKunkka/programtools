@@ -5,7 +5,7 @@ const chapterSchema = new mongoose.Schema({
   id: { type: String, required: true }, // e.g., '1-1'
   title: { type: String, required: true },
   content: { type: String, default: '' }, // Markdown content
-  contentType: { type: String, enum: ['markdown', 'html'], default: 'markdown' }, // Content type
+  contentType: { type: String, default: 'markdown' }, // Content type: 'markdown', 'html', 'pptx'
   resourceUrl: { type: String }, // URL for HTML content (e.g., '/public/courseware/bfs.html')
   problemIds: [{ type: String }], // Linked problems (Stored as "domainId:docId" or "docId")
   optionalProblemIds: [{ type: String }], // Optional problems (not required for unlocking)
@@ -13,6 +13,8 @@ const chapterSchema = new mongoose.Schema({
   examIds: [{ type: String }], // Linked exam contests (e.g., "domainId:contestId")
   optional: { type: Boolean, default: false }, // Whether the chapter is optional
   videoUrl: { type: String }, // Video URL (COS or Bilibili) for student viewing
+  pptxUrl: { type: String, default: '' },  // COS URL of uploaded Office PPT file
+  pptxCosKey: { type: String, default: '' }, // COS object key for uploaded PPT (used for deletion)
   previewContent: { type: String, default: '' }, // AI-generated preview content (Markdown, before class)
   reviewContent: { type: String, default: '' }   // AI-generated review/summary content (Markdown, after class)
 })
