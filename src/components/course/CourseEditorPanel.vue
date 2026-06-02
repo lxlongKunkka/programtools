@@ -1548,11 +1548,11 @@ export default {
           }),
           request('/api/preview-content/background', {
             method: 'POST',
-            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-preview`, lessonContent: existingContent })
+            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-preview`, lessonContent: existingContent, requirements })
           }),
           request('/api/review-content/background', {
             method: 'POST',
-            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-review`, lessonContent: existingContent })
+            body: JSON.stringify({ ...commonParams, clientKey: `${chapterId}-review`, lessonContent: existingContent, requirements })
           })
         ])
         
@@ -1585,7 +1585,7 @@ export default {
       try {
         await request('/api/preview-content/background', {
           method: 'POST',
-          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent })
+          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent, requirements: this.aiRequirements })
         })
         this.showToastMessage(`"${chapterTitle}" 预习内容生成任务已提交后台`)
       } catch (e) {
@@ -1615,7 +1615,7 @@ export default {
       try {
         await request('/api/review-content/background', {
           method: 'POST',
-          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent })
+          body: JSON.stringify({ topic: chapterTitle, context: topicTitle, level: `Level ${levelNum}`, model, language, chapterId, topicId: this.editingTopicForChapter._id, clientKey, lessonContent, requirements: this.aiRequirements })
         })
         this.showToastMessage(`"${chapterTitle}" 复习内容生成任务已提交后台`)
       } catch (e) {

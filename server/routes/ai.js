@@ -3139,7 +3139,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
 
 // Generate Preview Content Background
 router.post('/preview-content/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent } = req.body;
+  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent, requirements } = req.body;
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
   res.json({ status: 'processing', message: 'Preview content generation started in background' });
   (async () => {
@@ -3149,9 +3149,12 @@ router.post('/preview-content/background', authenticateToken, async (req, res) =
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           let targetLang = language || 'C++';
           let codeLang = /python/i.test(targetLang) ? 'python' : 'cpp';
-          const systemPrompt = PREVIEW_CONTENT_PROMPT
+          let systemPrompt = PREVIEW_CONTENT_PROMPT
             .replace('{{language}}', targetLang)
             .replace('{{code_lang}}', codeLang);
+          if (requirements && requirements.trim()) {
+              systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`;
+          }
           let userPrompt = `章节标题：${topic}\n所属主题：${context || ''}\n难度等级：${level || ''}`;
           if (lessonContent && lessonContent.trim().length > 50) {
               userPrompt += `\n\n【教案内容（请基于此生成预习导读）】\n${lessonContent.slice(0, 8000)}`;
@@ -3217,7 +3220,7 @@ router.post('/preview-content/background', authenticateToken, async (req, res) =
 
 // Generate Review Content Background
 router.post('/review-content/background', authenticateToken, async (req, res) => {
-  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent } = req.body;
+  const { topic, context, level, model, chapterId, topicId, clientKey, language, lessonContent, requirements } = req.body;
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
   res.json({ status: 'processing', message: 'Review content generation started in background' });
   (async () => {
@@ -3227,9 +3230,12 @@ router.post('/review-content/background', authenticateToken, async (req, res) =>
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
           let targetLang = language || 'C++';
           let codeLang = /python/i.test(targetLang) ? 'python' : 'cpp';
-          const systemPrompt = REVIEW_CONTENT_PROMPT
+          let systemPrompt = REVIEW_CONTENT_PROMPT
             .replace('{{language}}', targetLang)
             .replace('{{code_lang}}', codeLang);
+          if (requirements && requirements.trim()) {
+              systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`;
+          }
           let userPrompt = `章节标题：${topic}\n所属主题：${context || ''}\n难度等级：${level || ''}`;
           if (lessonContent && lessonContent.trim().length > 50) {
               userPrompt += `\n\n【教案内容（请基于此生成复习总结）】\n${lessonContent.slice(0, 8000)}`;
