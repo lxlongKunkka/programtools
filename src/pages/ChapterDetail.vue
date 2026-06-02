@@ -6,6 +6,7 @@
       <span v-if="level && chapter" class="nav-title">{{ chapter.title }}</span>
       <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
       <button v-if="canEdit && chapter" @click="copyPreviewLink" class="btn-copy-preview">📋 复制预习链接</button>
+      <button v-if="canEdit && chapter && chapter.reviewContent" @click="copyReviewLink" class="btn-copy-review">📋 复制复习链接</button>
     </div>
 
     <div v-if="loading" class="loading">加载中...</div>
@@ -770,6 +771,28 @@ export default {
         this.showToastMessage('✅ 预习链接已复制，可直接粘贴到微信群')
       }
     },
+    async copyReviewLink() {
+      if (!this.chapter) return
+      const chapterId = this.chapter.id
+      const lid = this.$route.query.lid || ''
+      const base = window.location.origin
+      const url = lid
+        ? `${base}/course/${chapterId}?lid=${lid}&tab=review`
+        : `${base}/course/${chapterId}?tab=review`
+      const text = `📖 课后复习\n\n同学们辛苦了！本节课「${this.chapter.title}」已结束，请课后巩固复习：\n${url}\n\n（需先登录平台）`
+      try {
+        await navigator.clipboard.writeText(text)
+        this.showToastMessage('✅ 复习链接已复制，可直接粘贴到微信群')
+      } catch {
+        const el = document.createElement('textarea')
+        el.value = text
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        this.showToastMessage('✅ 复习链接已复制，可直接粘贴到微信群')
+      }
+    },
     renderMath() {
       this.$nextTick(() => {
         const container = this.$el.querySelector('.markdown-scroll-wrapper')
@@ -923,7 +946,12 @@ export default {
             this.visiblePreviewSteps = 1
             this.visibleReviewSteps = 1
             this.currentVideoIndex = 0
-            if (chapterDetail.resourceUrl) {
+            const tabParam = this.$route.query.tab
+            if (tabParam === 'review' && chapterDetail.reviewContent) {
+              this.viewMode = 'review'
+            } else if (tabParam === 'preview' && chapterDetail.previewContent) {
+              this.viewMode = 'preview'
+            } else if (chapterDetail.resourceUrl) {
               this.viewMode = 'ppt'
             } else if (chapterDetail.content) {
               this.viewMode = 'md'
@@ -1267,6 +1295,20 @@ export default {
 }
 .btn-copy-preview:hover {
   background: #1e8449;
+}
+.btn-copy-review {
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-copy-review:hover {
+  background: #6d28d9;
 }
 
 .content-wrapper {
