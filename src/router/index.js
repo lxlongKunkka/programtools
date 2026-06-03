@@ -59,7 +59,7 @@ const routes = [
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
   { path: '/codebot', component: CodebotGame, meta: { hideMobileBottomNav: true } },
-  { path: '/graph-editor', component: GraphEditor, meta: { requiresAuth: true } },
+  { path: '/graph-editor', component: GraphEditor },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 
