@@ -41,7 +41,7 @@
         <textarea
           class="graph-data-area"
           v-model="graphDataText"
-          @input="debouncedParse"
+          @keydown="onDataKeyDown"
           spellcheck="false"
           :placeholder="'每行一条边\n格式: u v [w]'"
         ></textarea>
@@ -94,7 +94,7 @@ export default {
       edgeIdCounter: 1,
       nodeIdCounter: 1,
       drawFrom: null,
-      _parseTimer: null,
+      _parsing: false,
     }
   },
   computed: {
@@ -124,13 +124,14 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.resizeCanvas)
-    if (this._parseTimer) clearTimeout(this._parseTimer)
     if (this.network) this.network.destroy()
   },
   methods: {
-    debouncedParse() {
-      if (this._parseTimer) clearTimeout(this._parseTimer)
-      this._parseTimer = setTimeout(() => this.parseGraphData(false), 300)
+    onDataKeyDown(e) {
+      if (e.key === 'Enter') {
+        // 让换行先写入，再解析
+        this.$nextTick(() => this.parseGraphData(false))
+      }
     },
     initNetwork() {
       const container = this.$refs.networkContainer
@@ -292,6 +293,7 @@ export default {
     },
 
     updateGraphDataText() {
+      if (this._parsing) return   // 解析期间不覆盖 textarea
       const edges = this.edges.get()
       if (edges.length === 0) {
         this.graphDataText = ''
@@ -306,6 +308,7 @@ export default {
     },
 
     parseGraphData(fit = true) {
+      this._parsing = true
       const lines = this.graphDataText.trim().split('\n').filter(l => l.trim())
       this.edges.clear()
       this.edgeIdCounter = 1
@@ -347,6 +350,7 @@ export default {
       this.nodeCountInput = this.nodes.length
       const ids = this.nodes.getIds()
       this.nodeIdCounter = ids.length > 0 ? Math.max(...ids) + 1 : 1
+      this._parsing = false
       if (fit) this.network.fit()
       else this.fitIfNeeded()
     },
