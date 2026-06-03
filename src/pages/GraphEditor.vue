@@ -158,6 +158,18 @@ export default {
         }
       })
 
+      // Force 模式：拖动结束后，对已固定的节点重新应用 fixed（防止拖拽清除固定状态）
+      this.network.on('dragEnd', (params) => {
+        if (this.mode !== 'force') return
+        params.nodes.forEach(id => {
+          const node = this.nodes.get(id)
+          if (node && node.fixed && (node.fixed === true || node.fixed.x)) {
+            const pos = this.network.getPosition(id)
+            this.nodes.update({ id, x: pos.x, y: pos.y, fixed: { x: true, y: true } })
+          }
+        })
+      })
+
       this.network.on('click', (params) => {
         if (this.mode === 'delete') {
           if (params.nodes.length > 0) {
