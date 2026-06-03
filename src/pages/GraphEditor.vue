@@ -104,7 +104,7 @@ u2 v2 [w2]
 </template>
 
 <script>
-import { Network, DataSet } from 'vis-network/standalone/esm/vis-network'
+import { Network, DataSet } from 'vis-network/peer/esm/vis-network'
 
 export default {
   name: 'GraphEditor',
