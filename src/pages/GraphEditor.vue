@@ -158,12 +158,32 @@ export default {
         }
       })
 
+      // Force 模式：拖动结束后固定节点
+      this.network.on('dragEnd', (params) => {
+        if (this.mode !== 'force') return
+        params.nodes.forEach(id => {
+          const pos = this.network.getPosition(id)
+          this.nodes.update({ id, x: pos.x, y: pos.y, fixed: { x: true, y: true } })
+          this._markFixed(id, true)
+        })
+      })
+
       this.network.on('click', (params) => {
         if (this.mode === 'delete') {
           if (params.nodes.length > 0) {
             this.nodes.remove(params.nodes[0])
           } else if (params.edges.length > 0) {
             this.edges.remove(params.edges[0])
+          }
+          return
+        }
+        // Force 模式：单击已固定节点 → 解除固定
+        if (this.mode === 'force' && params.nodes.length > 0) {
+          const id = params.nodes[0]
+          const node = this.nodes.get(id)
+          if (node && node.fixed && (node.fixed === true || node.fixed.x)) {
+            this.nodes.update({ id, fixed: false })
+            this._markFixed(id, false)
           }
           return
         }
@@ -200,6 +220,14 @@ export default {
         } else if (params.edges.length > 0) {
           this.edges.remove(params.edges[0])
         }
+      })
+    },
+
+    // 固定节点的视觉标记：虚线边框
+    _markFixed(id, isFixed) {
+      this.nodes.update({
+        id,
+        shapeProperties: isFixed ? { borderDashes: [4, 3] } : { borderDashes: false }
       })
     },
 
