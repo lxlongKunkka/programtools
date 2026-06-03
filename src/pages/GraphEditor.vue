@@ -41,7 +41,7 @@
         <textarea
           class="graph-data-area"
           v-model="graphDataText"
-          @blur="parseGraphData"
+          @input="debouncedParse"
           spellcheck="false"
           :placeholder="'每行一条边\n格式: u v [w]'"
         ></textarea>
@@ -94,6 +94,7 @@ export default {
       edgeIdCounter: 1,
       nodeIdCounter: 1,
       drawFrom: null,
+      _parseTimer: null,
     }
   },
   computed: {
@@ -123,9 +124,14 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.resizeCanvas)
+    if (this._parseTimer) clearTimeout(this._parseTimer)
     if (this.network) this.network.destroy()
   },
   methods: {
+    debouncedParse() {
+      if (this._parseTimer) clearTimeout(this._parseTimer)
+      this._parseTimer = setTimeout(() => this.parseGraphData(false), 300)
+    },
     initNetwork() {
       const container = this.$refs.networkContainer
       this.nodes = new DataSet([])
@@ -299,31 +305,69 @@ export default {
       }).join('\n')
     },
 
-    parseGraphData() {
+    parseGraphData(fit = true) {
       const lines = this.graphDataText.trim().split('\n').filter(l => l.trim())
       this.edges.clear()
       this.edgeIdCounter = 1
       const base = this.indexBase
+      // collect required node ids first
+      const requiredNodes = new Set()
+      const validLines = []
       for (const line of lines) {
         const parts = line.trim().split(/\s+/).map(Number)
         if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-          const u = parts[0] - base + 1
-          const v = parts[1] - base + 1
-          const w = parts[2] !== undefined && !isNaN(parts[2]) ? parts[2] : 1
-          if (!this.nodes.get(u)) this.nodes.add({ id: u, label: String(parts[0]) })
-          if (!this.nodes.get(v)) this.nodes.add({ id: v, label: String(parts[1]) })
-          this.edges.add({
-            id: this.edgeIdCounter++,
-            from: u, to: v,
-            label: this.showWeights ? String(w) : '',
-            weight: w
-          })
+          requiredNodes.add(parts[0] - base + 1)
+          requiredNodes.add(parts[1] - base + 1)
+          validLines.push(parts)
         }
+      }
+      // remove nodes not referenced
+      const existingIds = new Set(this.nodes.getIds())
+      for (const id of existingIds) {
+        if (!requiredNodes.has(id)) this.nodes.remove(id)
+      }
+      // add missing nodes
+      for (const id of requiredNodes) {
+        if (!this.nodes.get(id)) {
+          this.nodes.add({ id, label: String(id - 1 + base) })
+        }
+      }
+      // add edges
+      for (const parts of validLines) {
+        const u = parts[0] - base + 1
+        const v = parts[1] - base + 1
+        const w = parts[2] !== undefined && !isNaN(parts[2]) ? parts[2] : 1
+        this.edges.add({
+          id: this.edgeIdCounter++,
+          from: u, to: v,
+          label: this.showWeights ? String(w) : '',
+          weight: w
+        })
       }
       this.nodeCountInput = this.nodes.length
       const ids = this.nodes.getIds()
       this.nodeIdCounter = ids.length > 0 ? Math.max(...ids) + 1 : 1
-      this.network.fit()
+      if (fit) this.network.fit()
+      else this.fitIfNeeded()
+    },
+
+    fitIfNeeded() {
+      if (!this.network || this.nodes.length === 0) return
+      const positions = this.network.getPositions()
+      const viewPos = this.network.getViewPosition()
+      const scale = this.network.getScale()
+      const w = this.$refs.canvasWrap?.offsetWidth || 800
+      const h = this.$refs.canvasWrap?.offsetHeight || 600
+      const halfW = w / 2 / scale
+      const halfH = h / 2 / scale
+      for (const id in positions) {
+        const dx = Math.abs(positions[id].x - viewPos.x)
+        const dy = Math.abs(positions[id].y - viewPos.y)
+        if (dx > halfW * 0.9 || dy > halfH * 0.9) {
+          this.network.fit({ animation: { duration: 250, easingFunction: 'easeInOutQuad' } })
+          return
+        }
+      }
     },
 
     fitGraph() {
