@@ -180,7 +180,10 @@ export default {
       this.network.on('click', (params) => {
         if (this.mode === 'delete') {
           if (params.nodes.length > 0) {
-            this.nodes.remove(params.nodes[0])
+            const nodeId = params.nodes[0]
+            const connectedEdges = this.edges.get().filter(e => e.from === nodeId || e.to === nodeId).map(e => e.id)
+            this.edges.remove(connectedEdges)
+            this.nodes.remove(nodeId)
           } else if (params.edges.length > 0) {
             this.edges.remove(params.edges[0])
           }
@@ -206,7 +209,10 @@ export default {
       this.network.on('oncontext', (params) => {
         params.event.preventDefault()
         if (params.nodes.length > 0) {
-          this.nodes.remove(params.nodes[0])
+          const nodeId = params.nodes[0]
+          const connectedEdges = this.edges.get().filter(e => e.from === nodeId || e.to === nodeId).map(e => e.id)
+          this.edges.remove(connectedEdges)
+          this.nodes.remove(nodeId)
         } else if (params.edges.length > 0) {
           this.edges.remove(params.edges[0])
         }
