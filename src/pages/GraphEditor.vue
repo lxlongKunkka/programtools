@@ -220,25 +220,41 @@ export default {
       } else {
         this._pinnedNodes.delete(id)
       }
-      this.nodes.update({
-        id,
-        shapeProperties: isFixed ? { borderDashes: [4, 3] } : { borderDashes: false }
-      })
+      this.network.redraw()
     },
 
     buildOptions() {
+      const self = this
       return {
         nodes: {
-          shape: 'circle',
-          size: 22,
-          font: { size: 15, color: '#222' },
-          color: {
-            background: '#fff',
-            border: '#333',
-            highlight: { background: '#dbeafe', border: '#2563eb' }
-          },
-          borderWidth: 2,
-          borderWidthSelected: 3,
+          shape: 'custom',
+          ctxRenderer: ({ ctx, id, x, y, state: { selected, hover }, label }) => {
+            const r = 22
+            return {
+              drawNode() {
+                const isPinned = self._pinnedNodes && self._pinnedNodes.has(id)
+                ctx.save()
+                ctx.beginPath()
+                ctx.arc(x, y, r, 0, 2 * Math.PI)
+                ctx.fillStyle = selected ? '#dbeafe' : (hover ? '#f0f6ff' : '#fff')
+                ctx.fill()
+                ctx.setLineDash(isPinned ? [4, 3] : [])
+                ctx.strokeStyle = selected ? '#2563eb' : '#333'
+                ctx.lineWidth = selected ? 3 : 2
+                ctx.stroke()
+                ctx.setLineDash([])
+                if (label != null && label !== '') {
+                  ctx.fillStyle = '#222'
+                  ctx.font = '14px sans-serif'
+                  ctx.textAlign = 'center'
+                  ctx.textBaseline = 'middle'
+                  ctx.fillText(label, x, y)
+                }
+                ctx.restore()
+              },
+              nodeDimensions: { width: r * 2, height: r * 2 }
+            }
+          }
         },
         edges: {
           width: 2,
