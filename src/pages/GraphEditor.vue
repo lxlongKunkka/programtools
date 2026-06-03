@@ -300,7 +300,7 @@ export default {
       this.showWeights = !this.showWeights
       const updates = this.edges.get().map(e => ({
         id: e.id,
-        label: this.showWeights && e.weight ? String(e.weight) : ''
+        label: this.showWeights && e.weight != null ? String(e.weight) : ''
       }))
       this.edges.update(updates)
     },
@@ -341,8 +341,7 @@ export default {
       this.graphDataText = edges.map(e => {
         const u = e.from - 1 + base
         const v = e.to - 1 + base
-        const w = e.weight ?? 1
-        return `${u} ${v} ${w}`
+        return e.weight != null ? `${u} ${v} ${e.weight}` : `${u} ${v}`
       }).join('\n')
     },
 
@@ -378,11 +377,11 @@ export default {
       for (const parts of validLines) {
         const u = parts[0] - base + 1
         const v = parts[1] - base + 1
-        const w = parts[2] !== undefined && !isNaN(parts[2]) ? parts[2] : 1
+        const w = parts[2] !== undefined && !isNaN(parts[2]) ? parts[2] : null
         this.edges.add({
           id: this.edgeIdCounter++,
           from: u, to: v,
-          label: this.showWeights ? String(w) : '',
+          label: this.showWeights && w != null ? String(w) : '',
           weight: w
         })
       }
