@@ -325,7 +325,8 @@ export default {
       this.graphDataText = edges.map(e => {
         const u = e.from - 1 + base
         const v = e.to - 1 + base
-        return this.showWeights && e.weight ? `${u} ${v} ${e.weight}` : `${u} ${v}`
+        const w = e.weight ?? 1
+        return `${u} ${v} ${w}`
       }).join('\n')
     },
 
