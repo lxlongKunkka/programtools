@@ -18,7 +18,6 @@
       <div class="tb-sep"></div>
       <div class="tb-group">
         <button :class="['tb-btn', mode==='force' && 'active']" @click="setMode('force')">Force</button>
-        <button :class="['tb-btn', mode==='draw' && 'active']" @click="setMode('draw')">绘制</button>
         <button :class="['tb-btn', mode==='delete' && 'active']" @click="setMode('delete')">删除</button>
       </div>
     </div>
@@ -93,7 +92,7 @@ export default {
       graphDataText: '',
       edgeIdCounter: 1,
       nodeIdCounter: 1,
-      drawFrom: null,
+
       _parsing: false,
     }
   },
@@ -105,13 +104,11 @@ export default {
       return this.edges ? this.edges.length : 0
     },
     modeTitle() {
-      return { force: 'Force 模式', draw: '绘制模式', delete: '删除模式' }[this.mode]
+      return { force: 'Force 模式', delete: '删除模式' }[this.mode]
     },
     modeDescHtml() {
       if (this.mode === 'force') {
         return '物理引擎驱动，节点自动排布。<br><br>交互方式：<ul><li>双击空白处：添加节点</li><li>拖动节点：移动（松开后固定）</li><li>单击固定节点：解除固定</li></ul>'
-      } else if (this.mode === 'draw') {
-        return '手动绘制模式，物理引擎关闭。<br><br>交互方式：<ul><li>双击空白处：添加节点</li><li>单击节点 A → 单击节点 B：添加边</li><li>拖动节点：移动</li></ul>'
       } else {
         return '单击节点或边即可删除。<br><br>其他操作仍然有效：<ul><li>双击空白处：添加节点</li><li>拖动节点：移动</li></ul>'
       }
@@ -203,30 +200,7 @@ export default {
           }
           return
         }
-        if (this.mode === 'draw') {
-          if (params.nodes.length > 0) {
-            const clicked = params.nodes[0]
-            if (this.drawFrom === null) {
-              this.drawFrom = clicked
-              this.network.selectNodes([clicked])
-            } else {
-              if (this.drawFrom !== clicked) {
-                this.edges.add({
-                  id: this.edgeIdCounter++,
-                  from: this.drawFrom,
-                  to: clicked,
-                  label: '',
-                  weight: 1
-                })
-              }
-              this.drawFrom = null
-              this.network.unselectAll()
-            }
-          } else {
-            this.drawFrom = null
-            this.network.unselectAll()
-          }
-        }
+
       })
 
       this.network.on('oncontext', (params) => {
@@ -317,7 +291,6 @@ export default {
 
     setMode(m) {
       this.mode = m
-      this.drawFrom = null
       this.network.unselectAll()
       this.network.setOptions({ physics: { enabled: m === 'force' } })
     },
@@ -435,7 +408,6 @@ export default {
       this.edgeIdCounter = 1
       this.nodeCountInput = 0
       this.graphDataText = ''
-      this.drawFrom = null
     },
 
     toClipboard(text) {
