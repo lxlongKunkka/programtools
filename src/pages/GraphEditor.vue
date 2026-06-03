@@ -157,7 +157,7 @@ export default {
         nodes: {
           shape: 'circle',
           size: 25,
-          font: { size: 16, color: '#fff', bold: { enabled: true } },
+          font: { size: 16, color: '#fff' },
           color: { background: '#3b82f6', border: '#2563eb', highlight: { background: '#60a5fa', border: '#3b82f6' } }
         },
         edges: {
