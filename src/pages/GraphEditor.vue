@@ -1,102 +1,73 @@
 <template>
   <div class="graph-editor-page">
-    <!-- Header -->
-    <div class="editor-header">
-      <h1>图编辑器</h1>
-      <div class="header-controls">
-        <label class="switch-label">
-          <input type="checkbox" v-model="isDirected" @change="toggleDirection" />
-          <span>有向图</span>
-        </label>
-        <label class="switch-label">
-          <input type="checkbox" v-model="showWeights" @change="redrawNetwork" />
-          <span>显示权重</span>
-        </label>
-        <select v-model="layoutType" @change="applyLayout" class="layout-select">
-          <option value="default">默认布局</option>
-          <option value="hierarchical">层次布局</option>
-          <option value="circular">环形布局</option>
-        </select>
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="tb-group">
+        <button :class="['tb-btn', !isDirected && 'active']" @click="setDirected(false)">无向图</button>
+        <button :class="['tb-btn', isDirected && 'active']" @click="setDirected(true)">有向图</button>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-group">
+        <button :class="['tb-btn', indexBase===0 && 'active']" @click="setIndexBase(0)">0起点</button>
+        <button :class="['tb-btn', indexBase===1 && 'active']" @click="setIndexBase(1)">1起点</button>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-group">
+        <button :class="['tb-btn', showWeights && 'active']" @click="toggleWeights">权重</button>
+      </div>
+      <div class="tb-sep"></div>
+      <div class="tb-group">
+        <button :class="['tb-btn', mode==='force' && 'active']" @click="setMode('force')">Force</button>
+        <button :class="['tb-btn', mode==='draw' && 'active']" @click="setMode('draw')">绘制</button>
+        <button :class="['tb-btn', mode==='delete' && 'active']" @click="setMode('delete')">删除</button>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="editor-content">
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="section">
-          <h3>节点操作</h3>
-          <button @click="addNode" class="btn-primary">➕ 添加节点</button>
-          <button @click="deleteSelected" class="btn-danger">🗑️ 删除选中</button>
-          <button @click="clearGraph" class="btn-secondary">🧹 清空图</button>
+    <!-- Body -->
+    <div class="editor-body">
+      <!-- Left: data panel -->
+      <div class="left-panel">
+        <div class="field-row">
+          <span class="field-label">节点数:</span>
+          <input
+            type="number"
+            v-model.number="nodeCountInput"
+            min="0" max="300"
+            class="node-count-input"
+            @change="applyNodeCount"
+          />
         </div>
-
-        <div class="section">
-          <h3>边操作</h3>
-          <div class="edge-controls">
-            <label>起点:</label>
-            <input v-model.number="edgeFrom" type="number" min="1" placeholder="节点ID" />
-            <label>终点:</label>
-            <input v-model.number="edgeTo" type="number" min="1" placeholder="节点ID" />
-            <label v-if="showWeights">权重:</label>
-            <input v-if="showWeights" v-model.number="edgeWeight" type="number" placeholder="权重" />
-            <button @click="addEdge" class="btn-primary">添加边</button>
-          </div>
-        </div>
-
-        <div class="section">
-          <h3>批量导入</h3>
-          <textarea 
-            v-model="batchInput" 
-            placeholder="输入格式：
-节点数 边数
-u1 v1 [w1]
-u2 v2 [w2]
-...
-
-例如：
-5 6
-1 2 3
-2 3 5
-..."
-            rows="8"
-          ></textarea>
-          <button @click="importBatch" class="btn-primary">导入</button>
-        </div>
-
-        <div class="section">
-          <h3>导出</h3>
-          <button @click="exportEdgeList" class="btn-export">📋 边列表</button>
-          <button @click="exportAdjList" class="btn-export">📋 邻接表</button>
-          <button @click="exportAdjMatrix" class="btn-export">📋 邻接矩阵</button>
-          <button @click="exportJSON" class="btn-export">📋 JSON</button>
-        </div>
-
-        <div class="section stats">
-          <h3>图信息</h3>
-          <p>节点数: {{ nodeCount }}</p>
-          <p>边数: {{ edgeCount }}</p>
-          <p>类型: {{ isDirected ? '有向图' : '无向图' }}</p>
-        </div>
+        <div class="field-label data-label">图数据:</div>
+        <textarea
+          class="graph-data-area"
+          v-model="graphDataText"
+          @blur="parseGraphData"
+          spellcheck="false"
+          :placeholder="'每行一条边\n格式: u v [w]'"
+        ></textarea>
       </div>
 
-      <!-- Canvas -->
-      <div class="canvas-container">
+      <!-- Center: canvas -->
+      <div class="canvas-wrap" ref="canvasWrap">
         <div ref="networkContainer" class="network-canvas"></div>
-        <div class="canvas-hint">
-          💡 提示：双击空白处添加节点 | 单击节点后拖动到另一节点创建边 | 右键删除元素
-        </div>
       </div>
-    </div>
 
-    <!-- Export Modal -->
-    <div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">
-      <div class="modal-content" @click.stop>
-        <h3>{{ exportTitle }}</h3>
-        <textarea :value="exportData" readonly rows="20"></textarea>
-        <div class="modal-actions">
-          <button @click="copyToClipboard" class="btn-primary">📋 复制</button>
-          <button @click="showExportModal = false" class="btn-secondary">关闭</button>
+      <!-- Right: mode info + export -->
+      <div class="right-panel">
+        <div class="mode-card">
+          <div class="mode-title">{{ modeTitle }}</div>
+          <div class="mode-desc" v-html="modeDescHtml"></div>
+        </div>
+        <div class="stats-row">
+          <span>{{ nodeCount }} 节点</span>
+          <span>{{ edgeCount }} 边</span>
+        </div>
+        <div class="export-group">
+          <button @click="copyEdgeList" class="exp-btn">复制边列表</button>
+          <button @click="copyAdjList" class="exp-btn">复制邻接表</button>
+          <button @click="copyAdjMatrix" class="exp-btn">复制邻接矩阵</button>
+          <button @click="fitGraph" class="exp-btn">居中视图</button>
+          <button @click="clearGraph" class="exp-btn danger">清空图</button>
         </div>
       </div>
     </div>
@@ -116,15 +87,13 @@ export default {
       edges: null,
       isDirected: false,
       showWeights: false,
-      layoutType: 'default',
+      indexBase: 1,
+      mode: 'force',
+      nodeCountInput: 0,
+      graphDataText: '',
+      edgeIdCounter: 1,
       nodeIdCounter: 1,
-      edgeFrom: null,
-      edgeTo: null,
-      edgeWeight: 1,
-      batchInput: '',
-      showExportModal: false,
-      exportTitle: '',
-      exportData: ''
+      drawFrom: null,
     }
   },
   computed: {
@@ -133,63 +102,87 @@ export default {
     },
     edgeCount() {
       return this.edges ? this.edges.length : 0
+    },
+    modeTitle() {
+      return { force: 'Force 模式', draw: '绘制模式', delete: '删除模式' }[this.mode]
+    },
+    modeDescHtml() {
+      if (this.mode === 'force') {
+        return '物理引擎驱动，节点自动排布。<br><br>交互方式：<ul><li>双击空白处：添加节点</li><li>拖动节点：移动（松开后固定）</li><li>单击固定节点：解除固定</li></ul>'
+      } else if (this.mode === 'draw') {
+        return '手动绘制模式，物理引擎关闭。<br><br>交互方式：<ul><li>双击空白处：添加节点</li><li>单击节点 A → 单击节点 B：添加边</li><li>拖动节点：移动</li></ul>'
+      } else {
+        return '单击节点或边即可删除。<br><br>其他操作仍然有效：<ul><li>双击空白处：添加节点</li><li>拖动节点：移动</li></ul>'
+      }
     }
   },
   mounted() {
     this.initNetwork()
-    this.$nextTick(() => {
-      this.resizeCanvas()
-    })
+    this.$nextTick(() => this.resizeCanvas())
     window.addEventListener('resize', this.resizeCanvas)
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.resizeCanvas)
-    if (this.network) {
-      this.network.destroy()
-    }
+    if (this.network) this.network.destroy()
   },
   methods: {
     initNetwork() {
       const container = this.$refs.networkContainer
-      
-      // Initialize data
       this.nodes = new DataSet([])
       this.edges = new DataSet([])
 
-      const data = { nodes: this.nodes, edges: this.edges }
-      
-      const options = {
-        nodes: {
-          shape: 'circle',
-          size: 25,
-          font: { size: 16, color: '#fff' },
-          color: { background: '#3b82f6', border: '#2563eb', highlight: { background: '#60a5fa', border: '#3b82f6' } }
-        },
-        edges: {
-          width: 2,
-          color: { color: '#94a3b8', highlight: '#475569' },
-          smooth: { type: 'continuous', roundness: 0.2 },
-          arrows: { to: { enabled: this.isDirected, scaleFactor: 0.8 } }
-        },
-        physics: {
-          stabilization: { iterations: 200 },
-          barnesHut: { gravitationalConstant: -8000, springConstant: 0.04, springLength: 150 }
-        },
-        interaction: {
-          hover: true,
-          tooltipDelay: 200
-        },
-        manipulation: {
-          enabled: false
-        }
+      const sync = () => {
+        this.nodeCountInput = this.nodes.length
+        this.updateGraphDataText()
       }
+      this.nodes.on('add', sync)
+      this.nodes.on('remove', sync)
+      this.edges.on('add', sync)
+      this.edges.on('remove', sync)
 
-      this.network = new Network(container, data, options)
-      
-      // Event handlers
+      const options = this.buildOptions()
+      this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options)
+
       this.network.on('doubleClick', (params) => {
-        if (params.nodes.length === 0) {
-          this.addNodeAtPosition(params.pointer.canvas)
+        if (params.nodes.length === 0 && params.edges.length === 0) {
+          const id = this.nodeIdCounter++
+          const label = String(id - 1 + this.indexBase)
+          this.nodes.add({ id, label, x: params.pointer.canvas.x, y: params.pointer.canvas.y })
+        }
+      })
+
+      this.network.on('click', (params) => {
+        if (this.mode === 'delete') {
+          if (params.nodes.length > 0) {
+            this.nodes.remove(params.nodes[0])
+          } else if (params.edges.length > 0) {
+            this.edges.remove(params.edges[0])
+          }
+          return
+        }
+        if (this.mode === 'draw') {
+          if (params.nodes.length > 0) {
+            const clicked = params.nodes[0]
+            if (this.drawFrom === null) {
+              this.drawFrom = clicked
+              this.network.selectNodes([clicked])
+            } else {
+              if (this.drawFrom !== clicked) {
+                this.edges.add({
+                  id: this.edgeIdCounter++,
+                  from: this.drawFrom,
+                  to: clicked,
+                  label: '',
+                  weight: 1
+                })
+              }
+              this.drawFrom = null
+              this.network.unselectAll()
+            }
+          } else {
+            this.drawFrom = null
+            this.network.unselectAll()
+          }
         }
       })
 
@@ -203,228 +196,206 @@ export default {
       })
     },
 
-    addNode() {
-      const id = this.nodeIdCounter++
-      this.nodes.add({ id, label: String(id) })
+    buildOptions() {
+      return {
+        nodes: {
+          shape: 'circle',
+          size: 22,
+          font: { size: 15, color: '#222' },
+          color: {
+            background: '#fff',
+            border: '#333',
+            highlight: { background: '#dbeafe', border: '#2563eb' }
+          },
+          borderWidth: 2,
+          borderWidthSelected: 3,
+        },
+        edges: {
+          width: 2,
+          color: { color: '#555', highlight: '#1a73e8' },
+          smooth: { type: 'continuous', roundness: 0.15 },
+          arrows: { to: { enabled: this.isDirected, scaleFactor: 0.8 } },
+          font: { size: 13, color: '#333', strokeWidth: 2, strokeColor: '#fff' },
+          selectionWidth: 3,
+        },
+        physics: {
+          enabled: true,
+          stabilization: { iterations: 150 },
+          barnesHut: { gravitationalConstant: -6000, springConstant: 0.04, springLength: 120 }
+        },
+        interaction: {
+          hover: true,
+          multiselect: false,
+          selectConnectedEdges: false,
+        },
+        manipulation: { enabled: false }
+      }
+    },
+
+    setDirected(val) {
+      this.isDirected = val
+      this.network.setOptions({ edges: { arrows: { to: { enabled: val } } } })
+    },
+
+    setIndexBase(base) {
+      const old = this.indexBase
+      this.indexBase = base
+      if (old !== base) {
+        const updates = this.nodes.get().map(n => ({
+          id: n.id,
+          label: String(n.id - 1 + base)
+        }))
+        this.nodes.update(updates)
+        this.updateGraphDataText()
+      }
+    },
+
+    toggleWeights() {
+      this.showWeights = !this.showWeights
+      const updates = this.edges.get().map(e => ({
+        id: e.id,
+        label: this.showWeights && e.weight ? String(e.weight) : ''
+      }))
+      this.edges.update(updates)
+    },
+
+    setMode(m) {
+      this.mode = m
+      this.drawFrom = null
+      this.network.unselectAll()
+      this.network.setOptions({ physics: { enabled: m === 'force' } })
+    },
+
+    applyNodeCount() {
+      const n = Math.max(0, Math.min(300, this.nodeCountInput || 0))
+      this.nodeCountInput = n
+      const current = this.nodes.getIds().sort((a, b) => a - b)
+      if (n > current.length) {
+        for (let i = current.length + 1; i <= n; i++) {
+          this.nodeIdCounter = Math.max(this.nodeIdCounter, i + 1)
+          this.nodes.add({ id: i, label: String(i - 1 + this.indexBase) })
+        }
+      } else if (n < current.length) {
+        const toRemove = current.slice(n)
+        this.nodes.remove(toRemove)
+        this.edges.remove(
+          this.edges.get().filter(e => toRemove.includes(e.from) || toRemove.includes(e.to)).map(e => e.id)
+        )
+      }
       this.network.fit()
     },
 
-    addNodeAtPosition(position) {
-      const id = this.nodeIdCounter++
-      this.nodes.add({ id, label: String(id), x: position.x, y: position.y })
-    },
-
-    addEdge() {
-      if (!this.edgeFrom || !this.edgeTo) {
-        alert('请输入起点和终点')
+    updateGraphDataText() {
+      const edges = this.edges.get()
+      if (edges.length === 0) {
+        this.graphDataText = ''
         return
       }
-      
-      const nodeIds = this.nodes.getIds()
-      if (!nodeIds.includes(this.edgeFrom) || !nodeIds.includes(this.edgeTo)) {
-        alert('节点不存在')
-        return
-      }
-
-      const edge = {
-        from: this.edgeFrom,
-        to: this.edgeTo,
-        label: this.showWeights ? String(this.edgeWeight) : ''
-      }
-      
-      this.edges.add(edge)
-      this.edgeFrom = null
-      this.edgeTo = null
-      this.edgeWeight = 1
+      const base = this.indexBase
+      this.graphDataText = edges.map(e => {
+        const u = e.from - 1 + base
+        const v = e.to - 1 + base
+        return this.showWeights && e.weight ? `${u} ${v} ${e.weight}` : `${u} ${v}`
+      }).join('\n')
     },
 
-    deleteSelected() {
-      const selected = this.network.getSelection()
-      if (selected.nodes.length > 0) {
-        this.nodes.remove(selected.nodes)
+    parseGraphData() {
+      const lines = this.graphDataText.trim().split('\n').filter(l => l.trim())
+      this.edges.clear()
+      this.edgeIdCounter = 1
+      const base = this.indexBase
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/).map(Number)
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          const u = parts[0] - base + 1
+          const v = parts[1] - base + 1
+          const w = parts[2] !== undefined && !isNaN(parts[2]) ? parts[2] : 1
+          if (!this.nodes.get(u)) this.nodes.add({ id: u, label: String(parts[0]) })
+          if (!this.nodes.get(v)) this.nodes.add({ id: v, label: String(parts[1]) })
+          this.edges.add({
+            id: this.edgeIdCounter++,
+            from: u, to: v,
+            label: this.showWeights ? String(w) : '',
+            weight: w
+          })
+        }
       }
-      if (selected.edges.length > 0) {
-        this.edges.remove(selected.edges)
-      }
+      this.nodeCountInput = this.nodes.length
+      const ids = this.nodes.getIds()
+      this.nodeIdCounter = ids.length > 0 ? Math.max(...ids) + 1 : 1
+      this.network.fit()
+    },
+
+    fitGraph() {
+      this.network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } })
     },
 
     clearGraph() {
-      if (confirm('确定要清空图吗？')) {
-        this.nodes.clear()
-        this.edges.clear()
-        this.nodeIdCounter = 1
-      }
+      if (!confirm('确定清空图吗？')) return
+      this.nodes.clear()
+      this.edges.clear()
+      this.nodeIdCounter = 1
+      this.edgeIdCounter = 1
+      this.nodeCountInput = 0
+      this.graphDataText = ''
+      this.drawFrom = null
     },
 
-    toggleDirection() {
-      this.network.setOptions({
-        edges: { arrows: { to: { enabled: this.isDirected } } }
+    toClipboard(text) {
+      navigator.clipboard.writeText(text).then(
+        () => alert('已复制到剪贴板'),
+        () => prompt('请手动复制：', text)
+      )
+    },
+
+    copyEdgeList() {
+      const edges = this.edges.get()
+      const base = this.indexBase
+      const n = this.nodeCount, m = edges.length
+      const lines = [`${n} ${m}`, ...edges.map(e => {
+        const u = e.from - 1 + base, v = e.to - 1 + base
+        return e.weight && this.showWeights ? `${u} ${v} ${e.weight}` : `${u} ${v}`
+      })]
+      this.toClipboard(lines.join('\n'))
+    },
+
+    copyAdjList() {
+      const base = this.indexBase
+      const adj = {}
+      this.nodes.getIds().forEach(id => { adj[id] = [] })
+      this.edges.get().forEach(e => {
+        adj[e.from].push(e.to - 1 + base)
+        if (!this.isDirected) adj[e.to].push(e.from - 1 + base)
       })
+      const text = Object.keys(adj).sort((a, b) => a - b).map(id => {
+        const label = Number(id) - 1 + base
+        return `${label}: ${adj[id].join(' ')}`
+      }).join('\n')
+      this.toClipboard(text)
     },
 
-    redrawNetwork() {
-      const currentEdges = this.edges.get()
-      currentEdges.forEach(edge => {
-        this.edges.update({
-          id: edge.id,
-          label: this.showWeights && edge.weight ? String(edge.weight) : ''
-        })
+    copyAdjMatrix() {
+      const base = this.indexBase
+      const ids = this.nodes.getIds().sort((a, b) => a - b)
+      const n = ids.length
+      const idx = {}
+      ids.forEach((id, i) => { idx[id] = i })
+      const mat = Array.from({ length: n }, () => Array(n).fill(0))
+      this.edges.get().forEach(e => {
+        mat[idx[e.from]][idx[e.to]] = e.weight || 1
+        if (!this.isDirected) mat[idx[e.to]][idx[e.from]] = e.weight || 1
       })
-    },
-
-    applyLayout() {
-      const options = {}
-      if (this.layoutType === 'hierarchical') {
-        options.layout = {
-          hierarchical: { direction: 'UD', sortMethod: 'directed', levelSeparation: 150 }
-        }
-      } else if (this.layoutType === 'circular') {
-        const nodeIds = this.nodes.getIds()
-        const radius = 200
-        const angleStep = (2 * Math.PI) / nodeIds.length
-        nodeIds.forEach((id, index) => {
-          const angle = index * angleStep
-          this.nodes.update({
-            id,
-            x: radius * Math.cos(angle),
-            y: radius * Math.sin(angle)
-          })
-        })
-        this.network.fit()
-        return
-      } else {
-        options.layout = { randomSeed: undefined }
-      }
-      
-      this.network.setOptions(options)
-      this.network.fit()
-    },
-
-    importBatch() {
-      try {
-        const lines = this.batchInput.trim().split('\n').filter(l => l.trim())
-        if (lines.length < 1) return
-
-        const [n, m] = lines[0].split(/\s+/).map(Number)
-        
-        // Clear existing graph
-        this.nodes.clear()
-        this.edges.clear()
-        
-        // Add nodes
-        for (let i = 1; i <= n; i++) {
-          this.nodes.add({ id: i, label: String(i) })
-        }
-        this.nodeIdCounter = n + 1
-
-        // Add edges
-        for (let i = 1; i < lines.length && i <= m; i++) {
-          const parts = lines[i].split(/\s+/).map(Number)
-          if (parts.length >= 2) {
-            const [u, v, w] = parts
-            this.edges.add({
-              from: u,
-              to: v,
-              label: this.showWeights && w !== undefined ? String(w) : '',
-              weight: w || 1
-            })
-          }
-        }
-
-        this.network.fit()
-        this.batchInput = ''
-        alert(`成功导入 ${n} 个节点，${Math.min(m, lines.length - 1)} 条边`)
-      } catch (e) {
-        alert('导入失败：' + e.message)
-      }
-    },
-
-    exportEdgeList() {
-      const allEdges = this.edges.get()
-      let result = `${this.nodeCount} ${this.edgeCount}\n`
-      allEdges.forEach(edge => {
-        result += `${edge.from} ${edge.to}`
-        if (edge.weight !== undefined) {
-          result += ` ${edge.weight}`
-        }
-        result += '\n'
-      })
-      this.showExport('边列表格式', result)
-    },
-
-    exportAdjList() {
-      const adjList = {}
-      this.nodes.getIds().forEach(id => { adjList[id] = [] })
-      
-      this.edges.get().forEach(edge => {
-        adjList[edge.from].push(edge.to)
-        if (!this.isDirected) {
-          adjList[edge.to].push(edge.from)
-        }
-      })
-
-      let result = ''
-      Object.keys(adjList).sort((a, b) => a - b).forEach(node => {
-        result += `${node}: ${adjList[node].join(', ')}\n`
-      })
-      this.showExport('邻接表', result)
-    },
-
-    exportAdjMatrix() {
-      const nodeIds = this.nodes.getIds().sort((a, b) => a - b)
-      const n = nodeIds.length
-      const matrix = Array(n).fill(0).map(() => Array(n).fill(0))
-      const idToIndex = {}
-      nodeIds.forEach((id, idx) => { idToIndex[id] = idx })
-
-      this.edges.get().forEach(edge => {
-        const i = idToIndex[edge.from]
-        const j = idToIndex[edge.to]
-        matrix[i][j] = edge.weight || 1
-        if (!this.isDirected) {
-          matrix[j][i] = edge.weight || 1
-        }
-      })
-
-      let result = `${n}\n`
-      matrix.forEach(row => {
-        result += row.join(' ') + '\n'
-      })
-      this.showExport('邻接矩阵', result)
-    },
-
-    exportJSON() {
-      const data = {
-        directed: this.isDirected,
-        nodes: this.nodes.get().map(n => ({ id: n.id, label: n.label })),
-        edges: this.edges.get().map(e => ({
-          from: e.from,
-          to: e.to,
-          weight: e.weight || 1
-        }))
-      }
-      this.showExport('JSON 格式', JSON.stringify(data, null, 2))
-    },
-
-    showExport(title, data) {
-      this.exportTitle = title
-      this.exportData = data
-      this.showExportModal = true
-    },
-
-    copyToClipboard() {
-      navigator.clipboard.writeText(this.exportData).then(() => {
-        alert('已复制到剪贴板')
-      })
+      const header = ids.map(id => Number(id) - 1 + base).join(' ')
+      const text = `  ${header}\n` + mat.map((row, i) => `${ids[i] - 1 + base} ${row.join(' ')}`).join('\n')
+      this.toClipboard(text)
     },
 
     resizeCanvas() {
+      const wrap = this.$refs.canvasWrap
       const container = this.$refs.networkContainer
-      if (!container) return
-      // 计算可用高度 = 窗口高度 - 容器顶部偏移 - 提示栏高度(42px)
-      const top = container.getBoundingClientRect().top
-      const h = window.innerHeight - top - 42
-      container.style.height = Math.max(h, 300) + 'px'
+      if (!wrap || !container) return
+      container.style.width = wrap.offsetWidth + 'px'
+      container.style.height = wrap.offsetHeight + 'px'
       if (this.network) this.network.redraw()
     }
   }
@@ -435,247 +406,212 @@ export default {
 .graph-editor-page {
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f0f2f5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.editor-header h1 {
-  margin: 0;
-  font-size: 24px;
-  color: #1e293b;
-}
-
-.header-controls {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.switch-label {
+/* ===== Toolbar ===== */
+.toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #475569;
-  cursor: pointer;
-}
-
-.switch-label input[type="checkbox"] {
-  cursor: pointer;
-}
-
-.layout-select {
+  gap: 4px;
   padding: 6px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
+  background: #1e2533;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-.editor-content {
+.tb-group {
   display: flex;
-  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.tb-btn {
+  padding: 5px 14px;
+  background: transparent;
+  color: rgba(255,255,255,0.65);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.tb-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.tb-btn.active { background: #2563eb; color: #fff; }
+
+.tb-sep {
+  width: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 2px 6px;
+}
+
+/* ===== Body ===== */
+.editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
-.sidebar {
-  width: 320px;
+/* ===== Left panel ===== */
+.left-panel {
+  width: 190px;
+  flex-shrink: 0;
   background: #fff;
-  border-right: 1px solid #e2e8f0;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.section:last-child {
-  border-bottom: none;
-}
-
-.section h3 {
-  margin: 0 0 12px;
-  font-size: 14px;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.edge-controls {
+  border-right: 1px solid #dde1e7;
   display: flex;
   flex-direction: column;
+  padding: 10px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.edge-controls label {
+.field-label {
   font-size: 13px;
-  color: #64748b;
+  color: #555;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.data-label {
   margin-top: 4px;
 }
 
-.edge-controls input {
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+.node-count-input {
+  width: 70px;
+  padding: 4px 8px;
+  border: 1px solid #ccd0d9;
+  border-radius: 4px;
   font-size: 14px;
+  font-weight: 600;
+  color: #222;
 }
+.node-count-input:focus { outline: none; border-color: #2563eb; }
 
-.edge-controls input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+.graph-data-area {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: 1px solid #ccd0d9;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: 'Consolas', 'Monaco', monospace;
   font-size: 13px;
-  font-family: monospace;
-  resize: vertical;
+  line-height: 1.7;
+  color: #222;
+  background: #fafafa;
 }
+.graph-data-area:focus { outline: none; border-color: #2563eb; background: #fff; }
 
-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-button {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-
-.btn-secondary {
-  background: #e2e8f0;
-  color: #475569;
-  margin-top: 8px;
-}
-
-.btn-secondary:hover {
-  background: #cbd5e1;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: white;
-  margin-top: 8px;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-export {
-  background: #10b981;
-  color: white;
-  margin-top: 8px;
-}
-
-.btn-export:hover {
-  background: #059669;
-}
-
-.stats p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #475569;
-}
-
-.canvas-container {
+/* ===== Canvas ===== */
+.canvas-wrap {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
   position: relative;
+  background: #fff;
+  border-right: 1px solid #dde1e7;
+  overflow: hidden;
 }
 
 .network-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-height: 300px;
-  background: #ffffff;
+  height: 100%;
 }
 
-.canvas-hint {
-  padding: 12px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 13px;
-  text-align: center;
-  border-top: 1px solid #e2e8f0;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  width: 600px;
-  max-width: 90vw;
-  max-height: 80vh;
+/* ===== Right panel ===== */
+.right-panel {
+  width: 210px;
+  flex-shrink: 0;
+  background: #fff;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  gap: 10px;
+  overflow-y: auto;
 }
 
-.modal-content h3 {
-  margin: 0 0 16px;
-  font-size: 18px;
+.mode-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.mode-title {
+  font-size: 15px;
+  font-weight: 700;
   color: #1e293b;
+  margin-bottom: 8px;
 }
 
-.modal-content textarea {
-  flex: 1;
-  margin-bottom: 16px;
-  font-family: 'Courier New', monospace;
+.mode-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
 }
 
-.modal-actions {
+.mode-desc :deep(ul) {
+  margin: 4px 0 0 0;
+  padding-left: 18px;
+}
+
+.mode-desc :deep(li) {
+  margin-bottom: 4px;
+}
+
+.stats-row {
   display: flex;
   gap: 12px;
+  font-size: 13px;
+  color: #64748b;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
 }
 
-.modal-actions button {
-  width: auto;
-  padding: 10px 20px;
+.export-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exp-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.exp-btn:hover { background: #e0f2fe; border-color: #38bdf8; color: #0369a1; }
+.exp-btn.danger { color: #dc2626; border-color: #fca5a5; }
+.exp-btn.danger:hover { background: #fee2e2; border-color: #ef4444; }
+
+.right-panel::-webkit-scrollbar { width: 4px; }
+.right-panel::-webkit-scrollbar-track { background: transparent; }
+.right-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+@media (max-width: 768px) {
+  .left-panel { width: 150px; }
+  .right-panel { display: none; }
 }
 </style>
