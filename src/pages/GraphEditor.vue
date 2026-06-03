@@ -259,7 +259,7 @@ export default {
         edges: {
           width: 2,
           color: { color: '#555', highlight: '#1a73e8' },
-          smooth: { type: 'continuous', roundness: 0.15 },
+          smooth: { enabled: true, type: 'dynamic' },
           arrows: { to: { enabled: this.isDirected, scaleFactor: 0.8 } },
           font: { size: 13, color: '#333', strokeWidth: 2, strokeColor: '#fff' },
           selectionWidth: 3,
