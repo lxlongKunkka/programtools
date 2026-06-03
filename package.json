@@ -45,6 +45,7 @@
     "socket.io-client": "^4.8.3",
     "sudoku-gen": "^1.0.2",
     "three": "^0.183.2",
+    "vis-data": "^8.0.4",
     "vis-network": "^10.1.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"

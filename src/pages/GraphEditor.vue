@@ -104,7 +104,8 @@ u2 v2 [w2]
 </template>
 
 <script>
-import { Network, DataSet } from 'vis-network'
+import { Network } from 'vis-network'
+import { DataSet } from 'vis-data'
 
 export default {
   name: 'GraphEditor',
