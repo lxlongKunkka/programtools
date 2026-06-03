@@ -137,8 +137,13 @@ export default {
   },
   mounted() {
     this.initNetwork()
+    this.$nextTick(() => {
+      this.resizeCanvas()
+    })
+    window.addEventListener('resize', this.resizeCanvas)
   },
   beforeUnmount() {
+    window.removeEventListener('resize', this.resizeCanvas)
     if (this.network) {
       this.network.destroy()
     }
@@ -411,6 +416,16 @@ export default {
       navigator.clipboard.writeText(this.exportData).then(() => {
         alert('已复制到剪贴板')
       })
+    },
+
+    resizeCanvas() {
+      const container = this.$refs.networkContainer
+      if (!container) return
+      // 计算可用高度 = 窗口高度 - 容器顶部偏移 - 提示栏高度(42px)
+      const top = container.getBoundingClientRect().top
+      const h = window.innerHeight - top - 42
+      container.style.height = Math.max(h, 300) + 'px'
+      if (this.network) this.network.redraw()
     }
   }
 }
@@ -420,7 +435,6 @@ export default {
 .graph-editor-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -470,7 +484,7 @@ export default {
 
 .editor-content {
   display: flex;
-  flex: 1;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -597,13 +611,15 @@ button {
 
 .canvas-container {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   position: relative;
 }
 
 .network-canvas {
-  flex: 1;
+  width: 100%;
+  min-height: 300px;
   background: #ffffff;
 }
 
