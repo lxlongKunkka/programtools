@@ -134,6 +134,7 @@ export default {
       }
     },
     initNetwork() {
+      this._pinnedNodes = new Set()
       const container = this.$refs.networkContainer
       this.nodes = new DataSet([])
       this.edges = new DataSet([])
@@ -158,12 +159,21 @@ export default {
         }
       })
 
-      // Force 模式：拖动结束后，对已固定的节点重新应用 fixed（防止拖拽清除固定状态）
+      // Force 模式：拖动开始时临时解除 fixed，允许用户拖拽
+      this.network.on('dragStart', (params) => {
+        if (this.mode !== 'force') return
+        params.nodes.forEach(id => {
+          if (this._pinnedNodes.has(id)) {
+            this.nodes.update({ id, fixed: false })
+          }
+        })
+      })
+
+      // Force 模式：拖动结束后，对已固定的节点在新位置重新应用 fixed
       this.network.on('dragEnd', (params) => {
         if (this.mode !== 'force') return
         params.nodes.forEach(id => {
-          const node = this.nodes.get(id)
-          if (node && node.fixed && (node.fixed === true || node.fixed.x)) {
+          if (this._pinnedNodes.has(id)) {
             const pos = this.network.getPosition(id)
             this.nodes.update({ id, x: pos.x, y: pos.y, fixed: { x: true, y: true } })
           }
@@ -182,10 +192,15 @@ export default {
         // Force 模式：单击节点切换固定/解除
         if (this.mode === 'force' && params.nodes.length > 0) {
           const id = params.nodes[0]
-          const node = this.nodes.get(id)
-          const isFixed = node && node.fixed && (node.fixed === true || node.fixed.x)
-          this.nodes.update({ id, fixed: isFixed ? false : { x: true, y: true } })
-          this._markFixed(id, !isFixed)
+          const isFixed = this._pinnedNodes.has(id)
+          if (isFixed) {
+            this.nodes.update({ id, fixed: false })
+            this._markFixed(id, false)
+          } else {
+            const pos = this.network.getPosition(id)
+            this.nodes.update({ id, x: pos.x, y: pos.y, fixed: { x: true, y: true } })
+            this._markFixed(id, true)
+          }
           return
         }
         if (this.mode === 'draw') {
@@ -224,8 +239,13 @@ export default {
       })
     },
 
-    // 固定节点的视觉标记：虚线边框
+    // 固定节点的视觉标记：虚线边框；同步维护 _pinnedNodes Set
     _markFixed(id, isFixed) {
+      if (isFixed) {
+        this._pinnedNodes.add(id)
+      } else {
+        this._pinnedNodes.delete(id)
+      }
       this.nodes.update({
         id,
         shapeProperties: isFixed ? { borderDashes: [4, 3] } : { borderDashes: false }
