@@ -158,16 +158,6 @@ export default {
         }
       })
 
-      // Force 模式：拖动结束后固定节点
-      this.network.on('dragEnd', (params) => {
-        if (this.mode !== 'force') return
-        params.nodes.forEach(id => {
-          const pos = this.network.getPosition(id)
-          this.nodes.update({ id, x: pos.x, y: pos.y, fixed: { x: true, y: true } })
-          this._markFixed(id, true)
-        })
-      })
-
       this.network.on('click', (params) => {
         if (this.mode === 'delete') {
           if (params.nodes.length > 0) {
@@ -177,14 +167,13 @@ export default {
           }
           return
         }
-        // Force 模式：单击已固定节点 → 解除固定
+        // Force 模式：单击节点切换固定/解除
         if (this.mode === 'force' && params.nodes.length > 0) {
           const id = params.nodes[0]
           const node = this.nodes.get(id)
-          if (node && node.fixed && (node.fixed === true || node.fixed.x)) {
-            this.nodes.update({ id, fixed: false })
-            this._markFixed(id, false)
-          }
+          const isFixed = node && node.fixed && (node.fixed === true || node.fixed.x)
+          this.nodes.update({ id, fixed: isFixed ? false : { x: true, y: true } })
+          this._markFixed(id, !isFixed)
           return
         }
         if (this.mode === 'draw') {
