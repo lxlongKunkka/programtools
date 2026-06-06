@@ -120,39 +120,31 @@ function sanitizeQuestion(question) {
 async function incrementQuestionStats(questionUid, isCorrect) {
   const updatedQuestion = await QuizQuestion.findOneAndUpdate(
     { questionUid },
-    [
-      {
-        $set: {
-          'stats.totalAttempts': {
-            $add: [{ $ifNull: ['$stats.totalAttempts', 0] }, 1]
-          },
-          'stats.totalCorrect': {
-            $add: [{ $ifNull: ['$stats.totalCorrect', 0] }, isCorrect ? 1 : 0]
-          },
-          'stats.totalWrong': {
-            $add: [{ $ifNull: ['$stats.totalWrong', 0] }, isCorrect ? 0 : 1]
-          }
-        }
-      },
-      {
-        $set: {
-          'stats.accuracy': {
-            $cond: [
-              { $gt: ['$stats.totalAttempts', 0] },
-              { $round: [{ $divide: ['$stats.totalCorrect', '$stats.totalAttempts'] }, 4] },
-              0
-            ]
-          }
-        }
+    {
+      $inc: {
+        'stats.totalAttempts': 1,
+        'stats.totalCorrect': isCorrect ? 1 : 0,
+        'stats.totalWrong': isCorrect ? 0 : 1
       }
-    ],
+    },
     {
       new: true,
       projection: { stats: 1 }
     }
   ).lean()
 
-  return sanitizeQuestionStats(updatedQuestion?.stats)
+  const nextStats = sanitizeQuestionStats(updatedQuestion?.stats)
+
+  await QuizQuestion.updateOne(
+    { questionUid },
+    {
+      $set: {
+        'stats.accuracy': nextStats.accuracy
+      }
+    }
+  )
+
+  return nextStats
 }
 
 function buildStemPreview(value, maxLength = 180) {
