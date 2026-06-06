@@ -12,9 +12,13 @@ const __dirname = path.dirname(__filename)
 const workspaceRoot = path.resolve(__dirname, '../..')
 
 const args = process.argv.slice(2)
-const inputFile = path.join(workspaceRoot, 'other', '计算机基础测试题.md')
+const inputFile = path.join(workspaceRoot, 'other', '计算机基础测试题（含解析_完整111题）.txt')
 const appUri = APP_MONGODB_URI
 const apply = args.includes('--apply')
+const source = 'computer-basics'
+const sourceDocId = 7000
+const paperUid = `computer-basics-${sourceDocId}`
+const sourceTitle = '计算机基础测试题（含解析）'
 
 async function main() {
   if (!fs.existsSync(inputFile)) {
@@ -22,9 +26,6 @@ async function main() {
   }
 
   const rawContent = fs.readFileSync(inputFile, 'utf-8').replace(/\r\n/g, '\n')
-  const sourceDocId = 7000
-  const paperUid = `computer-basics-${sourceDocId}`
-  const sourceTitle = '计算机基础测试题'
 
   const parsed = parseObjectiveQuestions(rawContent, {
     sourceDocId,
@@ -34,8 +35,8 @@ async function main() {
 
   const paper = {
     paperUid,
-    source: 'computer-basics',
-    sourceDomainId: 'computer-basics',
+    source,
+    sourceDomainId: source,
     sourceDocId,
     title: sourceTitle,
     year: 2026,
@@ -51,13 +52,22 @@ async function main() {
   const summary = {
     inputFile,
     paper: paperUid,
+    totalBlocks: parsed.totalBlocks,
     questions: parsed.questions.length,
     single: parsed.questions.filter((item) => item.type === 'single').length,
+    judge: parsed.questions.filter((item) => item.type === 'judge').length,
+    skipped: parsed.skipped.length,
     warnings: parsed.warnings.length,
     apply
   }
 
   console.log(JSON.stringify(summary, null, 2))
+  if (parsed.sectionStats.length > 0) {
+    console.log(JSON.stringify({ sections: parsed.sectionStats }, null, 2))
+  }
+  if (parsed.skipped.length > 0) {
+    console.log(JSON.stringify({ skipped: parsed.skipped.slice(0, 50) }, null, 2))
+  }
   if (parsed.warnings.length > 0) {
     console.log(JSON.stringify({ warnings: parsed.warnings.slice(0, 50) }, null, 2))
   }
@@ -69,6 +79,9 @@ async function main() {
   try {
     await conn.asPromise()
     const now = new Date()
+
+    await conn.collection('quiz_questions').deleteMany({ source })
+    await conn.collection('quiz_papers').deleteMany({ source })
 
     const paperOp = {
       updateOne: {
@@ -104,90 +117,91 @@ async function main() {
 function parseObjectiveQuestions(content, context) {
   const questions = []
   const warnings = []
+  const skipped = []
+  const sectionCountMap = new Map()
   let paperQuestionNo = 0
 
-  for (const section of extractObjectiveSections(content)) {
-    for (const block of extractQuestionBlocks(section.body)) {
-      const parsed = parseQuestionBlock(section.type, block.questionNo, block.lines, context)
-      if (!parsed) {
-        warnings.push(`第${block.questionNo}题 解析失败或缺失关键信息`)
-        continue
-      }
-      paperQuestionNo += 1
-      questions.push(buildQuestionRecord(parsed, { ...context, paperQuestionNo }))
-    }
-  }
+  const blocks = extractQuestionBlocks(content)
 
-  return { questions, warnings }
-}
-
-function extractObjectiveSections(content) {
-  const lines = String(content || '').split('\n')
-  const sections = []
-  let currentType = ''
-  let buffer = []
-
-  const flush = () => {
-    const body = buffer.join('\n').trim()
-    if (currentType && body) {
-      sections.push({ type: currentType, body })
-    }
-    buffer = []
-  }
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    const heading = line.match(/^#{2,4}\s*(.+)$/)
-    if (heading) {
-      const title = heading[1]
-      if (/问答题|编程题|答案汇总/.test(title)) {
-        flush()
-        currentType = ''
-        continue
-      }
-      if (/单选题/.test(title)) {
-        flush()
-        currentType = 'single'
-        continue
-      }
-      if (/判断题/.test(title)) {
-        flush()
-        currentType = 'judge'
-        continue
-      }
-    }
-
-    if (currentType) {
-      buffer.push(rawLine)
-    }
-  }
-
-  flush()
-  return sections
-}
-
-function extractQuestionBlocks(sectionContent) {
-  const lines = String(sectionContent || '').split('\n')
-  const blocks = []
-  let currentQuestionNo = ''
-  let currentLines = []
-
-  const flush = () => {
-    if (!currentQuestionNo || currentLines.length === 0) return
-    blocks.push({ questionNo: currentQuestionNo, lines: [...currentLines] })
-  }
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    const heading = line.match(/^#{3,4}\s*第\s*(\d+)\s*题\s*$/)
-    if (heading) {
-      flush()
-      currentQuestionNo = heading[1]
-      currentLines = []
+  for (const block of blocks) {
+    const parsed = parseQuestionBlock(block, context)
+    if (!parsed) {
+      skipped.push({
+        key: block.displayNo,
+        section: block.sectionTitle,
+        stem: block.stem,
+        reason: block.skipReason || '解析失败或缺失关键信息'
+      })
       continue
     }
-    if (currentQuestionNo) {
-      currentLines.push(rawLine)
+    if (parsed.skipReason) {
+      skipped.push({
+        key: block.displayNo,
+        section: block.sectionTitle,
+        stem: block.stem,
+        reason: parsed.skipReason
+      })
+      continue
+    }
+    paperQuestionNo += 1
+    questions.push(buildQuestionRecord(parsed, { ...context, paperQuestionNo }))
+    sectionCountMap.set(parsed.sectionTitle, (sectionCountMap.get(parsed.sectionTitle) || 0) + 1)
+    if (!parsed.explanation) {
+      warnings.push(`第${block.displayNo}题 缺少解析`)
+    }
+  }
+
+  return {
+    totalBlocks: blocks.length,
+    questions,
+    warnings,
+    skipped,
+    sectionStats: [...sectionCountMap.entries()].map(([section, count]) => ({ section, imported: count }))
+  }
+}
+
+function extractQuestionBlocks(content) {
+  const lines = String(content || '').split('\n')
+  const blocks = []
+  let currentSectionTitle = ''
+  let currentBlock = null
+
+  const flush = () => {
+    if (!currentBlock) return
+    blocks.push({
+      ...currentBlock,
+      lines: trimTrailingEmpty(currentBlock.lines)
+    })
+    currentBlock = null
+  }
+
+  for (const rawLine of lines) {
+    const line = String(rawLine || '').trim()
+    const sectionMatch = line.match(/^第[一二三四五六七八九十]+部分：(.+?)(?:（\d+题）)?$/)
+    if (sectionMatch) {
+      flush()
+      currentSectionTitle = sectionMatch[1].trim()
+      continue
+    }
+
+    const questionMatch = line.match(/^(?:(\d+)\.\s*|【(G\d+)】)(.+?)\[(单选题|判断题)\]\[答案：([^\]]+)\]\[分数：([^\]]+)\]\s*$/)
+    if (questionMatch) {
+      flush()
+      const displayNo = questionMatch[1] || questionMatch[2]
+      currentBlock = {
+        sectionTitle: currentSectionTitle || '未分组',
+        displayNo,
+        stem: String(questionMatch[3] || '').trim(),
+        type: questionMatch[4] === '判断题' ? 'judge' : 'single',
+        answerText: String(questionMatch[5] || '').trim(),
+        scoreText: String(questionMatch[6] || '').trim(),
+        lines: []
+      }
+      continue
+    }
+
+    if (currentBlock) {
+      currentBlock.lines.push(rawLine)
     }
   }
 
@@ -195,50 +209,78 @@ function extractQuestionBlocks(sectionContent) {
   return blocks
 }
 
-function parseQuestionBlock(sectionType, questionNo, lines, context) {
-  const cleanedLines = trimTrailingEmpty(lines)
-  const raw = cleanedLines.join('\n').trim()
-  if (!raw) return null
+function parseQuestionBlock(block, context) {
+  const mainLines = []
+  const optionLines = []
+  const explanationLines = []
+  let parsingExplanation = false
 
-  const answerText = extractAnswerText(raw)
-  if (!answerText) return null
+  for (const rawLine of block.lines) {
+    const line = String(rawLine || '').trim()
+    if (!line) {
+      if (parsingExplanation && explanationLines.length > 0) explanationLines.push('')
+      continue
+    }
+    if (/^【答案】/.test(line)) {
+      continue
+    }
+    if (/^【解析】/.test(line)) {
+      parsingExplanation = true
+      explanationLines.push(line.replace(/^【解析】\s*/, ''))
+      continue
+    }
+    if (parsingExplanation) {
+      explanationLines.push(line)
+      continue
+    }
+    if (/^[A-E][\.．]/.test(line)) {
+      optionLines.push(line)
+      continue
+    }
+    mainLines.push(line)
+  }
 
-  const answerIndex = cleanedLines.findIndex((line) => /参考答案/.test(line))
-  const blockEnd = answerIndex >= 0 ? answerIndex : cleanedLines.length
-  const mainLines = trimTrailingEmpty(cleanedLines.slice(0, blockEnd))
+  const stemSegments = [block.stem, ...mainLines].filter(Boolean)
+  const stem = trimMarkdownBlock(stemSegments.join('\n'))
+  const explanation = trimMarkdownBlock(explanationLines.join('\n').trim())
 
-  if (sectionType === 'single') {
-    const optionParse = extractSingleOptions(mainLines)
-    if (optionParse.options.length < 2) return null
-    const answer = normalizeSingleAnswer(answerText)
-    if (!answer) return null
+  if (!stem || stem === '（练习题）') {
+    return { skipReason: '题干不是独立可作答内容', sectionTitle: block.sectionTitle }
+  }
+
+  if (block.type === 'single') {
+    const options = extractSingleOptions(optionLines)
+    if (options.length < 2) {
+      return { skipReason: '单选题缺少完整选项，无法导入现有 Quiz 模型', sectionTitle: block.sectionTitle }
+    }
+    const answer = normalizeSingleAnswer(block.answerText)
+    if (!answer) {
+      return { skipReason: '单选题答案无法识别', sectionTitle: block.sectionTitle }
+    }
     return {
       type: 'single',
-      questionNo,
-      stem: trimMarkdownBlock(optionParse.stemLines.join('\n')),
-      options: optionParse.options.map((option) => ({
-        key: option.key,
-        text: option.text,
-        textPlain: stripMarkdown(option.text),
-        images: []
-      })),
+      sectionTitle: block.sectionTitle,
+      stem,
+      options,
       answer,
-      explanation: ''
+      explanation
     }
   }
 
-  const answer = normalizeJudgeAnswer(answerText)
-  if (!answer) return null
+  const answer = normalizeJudgeAnswer(block.answerText)
+  if (!answer) {
+    return { skipReason: '判断题答案无法识别', sectionTitle: block.sectionTitle }
+  }
   return {
     type: 'judge',
-    questionNo,
-    stem: trimMarkdownBlock(mainLines.join('\n')),
+    sectionTitle: block.sectionTitle,
+    stem,
     options: [
       { key: 'true', text: '正确', textPlain: '正确', images: [] },
       { key: 'false', text: '错误', textPlain: '错误', images: [] }
     ],
     answer,
-    explanation: ''
+    explanation
   }
 }
 
@@ -247,8 +289,8 @@ function buildQuestionRecord(parsed, context) {
   return {
     questionUid: `${context.paperUid}-q${context.paperQuestionNo}`,
     paperUid: context.paperUid,
-    source: 'computer-basics',
-    sourceDomainId: 'computer-basics',
+    source,
+    sourceDomainId: source,
     sourceDocId: context.sourceDocId,
     paperQuestionNo: context.paperQuestionNo,
     type: parsed.type,
@@ -263,30 +305,22 @@ function buildQuestionRecord(parsed, context) {
     levelTag: '',
     subject: 'C++',
     difficulty: null,
-    sourceTitle: context.sourceTitle,
+    sourceTitle: `${context.sourceTitle} · ${parsed.sectionTitle}`,
     enabled: true,
     reviewStatus: 'reviewed'
   }
 }
 
 function extractSingleOptions(lines) {
-  const stemLines = []
   const options = []
   let currentOption = null
-  let optionStarted = false
 
   for (const line of lines) {
     const normalizedLine = String(line || '').replace(/\r$/, '')
-    const optionMatch = normalizedLine.match(/^\s*([A-E])\.\s*(.*)$/)
+    const optionMatch = normalizedLine.match(/^\s*([A-E])[\.．]\s*(.*)$/)
     if (optionMatch) {
-      optionStarted = true
       if (currentOption) options.push(currentOption)
       currentOption = { key: optionMatch[1], textLines: [optionMatch[2]] }
-      continue
-    }
-
-    if (!optionStarted) {
-      stemLines.push(normalizedLine)
       continue
     }
 
@@ -297,18 +331,12 @@ function extractSingleOptions(lines) {
 
   if (currentOption) options.push(currentOption)
 
-  return {
-    stemLines,
-    options: options.map((item) => ({
-      key: item.key,
-      text: trimMarkdownBlock(item.textLines.join('\n'))
-    }))
-  }
-}
-
-function extractAnswerText(raw) {
-  const match = String(raw || '').match(/参考答案】\s*([^\n*]+)/)
-  return match ? match[1].trim() : ''
+  return options.map((item) => ({
+    key: item.key,
+    text: trimMarkdownBlock(item.textLines.join('\n')),
+    textPlain: stripMarkdown(trimMarkdownBlock(item.textLines.join('\n'))),
+    images: []
+  }))
 }
 
 function normalizeSingleAnswer(answerText) {
@@ -325,6 +353,7 @@ function normalizeJudgeAnswer(answerText) {
 
 function buildQuestionTags(sourceTitle, parsed) {
   const sourceTags = ['专题:计算机基础']
+  if (parsed.sectionTitle) sourceTags.push(`分组:${parsed.sectionTitle}`)
   if (parsed.type === 'judge') sourceTags.push('题型:判断题')
   if (parsed.type === 'single') sourceTags.push('题型:单选题')
 
