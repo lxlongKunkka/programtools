@@ -80,6 +80,23 @@ function formatSourceTagLabel(tag) {
   return text.startsWith('专题:') ? text.slice(3) : text
 }
 
+function sanitizeQuestionStats(stats = {}) {
+  const totalAttempts = Math.max(Number(stats?.totalAttempts || 0), 0)
+  const totalCorrect = Math.max(Number(stats?.totalCorrect || 0), 0)
+  const totalWrong = Math.max(Number(stats?.totalWrong || 0), 0)
+  const accuracy = totalAttempts > 0
+    ? Number((totalCorrect / totalAttempts).toFixed(4))
+    : 0
+
+  return {
+    totalAttempts,
+    totalCorrect,
+    totalWrong,
+    accuracy,
+    accuracyPercent: totalAttempts > 0 ? Number((accuracy * 100).toFixed(1)) : 0
+  }
+}
+
 function sanitizeQuestion(question) {
   if (!question) return null
   return {
@@ -91,12 +108,51 @@ function sanitizeQuestion(question) {
     options: question.options || [],
     images: question.images || [],
     tags: question.tags || [],
+    stats: sanitizeQuestionStats(question.stats),
     levelTag: question.levelTag || '',
     subject: question.subject || 'C++',
     sourceTitle: question.sourceTitle || '',
     sourceDocId: question.sourceDocId,
     source: question.source || 'gesp'
   }
+}
+
+async function incrementQuestionStats(questionUid, isCorrect) {
+  const updatedQuestion = await QuizQuestion.findOneAndUpdate(
+    { questionUid },
+    [
+      {
+        $set: {
+          'stats.totalAttempts': {
+            $add: [{ $ifNull: ['$stats.totalAttempts', 0] }, 1]
+          },
+          'stats.totalCorrect': {
+            $add: [{ $ifNull: ['$stats.totalCorrect', 0] }, isCorrect ? 1 : 0]
+          },
+          'stats.totalWrong': {
+            $add: [{ $ifNull: ['$stats.totalWrong', 0] }, isCorrect ? 0 : 1]
+          }
+        }
+      },
+      {
+        $set: {
+          'stats.accuracy': {
+            $cond: [
+              { $gt: ['$stats.totalAttempts', 0] },
+              { $round: [{ $divide: ['$stats.totalCorrect', '$stats.totalAttempts'] }, 4] },
+              0
+            ]
+          }
+        }
+      }
+    ],
+    {
+      new: true,
+      projection: { stats: 1 }
+    }
+  ).lean()
+
+  return sanitizeQuestionStats(updatedQuestion?.stats)
 }
 
 function buildStemPreview(value, maxLength = 180) {
@@ -1395,6 +1451,7 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
         correct: isCorrect,
         correctAnswer: normalizedCorrectAnswer,
         explanation: question.explanation || '',
+        questionStats: sanitizeQuestionStats(question.stats),
         completed: answeredCount >= GUEST_DAILY_LIMIT,
         progress: {
           answeredCount,
@@ -1422,6 +1479,7 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
         correct: existingAttempt.isCorrect,
         correctAnswer: normalizeSubmittedAnswer(answeredQuestion?.answer, answeredType),
         explanation: answeredQuestion?.explanation || '',
+        questionStats: sanitizeQuestionStats(answeredQuestion?.stats),
         completed: !!existingProgress.completed,
         progress: {
           answeredCount: existingProgress.answeredCount || 0,
@@ -1506,22 +1564,7 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean()
 
-    const totalAttempts = Number(assignedQuestion.stats?.totalAttempts || 0) + 1
-    const totalCorrect = Number(assignedQuestion.stats?.totalCorrect || 0) + (isCorrect ? 1 : 0)
-    const totalWrong = Number(assignedQuestion.stats?.totalWrong || 0) + (isCorrect ? 0 : 1)
-    const accuracy = totalAttempts > 0 ? Number((totalCorrect / totalAttempts).toFixed(4)) : 0
-
-    await QuizQuestion.updateOne(
-      { questionUid },
-      {
-        $set: {
-          'stats.totalAttempts': totalAttempts,
-          'stats.totalCorrect': totalCorrect,
-          'stats.totalWrong': totalWrong,
-          'stats.accuracy': accuracy
-        }
-      }
-    )
+    const questionStats = await incrementQuestionStats(questionUid, isCorrect)
 
     if (isCorrect) {
       await grantCoins(
@@ -1538,6 +1581,7 @@ router.post('/daily/submit', optionalAuthenticateToken, async (req, res) => {
       correct: isCorrect,
       correctAnswer: normalizedCorrectAnswer,
       explanation: assignedQuestion.explanation || '',
+      questionStats,
       completed: !!updatedProgress.completed,
       progress: {
         answeredCount: updatedProgress.answeredCount || 0,
@@ -1810,6 +1854,8 @@ router.post('/favorite/submit', authenticateToken, async (req, res) => {
       answeredAt: now
     })
 
+    const questionStats = await incrementQuestionStats(questionUid, isCorrect)
+
     if (isCorrect) {
       await grantCoins(
         Number(req.user.id),
@@ -1823,7 +1869,8 @@ router.post('/favorite/submit', authenticateToken, async (req, res) => {
     res.json({
       correct: isCorrect,
       correctAnswer: normalizedCorrectAnswer,
-      explanation: question.explanation || ''
+      explanation: question.explanation || '',
+      questionStats
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -1871,6 +1918,8 @@ router.post('/wrongbook/submit', authenticateToken, async (req, res) => {
       answeredAt: now
     })
 
+    const questionStats = await incrementQuestionStats(questionUid, isCorrect)
+
     if (isCorrect) {
       await grantCoins(
         Number(req.user.id),
@@ -1885,6 +1934,7 @@ router.post('/wrongbook/submit', authenticateToken, async (req, res) => {
       correct: isCorrect,
       correctAnswer: normalizedCorrectAnswer,
       explanation: question.explanation || '',
+      questionStats,
       removed: !!isCorrect
     })
   } catch (e) {

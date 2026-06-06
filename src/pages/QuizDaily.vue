@@ -100,6 +100,7 @@
             <div class="question-meta">
               <span class="meta-chip">{{ question.levelTag || '未分级' }}</span>
               <span class="meta-chip">{{ question.type === 'judge' ? '判断题' : '单选题' }}</span>
+              <span class="meta-chip stats-chip">{{ formatQuestionStats(question.stats) }}</span>
               <span v-for="tag in question.tags || []" :key="tag" class="meta-chip knowledge-chip">{{ tag }}</span>
               <span v-if="question.sourceTitle" class="meta-source">{{ question.sourceTitle }}</span>
             </div>
@@ -901,6 +902,12 @@ async function submitAnswer() {
       correctAnswer: data?.correctAnswer || '',
       explanation: data?.explanation || ''
     }
+    if (question.value && data?.questionStats) {
+      question.value = {
+        ...question.value,
+        stats: data.questionStats
+      }
+    }
     if (activeMode.value === 'daily') {
       const nextProgress = {
         answeredCount: data?.progress?.answeredCount || progress.value.answeredCount,
@@ -1206,6 +1213,16 @@ function formatLeaderboardAccuracy(value) {
   const numberValue = Number(value)
   if (!Number.isFinite(numberValue)) return '--'
   return `${numberValue.toFixed(1)}%`
+}
+
+function formatQuestionStats(stats) {
+  const totalAttempts = Math.max(Number(stats?.totalAttempts || 0), 0)
+  if (totalAttempts <= 0) return '暂无统计'
+  const accuracyPercent = Number(stats?.accuracyPercent)
+  const normalizedAccuracy = Number.isFinite(accuracyPercent)
+    ? accuracyPercent
+    : Number((Number(stats?.accuracy || 0) * 100).toFixed(1))
+  return `正确率 ${normalizedAccuracy.toFixed(1)}% · ${totalAttempts} 次作答`
 }
 
 function optionLabel(key) {
@@ -1827,6 +1844,11 @@ async function submitIssueReport() {
   padding: 6px 10px;
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+.stats-chip {
+  background: #eef7e8;
+  color: #335b1f;
 }
 
 .knowledge-chip {
