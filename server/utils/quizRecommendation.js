@@ -168,7 +168,7 @@ export function buildRecommendationReason(question, {
   if (!attemptSummary) {
     return {
       code: 'new-question',
-      text: '这是当前筛选下适合插入练习的新题。'
+      text: '这是一道你还没做过的新题，系统优先安排练习。'
     }
   }
 
