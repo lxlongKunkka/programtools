@@ -7,6 +7,7 @@
 访问入口：
 - 前端路由 `/graph` 会直接跳转到 `/grapheditor/index.html`
 - 静态产物目录在 `public/grapheditor/`
+- graph.acjudge.com 专用同域副本目录在 `public/graph-domain/`
 - 第三方源码目录在 `grapheditor-app/`
 
 ## 新版能力
@@ -51,11 +52,20 @@ public/grapheditor
 npm run build
 ```
 
-会先构建 `grapheditor-app`，再构建主站 Vue 应用。
+会先构建 `grapheditor-app`，再生成 `graph-domain` 同域副本，最后构建主站 Vue 应用。
+
+如果只想重建 graph.acjudge.com 的专用副本：
+
+```bash
+npm run build:graph-domain
+```
+
+这个命令会基于 `public/grapheditor/` 复制出 `public/graph-domain/`，并把其中的 `/grapheditor/` 资源前缀改写为根路径 `/`，供 graph.acjudge.com 使用。
 
 ## 维护约定
 
 - 如果要升级第三方图编辑器，优先在 `grapheditor-app/` 内进行。
+- graph.acjudge.com 依赖 `public/graph-domain/` 这份同域副本，不要只更新 `public/grapheditor/` 后忘记重建它。
 - 如果只改主站跳转或入口，修改 `src/router/index.js`。
 - 不要恢复 `src/pages/GraphEditor.vue` 旧实现；当前已经正式弃用。
 

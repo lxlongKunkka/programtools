@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:grapheditor && vite build",
+    "build": "npm run build:grapheditor && npm run build:graph-domain && vite build",
     "test": "node --test",
     "preview": "vite preview",
     "start": "node server/index.js",
@@ -18,6 +18,7 @@
     "export:gesp-objective-bank": "node server/scripts/import-gesp-objective-bank.js --export-only --out-dir=server/temp_gesp/objective_bank_export",
     "import:codebot-images": "node scripts/build-codebot-image-manifest.mjs",
     "build:grapheditor": "cd grapheditor-app && npm install && npm run build",
+    "build:graph-domain": "node scripts/build-graph-domain-variant.mjs",
     "deploy": "node deploy.mjs",
     "build:codebot": "cd lightbot-src && npm install && npm run build",
     "deploy:rotate-jwt": "cross-env ROTATE_JWT_SECRET=1 node deploy.mjs"

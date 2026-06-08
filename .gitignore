@@ -8,6 +8,7 @@ server/.env
 # build outputs
 dist/
 .vite/
+public/graph-domain/
 
 # logs (do not push request logs)
 server/logs/
