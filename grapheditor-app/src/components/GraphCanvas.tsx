@@ -118,7 +118,7 @@ export function GraphCanvas({
 
     if (SVGRenderer.fontBase64 === "") {
       SVGRenderer.fontBase64 = await loadFontAsBase64(
-        "/another_graph_editor/JetBrainsMono-Bold.ttf",
+        "/grapheditor/JetBrainsMono-Bold.ttf",
       );
     }
 
@@ -244,7 +244,7 @@ export function GraphCanvas({
   useEffect(() => {
     let font = new FontFace(
       "JB",
-      "url(/another_graph_editor/JetBrainsMono-Bold.ttf)",
+      "url(/grapheditor/JetBrainsMono-Bold.ttf)",
     );
 
     font.load();
