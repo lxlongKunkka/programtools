@@ -27,7 +27,6 @@ const SokobanGame = () => import('../pages/SokobanGame.vue')
 const CodebotGame = () => import('../pages/CodebotEmbed.vue')
 const CodebotStatsAdmin = () => import('../pages/CodebotStatsAdmin.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
-const GraphEditor = () => import('../pages/GraphEditor.vue')
 
 const routes = [
   { path: '/', component: QuizDaily },
@@ -59,7 +58,13 @@ const routes = [
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
   { path: '/codebot', component: CodebotGame, meta: { hideMobileBottomNav: true } },
-  { path: '/graph', component: GraphEditor },
+  {
+    path: '/graph',
+    beforeEnter: () => {
+      window.location.assign('/grapheditor/index.html')
+      return false
+    }
+  },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 

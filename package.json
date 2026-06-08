@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:grapheditor && vite build",
     "test": "node --test",
     "preview": "vite preview",
     "start": "node server/index.js",
@@ -17,6 +17,7 @@
     "backfill:quiz-knowledge": "node server/scripts/backfill-quiz-knowledge-from-text.js",
     "export:gesp-objective-bank": "node server/scripts/import-gesp-objective-bank.js --export-only --out-dir=server/temp_gesp/objective_bank_export",
     "import:codebot-images": "node scripts/build-codebot-image-manifest.mjs",
+    "build:grapheditor": "cd grapheditor-app && npm install && npm run build",
     "deploy": "node deploy.mjs",
     "build:codebot": "cd lightbot-src && npm install && npm run build",
     "deploy:rotate-jwt": "cross-env ROTATE_JWT_SECRET=1 node deploy.mjs"
