@@ -45,3 +45,21 @@ lightbot-src/.env.local
 
 # APK ��װ��������󣬲���⣩
 *.apk
+
+# local generated reports / one-off exports
+changelogs/BLOG_EXPORT_REPORT_*.md
+changelogs/BLOG_OBJECTIVE_PROBLEMS_REPORT.md
+changelogs/blog-csp-preliminary-problems*.json
+changelogs/blog-info-*.json
+changelogs/blog-objective-problems-*.json
+changelogs/quiz_questions-full-export-*.json
+changelogs/quiz_questions-full-export-*.json.gz
+
+# local quiz import sources and ad-hoc helpers
+other/进制逻辑排列组合测试题_完整版.txt
+other/进制逻辑排列组合测试题_解析.json
+scripts/analyze-objective-problems.py
+scripts/analyze-quiz-export.py
+scripts/export-all-quiz-questions.mjs
+scripts/parse-blog-problems.py
+server/scripts/import-binary-logic-combinatorics-quiz.js
