@@ -28,6 +28,14 @@ const CodebotGame = () => import('../pages/CodebotEmbed.vue')
 const CodebotStatsAdmin = () => import('../pages/CodebotStatsAdmin.vue')
 const ProgressDashboard = () => import('../pages/ProgressDashboard.vue')
 
+const GraphEditorRedirect = {
+  name: 'GraphEditorRedirect',
+  template: '<div class="page-redirecting">正在跳转到新版图编辑器...</div>',
+  mounted() {
+    window.location.replace('/grapheditor/index.html')
+  }
+}
+
 const routes = [
   { path: '/', component: QuizDaily },
   { path: '/quiz-daily', redirect: '/' },
@@ -58,13 +66,7 @@ const routes = [
   { path: '/sudoku', component: GameSudoku, meta: { requiresAuth: true } },
   { path: '/sokoban', component: SokobanGame, meta: { requiresAuth: true } },
   { path: '/codebot', component: CodebotGame, meta: { hideMobileBottomNav: true } },
-  {
-    path: '/graph',
-    beforeEnter: () => {
-      window.location.assign('/grapheditor/index.html')
-      return false
-    }
-  },
+  { path: '/graph', component: GraphEditorRedirect },
   { path: '/atcoder', redirect: '/solvedata' }
 ]
 
