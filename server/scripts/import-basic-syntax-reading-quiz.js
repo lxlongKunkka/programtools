@@ -176,11 +176,6 @@ function parseQuestionBlock(block) {
   if (!raw) return null
 
   const lines = raw.split('\n')
-  const firstContentLine = String(lines.find((line, index) => index > 0 && String(line || '').trim()) || '').trim()
-  if (/^G\d+\s+/.test(firstContentLine)) {
-    return { skipReason: 'G附录题块答案与解析明显错位，暂不导入' }
-  }
-
   const answerIndex = lines.findIndex((line) => /^\*\*答案[:：]/.test(line.trim()))
   if (answerIndex < 0) {
     return { skipReason: '缺少答案行' }
