@@ -62,5 +62,9 @@ other/进制逻辑排列组合测试题_解析.json
 scripts/analyze-objective-problems.py
 scripts/analyze-quiz-export.py
 scripts/export-all-quiz-questions.mjs
+scripts/export-course-chapters.mjs
 scripts/parse-blog-problems.py
 server/scripts/import-binary-logic-combinatorics-quiz.js
+
+# local curriculum export artifacts
+curriculum_export/
