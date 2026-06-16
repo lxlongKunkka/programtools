@@ -1,0 +1,28 @@
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+const { DatabaseSync } = require('node:sqlite')
+const db = new DatabaseSync('D:/webapp/programtools/logs/atcoder-batch.db')
+const total = db.prepare('SELECT COUNT(*) as c FROM tasks').get()
+const problem = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE problem_status='fetched'").get()
+const acFound = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE ac_status='found'").get()
+const acNotFound = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE ac_status='not_found'").get()
+const acRateLimit = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE ac_status='skipped'").get()
+const byUser = db.prepare("SELECT ac_user, COUNT(*) as c FROM tasks WHERE ac_status='found' GROUP BY ac_user ORDER BY c DESC").all()
+const contests = db.prepare('SELECT DISTINCT contest_id FROM tasks ORDER BY contest_id DESC').all()
+
+console.log('=== atcoder-batch 进度 ===')
+console.log('已跑比赛:', contests.length, '(' + contests[contests.length-1]?.contest_id + ' -> ' + contests[0]?.contest_id + ')')
+console.log('总题数:', total.c)
+console.log('题干已抓:', problem.c)
+console.log('AC 找到:', acFound.c, '(' + (acFound.c/total.c*100).toFixed(1) + '%)')
+console.log('AC 未找到:', acNotFound.c, '(' + (acNotFound.c/total.c*100).toFixed(1) + '%)')
+console.log('AC 跳过:', acRateLimit.c)
+console.log('\n=== AC 来源用户 (Top 10) ===')
+byUser.slice(0, 10).forEach(r => console.log('  ' + (r.ac_user || 'null') + ': ' + r.c + ' 题'))
+console.log('\n=== 最近 8 场比赛 ===')
+contests.slice(0, 8).forEach(c => {
+  const all = db.prepare("SELECT ac_status, COUNT(*) as c FROM tasks WHERE contest_id=? GROUP BY ac_status").all(c.contest_id)
+  const stats = {}
+  all.forEach(a => stats[a.ac_status] = a.c)
+  console.log('  ' + c.contest_id + ': ' + (stats.fetched||0) + ' 题, AC 找到 ' + (stats.found||0))
+})
