@@ -72,21 +72,12 @@ async function main() {
     )
 
     for (const lv of parsed.levels) {
-      const chapters = lv.lessons.map((lesson, index) => {
-        const chapterId = `cppv4-${lv.level}-1-${index + 1}`
-        const content = buildLessonContent(lesson)
+      const topics = lv.lessons.map((lesson) => {
+        const description = buildLessonContent(lesson)
         return {
-          id: chapterId,
           title: `第 ${lesson.no} 课：${lesson.title}`,
-          content,
-          contentType: 'markdown',
-          resourceUrl: '',
-          videoUrl: '',
-          problemIds: [],
-          optionalProblemIds: [],
-          homeworkIds: [],
-          examIds: [],
-          optional: false
+          description,
+          chapters: []
         }
       })
 
@@ -97,13 +88,7 @@ async function main() {
         subject,
         title: `GESP ${lv.level} 级：${lv.title}`,
         description: lv.description,
-        topics: [
-          {
-            title: '课程知识点',
-            description: `本级共 ${lv.lessons.length} 课，覆盖语法、算法与策略要点。`,
-            chapters
-          }
-        ],
+        topics,
         chapters: []
       }
 
@@ -124,7 +109,7 @@ async function main() {
     console.log(JSON.stringify({
       group: courseGroupName,
       levelsSaved: savedLevels.length,
-      lessonsSaved: savedLevels.reduce((sum, lv) => sum + ((lv.topics?.[0]?.chapters?.length) || 0), 0)
+      lessonsSaved: savedLevels.reduce((sum, lv) => sum + (lv.topics?.length || 0), 0)
     }, null, 2))
   } finally {
     await conn.close().catch(() => {})
