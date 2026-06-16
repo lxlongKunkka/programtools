@@ -73,11 +73,12 @@ async function main() {
 
     for (const lv of parsed.levels) {
       const topics = lv.lessons.map((lesson) => {
-        const description = buildLessonContent(lesson)
+        const chapters = buildLessonChapters(lv.level, lesson)
+        const description = `本课包含 ${chapters.length} 个知识点章节。`
         return {
           title: `第 ${lesson.no} 课：${lesson.title}`,
           description,
-          chapters: []
+          chapters
         }
       })
 
@@ -191,33 +192,37 @@ function parseCourse(text) {
 
 function buildLessonContent(lesson) {
   const lines = []
-  lines.push(`# ${lesson.title}`)
-  lines.push('')
-  if (lesson.knowledge) {
-    lines.push('## 语法和知识')
-    lines.push(`- ${lesson.knowledge}`)
-    lines.push('')
-  }
-  if (lesson.algorithm) {
-    lines.push('## 核心算法')
-    lines.push(`- ${lesson.algorithm}`)
-    lines.push('')
-  }
-  if (lesson.dataStruct) {
-    lines.push('## 数据结构')
-    lines.push(`- ${lesson.dataStruct}`)
-    lines.push('')
-  }
-  if (lesson.strategy) {
-    lines.push('## 数学和策略')
-    lines.push(`- ${lesson.strategy}`)
-    lines.push('')
-  }
-  if (!lesson.knowledge && !lesson.algorithm && !lesson.dataStruct && !lesson.strategy) {
-    lines.push('> 本课未在大纲中提供结构化知识点字段。')
-    lines.push('')
-  }
-  return lines.join('\n').trim()
+  if (lesson.knowledge) lines.push(`语法和知识：${lesson.knowledge}`)
+  if (lesson.algorithm) lines.push(`核心算法：${lesson.algorithm}`)
+  if (lesson.dataStruct) lines.push(`数据结构：${lesson.dataStruct}`)
+  if (lesson.strategy) lines.push(`数学和策略：${lesson.strategy}`)
+  if (!lines.length) lines.push('本课未在大纲中提供结构化知识点字段。')
+  return lines.join('；')
+}
+
+function buildLessonChapters(level, lesson) {
+  const chapterSpecs = [
+    { key: 'knowledge', title: '语法和知识', content: lesson.knowledge },
+    { key: 'algorithm', title: '核心算法', content: lesson.algorithm },
+    { key: 'data', title: '数据结构', content: lesson.dataStruct },
+    { key: 'strategy', title: '数学和策略', content: lesson.strategy }
+  ]
+
+  return chapterSpecs
+    .filter((item) => item.content)
+    .map((item, index) => ({
+      id: `cppv4-${level}-t${lesson.no}-c${index + 1}`,
+      title: item.title,
+      content: `- ${item.content}`,
+      contentType: 'markdown',
+      resourceUrl: '',
+      videoUrl: '',
+      problemIds: [],
+      optionalProblemIds: [],
+      homeworkIds: [],
+      examIds: [],
+      optional: false
+    }))
 }
 
 function resolveArg(name, fallbackValue) {
