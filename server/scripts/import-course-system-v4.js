@@ -10,8 +10,8 @@ const inputFile = resolveArg('file', path.resolve(process.cwd(), 'docs', 'course
 const appUri = getArg('app-uri', process.env.APP_MONGODB_URI || '')
 const apply = args.includes('--apply')
 
-const courseGroupName = getArg('group', '岐麦教育 C++ 信奥全体系课程（v4.0）')
-const courseGroupTitle = getArg('title', '岐麦教育 C++ 信奥全体系课程（v4.0 · GESP 官方对标版）')
+const courseGroupName = getArg('group', '岐麦教育 C++ 信奥全体系课程（v8.1）')
+const courseGroupTitle = getArg('title', '岐麦教育 C++ 信奥全体系课程（v8.1 · GESP 官方对标版）')
 const subject = getArg('subject', 'C++')
 
 const courseGroupSchema = new mongoose.Schema({}, { collection: 'coursegroups', strict: false })
@@ -72,15 +72,11 @@ async function main() {
     )
 
     for (const lv of parsed.levels) {
-      const topics = lv.lessons.map((lesson) => {
-        const chapters = buildLessonChapters(lv.level, lesson)
-        const description = `本课包含 ${chapters.length} 个知识点章节。`
-        return {
-          title: `第 ${lesson.no} 课：${lesson.title}`,
-          description,
-          chapters
-        }
-      })
+      const topics = lv.lessons.map((lesson) => ({
+        title: `${lesson.code}  ${lesson.title}`,
+        description: '',
+        chapters: []
+      }))
 
       const levelDoc = {
         level: lv.level,
@@ -120,13 +116,13 @@ async function main() {
 function parseCourse(text) {
   const lines = String(text || '').split('\n')
   const levels = []
-
   let currentLevel = null
 
-  for (let i = 0; i < lines.length; i += 1) {
+  for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
 
-    const levelMatch = line.match(/^###\s+.*GESP\s*(\d+)\s*级[:：]\s*(.+)$/)
+    // 匹配：## 📘 GESP N 级：title  /  ## 📕 GESP N 级：title  等各种 emoji 前缀
+    const levelMatch = line.match(/^##\s+\S+\s+GESP\s+(\d+)\s+级[：:]\s*(.+)$/)
     if (levelMatch) {
       if (currentLevel) levels.push(currentLevel)
       currentLevel = {
@@ -140,53 +136,19 @@ function parseCourse(text) {
 
     if (!currentLevel) continue
 
-    if (!currentLevel.description && line.startsWith('> **级别描述**')) {
-      currentLevel.description = line.replace(/^>\s*\*\*级别描述\*\*[:：]?\s*/, '').trim()
-      continue
-    }
-
-    const lessonMatch = line.match(/^•\s*第\s*(\d+)\s*课[:：]\s*(.+)$/)
-    if (lessonMatch) {
-      currentLevel.lessons.push({
-        no: Number(lessonMatch[1]),
-        title: lessonMatch[2].trim(),
-        knowledge: '',
-        algorithm: '',
-        dataStruct: '',
-        strategy: ''
-      })
-      continue
-    }
-
-    if (!currentLevel.lessons.length) continue
-
-    const last = currentLevel.lessons[currentLevel.lessons.length - 1]
-    const knowledgeMatch = line.match(/^•\s*语法和知识[:：]\s*(.+)$/)
-    if (knowledgeMatch) {
-      last.knowledge = knowledgeMatch[1].trim()
-      continue
-    }
-
-    const algoMatch = line.match(/^•\s*核心算法[:：]\s*(.+)$/)
-    if (algoMatch) {
-      last.algorithm = algoMatch[1].trim()
-      continue
-    }
-
-    const dsMatch = line.match(/^•\s*数据结构[:：]\s*(.+)$/)
-    if (dsMatch) {
-      last.dataStruct = dsMatch[1].trim()
-      continue
-    }
-
-    const strategyMatch = line.match(/^•\s*数学和策略[:：]\s*(.+)$/)
-    if (strategyMatch) {
-      last.strategy = strategyMatch[1].trim()
+    // 匹配表格行：| L0101 | 主题描述 |
+    const tableMatch = line.match(/^\|\s*(L\d{4})\s*\|\s*(.+?)\s*\|/)
+    if (tableMatch) {
+      const code = tableMatch[1]    // e.g. L0101
+      const title = tableMatch[2].trim()
+      // 跳过表头和分隔行
+      if (title === '主题' || /^[-:#]/.test(title) || title === '#') continue
+      const lessonNo = parseInt(code.slice(3), 10)  // L0101 -> 01 -> 1
+      currentLevel.lessons.push({ code, no: lessonNo, title })
     }
   }
 
   if (currentLevel) levels.push(currentLevel)
-
   return { levels }
 }
 
