@@ -67,8 +67,9 @@ app.use('/public', express.static(path.join(__dirname, 'public')))
 // Serve PDF exports (temporary files)
 app.use('/temp/pdf-exports', express.static(path.join(__dirname, '../temp/pdf-exports')))
 
-// Serve PDF outputs from md2pdf tool
+// Serve PDF outputs from md2pdf tool (同时提供 /api 前缀路径避免前端路由拦截)
 app.use('/temp/pdf-outputs', express.static(path.join(__dirname, '../temp/pdf-outputs')))
+app.use('/api/temp/pdf-outputs', express.static(path.join(__dirname, '../temp/pdf-outputs')))
 
 // [Fix] Also serve under /api/public to bypass Nginx/Frontend routing issues in production
 // Since /api is usually proxied to backend, this ensures static files are served by Node

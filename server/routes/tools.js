@@ -233,7 +233,7 @@ router.post('/md2pdf', upload.single('file'), async (req, res) => {
         safeName: safeFileName,  // 安全的文件系统名称
         path: pdfPath,
         size: stats.size,
-        url: `/temp/pdf-outputs/${safeFileName}`  // URL 使用安全文件名
+        url: `/api/temp/pdf-outputs/${safeFileName}`  // 使用 /api 前缀避免前端路由拦截
       }
     })
   } catch (error) {
