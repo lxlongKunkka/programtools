@@ -24,6 +24,7 @@
         </div>
       </div>
       <div class="ai-controls" :class="{ disabled: aiLoading }">
+        <button @click="onBatchGenerateTopicChapters" class="btn-ai btn-ai-blue" :disabled="aiLoading">📋 一键生成所有章节列表</button>
         <button @click="onBatchLessonPlans" class="btn-ai btn-ai-purple" :disabled="aiLoading">📚 一键生成所有教案</button>
         <button @click="onBatchPpts"         class="btn-ai btn-ai-pink"   :disabled="aiLoading">📊 一键生成所有PPT</button>
         <button @click="onBatchSolutionReports" class="btn-ai btn-ai-green" :disabled="aiLoading">💡 一键生成所有题解</button>
@@ -63,15 +64,16 @@ export default {
   name: 'LevelEditor',
   components: { MarkdownViewer },
   props: {
-    level:                  { type: Object,   required: true },
-    isAdmin:                { type: Boolean,  default: false },
-    teachers:               { type: Array,    default: () => [] },
-    aiLoading:              { type: Boolean,  default: false },
-    aiStatus:               { type: String,   default: '' },
-    onResetAi:              { type: Function, default: () => {} },
-    onBatchLessonPlans:     { type: Function, default: () => {} },
-    onBatchPpts:            { type: Function, default: () => {} },
-    onBatchSolutionReports: { type: Function, default: () => {} }
+    level:                       { type: Object,   required: true },
+    isAdmin:                     { type: Boolean,  default: false },
+    teachers:                    { type: Array,    default: () => [] },
+    aiLoading:                   { type: Boolean,  default: false },
+    aiStatus:                    { type: String,   default: '' },
+    onResetAi:                   { type: Function, default: () => {} },
+    onBatchGenerateTopicChapters:{ type: Function, default: () => {} },
+    onBatchLessonPlans:          { type: Function, default: () => {} },
+    onBatchPpts:                 { type: Function, default: () => {} },
+    onBatchSolutionReports:      { type: Function, default: () => {} }
   }
 }
 </script>

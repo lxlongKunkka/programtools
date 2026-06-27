@@ -96,6 +96,7 @@
             :aiLoading="currentAiLoading"
             :aiStatus="currentAiStatus"
             :onResetAi="resetAiStatus"
+            :onBatchGenerateTopicChapters="batchGenerateLevelTopicChapters"
             :onBatchLessonPlans="batchGenerateLevelLessonPlans"
             :onBatchPpts="batchGenerateLevelPPTs"
             :onBatchSolutionReports="batchGenerateLevelSolutionReports"
@@ -2069,6 +2070,71 @@ export default {
         this.aiLoadingMap[targetTopicId] = false
         this.aiStatusMap[targetTopicId] = ''
       }
+    },
+
+    async batchGenerateLevelTopicChapters() {
+      if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) {
+        return this.showToastMessage('当前模块没有知识点')
+      }
+      
+      const topicCount = this.editingLevel.topics.length
+      if (!confirm(`确定要为本模块下的 ${topicCount} 个知识点生成章节列表吗？生成过程将在后台进行。`)) return
+
+      const levelNum = this.editingLevel.level
+      const levelId = this.selectedNode.id
+      const groupName = this.editingLevel.group
+      const groupObj = this.groups.find(g => g.name === groupName)
+      const language = groupObj ? (groupObj.language || 'C++') : 'C++'
+      const model = this.selectedModel
+
+      this.aiLoadingMap[levelId] = true
+      let successCount = 0
+
+      for (const topic of this.editingLevel.topics) {
+        const topicId = topic._id || topic.id
+        const topicTitle = topic.title
+
+        this.aiStatusMap[levelId] = `正在提交章节列表生成任务: ${topicTitle} (${successCount + 1}/${topicCount})`
+        
+        try {
+          this.aiLoadingMap[topicId] = true
+          this.aiStatusMap[topicId] = '正在提交后台任务...'
+
+          const existingChapters = (topic.chapters || []).map(c => ({
+            title: c.title,
+            contentPreview: c.content ? c.content.slice(0, 200).replace(/\n/g, ' ') + '...' : ''
+          }))
+
+          await request('/api/topic-plan/background', {
+            method: 'POST',
+            body: JSON.stringify({
+              topic: topicTitle,
+              level: `Level ${levelNum}`,
+              existingChapters: existingChapters,
+              mode: 'chapters',
+              model: model,
+              language: language,
+              topicId: topicId,
+              levelId: levelId,
+              clientKey: topicId
+            })
+          })
+
+          this.aiStatusMap[topicId] = '正在后台生成中...'
+          successCount++
+        } catch (e) {
+          console.error(`Failed to submit chapter generation for ${topicTitle}`, e)
+          this.aiLoadingMap[topicId] = false
+          this.aiStatusMap[topicId] = '提交失败'
+        }
+        
+        // 每个任务间隔 500ms，避免请求过快
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      this.aiLoadingMap[levelId] = false
+      this.aiStatusMap[levelId] = ''
+      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个知识点的章节生成任务`)
     },
 
     async batchGenerateLessonPlans() {
