@@ -16,6 +16,7 @@ const ProblemManager = () => import('../pages/ProblemManager.vue')
 const Typing = () => import('../pages/Typing.vue')
 const LearningMap = () => import('../pages/LearningMap.vue')
 const ChapterDetail = () => import('../pages/ChapterDetail.vue')
+const CoursePdfExport = () => import('../pages/CoursePdfExport.vue')
 const DailyProblem = () => import('../pages/DailyProblem.vue')
 const QuizDaily = () => import('../pages/QuizDaily.vue')
 const SolutionReport = () => import('../pages/SolutionReport.vue')
@@ -60,6 +61,7 @@ const routes = [
   { path: '/chat', component: Chat, meta: { requiresAuth: true, requiresPremium: true } },
   { path: '/typing', component: Typing },
   { path: '/course', component: LearningMap, meta: { requiresAuth: true } },
+  { path: '/course/export-pdf', component: CoursePdfExport, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/progress', component: ProgressDashboard, meta: { requiresAuth: true } },
   { path: '/course/:chapterId', component: ChapterDetail, meta: { requiresAuth: true } },
   { path: '/daily', component: DailyProblem, meta: { requiresAuth: true } },

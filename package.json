@@ -24,6 +24,7 @@
     "deploy:rotate-jwt": "cross-env ROTATE_JWT_SECRET=1 node deploy.mjs"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",

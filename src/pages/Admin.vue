@@ -122,6 +122,7 @@
           <button @click="$router.push('/admin/quiz-issues')" class="btn-tool">问题题目维护</button>
           <button @click="$router.push('/problems')" class="btn-tool">题目管理 (翻译/标签)</button>
           <button @click="$router.push('/course')" class="btn-tool">课程设计</button>
+          <button @click="$router.push('/course/export-pdf')" class="btn-tool">📄 课程导出 PDF</button>
           <button @click="$router.push('/admin/prompts')" class="btn-tool">Prompts Editor</button>
         </div>
       </div>
