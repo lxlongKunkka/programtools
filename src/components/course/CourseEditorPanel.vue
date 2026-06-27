@@ -335,16 +335,19 @@ export default {
                     })
                 }
                 // Handle Chapter Content Generation (Lesson Plan, PPT, Solution, Preview, Review)
-                // If currently viewing this chapter, refresh content
-                else if (this.selectedNode && this.selectedNode.type === 'chapter') {
+                // Must also handle batch events when current selected node is level/topic
+                else {
                     // Robust check for current chapter — strip suffix for preview/review clientKeys
                     const baseChapterId = (key || '').replace(/-preview$|-review$/, '')
                     const isCurrent = (id) => {
                         if (!id) return false
                         const strId = String(id)
-                        return String(this.selectedNode.id) === strId || 
-                                String(this.editingChapter.id) === strId || 
-                                String(this.editingChapter._id) === strId
+                  const editingId = this.editingChapter && this.editingChapter.id ? String(this.editingChapter.id) : ''
+                  const editingOid = this.editingChapter && this.editingChapter._id ? String(this.editingChapter._id) : ''
+                  const selectedId = this.selectedNode && this.selectedNode.id ? String(this.selectedNode.id) : ''
+                        return selectedId === strId || 
+                          editingId === strId || 
+                          editingOid === strId
                     }
 
                     const isMatch = isCurrent(baseChapterId) || isCurrent(data.chapterId)

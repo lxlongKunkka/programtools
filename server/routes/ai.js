@@ -3097,6 +3097,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'lesson-plan',
+                          contentType: 'markdown',
                           status: 'success',
                           message: '教案生成完成'
                       });
@@ -3108,6 +3109,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
                           chapterTitle: foundChapterTitle,
                           clientKey,
                           type: 'lesson-plan',
+                          contentType: 'markdown',
                           status: 'success',
                           message: '教案生成完成'
                       });
