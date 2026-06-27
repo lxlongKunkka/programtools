@@ -220,7 +220,11 @@ export default {
           ...l,
           collapsed: wasCollapsed,
           problemCount: 0,
-          topics: (l.topics || []).map(t => ({ ...t, problemCount: 0 }))
+          topics: (l.topics || []).map((t, topicIndex) => ({
+            ...t,
+            _id: t._id || t.id || `${l._id}-topic-${topicIndex}`,
+            problemCount: 0
+          }))
         }
         const gName = l.group || 'C++基础'
         if (!groupMap[gName]) {
