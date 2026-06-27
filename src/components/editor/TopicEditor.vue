@@ -27,6 +27,7 @@
         <button @click="onBatchPpts"            class="btn-ai btn-ai-pink"   :disabled="aiLoading">📊 一键生成所有PPT</button>
         <button @click="onBatchSolutionPlans"   class="btn-ai btn-ai-blue"   :disabled="aiLoading">📘 一键生成所有题解教案</button>
         <button @click="onBatchSolutionReports" class="btn-ai btn-ai-green"  :disabled="aiLoading">💡 一键生成所有题解PPT</button>
+        <button @click="onExportAllReviews"     class="btn-ai btn-ai-orange" :disabled="exporting">📦 导出所有复习内容</button>
       </div>
     </div>
 

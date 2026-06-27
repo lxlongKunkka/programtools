@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import axios from 'axios'
 import multer from 'multer'
+import archiver from 'archiver'
 import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
 import CourseGroup from '../models/CourseGroup.js'
@@ -2233,6 +2234,100 @@ router.get('/chapter/:chapterId/export-review', authenticateToken, async (req, r
 
   } catch (e) {
     console.error(e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Export all review content for a topic (ZIP)
+router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res) => {
+  try {
+    const { topicId } = req.params
+    const { levelId } = req.query
+
+    // Find the level containing this topic
+    const level = await CourseLevel.findById(levelId)
+    if (!level) {
+      return res.status(404).json({ error: 'Level not found' })
+    }
+
+    const topic = level.topics.id(topicId)
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+
+    if (!topic.chapters || topic.chapters.length === 0) {
+      return res.status(400).json({ error: 'No chapters found' })
+    }
+
+    // Create ZIP archive
+    const archive = archiver('zip', { zlib: { level: 9 } })
+    
+    res.attachment(`${topic.title}-复习内容.zip`)
+    archive.pipe(res)
+
+    // Add each chapter's review content as a markdown file
+    for (const chapter of topic.chapters) {
+      if (!chapter.reviewContent) continue
+
+      let markdown = `# ${chapter.title} - 复习资料\n\n`
+      markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
+      markdown += `---\n\n`
+      markdown += chapter.reviewContent
+
+      const fileName = `${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
+      archive.append(markdown, { name: fileName })
+    }
+
+    await archive.finalize()
+  } catch (e) {
+    console.error('Export topic reviews error:', e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Export all review content for a level (ZIP)
+router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res) => {
+  try {
+    const { levelId } = req.params
+
+    const level = await CourseLevel.findById(levelId)
+    if (!level) {
+      return res.status(404).json({ error: 'Level not found' })
+    }
+
+    if (!level.topics || level.topics.length === 0) {
+      return res.status(400).json({ error: 'No topics found' })
+    }
+
+    // Create ZIP archive
+    const archive = archiver('zip', { zlib: { level: 9 } })
+    
+    res.attachment(`${level.title}-复习内容.zip`)
+    archive.pipe(res)
+
+    // Add each chapter's review content, organized by topic folders
+    for (const topic of level.topics) {
+      if (!topic.chapters || topic.chapters.length === 0) continue
+
+      const topicFolder = topic.title.replace(/[/\\?%*:|"<>]/g, '-')
+
+      for (const chapter of topic.chapters) {
+        if (!chapter.reviewContent) continue
+
+        let markdown = `# ${chapter.title} - 复习资料\n\n`
+        markdown += `> 知识点：${topic.title}\n`
+        markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
+        markdown += `---\n\n`
+        markdown += chapter.reviewContent
+
+        const fileName = `${topicFolder}/${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
+        archive.append(markdown, { name: fileName })
+      }
+    }
+
+    await archive.finalize()
+  } catch (e) {
+    console.error('Export level reviews error:', e)
     res.status(500).json({ error: e.message })
   }
 })

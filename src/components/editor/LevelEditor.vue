@@ -28,6 +28,7 @@
         <button @click="onBatchLessonPlans" class="btn-ai btn-ai-purple" :disabled="aiLoading">📚 一键生成所有教案</button>
         <button @click="onBatchPpts"         class="btn-ai btn-ai-pink"   :disabled="aiLoading">📊 一键生成所有PPT</button>
         <button @click="onBatchSolutionReports" class="btn-ai btn-ai-green" :disabled="aiLoading">💡 一键生成所有题解</button>
+        <button @click="onExportAllReviews"     class="btn-ai btn-ai-orange" :disabled="exporting">📦 导出所有复习内容</button>
       </div>
     </div>
 
@@ -69,11 +70,13 @@ export default {
     teachers:                    { type: Array,    default: () => [] },
     aiLoading:                   { type: Boolean,  default: false },
     aiStatus:                    { type: String,   default: '' },
+    exporting:                   { type: Boolean,  default: false },
     onResetAi:                   { type: Function, default: () => {} },
     onBatchGenerateTopicChapters:{ type: Function, default: () => {} },
     onBatchLessonPlans:          { type: Function, default: () => {} },
     onBatchPpts:                 { type: Function, default: () => {} },
-    onBatchSolutionReports:      { type: Function, default: () => {} }
+    onBatchSolutionReports:      { type: Function, default: () => {} },
+    onExportAllReviews:          { type: Function, default: () => {} }
   }
 }
 </script>

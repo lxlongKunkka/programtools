@@ -95,11 +95,13 @@
             :teachers="teachers"
             :aiLoading="currentAiLoading"
             :aiStatus="currentAiStatus"
+            :exporting="exportingReviews"
             :onResetAi="resetAiStatus"
             :onBatchGenerateTopicChapters="batchGenerateLevelTopicChapters"
             :onBatchLessonPlans="batchGenerateLevelLessonPlans"
             :onBatchPpts="batchGenerateLevelPPTs"
             :onBatchSolutionReports="batchGenerateLevelSolutionReports"
+            :onExportAllReviews="exportLevelReviews"
           />
 
           <TopicEditor
@@ -107,6 +109,7 @@
             :topic="editingTopic"
             :aiLoading="currentAiLoading"
             :aiStatus="currentAiStatus"
+            :exporting="exportingReviews"
             :onResetAi="resetAiStatus"
             :onGenerateDesc="generateTopicDescription"
             :onGenerateChapters="generateTopicChapters"
@@ -114,6 +117,7 @@
             :onBatchPpts="batchGeneratePPTs"
             :onBatchSolutionPlans="batchGenerateSolutionPlans"
             :onBatchSolutionReports="batchGenerateSolutionReports"
+            :onExportAllReviews="exportTopicReviews"
           />
 
           <ChapterEditor
@@ -225,6 +229,7 @@ export default {
       aiRequirements: '',
       aiLoadingMap: {},
       aiStatusMap: {},
+      exportingReviews: false,
       
       // Models
       selectedModel: 'gemini-3.5-flash',
@@ -2737,6 +2742,81 @@ export default {
       this.showToastMessage(`批量任务提交完成: 成功 ${successCount} 个, 跳过 ${skippedCount} 个`)
     },
 
+    // 导出 Topic 所有复习内容
+    async exportTopicReviews() {
+      if (!this.editingTopic || !this.editingTopic.chapters || this.editingTopic.chapters.length === 0) {
+        return this.showToastMessage('当前知识点没有章节')
+      }
+
+      const topicId = this.editingTopic._id || this.editingTopic.id
+      const levelId = this.editingLevelForTopic._id
+
+      if (!confirm(`确定要导出"${this.editingTopic.title}"下所有章节的复习内容吗？`)) return
+
+      this.exportingReviews = true
+      try {
+        const response = await request(`/api/course/topic/${topicId}/export-reviews?levelId=${levelId}`, {
+          method: 'GET',
+          responseType: 'blob'
+        })
+
+        // 下载 ZIP 文件
+        const blob = new Blob([response], { type: 'application/zip' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${this.editingTopic.title}-复习内容.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        this.showToastMessage('✅ 复习内容已导出')
+      } catch (error) {
+        console.error('导出失败:', error)
+        this.showToastMessage('❌ 导出失败: ' + (error.message || '未知错误'))
+      } finally {
+        this.exportingReviews = false
+      }
+    },
+
+    // 导出 Level 所有复习内容
+    async exportLevelReviews() {
+      if (!this.editingLevel || !this.editingLevel.topics || this.editingLevel.topics.length === 0) {
+        return this.showToastMessage('当前模块没有知识点')
+      }
+
+      const levelId = this.editingLevel._id
+
+      if (!confirm(`确定要导出"${this.editingLevel.title}"下所有章节的复习内容吗？`)) return
+
+      this.exportingReviews = true
+      try {
+        const response = await request(`/api/course/level/${levelId}/export-reviews`, {
+          method: 'GET',
+          responseType: 'blob'
+        })
+
+        // 下载 ZIP 文件
+        const blob = new Blob([response], { type: 'application/zip' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${this.editingLevel.title}-复习内容.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        this.showToastMessage('✅ 复习内容已导出')
+      } catch (error) {
+        console.error('导出失败:', error)
+        this.showToastMessage('❌ 导出失败: ' + (error.message || '未知错误'))
+      } finally {
+        this.exportingReviews = false
+      }
+    },
+
     findTopicInTree(topicId) {
       return _findTopicInTree(this.levels, topicId)
     },
@@ -3278,6 +3358,17 @@ export default {
 .btn-ai-green:hover {
   background-color: #059669;
   border-color: #059669;
+  color: white;
+}
+
+.btn-ai-orange {
+  background-color: #f97316;
+  color: white;
+  border-color: #f97316;
+}
+.btn-ai-orange:hover {
+  background-color: #ea580c;
+  border-color: #ea580c;
   color: white;
 }
 
