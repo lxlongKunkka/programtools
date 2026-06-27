@@ -76,10 +76,21 @@
 ### 后端处理流程
 1. 接收用户上传的 .md 文件
 2. 保存到临时目录 `temp/uploads/`
-3. 调用 `other/dist/md2pdf_bundle.js` 进行转换
-4. 生成的 PDF 保存到 `temp/pdf-outputs/`
-5. 返回 PDF 文件的 URL 供下载
-6. 自动清理 2 小时前的临时文件
+3. 读取 Markdown 内容并使用 `marked` 解析为 HTML
+4. 从 `other/dist/assets/` 加载样式资源（hljs.css, katex.css, typora_manual_theme.css）
+5. 注入代码高亮（highlight.js）和数学公式（KaTeX）支持
+6. 使用 `playwright` 的 chromium 浏览器渲染 HTML 并生成 PDF
+7. 生成的 PDF 保存到 `temp/pdf-outputs/`
+8. 返回 PDF 文件的 URL 供下载
+9. 自动清理 2 小时前的临时文件
+
+### 核心依赖
+- **marked**: Markdown 解析器
+- **playwright**: 无头浏览器，用于 HTML 转 PDF
+- **highlight.js**: 代码语法高亮
+- **KaTeX**: 数学公式渲染
+- **multer**: 文件上传处理
+- **archiver**: ZIP 打包
 
 ### 文件大小限制
 - 单个文件最大 **10 MB**
@@ -134,21 +145,22 @@
 
 ## 部署注意事项
 
-### 1. 确保 md2pdf 工具可用
+### 1. 确保 assets 资源可用
 ```bash
-ls -la other/dist/md2pdf_bundle.js
 ls -la other/dist/assets/
-ls -la other/dist/chrome/
+# 应包含：hljs.css, hljs.js, katex.css, katex.js, typora_manual_theme.css
 ```
 
-### 2. 安装 Chromium（如果未安装）
+### 2. 确保 playwright 浏览器已安装
 ```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install -y chromium-browser
+# 安装 playwright 依赖
+npm install playwright --save-dev
 
-# 或者
-npm install puppeteer
+# 安装浏览器（如果尚未安装）
+npx playwright install chromium
+
+# 或安装所有依赖（包括系统库）
+npx playwright install --with-deps chromium
 ```
 
 ### 3. 创建临时目录
@@ -175,13 +187,6 @@ server {
 }
 ```
 
-### 5. 环境变量（可选）
-如果 Chromium 不在默认路径：
-
-```bash
-export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-```
-
 ## 故障排查
 
 ### 问题：上传文件后显示 "只支持 .md 和 .markdown 文件"
@@ -195,15 +200,22 @@ export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ls -la other/dist/md2pdf_bundle.js
 chmod +x other/dist/md2pdf_bundle.js
 ```
-
-### 问题：转换超时
-**原因**: 
-1. Markdown 文件过大或内容复杂
-2. Chromium 启动失败
+playwright 浏览器未安装或系统缺少依赖库  
+**解决**: 
+```bash
+# 安装 playwright 浏览器
+npxplaywright 浏览器启动慢
 3. 服务器资源不足
 
 **解决**:
 1. 分割大文件为多个小文件
+2. 优化 Markdown 内容（减少复杂样式）
+3. 查看服务器资源：`top` 或 `htop`
+4. 增加超时时间（修改 `server/routes/tools.js`）
+5. 检查 playwright 是否正常工作：
+   ```bash
+   node -e "const {chromium} = require('playwright'); chromium.launch().then(b => b.close())"
+   ```
 2. 检查 Chromium 安装：`which chromium-browser`
 3. 查看服务器资源：`top` 或 `htop`
 4. 增加超时时间（修改 `server/routes/tools.js`）
