@@ -145,6 +145,8 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
   let page = null
   
   try {
+    console.log('[MD2PDF] 接收到的选项:', JSON.stringify(options))
+    
     // 读取 Markdown 文件
     const mdContent = await fs.readFile(mdPath, 'utf8')
     
@@ -171,7 +173,8 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
       landscape: options.orientation === 'landscape',
       printBackground: options.printBackground !== false,
       displayHeaderFooter: options.displayHeaderFooter || false,
-      margin: {}
+      margin: {},
+      preferCSSPageSize: options.preferCSSPageSize || false
     }
     
     // 设置页边距
@@ -182,6 +185,8 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
     }
     
     pdfOptions.margin = marginMap[options.margin] || marginMap['standard']
+    
+    console.log('[MD2PDF] PDF 生成选项:', JSON.stringify(pdfOptions))
     
     // 生成 PDF
     await page.pdf(pdfOptions)
