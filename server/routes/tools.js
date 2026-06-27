@@ -102,9 +102,13 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
     // 生成 HTML
     const html = makeHtml(mdContent)
     
+    // Chrome 可执行文件路径
+    const chromePath = path.join(__dirname, '../../other/dist/chrome-linux64/chrome')
+    
     // 启动浏览器
     browser = await chromium.launch({
-      headless: true
+      headless: true,
+      executablePath: chromePath
     })
     
     const page = await browser.newPage()
