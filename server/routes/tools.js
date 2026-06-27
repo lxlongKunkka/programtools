@@ -44,7 +44,7 @@ async function ensureTempDirs() {
 ensureTempDirs()
 
 // 加载样式资源
-let HLJS_CSS, KATEX_CSS, MANUAL_CSS, HLJS_JS, KATEX_JS
+let HLJS_CSS, KATEX_CSS, MANUAL_CSS, HLJS_JS, KATEX_JS, KATEX_AR_JS
 
 try {
   HLJS_CSS = readFileSync(path.join(ASSETS_DIR, 'hljs.css'), 'utf8')
@@ -52,6 +52,7 @@ try {
   MANUAL_CSS = readFileSync(path.join(ASSETS_DIR, 'typora_manual_theme.css'), 'utf8')
   HLJS_JS = readFileSync(path.join(ASSETS_DIR, 'hljs.js'), 'utf8')
   KATEX_JS = readFileSync(path.join(ASSETS_DIR, 'katex.js'), 'utf8')
+  KATEX_AR_JS = readFileSync(path.join(ASSETS_DIR, 'katex-ar.js'), 'utf8')
   console.log('成功加载 assets 资源')
 } catch (error) {
   console.error('加载 assets 资源失败:', error)
@@ -70,6 +71,7 @@ function makeHtml(mdContent) {
 <style>${MANUAL_CSS}</style>
 <script>${HLJS_JS}</script>
 <script>${KATEX_JS}</script>
+<script>${KATEX_AR_JS}</script>
 </head>
 <body>
 ${body}
@@ -82,7 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderMathInElement(document.body, {
       delimiters: [
         {left:"$$",right:"$$",display:true},
-        {left:"$",right:"$",display:false}
+        {left:"$",right:"$",display:false},
+        {left:"\\(",right:"\\)",display:false},
+        {left:"\\[",right:"\\]",display:true}
       ],
       throwOnError: false
     });
