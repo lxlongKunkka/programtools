@@ -59,8 +59,21 @@ try {
 }
 
 // 生成 HTML
-function makeHtml(mdContent) {
+function makeHtml(mdContent, options = {}) {
   const body = marked.parse(mdContent)
+  
+  // CSS 预设的 @page 规则（紧凑格式：5mm 边距）
+  const cssPageRules = options.preferCSSPageSize ? `
+<style>
+@page {
+    size: A4;
+    margin: 5mm 5mm 5mm 5mm;
+}
+@page :first {
+    margin-top: 0mm;
+}
+</style>
+` : ''
   
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -68,7 +81,7 @@ function makeHtml(mdContent) {
 <meta charset="UTF-8">
 <style>${HLJS_CSS}</style>
 <style>${KATEX_CSS}</style>
-<style>${MANUAL_CSS}</style>
+<style>${MANUAL_CSS}</style>${cssPageRules}
 <script>${HLJS_JS}</script>
 <script>${KATEX_JS}</script>
 <script>${KATEX_AR_JS}</script>
@@ -151,7 +164,7 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
     const mdContent = await fs.readFile(mdPath, 'utf8')
     
     // 生成 HTML
-    const html = makeHtml(mdContent)
+    const html = makeHtml(mdContent, options)
     
     // 获取浏览器实例（单例模式）
     const browser = await getBrowser()

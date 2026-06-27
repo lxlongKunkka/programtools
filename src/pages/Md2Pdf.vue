@@ -90,7 +90,7 @@
 
           <label class="option-item checkbox-item">
             <input type="checkbox" v-model="options.preferCSSPageSize" />
-            <span>使用 CSS 页面大小</span>
+            <span>使用紧凑格式（CSS 预设：A4 纸张，5mm 边距）</span>
           </label>
         </div>
       </div>
