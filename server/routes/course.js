@@ -2238,6 +2238,67 @@ router.get('/chapter/:chapterId/export-review', authenticateToken, async (req, r
   }
 })
 
+// Helper function to get problems for a chapter
+async function getChapterProblems(chapter) {
+  const problems = []
+  if (!chapter.problemIds || chapter.problemIds.length === 0) {
+    return problems
+  }
+
+  for (const pidStr of chapter.problemIds) {
+    let query = {}
+    if (mongoose.Types.ObjectId.isValid(pidStr)) {
+      query = { _id: pidStr }
+    } else if (pidStr.includes(':')) {
+      const [domain, docId] = pidStr.split(':')
+      if (!isNaN(docId)) {
+        query = { domainId: domain, docId: Number(docId) }
+      } else {
+        query = { domainId: domain, pid: docId }
+      }
+    } else {
+      if (!isNaN(pidStr)) {
+        const docId = Number(pidStr)
+        const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId aiSolution aiSolutionLang')
+        if (sysDoc) {
+          problems.push({
+            title: sysDoc.title,
+            docId: sysDoc.docId,
+            domainId: sysDoc.domainId,
+            aiSolution: sysDoc.aiSolution || ''
+          })
+          continue
+        }
+        query = { docId: docId }
+      } else {
+        const sysDoc = await Document.findOne({ domainId: 'system', pid: pidStr }).select('title docId domainId aiSolution aiSolutionLang')
+        if (sysDoc) {
+          problems.push({
+            title: sysDoc.title,
+            docId: sysDoc.docId,
+            domainId: sysDoc.domainId,
+            aiSolution: sysDoc.aiSolution || ''
+          })
+          continue
+        }
+        query = { pid: pidStr }
+      }
+    }
+    
+    const doc = await Document.findOne(query).select('title docId domainId aiSolution aiSolutionLang')
+    if (doc) {
+      problems.push({
+        title: doc.title,
+        docId: doc.docId,
+        domainId: doc.domainId,
+        aiSolution: doc.aiSolution || ''
+      })
+    }
+  }
+
+  return problems
+}
+
 // Export all review content for a topic (ZIP)
 router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res) => {
   try {
@@ -2296,10 +2357,32 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
     for (const chapter of topic.chapters) {
       if (!chapter.reviewContent) continue
 
-      let markdown = `# ${chapter.title} - 复习资料\n\n`
+      let markdown = `# ${chapter.title} - 复习资料包\n\n`
       markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
       markdown += `---\n\n`
+      
+      // 添加复习内容
+      markdown += `## 📋 课后复习总结\n\n`
       markdown += chapter.reviewContent
+      markdown += `\n\n---\n\n`
+      
+      // 添加必做题目题解
+      const problems = await getChapterProblems(chapter)
+      if (problems.length > 0) {
+        markdown += `## 💡 必做题目题解\n\n`
+        
+        problems.forEach((problem, index) => {
+          markdown += `### ${index + 1}. ${problem.title}\n\n`
+          
+          if (problem.aiSolution) {
+            markdown += problem.aiSolution
+          } else {
+            markdown += `> 暂无AI题解\n`
+          }
+          
+          markdown += `\n\n---\n\n`
+        })
+      }
 
       const chapterFileName = `${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
       archive.append(Buffer.from(markdown, 'utf8'), { name: chapterFileName })
@@ -2377,11 +2460,33 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
       for (const chapter of topic.chapters) {
         if (!chapter.reviewContent) continue
 
-        let markdown = `# ${chapter.title} - 复习资料\n\n`
+        let markdown = `# ${chapter.title} - 复习资料包\n\n`
         markdown += `> 知识点：${topic.title}\n`
         markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
         markdown += `---\n\n`
+        
+        // 添加复习内容
+        markdown += `## 📋 课后复习总结\n\n`
         markdown += chapter.reviewContent
+        markdown += `\n\n---\n\n`
+        
+        // 添加必做题目题解
+        const problems = await getChapterProblems(chapter)
+        if (problems.length > 0) {
+          markdown += `## 💡 必做题目题解\n\n`
+          
+          problems.forEach((problem, index) => {
+            markdown += `### ${index + 1}. ${problem.title}\n\n`
+            
+            if (problem.aiSolution) {
+              markdown += problem.aiSolution
+            } else {
+              markdown += `> 暂无AI题解\n`
+            }
+            
+            markdown += `\n\n---\n\n`
+          })
+        }
 
         const chapterFileName = `${topicFolder}/${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
         archive.append(Buffer.from(markdown, 'utf8'), { name: chapterFileName })
