@@ -2108,6 +2108,135 @@ router.get('/chapter/:chapterId', authenticateToken, async (req, res) => {
   }
 })
 
+// Export review package (review content + problem solutions)
+router.get('/chapter/:chapterId/export-review', authenticateToken, async (req, res) => {
+  try {
+    const { chapterId } = req.params
+    const { levelId } = req.query
+    
+    // Find the chapter
+    const query = { 
+        $or: [
+            { 'chapters.id': chapterId },
+            { 'topics.chapters.id': chapterId }
+        ]
+    }
+    
+    if (levelId && mongoose.Types.ObjectId.isValid(levelId)) {
+        query._id = levelId
+    }
+
+    let level = await CourseLevel.findOne(query)
+
+    if (!level && mongoose.Types.ObjectId.isValid(chapterId)) {
+        const idQuery = { 
+            $or: [
+                { 'chapters._id': chapterId },
+                { 'topics.chapters._id': chapterId }
+            ]
+        }
+        if (levelId && mongoose.Types.ObjectId.isValid(levelId)) {
+            idQuery._id = levelId
+        }
+        level = await CourseLevel.findOne(idQuery)
+    }
+
+    let chapter = null
+    
+    if (level) {
+      let idx = level.chapters.findIndex(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
+      if (idx !== -1) {
+        chapter = level.chapters[idx]
+      } else if (level.topics) {
+        for (const topic of level.topics) {
+          idx = topic.chapters.findIndex(c => c.id === chapterId || (c._id && c._id.toString() === chapterId))
+          if (idx !== -1) {
+            chapter = topic.chapters[idx]
+            break
+          }
+        }
+      }
+    }
+
+    if (!level || !chapter) {
+      return res.status(404).json({ error: 'Chapter not found' })
+    }
+
+    // Get review content
+    const reviewContent = chapter.reviewContent || ''
+
+    // Get problem solutions
+    const problems = []
+    if (chapter.problemIds && chapter.problemIds.length > 0) {
+        for (const pidStr of chapter.problemIds) {
+            let query = {}
+            if (mongoose.Types.ObjectId.isValid(pidStr)) {
+                query = { _id: pidStr }
+            } else if (pidStr.includes(':')) {
+                const [domain, docId] = pidStr.split(':')
+                if (!isNaN(docId)) {
+                    query = { domainId: domain, docId: Number(docId) }
+                } else {
+                    query = { domainId: domain, pid: docId }
+                }
+            } else {
+                if (!isNaN(pidStr)) {
+                    const docId = Number(pidStr)
+                    const sysDoc = await Document.findOne({ domainId: 'system', docId: docId }).select('title docId domainId aiSolution aiSolutionLang contentbok')
+                    if (sysDoc) {
+                        problems.push({
+                            title: sysDoc.title,
+                            docId: sysDoc.docId,
+                            domainId: sysDoc.domainId,
+                            aiSolution: sysDoc.aiSolution || '',
+                            aiSolutionLang: sysDoc.aiSolutionLang || 'C++',
+                            content: sysDoc.contentbok || ''
+                        })
+                        continue
+                    }
+                    query = { docId: docId }
+                } else {
+                    const sysDoc = await Document.findOne({ domainId: 'system', pid: pidStr }).select('title docId domainId aiSolution aiSolutionLang contentbok')
+                    if (sysDoc) {
+                        problems.push({
+                            title: sysDoc.title,
+                            docId: sysDoc.docId,
+                            domainId: sysDoc.domainId,
+                            aiSolution: sysDoc.aiSolution || '',
+                            aiSolutionLang: sysDoc.aiSolutionLang || 'C++',
+                            content: sysDoc.contentbok || ''
+                        })
+                        continue
+                    }
+                    query = { pid: pidStr }
+                }
+            }
+            
+            const doc = await Document.findOne(query).select('title docId domainId aiSolution aiSolutionLang contentbok')
+            if (doc) {
+                problems.push({
+                    title: doc.title,
+                    docId: doc.docId,
+                    domainId: doc.domainId,
+                    aiSolution: doc.aiSolution || '',
+                    aiSolutionLang: doc.aiSolutionLang || 'C++',
+                    content: doc.contentbok || ''
+                })
+            }
+        }
+    }
+
+    res.json({
+        reviewContent,
+        problems
+    })
+
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 
 // Get all course levels (structure)
 router.get('/levels', async (req, res) => {

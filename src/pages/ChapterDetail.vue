@@ -7,6 +7,9 @@
       <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
       <button v-if="canEdit && chapter" @click="copyPreviewLink" class="btn-copy-preview">📋 复制预习链接</button>
       <button v-if="canEdit && chapter && chapter.reviewContent" @click="copyReviewLink" class="btn-copy-review">📋 复制复习链接</button>
+      <button v-if="chapter && (chapter.reviewContent || (chapter.problemIds && chapter.problemIds.length > 0))" @click="exportReviewPackage" class="btn-export-review" :disabled="exporting">
+        {{ exporting ? '导出中...' : '📦 导出复习包' }}
+      </button>
     </div>
 
     <div v-if="loading" class="loading">加载中...</div>
@@ -375,6 +378,7 @@ export default {
       chapter: null,
       userProgress: null,
       submitting: false,
+      exporting: false,
       isMaximized: false,
       fontSize: 18,
       checking: null,
@@ -791,6 +795,66 @@ export default {
         document.execCommand('copy')
         document.body.removeChild(el)
         this.showToastMessage('✅ 复习链接已复制，可直接粘贴到微信群')
+      }
+    },
+    async exportReviewPackage() {
+      if (!this.chapter) return
+      
+      this.exporting = true
+      try {
+        const chapterId = this.chapter.id || this.chapter._id
+        const levelId = this.level._id
+        
+        // 调用后端 API 获取复习包数据
+        const response = await request(`/api/course/chapter/${chapterId}/export-review?levelId=${levelId}`)
+        
+        // 构建 Markdown 内容
+        let markdown = `# ${this.chapter.title} - 复习资料包\n\n`
+        markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
+        markdown += `---\n\n`
+        
+        // 添加复习内容
+        if (response.reviewContent) {
+          markdown += `## 📋 课后复习总结\n\n`
+          markdown += response.reviewContent
+          markdown += `\n\n---\n\n`
+        }
+        
+        // 添加必做题目题解
+        if (response.problems && response.problems.length > 0) {
+          markdown += `## 💡 必做题目题解\n\n`
+          
+          response.problems.forEach((problem, index) => {
+            markdown += `### ${index + 1}. ${problem.title}\n\n`
+            
+            if (problem.aiSolution) {
+              markdown += problem.aiSolution
+            } else {
+              markdown += `> 暂无AI题解\n`
+            }
+            
+            markdown += `\n\n---\n\n`
+          })
+        }
+        
+        // 生成文件并下载
+        const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        const fileName = `${this.chapter.title}-复习资料包.md`
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        this.showToastMessage('✅ 复习资料包已导出')
+      } catch (error) {
+        console.error('导出失败:', error)
+        this.showToastMessage('❌ 导出失败: ' + (error.message || '未知错误'))
+      } finally {
+        this.exporting = false
       }
     },
     renderMath() {
@@ -1309,6 +1373,25 @@ export default {
 }
 .btn-copy-review:hover {
   background: #6d28d9;
+}
+
+.btn-export-review {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-export-review:hover:not(:disabled) {
+  background: #0284c7;
+}
+.btn-export-review:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .content-wrapper {
