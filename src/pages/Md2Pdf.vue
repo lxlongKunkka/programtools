@@ -306,8 +306,8 @@ async function downloadFile(file) {
       }
     })
     
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
+    // response.data 已经是 Blob 对象，直接使用
+    const url = window.URL.createObjectURL(response.data)
     const link = document.createElement('a')
     link.href = url
     link.download = file.name  // 使用原始文件名（包含中文）
@@ -329,8 +329,8 @@ async function previewPdf(file) {
       responseType: 'blob'
     })
     
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const blobUrl = window.URL.createObjectURL(blob)
+    // response.data 已经是 Blob 对象，直接使用
+    const blobUrl = window.URL.createObjectURL(response.data)
     
     // 创建带 blob URL 的文件对象用于预览
     previewFile.value = {
