@@ -3365,6 +3365,8 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                       // Chapters mode
                       content = content.replace(/```json\s*/g, '').replace(/```/g, '').trim()
                       let result = {}
+                      let parseError = null
+                      
                       try {
                         const parsed = JSON.parse(content)
                         if (Array.isArray(parsed)) {
@@ -3373,8 +3375,28 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                             result = parsed
                         }
                       } catch (e) {
-                        const list = content.split('\n').filter(line => line.trim().length > 0).map(l => l.replace(/^\d+\.\s*/, ''))
-                        result = { chapters: list }
+                        console.error(`[Background] JSON Parse Error for topic ${topicId}:`, e.message)
+                        console.error(`[Background] Raw content preview:`, content.slice(0, 500))
+                        parseError = e
+                        
+                        // Fallback: try to extract chapters from newline-separated plain text
+                        // But only if content looks like a simple list (not JSON structure)
+                        if (!content.includes('{') && !content.includes('"description"')) {
+                            const list = content.split('\n')
+                                .filter(line => line.trim().length > 0)
+                                .map(l => l.replace(/^\d+\.\s*/, '').trim())
+                            result = { chapters: list }
+                        } else {
+                            // If it looks like malformed JSON, don't try to parse it as plain text
+                            console.error(`[Background] Content looks like JSON but failed to parse. Aborting chapter creation.`)
+                            throw new Error('AI 返回的章节列表格式错误，无法解析')
+                        }
+                      }
+
+                      // Save description if present
+                      if (result.description && typeof result.description === 'string') {
+                          topicObj.description = result.description
+                          console.log(`[Background] Saved description for topic ${topicId}`)
                       }
 
                       if (result.chapters && Array.isArray(result.chapters)) {
@@ -3398,6 +3420,12 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                                   content = item.content || '';
                               }
 
+                              // Skip items with invalid titles (e.g., JSON fragments)
+                              if (!title || title.length < 2 || title.startsWith('"') || title.includes('": ')) {
+                                  console.warn(`[Background] Skipping invalid chapter title: ${title}`)
+                                  return
+                              }
+
                               topicObj.chapters.push({
                                   id: `${prefix}-${startIdx + idx}`,
                                   title: title,
@@ -3406,6 +3434,8 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
                                   problemIds: []
                               });
                           });
+                          
+                          console.log(`[Background] Added ${result.chapters.length} chapters to topic ${topicId}`)
                       }
                   }
                   await courseLevel.save();
