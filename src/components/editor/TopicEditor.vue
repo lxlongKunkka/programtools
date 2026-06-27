@@ -53,13 +53,15 @@ export default {
     topic:                  { type: Object,   required: true },
     aiLoading:              { type: Boolean,  default: false },
     aiStatus:               { type: String,   default: '' },
+    exporting:              { type: Boolean,  default: false },
     onResetAi:              { type: Function, default: () => {} },
     onGenerateDesc:         { type: Function, default: () => {} },
     onGenerateChapters:     { type: Function, default: () => {} },
     onBatchLessonPlans:     { type: Function, default: () => {} },
     onBatchPpts:            { type: Function, default: () => {} },
     onBatchSolutionPlans:   { type: Function, default: () => {} },
-    onBatchSolutionReports: { type: Function, default: () => {} }
+    onBatchSolutionReports: { type: Function, default: () => {} },
+    onExportAllReviews:     { type: Function, default: () => {} }
   }
 }
 </script>
