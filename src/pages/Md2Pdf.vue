@@ -72,7 +72,7 @@
           <label class="option-item">
             <span class="option-label">页边距</span>
             <select v-model="options.margin">
-              <option value="normal">标准 (2.54 cm)</option>
+              <option value="standard">标准 (2.54 cm)</option>
               <option value="narrow">窄 (1.27 cm)</option>
               <option value="wide">宽 (3.81 cm)</option>
             </select>
@@ -197,7 +197,7 @@ const selectedFiles = ref([])
 const options = ref({
   paperSize: 'A4',
   orientation: 'portrait',
-  margin: 'normal',
+  margin: 'standard',
   displayHeaderFooter: false,
   printBackground: true,
   preferCSSPageSize: false
