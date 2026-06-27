@@ -13,7 +13,7 @@ import adminRoutes from './routes/admin.js'
 import typingRoutes from './routes/typing.js'
 import courseRoutes from './routes/course.js'
 import courseExportRoutes from './routes/course-export.js'
-import toolsRoutes from './routes/tools.js'
+import toolsRoutes, { closeBrowser } from './routes/tools.js'
 import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
@@ -135,4 +135,17 @@ process.on('unhandledRejection', (reason, promise) => {
 
 httpServer.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT} [deployed ${new Date().toLocaleString('zh-CN')}]`)
+})
+
+// 进程退出时清理浏览器实例
+process.on('SIGINT', async () => {
+  console.log('\n正在关闭服务器...')
+  await closeBrowser()
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  console.log('\n正在关闭服务器...')
+  await closeBrowser()
+  process.exit(0)
 })

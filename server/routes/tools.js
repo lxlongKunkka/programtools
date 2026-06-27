@@ -93,9 +93,52 @@ document.addEventListener("DOMContentLoaded", () => {
 </html>`
 }
 
+// 浏览器单例（参考 md2pdf_core.js）
+let browserInstance = null
+let conversionCount = 0
+
+// 获取或创建浏览器实例
+async function getBrowser() {
+  const chromePath = path.join(__dirname, '../../other/dist/chrome-linux64/chrome')
+  
+  if (!browserInstance) {
+    browserInstance = await chromium.launch({
+      headless: true,
+      executablePath: chromePath,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    })
+    
+    // 浏览器断开时清空实例
+    browserInstance.on('disconnected', () => {
+      browserInstance = null
+      conversionCount = 0
+    })
+  }
+  
+  // 每 100 次转换重启一次浏览器（防止内存泄漏）
+  conversionCount++
+  if (conversionCount > 100) {
+    await browserInstance.close().catch(() => {})
+    browserInstance = null
+    conversionCount = 0
+    return getBrowser()
+  }
+  
+  return browserInstance
+}
+
+// 关闭浏览器
+async function closeBrowser() {
+  if (browserInstance) {
+    await browserInstance.close().catch(() => {})
+    browserInstance = null
+    conversionCount = 0
+  }
+}
+
 // 将 Markdown 转换为 PDF
 async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
-  let browser = null
+  let page = null
   
   try {
     // 读取 Markdown 文件
@@ -104,19 +147,18 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
     // 生成 HTML
     const html = makeHtml(mdContent)
     
-    // Chrome 可执行文件路径
-    const chromePath = path.join(__dirname, '../../other/dist/chrome-linux64/chrome')
+    // 获取浏览器实例（单例模式）
+    const browser = await getBrowser()
+    page = await browser.newPage()
     
-    // 启动浏览器
-    browser = await chromium.launch({
-      headless: true,
-      executablePath: chromePath
+    // 加载 HTML（等待网络空闲）
+    await page.setContent(html, { 
+      waitUntil: 'networkidle',
+      timeout: 30000 
     })
     
-    const page = await browser.newPage()
-    
-    // 加载 HTML
-    await page.setContent(html, { waitUntil: 'networkidle' })
+    // 等待 KaTeX 渲染完成（参考 md2pdf_core.js）
+    await page.waitForTimeout(800)
     
     // 配置 PDF 选项
     const pdfOptions = {
@@ -140,13 +182,15 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
     // 生成 PDF
     await page.pdf(pdfOptions)
     
-    await browser.close()
+    // 只关闭页面，保持浏览器实例
+    await page.close()
     
     console.log(`PDF 转换成功: ${pdfPath}`)
   } catch (error) {
-    if (browser) {
-      await browser.close().catch(() => {})
+    if (page) {
+      await page.close().catch(() => {})
     }
+    console.error('PDF 转换错误:', error)
     throw new Error(`PDF 转换失败: ${error.message}`)
   }
 }
@@ -278,5 +322,8 @@ async function cleanupOldFiles() {
 
 // 每30分钟清理一次
 setInterval(cleanupOldFiles, 30 * 60 * 1000)
+
+// 导出浏览器清理函数
+export { closeBrowser }
 
 export default router
