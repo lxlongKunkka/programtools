@@ -197,7 +197,13 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
       'wide': { top: '3.81cm', right: '3.81cm', bottom: '3.81cm', left: '3.81cm' }
     }
     
-    pdfOptions.margin = marginMap[options.margin] || marginMap['standard']
+    // 处理自定义边距
+    if (options.margin === 'custom' && options.customMargin) {
+      const cm = `${options.customMargin}cm`
+      pdfOptions.margin = { top: cm, right: cm, bottom: cm, left: cm }
+    } else {
+      pdfOptions.margin = marginMap[options.margin] || marginMap['standard']
+    }
     
     console.log('[MD2PDF] PDF 生成选项:', JSON.stringify(pdfOptions))
     

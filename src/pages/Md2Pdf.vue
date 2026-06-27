@@ -75,7 +75,20 @@
               <option value="standard">标准 (2.54 cm)</option>
               <option value="narrow">窄 (1.27 cm)</option>
               <option value="wide">宽 (3.81 cm)</option>
+              <option value="custom">自定义...</option>
             </select>
+          </label>
+
+          <label v-if="options.margin === 'custom'" class="option-item">
+            <span class="option-label">自定义边距 (cm)</span>
+            <input 
+              type="number" 
+              v-model.number="options.customMargin" 
+              min="0" 
+              max="10" 
+              step="0.1" 
+              placeholder="例如: 0.508"
+            />
           </label>
 
           <label class="option-item checkbox-item">
@@ -198,6 +211,7 @@ const options = ref({
   paperSize: 'A4',
   orientation: 'portrait',
   margin: 'standard',
+  customMargin: 0.5,
   displayHeaderFooter: false,
   printBackground: true,
   preferCSSPageSize: false
