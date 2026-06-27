@@ -2,9 +2,11 @@ import express from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs/promises'
+import { existsSync, readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
-import { spawn } from 'child_process'
 import archiver from 'archiver'
+import { chromium } from 'playwright'
+import { marked } from 'marked'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const router = express.Router()
@@ -25,7 +27,7 @@ const upload = multer({
 // 临时文件目录
 const TEMP_UPLOAD_DIR = path.join(__dirname, '../../temp/uploads')
 const TEMP_PDF_DIR = path.join(__dirname, '../../temp/pdf-outputs')
-const MD2PDF_BUNDLE = path.join(__dirname, '../../other/dist/md2pdf_bundle.js')
+const ASSETS_DIR = path.join(__dirname, '../../other/dist/assets')
 
 // 确保临时目录存在
 async function ensureTempDirs() {
@@ -39,53 +41,108 @@ async function ensureTempDirs() {
 
 ensureTempDirs()
 
+// 加载样式资源
+let HLJS_CSS, KATEX_CSS, MANUAL_CSS, HLJS_JS, KATEX_JS
+
+try {
+  HLJS_CSS = readFileSync(path.join(ASSETS_DIR, 'hljs.css'), 'utf8')
+  KATEX_CSS = readFileSync(path.join(ASSETS_DIR, 'katex.css'), 'utf8')
+  MANUAL_CSS = readFileSync(path.join(ASSETS_DIR, 'typora_manual_theme.css'), 'utf8')
+  HLJS_JS = readFileSync(path.join(ASSETS_DIR, 'hljs.js'), 'utf8')
+  KATEX_JS = readFileSync(path.join(ASSETS_DIR, 'katex.js'), 'utf8')
+  console.log('成功加载 assets 资源')
+} catch (error) {
+  console.error('加载 assets 资源失败:', error)
+}
+
+// 生成 HTML
+function makeHtml(mdContent) {
+  const body = marked.parse(mdContent)
+  
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>${HLJS_CSS}</style>
+<style>${KATEX_CSS}</style>
+<style>${MANUAL_CSS}</style>
+<script>${HLJS_JS}</script>
+<script>${KATEX_JS}</script>
+</head>
+<body>
+${body}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof hljs !== 'undefined') {
+    hljs.highlightAll();
+  }
+  if (typeof renderMathInElement !== 'undefined') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left:"$$",right:"$$",display:true},
+        {left:"$",right:"$",display:false}
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+</body>
+</html>`
+}
+
 // 将 Markdown 转换为 PDF
 async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
-  return new Promise((resolve, reject) => {
-    // 构建命令参数
-    const args = [MD2PDF_BUNDLE, mdPath, '-o', pdfPath]
+  let browser = null
+  
+  try {
+    // 读取 Markdown 文件
+    const mdContent = await fs.readFile(mdPath, 'utf8')
     
-    // 添加选项参数
-    if (options.paperSize) args.push('--paper-size', options.paperSize)
-    if (options.orientation) args.push('--orientation', options.orientation)
-    if (options.margin) args.push('--margin', options.margin)
-    if (options.displayHeaderFooter) args.push('--header-footer')
-    if (options.printBackground) args.push('--print-background')
+    // 生成 HTML
+    const html = makeHtml(mdContent)
     
-    const childProcess = spawn('node', args, {
-      stdio: 'pipe',
-      env: { ...process.env, NODE_ENV: 'production' }
+    // 启动浏览器
+    browser = await chromium.launch({
+      headless: true
     })
     
-    let stdout = ''
-    let stderr = ''
+    const page = await browser.newPage()
     
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
+    // 加载 HTML
+    await page.setContent(html, { waitUntil: 'networkidle' })
     
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
+    // 配置 PDF 选项
+    const pdfOptions = {
+      path: pdfPath,
+      format: options.paperSize || 'A4',
+      landscape: options.orientation === 'landscape',
+      printBackground: options.printBackground !== false,
+      displayHeaderFooter: options.displayHeaderFooter || false,
+      margin: {}
+    }
     
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr })
-      } else {
-        reject(new Error(`PDF 转换失败 (code ${code}): ${stderr || '未知错误'}`))
-      }
-    })
+    // 设置页边距
+    const marginMap = {
+      'standard': { top: '2.54cm', right: '2.54cm', bottom: '2.54cm', left: '2.54cm' },
+      'narrow': { top: '1.27cm', right: '1.27cm', bottom: '1.27cm', left: '1.27cm' },
+      'wide': { top: '3.81cm', right: '3.81cm', bottom: '3.81cm', left: '3.81cm' }
+    }
     
-    childProcess.on('error', (error) => {
-      reject(new Error(`启动转换工具失败: ${error.message}`))
-    })
+    pdfOptions.margin = marginMap[options.margin] || marginMap['standard']
     
-    // 设置超时（2分钟）
-    setTimeout(() => {
-      childProcess.kill()
-      reject(new Error('PDF 转换超时（2分钟）'))
-    }, 2 * 60 * 1000)
-  })
+    // 生成 PDF
+    await page.pdf(pdfOptions)
+    
+    await browser.close()
+    
+    console.log(`PDF 转换成功: ${pdfPath}`)
+  } catch (error) {
+    if (browser) {
+      await browser.close().catch(() => {})
+    }
+    throw new Error(`PDF 转换失败: ${error.message}`)
+  }
 }
 
 // 单文件转换接口
