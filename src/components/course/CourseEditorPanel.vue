@@ -2139,7 +2139,7 @@ export default {
 
     async batchGenerateLessonPlans() {
       if (!this.editingTopic.chapters || this.editingTopic.chapters.length === 0) return this.showToastMessage('当前知识点没有章节')
-      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成教案吗？这将覆盖已有内容。`)) return
+      if (!confirm(`确定要为本知识点下的 ${this.editingTopic.chapters.length} 个章节生成预习、教案、复习内容吗？这将覆盖已有内容。`)) return
 
       const levelNum = this.editingLevelForTopic.level
       const topicTitle = this.editingTopic.title
@@ -2157,12 +2157,13 @@ export default {
         const chapterId = chapter._id || chapter.id
         const chapterTitle = chapter.title
 
-        this.aiStatusMap[topicId] = `正在提交教案任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
+        this.aiStatusMap[topicId] = `正在提交任务 (${i + 1}/${this.editingTopic.chapters.length}): ${chapterTitle}`
         
         try {
             this.aiLoadingMap[chapterId] = true
-            this.aiStatusMap[chapterId] = '正在后台生成教案...'
+            this.aiStatusMap[chapterId] = '正在后台生成内容...'
 
+            // 1. 生成教案
             await request('/api/lesson-plan/background', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -2178,9 +2179,44 @@ export default {
                     existingContent: chapter.content || ''
                 })
             })
+
+            // 2. 生成预习内容
+            await request('/api/preview-content/background', {
+                method: 'POST',
+                body: JSON.stringify({
+                    topic: chapterTitle,
+                    context: topicTitle,
+                    topicId: topicId,
+                    level: `Level ${levelNum}`,
+                    model: model,
+                    language: language,
+                    chapterId: chapterId,
+                    clientKey: `${chapterId}-preview`,
+                    lessonContent: chapter.content || '',
+                    requirements: ''
+                })
+            })
+
+            // 3. 生成复习内容
+            await request('/api/review-content/background', {
+                method: 'POST',
+                body: JSON.stringify({
+                    topic: chapterTitle,
+                    context: topicTitle,
+                    topicId: topicId,
+                    level: `Level ${levelNum}`,
+                    model: model,
+                    language: language,
+                    chapterId: chapterId,
+                    clientKey: `${chapterId}-review`,
+                    lessonContent: chapter.content || '',
+                    requirements: ''
+                })
+            })
+
             successCount++
         } catch (e) {
-            console.error(`Failed to submit lesson plan for ${chapterTitle}`, e)
+            console.error(`Failed to submit tasks for ${chapterTitle}`, e)
             this.aiLoadingMap[chapterId] = false
             this.aiStatusMap[chapterId] = '提交失败'
         }
@@ -2189,7 +2225,7 @@ export default {
 
       this.aiLoadingMap[topicId] = false
       this.aiStatusMap[topicId] = ''
-      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+      this.showToastMessage(`批量任务提交完成，共为 ${successCount} 个章节提交了预习、教案、复习任务`)
     },
 
     async batchGeneratePPTs() {
@@ -2439,7 +2475,7 @@ export default {
 
     async batchGenerateLevelLessonPlans() {
       if (!this.editingLevel.topics || this.editingLevel.topics.length === 0) return this.showToastMessage('当前模块没有知识点')
-      if (!confirm(`确定要为本模块下的所有章节生成教案吗？这将覆盖已有内容。`)) return
+      if (!confirm(`确定要为本模块下的所有章节生成预习、教案、复习内容吗？这将覆盖已有内容。`)) return
 
       const levelNum = this.editingLevel.level
       const groupName = this.editingLevel.group
@@ -2461,12 +2497,13 @@ export default {
             const chapterId = chapter._id || chapter.id
             const chapterTitle = chapter.title
 
-            this.aiStatusMap[levelId] = `正在提交教案任务: ${topicTitle} - ${chapterTitle}`
+            this.aiStatusMap[levelId] = `正在提交任务: ${topicTitle} - ${chapterTitle}`
             
             try {
                 this.aiLoadingMap[chapterId] = true
-                this.aiStatusMap[chapterId] = '正在后台生成教案...'
+                this.aiStatusMap[chapterId] = '正在后台生成内容...'
 
+                // 1. 生成教案
                 await request('/api/lesson-plan/background', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -2482,9 +2519,44 @@ export default {
                         existingContent: chapter.content || ''
                     })
                 })
+
+                // 2. 生成预习内容
+                await request('/api/preview-content/background', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        topic: chapterTitle,
+                        context: topicTitle,
+                        topicId: topicId,
+                        level: `Level ${levelNum}`,
+                        model: model,
+                        language: language,
+                        chapterId: chapterId,
+                        clientKey: `${chapterId}-preview`,
+                        lessonContent: chapter.content || '',
+                        requirements: ''
+                    })
+                })
+
+                // 3. 生成复习内容
+                await request('/api/review-content/background', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        topic: chapterTitle,
+                        context: topicTitle,
+                        topicId: topicId,
+                        level: `Level ${levelNum}`,
+                        model: model,
+                        language: language,
+                        chapterId: chapterId,
+                        clientKey: `${chapterId}-review`,
+                        lessonContent: chapter.content || '',
+                        requirements: ''
+                    })
+                })
+
                 successCount++
             } catch (e) {
-                console.error(`Failed to submit lesson plan for ${chapterTitle}`, e)
+                console.error(`Failed to submit tasks for ${chapterTitle}`, e)
                 this.aiLoadingMap[chapterId] = false
                 this.aiStatusMap[chapterId] = '提交失败'
             }
@@ -2494,7 +2566,7 @@ export default {
 
       this.aiLoadingMap[levelId] = false
       this.aiStatusMap[levelId] = ''
-      this.showToastMessage(`批量任务提交完成，共提交 ${successCount} 个任务`)
+      this.showToastMessage(`批量任务提交完成，共为 ${successCount} 个章节提交了预习、教案、复习任务`)
     },
 
     async batchGenerateLevelPPTs() {
