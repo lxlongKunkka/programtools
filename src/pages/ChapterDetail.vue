@@ -7,7 +7,7 @@
       <button v-if="canEdit && chapter" @click="openEditMode" class="btn-edit-chapter">✏️ 编辑此章节</button>
       <button v-if="canEdit && chapter" @click="copyPreviewLink" class="btn-copy-preview">📋 复制预习链接</button>
       <button v-if="canEdit && chapter && chapter.reviewContent" @click="copyReviewLink" class="btn-copy-review">📋 复制复习链接</button>
-      <button v-if="chapter && (chapter.reviewContent || (chapter.problemIds && chapter.problemIds.length > 0))" @click="exportReviewPackage" class="btn-export-review" :disabled="exporting">
+      <button v-if="canEdit && chapter && (chapter.reviewContent || (chapter.problemIds && chapter.problemIds.length > 0))" @click="exportReviewPackage" class="btn-export-review" :disabled="exporting">
         {{ exporting ? '导出中...' : '📦 导出复习包' }}
       </button>
     </div>
