@@ -182,7 +182,7 @@
           <h3>{{ previewFile.name }}</h3>
           <button class="btn-close" @click="closePreview">✕</button>
         </div>
-        <iframe :src="previewFile.url" class="preview-iframe"></iframe>
+        <iframe :src="previewFile.blobUrl" class="preview-iframe"></iframe>
       </div>
     </div>
   </div>
@@ -298,9 +298,15 @@ async function convertToPdf() {
 // 下载单个文件
 async function downloadFile(file) {
   try {
-    // 使用 fetch 获取文件，然后用 blob 下载，避免中文文件名编码问题
-    const response = await fetch(file.url)
-    const blob = await response.blob()
+    // 使用 axios 获取文件（带认证），然后用 blob 下载
+    const response = await axios.get(file.url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/pdf'
+      }
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -311,17 +317,37 @@ async function downloadFile(file) {
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('下载失败:', error)
-    alert('下载失败，请重试')
+    alert('下载失败: ' + (error.response?.data || error.message))
   }
 }
 
 // 预览 PDF
-function previewPdf(file) {
-  previewFile.value = file
+async function previewPdf(file) {
+  try {
+    // 使用 axios 获取 PDF blob，避免 iframe 跨域问题
+    const response = await axios.get(file.url, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const blobUrl = window.URL.createObjectURL(blob)
+    
+    // 创建带 blob URL 的文件对象用于预览
+    previewFile.value = {
+      ...file,
+      blobUrl: blobUrl
+    }
+  } catch (error) {
+    console.error('加载预览失败:', error)
+    alert('加载预览失败，请直接下载')
+  }
 }
 
 // 关闭预览
 function closePreview() {
+  if (previewFile.value?.blobUrl) {
+    window.URL.revokeObjectURL(previewFile.value.blobUrl)
+  }
   previewFile.value = null
 }
 
