@@ -304,11 +304,12 @@ export default {
 
     selectNode(type, data, parentLevel = null, preventExpand = false) {
       if (!data) return
-      this.selectedNode = { type, id: data._id || data.name }
+      const nodeId = data._id || data.id || data.name
+      this.selectedNode = { type, id: nodeId }
       this.selectedData = data
       if (type === 'topic') this.selectedLevel = parentLevel
       if (type === 'group' && !preventExpand) data.collapsed = false
-      if (this.editMode) this.editModeNode = { type, id: data._id || data.name }
+      if (this.editMode) this.editModeNode = { type, id: nodeId }
     },
 
     enterEditMode() {
@@ -320,13 +321,18 @@ export default {
 
     enterEditModeForChapter(chapter, level, topic) {
       if (level && topic) {
-        this.selectedNode = { type: 'topic', id: topic._id }
+        this.selectedNode = { type: 'topic', id: topic._id || topic.id }
         this.selectedData = topic
         this.selectedLevel = level
       }
       this.editMode = true
       this.$nextTick(() => {
-        this.editModeNode = { type: 'chapter', id: chapter._id, docId: chapter.id, levelId: level ? level._id : undefined }
+        this.editModeNode = {
+          type: 'chapter',
+          id: chapter._id || chapter.id,
+          docId: chapter.id,
+          levelId: level ? level._id : undefined
+        }
       })
     },
     triggerEditorAction(actionName, ...args) {
@@ -371,9 +377,14 @@ export default {
     },
 
     selectChapterInTree(chapter, level, topic) {
-      const node = { type: 'chapter', id: chapter._id, docId: chapter.id, levelId: level ? level._id : undefined }
+      const node = {
+        type: 'chapter',
+        id: chapter._id || chapter.id,
+        docId: chapter.id,
+        levelId: level ? level._id : undefined
+      }
       if (!this.editMode) {
-        this.selectedNode = { type: 'topic', id: topic._id }
+        this.selectedNode = { type: 'topic', id: topic._id || topic.id }
         this.selectedData = topic
         this.selectedLevel = level
         this.editMode = true
@@ -401,7 +412,7 @@ export default {
 
     async viewLearnerProgress(user) {
       const scopeType = this.selectedNode?.type
-      const scopeId = this.selectedData?._id
+      const scopeId = this.selectedData?._id || this.selectedData?.id
       if (!user?._id || !scopeId || !['level', 'topic'].includes(scopeType)) {
         return
       }

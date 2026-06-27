@@ -1,0 +1,892 @@
+[
+  {
+    "level": 1,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 1 级：初识 C++ · 变量与 I/O · 数据类型 · 三大控制流",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0101  初识 C++（Hello World · 编译器 · 注释 · cout）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0102  变量与 cin/cout 输入输出",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0103  算术运算 · 自增自减",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0104  算术运算强化 · 数位拆分",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0105  更多数据类型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0106  浮点数算术运算 · 字符类型练习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0107  关系运算符 · 单分支/双分支语句",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0108  逻辑运算符 · 多分支语句",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0109  switch-case 简介 · 分支结构强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0110  三目运算符 · 运算优先级 · 分支结构强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0111  for 循环",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0112  while / do-while 循环",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0113  循环结构强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0114  break / continue · 循环结构强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0115  printf + scanf · 计算机基础 · 全章节强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0116  GESP 1 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 2,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 2 级：字符、嵌套、数组与算法启蒙",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0201  ASCII 编码 · 字符与整数互转 · 大小写转换",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0202  多层分支结构 · 强化练习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0203  计算机常识 · 软硬件、操作系统、网络、流程图",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0204  常用数学函数 · max/min/sqrt/pow/abs/floor/round/ceil",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0205  多层循环结构",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0206  多层循环 · 图案打印",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0207  循环应用 · 数位分离",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0208  循环应用 · 最长平台模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0209  简单枚举算法",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0210  简单模拟算法",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0211  一维数组基础 · 访问与读写",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0212  一维数组常见操作 · 插入/删除/翻转/查找",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0213  数组强化练习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0214  笔试题专场 · 计算机基础 + 语法基础",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0215  三大结构 + 数组强化练习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0216  GESP 2 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 3,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 3 级：一维数组、字符串、进制位运算、枚举与模拟",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0301  一维数组 · 回顾、遍历、求和与最值",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0302  一维数组 · 桶思想（计数与频次）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0303  字符数组 · 定义、初始化、输入输出",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0304  string 类 · 构造、运算符、内置函数",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0305  字符串强化 · 内置函数综合训练",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0306  进制转换 + 位运算 + 原码/反码/补码（合并课）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0307  枚举进阶 · 多维枚举与经典枚举题",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0308  枚举应用 · 枚举 + 判断筛选",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0309  枚举 + 简单模拟综合",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0310  模拟进阶 · 一维数组模拟与计数器",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0311  模拟强化 · 字符串模拟与日期推进",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0312  综合强化 · 三大结构 + 数组 + 字符串",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0313  综合强化 · 枚举 + 模拟 + 字符串综合",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0314  综合强化 · 全模块压轴题",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0315  GESP 3 级全真模拟（上机+笔试）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0316  GESP 3 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 4,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 4 级：函数、指针、结构体、二维数组、排序、递推、算法复杂度、文件操作、异常处理",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0401  函数基础 · 定义、声明与调用",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0402  函数与数论应用",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0403  函数强化练习 · 竞赛专题",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0404  二维数组基础 · 定义、遍历与基本操作",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0405  二维数组应用 · 矩阵填充与图案生成",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0406  结构体 · 定义、初始化、成员访问与结构体数组",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0407  指针与引用 + 算法复杂度 + 文件重定向 + 异常处理（合并课）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0408  简单排序 · 冒泡、选择、插入与桶排序",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0409  sort 函数与自定义排序",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0410  结构体排序 · 多关键字排序与稳定排序",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0411  排序综合练习 · 算法对比与综合强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0412  递推算法 · 递推关系与状态转移",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0413  枚举综合练习 · 多重循环与经典枚举题",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0414  模拟进阶 · 复杂状态与多变量",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0415  综合练习 · 真题模拟与强化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0416  GESP 4 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 5,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 5 级：STL、数论、高精度、链表、递归、排序、前缀和、二分、贪心、离散化、二进制枚举",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0501  STL 容器 · vector、pair、map 与 set",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0502  数学基础 · 质数判定、GCD、LCM 与质因数分解",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0503  筛法与模运算 · 埃氏筛、线性筛、模与同余、快速幂",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0504  高精度运算 · 加减乘除四则运算",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0505  一维前缀和与差分",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0506  二分查找",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0507  二分答案",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0508  双指针",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0509  贪心算法",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0510  离散化及应用",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0511  链表",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0512  递归算法",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0513  快速排序与归并排序",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0514  二维前缀和与差分",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0515  二进制枚举 · 位掩码与子集应用",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0516  GESP 5 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 6,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 6 级：栈队列 · 树 · 搜索 · DP · 背包 · OOP",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0601  线性表 · 栈与队列",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0602  树形结构 · 树的遍历",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0603  堆与优先队列",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0604  图论基础 · 存图方式",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0605  BFS 基本框架 · 最短路径模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0606  BFS 应用 · 求连通块",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0607  多源 BFS · 0-1 BFS",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0608  DFS 基本框架 · 连通块和路径枚举",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0609  DFS 的优化策略",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0610  DFS 综合练习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0611  动态规划基础 · 一维动态规划",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0612  LIS / LCS 模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0613  0-1 背包模型 · 完全背包模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0614  多重背包模型 · 混合背包模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0615  面向对象 · 哈夫曼编码 · 格雷码 · 综合复习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0616  GESP 6 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 7,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 7 级：二维/区间 DP · 图论 · BFS/DFS 进阶 · 哈希表",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0701  二维线性 DP",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0702  区间 DP",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0703  图上的 BFS 进阶",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0704  图上的 BFS 进阶 2",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0705  图上的 DFS 进阶 · Flood Fill",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0706  图上的 DFS 进阶 2",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0707  拓扑排序（Kahn 算法）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0708  并查集及优化",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0709  字符串算法 · 哈希",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0710  倍增与 ST 表",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0711  树上的简单操作",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0712  树的直径 · 树的重心",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0713  DP 回顾 · 数学函数 · LIS/LCS 模型",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0714  综合复习 · DP/图/哈希 综合实战",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0715  综合复习 · 真题冲刺",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0716  GESP 7 级通关测评",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 8,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 8 级：数论 · 组合 · 图论 · 树上 DP · 倍增 LCA · 数据结构",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0801  数学 · 质数筛的应用与线性筛进阶",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0802  数论 · EXGCD 与模逆元",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0803  数论 · 矩阵乘法与快速幂",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0804  数学 · 容斥 · 错排 · 圆排列 · 鸽巢",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0805  图论 · 最短路 Dijkstra",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0806  图论 · 最短路 SPFA 与 Bellman-Ford",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0807  图论 · 最小生成树 Prim 与 Kruskal",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0808  树形 DP · 基础",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0809  树形 DP · 树上背包与换根 DP",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0810  树形 · 倍增 LCA",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0811  数据结构 · 单调队列与单调栈",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0812  数据结构 · 树状数组 BIT",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0813  DP · 二维 DP 进阶",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0814  DP · 多维 DP 进阶",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0815  综合复习 · GESP 8 全模块综合复习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0816  GESP 8 级过关测试",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 9,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 9 级：数据结构 · DP · 图论 · 字符串 · 树形 · GESP 9 过关测试",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L0901  数据结构 · 树状数组深化（区间修改 + 区间查询 / 二维 BIT）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0902  数据结构 · 树状数组综合应用（逆序对 / 离线查询）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0903  数据结构 · 线段树 · 建树 + 单点修改 + 区间查询",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0904  数据结构 · 线段树 · 懒标记与区间修改",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0905  数据结构 · 线段树 · 双标记 + 动态开点",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0906  DP · 状态压缩 DP（位运算 + 子集枚举）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0907  DP · 单调队列优化 DP + 综合复习",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0908  图论 · 强连通分量 Tarjan / Kosaraju",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0909  图论 · 割点 · 割边 · 双连通分量",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0910  图论 · 二分图判定 + 匈牙利算法（最大匹配）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0911  字符串 · 字典树 Trie（基础 + 应用）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0912  字符串 · KMP 字符串匹配 + Manacher 回文算法",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0913  树形 · 树链剖分 · 基础（重链剖分 + LCA 树链）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0914  树形 · 树链剖分 · 高级（子树修改 + 树上差分）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0915  树形 · 虚树（构建 + 虚树 DP）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L0916  GESP 9 级过关测试（CSP-S T1-T3 难度）",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  },
+  {
+    "level": 10,
+    "group": "岐麦教育 C++ 信奥全体系课程（v8.1）",
+    "title": "GESP 10 级：数学 · DP 优化 · 图论 · 字符串 · 平衡树 · GESP 10 通关测评",
+    "description": "",
+    "subject": "C++",
+    "topics": [
+      {
+        "title": "L1001  数学 · 卡特兰数 / 斯特林数 / 母函数",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1002  数学 · 博弈论 · SG 函数 / Nim 博弈",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1003  数学 · 概率与期望 DP",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1004  数学 · 高斯消元",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1005  DP · 斜率优化 + 单调队列综合",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1006  DP · 决策单调性 + 四边形不等式",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1007  DP · 综合 · 真题压轴",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1008  图论 · 2-SAT 问题",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1009  图论 · 差分约束系统",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1010  图论 · 网络流 · 最大流（Dinic）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1011  图论 · 网络流 · 最小割 + 最大流应用",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1012  图论 · 树上分治 · 点分治",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1013  字符串 · AC 自动机（多模式匹配）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1014  字符串 · 后缀数组 SA（基础）",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1015  数据结构 · 平衡树 · Treap",
+        "description": "",
+        "chapters": []
+      },
+      {
+        "title": "L1016  GESP 10 级通关测评（模拟 NOIP）",
+        "description": "",
+        "chapters": []
+      }
+    ]
+  }
+]
