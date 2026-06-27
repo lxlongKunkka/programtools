@@ -13,6 +13,7 @@ import adminRoutes from './routes/admin.js'
 import typingRoutes from './routes/typing.js'
 import courseRoutes from './routes/course.js'
 import courseExportRoutes from './routes/course-export.js'
+import toolsRoutes from './routes/tools.js'
 import dailyRoutes from './routes/daily.js'
 import gespRoutes from './routes/gesp.js'
 import sudokuRoutes from './routes/sudoku.js'
@@ -66,6 +67,9 @@ app.use('/public', express.static(path.join(__dirname, 'public')))
 // Serve PDF exports (temporary files)
 app.use('/temp/pdf-exports', express.static(path.join(__dirname, '../temp/pdf-exports')))
 
+// Serve PDF outputs from md2pdf tool
+app.use('/temp/pdf-outputs', express.static(path.join(__dirname, '../temp/pdf-outputs')))
+
 // [Fix] Also serve under /api/public to bypass Nginx/Frontend routing issues in production
 // Since /api is usually proxied to backend, this ensures static files are served by Node
 app.use('/api/public/courseware', protectStatic, express.static(path.join(__dirname, 'public/courseware')))
@@ -83,6 +87,7 @@ app.use('/api', dataRoutes)
 app.use('/api/typing', typingRoutes)
 app.use('/api/course', courseRoutes)
 app.use('/api/course', courseExportRoutes)
+app.use('/api/tools', toolsRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/daily', dailyRoutes)
 app.use('/api/gesp', gespRoutes)

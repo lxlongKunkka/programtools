@@ -17,6 +17,7 @@ const Typing = () => import('../pages/Typing.vue')
 const LearningMap = () => import('../pages/LearningMap.vue')
 const ChapterDetail = () => import('../pages/ChapterDetail.vue')
 const CoursePdfExport = () => import('../pages/CoursePdfExport.vue')
+const Md2Pdf = () => import('../pages/Md2Pdf.vue')
 const DailyProblem = () => import('../pages/DailyProblem.vue')
 const QuizDaily = () => import('../pages/QuizDaily.vue')
 const SolutionReport = () => import('../pages/SolutionReport.vue')
@@ -42,6 +43,7 @@ const routes = [
   { path: '/quiz-daily', redirect: '/' },
   { path: '/gesp', component: GespTool, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },
   { path: '/gesp-map', component: GespMap, meta: { requiresAuth: true } },
+  { path: '/md2pdf', component: Md2Pdf },
   { path: '/login', component: Login },
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, allowedRoles: ['admin', 'teacher'] } },

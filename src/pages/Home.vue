@@ -55,6 +55,12 @@
           <div class="card-desc">PDF 试卷转 Hydro 题库，自动提取图片。</div>
         </router-link>
 
+        <router-link to="/md2pdf" class="card">
+          <div class="card-icon">📝</div>
+          <div class="card-title">Markdown 转 PDF</div>
+          <div class="card-desc">上传 Markdown 文件，在线转换为精美 PDF。</div>
+        </router-link>
+
         <router-link v-if="showGames" to="/sudoku" class="card">
           <div class="card-icon">🧩</div>
           <div class="card-title">数独游戏</div>
