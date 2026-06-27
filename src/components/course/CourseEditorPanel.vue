@@ -894,7 +894,7 @@ export default {
             console.error('Failed to fetch teachers', e)
         }
     },
-    fetchLevels() { this.fetchData() }, // Alias for compatibility
+    fetchLevels() { return this.fetchData() }, // Alias for compatibility - must return Promise
 
     // Phase A: navigate to the node indicated by the initialNode prop
     applyInitialNode() {
