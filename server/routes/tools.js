@@ -272,14 +272,18 @@ router.post('/md2pdf/download-all', async (req, res) => {
     res.attachment(`markdown-pdfs-${Date.now()}.zip`)
     archive.pipe(res)
     
-    // 添加所有文件到 zip
-    for (const filePath of files) {
+    // 添加所有文件到 zip（优先使用前端传入的原始文件名）
+    for (const fileItem of files) {
       try {
+        const filePath = typeof fileItem === 'string' ? fileItem : fileItem.path
+        const preferredName = typeof fileItem === 'object' && fileItem ? fileItem.name : ''
+        if (!filePath) continue
         await fs.access(filePath)
-        const fileName = path.basename(filePath).replace(/^\d+-/, '') // 移除时间戳前缀
+        const fileName = preferredName || path.basename(filePath).replace(/^\d+-/, '') // 兼容旧调用
         archive.file(filePath, { name: fileName })
       } catch (error) {
-        console.error(`文件不存在: ${filePath}`)
+        const missingPath = typeof fileItem === 'string' ? fileItem : fileItem?.path
+        console.error(`文件不存在: ${missingPath}`)
       }
     }
     

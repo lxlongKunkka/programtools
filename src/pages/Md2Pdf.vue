@@ -355,7 +355,10 @@ function closePreview() {
 async function downloadAll() {
   try {
     const response = await axios.post('/api/tools/md2pdf/download-all', {
-      files: convertedFiles.value.map(f => f.path)
+      files: convertedFiles.value.map(f => ({
+        path: f.path,
+        name: f.name
+      }))
     }, {
       responseType: 'blob'
     })
