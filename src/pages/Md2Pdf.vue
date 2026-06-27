@@ -296,11 +296,23 @@ async function convertToPdf() {
 }
 
 // 下载单个文件
-function downloadFile(file) {
-  const link = document.createElement('a')
-  link.href = file.url
-  link.download = file.name
-  link.click()
+async function downloadFile(file) {
+  try {
+    // 使用 fetch 获取文件，然后用 blob 下载，避免中文文件名编码问题
+    const response = await fetch(file.url)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.name  // 使用原始文件名（包含中文）
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('下载失败:', error)
+    alert('下载失败，请重试')
+  }
 }
 
 // 预览 PDF

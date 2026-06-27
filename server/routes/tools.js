@@ -158,8 +158,10 @@ router.post('/md2pdf', upload.single('file'), async (req, res) => {
     
     const options = req.body.options ? JSON.parse(req.body.options) : {}
     const mdPath = req.file.path
-    const pdfFileName = req.file.originalname.replace(/\.(md|markdown)$/, '.pdf')
-    const pdfPath = path.join(TEMP_PDF_DIR, `${Date.now()}-${pdfFileName}`)
+    const originalFileName = req.file.originalname.replace(/\.(md|markdown)$/, '.pdf')
+    // 使用时间戳作为文件系统名称，避免中文路径问题
+    const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`
+    const pdfPath = path.join(TEMP_PDF_DIR, safeFileName)
     
     // 转换为 PDF
     await convertMd2Pdf(mdPath, pdfPath, options)
@@ -173,10 +175,11 @@ router.post('/md2pdf', upload.single('file'), async (req, res) => {
     res.json({
       success: true,
       file: {
-        name: pdfFileName,
+        name: originalFileName,  // 保留原始中文文件名
+        safeName: safeFileName,  // 安全的文件系统名称
         path: pdfPath,
         size: stats.size,
-        url: `/temp/pdf-outputs/${path.basename(pdfPath)}`
+        url: `/temp/pdf-outputs/${safeFileName}`  // URL 使用安全文件名
       }
     })
   } catch (error) {
