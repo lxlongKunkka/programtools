@@ -777,8 +777,9 @@ export default {
                 ...l, 
                 descCollapsed: false, 
                 problemCount: 0,
-                topics: (l.topics || []).map(t => ({
+              topics: (l.topics || []).map((t, topicIndex) => ({
                     ...t,
+                _id: t._id || t.id || `${l._id}-topic-${topicIndex}`,
                     collapsed: false,
                     problemCount: 0
                 }))

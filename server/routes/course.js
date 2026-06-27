@@ -147,6 +147,52 @@ function buildChapterUidIdMap(level) {
   return chapterUidIdMap
 }
 
+function buildSyntheticTopicId(level, topicIndex) {
+  return `${String(level?._id || level?.id || 'level')}-topic-${topicIndex}`
+}
+
+function findTopicInfoInLevel(level, topicId) {
+  if (!level || !Array.isArray(level.topics)) return null
+
+  const target = String(topicId || '')
+  for (let index = 0; index < level.topics.length; index += 1) {
+    const topic = level.topics[index]
+    const candidates = [
+      topic?._id ? String(topic._id) : '',
+      topic?.id ? String(topic.id) : '',
+      buildSyntheticTopicId(level, index)
+    ].filter(Boolean)
+
+    if (candidates.includes(target)) {
+      return { topic, index, resolvedTopicId: candidates[0] }
+    }
+  }
+
+  return null
+}
+
+async function findLevelAndTopicByTopicId(topicId, projection = '') {
+  let level = await CourseLevel.findOne({ 'topics._id': topicId }).select(projection)
+  if (level) {
+    const topicInfo = findTopicInfoInLevel(level, topicId)
+    if (topicInfo) return { level, ...topicInfo }
+  }
+
+  level = await CourseLevel.findOne({ 'topics.id': topicId }).select(projection)
+  if (level) {
+    const topicInfo = findTopicInfoInLevel(level, topicId)
+    if (topicInfo) return { level, ...topicInfo }
+  }
+
+  const levels = await CourseLevel.find({ topics: { $exists: true, $ne: [] } }).select(projection || 'title level group subject topics')
+  for (const candidate of levels) {
+    const topicInfo = findTopicInfoInLevel(candidate, topicId)
+    if (topicInfo) return { level: candidate, ...topicInfo }
+  }
+
+  return null
+}
+
 function remapChapterIdList(values, chapterIdRemap) {
   const result = []
   const seen = new Set()
@@ -2221,17 +2267,11 @@ router.get('/topic/:topicId/learners', async (req, res) => {
   try {
     const { topicId } = req.params
     
-    // 1. Find the topic and its chapters
-    const level = await CourseLevel.findOne({ 'topics._id': topicId })
-    
-    if (!level) {
+    const resolved = await findLevelAndTopicByTopicId(topicId)
+    if (!resolved) {
       return res.status(404).json({ error: 'Topic not found' })
     }
-    
-    const topic = level.topics.id(topicId)
-    if (!topic) {
-      return res.status(404).json({ error: 'Topic not found' })
-    }
+    const { level, topic } = resolved
     
     const chapterIds = topic.chapters.map(c => c.id)
     
@@ -2375,19 +2415,14 @@ router.get('/topic/:topicId/learners/:learnerId/detail', authenticateToken, asyn
       return res.status(400).json({ error: '学员 ID 不合法' })
     }
 
-    const levelDoc = await CourseLevel.findOne({ 'topics._id': topicId })
-      .select('level group subject title topics._id topics.title topics.chapters._id topics.chapters.id topics.chapters.title')
-      .lean()
-    if (!levelDoc) {
+    const resolved = await findLevelAndTopicByTopicId(
+      topicId,
+      'level group subject title topics._id topics.id topics.title topics.chapters._id topics.chapters.id topics.chapters.title'
+    )
+    if (!resolved) {
       return res.status(404).json({ error: 'Topic not found' })
     }
-
-    const topic = Array.isArray(levelDoc.topics)
-      ? levelDoc.topics.find(item => String(item._id) === String(topicId))
-      : null
-    if (!topic) {
-      return res.status(404).json({ error: 'Topic not found' })
-    }
+    const { level: levelDoc, topic } = resolved
 
     const chapterIds = Array.isArray(topic.chapters)
       ? topic.chapters.map(chapter => chapter.id).filter(Boolean)
@@ -3516,7 +3551,8 @@ router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin
         return res.status(403).json({ error: 'Access denied: You cannot edit topics in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
     topic.title = title
@@ -3539,7 +3575,8 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
     }
 
     // Delete physical files
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (topic && topic.chapters) {
       for (const chapter of topic.chapters) {
         if (chapter.resourceUrl) {
@@ -3559,7 +3596,8 @@ router.delete('/levels/:id/topics/:topicId', authenticateToken, requireRole(['ad
       }
     }
 
-    level.topics.pull(req.params.topicId)
+    if (!topicInfo) return res.status(404).json({ error: 'Topic not found' })
+    level.topics.splice(topicInfo.index, 1)
     await level.save()
     res.json(level)
   } catch (e) {
@@ -3578,10 +3616,11 @@ router.post('/levels/:id/topics/:topicId/move', authenticateToken, requireRole([
         return res.status(403).json({ error: 'Access denied: You cannot move topics in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
-    const index = level.topics.indexOf(topic)
+    const index = topicInfo.index
     if (index === -1) return res.status(404).json({ error: 'Topic not found in array' })
     
     if (direction === 'up') {
@@ -3625,7 +3664,8 @@ router.post('/levels/:id/topics/:topicId/chapters', authenticateToken, requireRo
         return res.status(403).json({ error: 'Access denied: You cannot add chapters to this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
     // Store problemIds directly as strings
@@ -3684,7 +3724,8 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateToken,
         return res.status(403).json({ error: 'Access denied: You cannot edit chapters in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
     const chapter = topic.chapters.id(req.params.chapterId) // Use .id() for subdocument search by _id
@@ -3760,7 +3801,8 @@ router.delete('/levels/:id/topics/:topicId/chapters', authenticateToken, require
         return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) {
         console.log('[DELETE ALL CHAPTERS] Topic not found');
         return res.status(404).json({ error: 'Topic not found' })
@@ -3805,7 +3847,8 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
         return res.status(403).json({ error: 'Access denied: You cannot delete chapters in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
     // Try to remove by _id or id string
@@ -3842,7 +3885,7 @@ router.delete('/levels/:id/topics/:topicId/chapters/:chapterId', authenticateTok
     }
 
     // Auto-renumber chapters
-    const topicIndex = level.topics.findIndex(t => t._id.equals(topic._id))
+    const topicIndex = topicInfo.index
     if (topicIndex !== -1) {
         const prefix = `${level.level}-${topicIndex + 1}`
         level.topics[topicIndex].chapters.forEach((ch, idx) => {
@@ -3869,7 +3912,8 @@ router.put('/levels/:id/topics/:topicId/chapters/:chapterId/move', authenticateT
         return res.status(403).json({ error: 'Access denied: You cannot move chapters in this group.' })
     }
 
-    const topic = level.topics.id(req.params.topicId)
+    const topicInfo = findTopicInfoInLevel(level, req.params.topicId)
+    const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
 
     const chapterIndex = topic.chapters.findIndex(c => c.id === req.params.chapterId || (c._id && c._id.toString() === req.params.chapterId))
