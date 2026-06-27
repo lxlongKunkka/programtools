@@ -1300,6 +1300,12 @@ export default {
       if (this.isSaving) return
       this.isSaving = true
       try {
+        const topicObjectId = this.editingTopicForChapter?._id || this.editingTopicForChapter?.id
+
+        if (!topicObjectId) {
+          throw new Error('Topic id is missing')
+        }
+
         const problemIds = (this.editingChapter.problemIdsStr || '')
           .split(/[,，]/).map(s => s.trim()).filter(s => s).map(String)
 
@@ -1333,14 +1339,14 @@ export default {
 
         let updatedLevel;
         if (this.editingChapter.isNew) {
-           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters`, {
+           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${topicObjectId}/chapters`, {
              method: 'POST',
              body: JSON.stringify(chapterData)
            })
            
            // Update ID for new chapter
            if (updatedLevel && updatedLevel.topics) {
-               const topic = updatedLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
+               const topic = updatedLevel.topics.find(t => t._id === topicObjectId || t.id === topicObjectId)
                if (topic && topic.chapters && topic.chapters.length > 0) {
                    // Find the newly created chapter to update local state immediately
                    let newCh = null
@@ -1368,7 +1374,7 @@ export default {
                        const newLevel = this.levels.find(l => l._id === this.editingLevelForChapter._id)
                        if (newLevel) {
                            this.editingLevelForChapter = newLevel
-                           const newTopic = newLevel.topics.find(t => t._id === this.editingTopicForChapter._id)
+                         const newTopic = newLevel.topics.find(t => t._id === topicObjectId || t.id === topicObjectId)
                            if (newTopic) {
                                this.editingTopicForChapter = newTopic
                            }
@@ -1379,7 +1385,7 @@ export default {
            }
         } else {
            const chId = this.editingChapter._id || this.editingChapter.id
-           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${this.editingTopicForChapter._id}/chapters/${chId}`, {
+           updatedLevel = await request(`/api/course/levels/${this.editingLevelForChapter._id}/topics/${topicObjectId}/chapters/${chId}`, {
              method: 'PUT',
              body: JSON.stringify(chapterData)
            })
