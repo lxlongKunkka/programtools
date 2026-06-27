@@ -214,7 +214,7 @@ const options = ref({
   customMargin: 0.5,
   displayHeaderFooter: false,
   printBackground: true,
-  preferCSSPageSize: false
+  preferCSSPageSize: true  // 默认使用 CSS 紧凑格式
 })
 
 const converting = ref(false)

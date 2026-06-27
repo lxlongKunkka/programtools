@@ -205,6 +205,27 @@ async function convertMd2Pdf(mdPath, pdfPath, options = {}) {
       pdfOptions.margin = marginMap[options.margin] || marginMap['standard']
     }
     
+    // 如果启用页眉页脚，添加默认模板并调整边距
+    if (options.displayHeaderFooter) {
+      pdfOptions.headerTemplate = `
+        <div style="font-size: 9px; width: 100%; text-align: center; color: #666; padding: 5px 0;">
+          <span class="title"></span>
+        </div>
+      `
+      pdfOptions.footerTemplate = `
+        <div style="font-size: 9px; width: 100%; text-align: center; color: #666; padding: 5px 0;">
+          <span class="pageNumber"></span> / <span class="totalPages"></span>
+        </div>
+      `
+      // 页眉页脚需要额外的边距空间（在原有基础上增加）
+      if (!options.preferCSSPageSize) {
+        const currentTop = parseFloat(pdfOptions.margin.top) || 2.54
+        const currentBottom = parseFloat(pdfOptions.margin.bottom) || 2.54
+        pdfOptions.margin.top = `${currentTop + 1}cm`
+        pdfOptions.margin.bottom = `${currentBottom + 1}cm`
+      }
+    }
+    
     console.log('[MD2PDF] PDF 生成选项:', JSON.stringify(pdfOptions))
     
     // 生成 PDF
