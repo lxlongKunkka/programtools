@@ -16,7 +16,9 @@ const upload = multer({
   dest: path.join(__dirname, '../../temp/uploads'),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    if (file.originalname.endsWith('.md') || file.originalname.endsWith('.markdown')) {
+    // 检查文件扩展名（编码修复在接收后处理）
+    const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8')
+    if (fileName.endsWith('.md') || fileName.endsWith('.markdown')) {
       cb(null, true)
     } else {
       cb(new Error('只支持 .md 和 .markdown 文件'))
@@ -156,9 +158,17 @@ router.post('/md2pdf', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: '没有上传文件' })
     }
     
+    // 修复文件名编码（multer 默认使用 latin1 解析，需要转为 utf8）
+    let originalFileName = req.file.originalname
+    try {
+      originalFileName = Buffer.from(originalFileName, 'latin1').toString('utf8')
+    } catch (error) {
+      console.error('文件名编码转换失败:', error)
+    }
+    originalFileName = originalFileName.replace(/\.(md|markdown)$/, '.pdf')
+    
     const options = req.body.options ? JSON.parse(req.body.options) : {}
     const mdPath = req.file.path
-    const originalFileName = req.file.originalname.replace(/\.(md|markdown)$/, '.pdf')
     // 使用时间戳作为文件系统名称，避免中文路径问题
     const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`
     const pdfPath = path.join(TEMP_PDF_DIR, safeFileName)
