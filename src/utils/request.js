@@ -35,6 +35,25 @@ export async function request(url, options = {}) {
       }
     }
 
+    // Handle blob response type
+    if (options.responseType === 'blob') {
+      if (!response.ok) {
+        // Try to read error message from blob
+        const text = await response.text()
+        let errorMessage = `HTTP ${response.status}`
+        try {
+          const errorData = JSON.parse(text)
+          if (errorData.error) errorMessage = errorData.error
+        } catch (e) {
+          if (text) errorMessage = text.slice(0, 200)
+        }
+        const err = new Error(errorMessage)
+        err.response = { status: response.status }
+        throw err
+      }
+      return await response.blob()
+    }
+
     const contentType = response.headers.get('content-type') || ''
     
     let data

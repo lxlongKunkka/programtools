@@ -2259,10 +2259,37 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
       return res.status(400).json({ error: 'No chapters found' })
     }
 
+    // Check if any chapter has review content
+    const chaptersWithReview = topic.chapters.filter(c => c.reviewContent)
+    if (chaptersWithReview.length === 0) {
+      return res.status(400).json({ error: '没有复习内容可导出' })
+    }
+
     // Create ZIP archive
     const archive = archiver('zip', { zlib: { level: 9 } })
     
-    res.attachment(`${topic.title}-复习内容.zip`)
+    // Set response headers
+    const fileName = `${topic.title.replace(/[/\\?%*:|"<>]/g, '-')}-复习内容.zip`
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`)
+    
+    // Error handling
+    archive.on('error', (err) => {
+      console.error('Archive error:', err)
+      if (!res.headersSent) {
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn('Archive warning:', err)
+      } else {
+        console.error('Archive warning:', err)
+      }
+    })
+
+    // Pipe archive to response
     archive.pipe(res)
 
     // Add each chapter's review content as a markdown file
@@ -2274,14 +2301,17 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
       markdown += `---\n\n`
       markdown += chapter.reviewContent
 
-      const fileName = `${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
-      archive.append(markdown, { name: fileName })
+      const chapterFileName = `${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
+      archive.append(Buffer.from(markdown, 'utf8'), { name: chapterFileName })
     }
 
     await archive.finalize()
+    console.log(`[Export] Topic "${topic.title}" exported successfully (${chaptersWithReview.length} chapters)`)
   } catch (e) {
     console.error('Export topic reviews error:', e)
-    res.status(500).json({ error: e.message })
+    if (!res.headersSent) {
+      res.status(500).json({ error: e.message })
+    }
   }
 })
 
@@ -2299,10 +2329,43 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
       return res.status(400).json({ error: 'No topics found' })
     }
 
+    // Check if any chapter has review content
+    let totalChaptersWithReview = 0
+    for (const topic of level.topics) {
+      if (topic.chapters) {
+        totalChaptersWithReview += topic.chapters.filter(c => c.reviewContent).length
+      }
+    }
+
+    if (totalChaptersWithReview === 0) {
+      return res.status(400).json({ error: '没有复习内容可导出' })
+    }
+
     // Create ZIP archive
     const archive = archiver('zip', { zlib: { level: 9 } })
     
-    res.attachment(`${level.title}-复习内容.zip`)
+    // Set response headers
+    const fileName = `${level.title.replace(/[/\\?%*:|"<>]/g, '-')}-复习内容.zip`
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`)
+    
+    // Error handling
+    archive.on('error', (err) => {
+      console.error('Archive error:', err)
+      if (!res.headersSent) {
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn('Archive warning:', err)
+      } else {
+        console.error('Archive warning:', err)
+      }
+    })
+
+    // Pipe archive to response
     archive.pipe(res)
 
     // Add each chapter's review content, organized by topic folders
@@ -2320,15 +2383,18 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
         markdown += `---\n\n`
         markdown += chapter.reviewContent
 
-        const fileName = `${topicFolder}/${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
-        archive.append(markdown, { name: fileName })
+        const chapterFileName = `${topicFolder}/${chapter.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`
+        archive.append(Buffer.from(markdown, 'utf8'), { name: chapterFileName })
       }
     }
 
     await archive.finalize()
+    console.log(`[Export] Level "${level.title}" exported successfully (${totalChaptersWithReview} chapters)`)
   } catch (e) {
     console.error('Export level reviews error:', e)
-    res.status(500).json({ error: e.message })
+    if (!res.headersSent) {
+      res.status(500).json({ error: e.message })
+    }
   }
 })
 

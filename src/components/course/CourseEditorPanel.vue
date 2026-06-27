@@ -2755,13 +2755,12 @@ export default {
 
       this.exportingReviews = true
       try {
-        const response = await request(`/api/course/topic/${topicId}/export-reviews?levelId=${levelId}`, {
+        const blob = await request(`/api/course/topic/${topicId}/export-reviews?levelId=${levelId}`, {
           method: 'GET',
           responseType: 'blob'
         })
 
         // 下载 ZIP 文件
-        const blob = new Blob([response], { type: 'application/zip' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
@@ -2792,13 +2791,12 @@ export default {
 
       this.exportingReviews = true
       try {
-        const response = await request(`/api/course/level/${levelId}/export-reviews`, {
+        const blob = await request(`/api/course/level/${levelId}/export-reviews`, {
           method: 'GET',
           responseType: 'blob'
         })
 
         // 下载 ZIP 文件
-        const blob = new Blob([response], { type: 'application/zip' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
