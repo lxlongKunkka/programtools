@@ -29,7 +29,7 @@ const upload = multer({
 // 临时文件目录
 const TEMP_UPLOAD_DIR = path.join(__dirname, '../../temp/uploads')
 const TEMP_PDF_DIR = path.join(__dirname, '../../temp/pdf-outputs')
-const ASSETS_DIR = path.join(__dirname, '../../other/dist/assets')
+const ASSETS_DIR = path.join(__dirname, '../assets/md2pdf')
 
 // 确保临时目录存在
 async function ensureTempDirs() {
