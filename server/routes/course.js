@@ -2358,7 +2358,6 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
       if (!chapter.reviewContent) continue
 
       let markdown = `# ${chapter.title} - 复习资料包\n\n`
-      markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
       markdown += `---\n\n`
       
       // 添加复习内容
@@ -2461,8 +2460,7 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
         if (!chapter.reviewContent) continue
 
         let markdown = `# ${chapter.title} - 复习资料包\n\n`
-        markdown += `> 知识点：${topic.title}\n`
-        markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
+        markdown += `> 知识点：${topic.title}\n\n`
         markdown += `---\n\n`
         
         // 添加复习内容

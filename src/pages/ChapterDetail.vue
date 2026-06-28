@@ -810,7 +810,6 @@ export default {
         
         // 构建 Markdown 内容
         let markdown = `# ${this.chapter.title} - 复习资料包\n\n`
-        markdown += `> 导出时间：${new Date().toLocaleString('zh-CN')}\n\n`
         markdown += `---\n\n`
         
         // 添加复习内容
