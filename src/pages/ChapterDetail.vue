@@ -810,22 +810,16 @@ export default {
         
         // 构建 Markdown 内容
         let markdown = `# ${this.chapter.title} - 知识总结\n\n`
-        markdown += `---\n\n`
         
         // 添加复习内容
         if (response.reviewContent) {
-          markdown += `## 📋 知识总结\n\n`
           markdown += response.reviewContent
           markdown += `\n\n---\n\n`
         }
         
         // 添加必做题目题解
         if (response.problems && response.problems.length > 0) {
-          markdown += `## 💡 必做题目题解\n\n`
-          
           response.problems.forEach((problem, index) => {
-            markdown += `### ${index + 1}. ${problem.title}\n\n`
-            
             if (problem.aiSolution) {
               markdown += problem.aiSolution
             } else {

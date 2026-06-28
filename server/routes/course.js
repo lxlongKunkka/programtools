@@ -2358,21 +2358,15 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
       if (!chapter.reviewContent) continue
 
       let markdown = `# ${chapter.title} - 知识总结\n\n`
-      markdown += `---\n\n`
       
       // 添加复习内容
-      markdown += `## 📋 知识总结\n\n`
       markdown += chapter.reviewContent
       markdown += `\n\n---\n\n`
       
       // 添加必做题目题解
       const problems = await getChapterProblems(chapter)
       if (problems.length > 0) {
-        markdown += `## 💡 必做题目题解\n\n`
-        
         problems.forEach((problem, index) => {
-          markdown += `### ${index + 1}. ${problem.title}\n\n`
-          
           if (problem.aiSolution) {
             markdown += problem.aiSolution
           } else {
@@ -2461,21 +2455,15 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
 
         let markdown = `# ${chapter.title} - 知识总结\n\n`
         markdown += `> 知识点：${topic.title}\n\n`
-        markdown += `---\n\n`
         
         // 添加复习内容
-        markdown += `## 📋 知识总结\n\n`
         markdown += chapter.reviewContent
         markdown += `\n\n---\n\n`
         
         // 添加必做题目题解
         const problems = await getChapterProblems(chapter)
         if (problems.length > 0) {
-          markdown += `## 💡 必做题目题解\n\n`
-          
           problems.forEach((problem, index) => {
-            markdown += `### ${index + 1}. ${problem.title}\n\n`
-            
             if (problem.aiSolution) {
               markdown += problem.aiSolution
             } else {
