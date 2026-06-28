@@ -1822,7 +1822,7 @@ router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermi
 
 // Generate Solution Plan Background
 router.post('/solution-plan/background', authenticateToken, requirePremium, checkModelPermission, async (req, res) => {
-  const { problem, code, chapterId, topicId, clientKey, model } = req.body;
+  const { problem, code, chapterId, topicId, clientKey, model, problemIds } = req.body;
 
   if (!problem || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1834,7 +1834,58 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
           console.log(logMsg);
           try { getIO().emit('ai_task_log', { message: logMsg, clientKey }); } catch (e) {}
 
-          const userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+          let userContent = `题目描述：\n${problem}\n\n代码：\n${code || '未提供'}`;
+
+          // Fetch all problems from problemIds for reference
+          if (problemIds && Array.isArray(problemIds) && problemIds.length > 1) {
+              try {
+                  const Document = (await import('../models/Document.js')).default;
+                  const additionalProblems = [];
+                  
+                  for (const pidStr of problemIds.slice(1, 6)) { // 跳过第一题，最多取5道其他题
+                      let query = {};
+                      if (pidStr.includes(':')) {
+                          const [domain, docId] = pidStr.split(':');
+                          if (!isNaN(docId)) {
+                              query = { domainId: domain, docId: Number(docId) };
+                          } else {
+                              query = { domainId: domain, pid: docId };
+                          }
+                      } else if (!isNaN(pidStr)) {
+                          query = { domainId: 'system', docId: Number(pidStr) };
+                      } else {
+                          query = { domainId: 'system', pid: pidStr };
+                      }
+                      
+                      const doc = await Document.findOne(query).select('title content contentbak aiSolution');
+                      if (doc) {
+                          additionalProblems.push({
+                              title: doc.title,
+                              content: doc.content || doc.contentbak || '',
+                              aiSolution: doc.aiSolution || ''
+                          });
+                      }
+                  }
+                  
+                  if (additionalProblems.length > 0) {
+                      userContent += `\n\n【其他必做题目（作为参考）】\n以下是本章节的其他必做题目，请在教案中综合考虑这些题目的知识点和难度，使教案更全面：\n\n`;
+                      additionalProblems.forEach((prob, idx) => {
+                          userContent += `\n参考题${idx + 1}：${prob.title}\n`;
+                          if (prob.content && prob.content.length > 0) {
+                              const contentText = prob.content.length > 1500 ? prob.content.slice(0, 1500) + '...' : prob.content;
+                              userContent += `题目：${contentText}\n`;
+                          }
+                          if (prob.aiSolution && prob.aiSolution.length > 0) {
+                              const solutionText = prob.aiSolution.length > 2000 ? prob.aiSolution.slice(0, 2000) + '...' : prob.aiSolution;
+                              userContent += `题解参考：${solutionText}\n`;
+                          }
+                          userContent += `\n${'='.repeat(50)}\n`;
+                      });
+                  }
+              } catch (e) {
+                  console.error('[Background] Failed to fetch additional problems for solution plan:', e);
+              }
+          }
 
           const messages = [
               { role: 'system', content: SOLUTION_PROMPT },

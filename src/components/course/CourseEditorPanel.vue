@@ -1828,7 +1828,8 @@ export default {
             chapterId: targetChapterId, // Use captured ID
             topicId: targetTopicId, // Use captured ID
             clientKey: id,
-            model: this.selectedModel
+            model: this.selectedModel,
+            problemIds: this.editingChapter.problemIds || []
         })
         
         this.aiStatusMap[id] = '正在后台生成教案中...'
