@@ -2735,7 +2735,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
             model: model || 'gemini-3.5-flash',
             messages,
             temperature: 0.3,
-            max_tokens: 16000
+            max_tokens: 32000  // 提高限制，减少截断
           }
 
           const resp = await axios.post(YUN_API_URL, payload, {
@@ -2767,7 +2767,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                       model: model || 'gemini-3.5-flash',
                       messages,
                       temperature: 0.3,
-                      max_tokens: 16000
+                      max_tokens: 32000  // 提高限制，减少截断
                   }, {
                     headers: {
                       'Content-Type': 'application/json',
