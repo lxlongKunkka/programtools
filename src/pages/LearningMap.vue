@@ -227,10 +227,10 @@ export default {
           }))
         }
         const gName = l.group || 'C++基础'
-        if (!groupMap[gName]) {
-          groupMap[gName] = { name: gName, title: gName, levels: [], collapsed: true, order: l.group ? 999 : 0 }
+        // Only add level if its group exists (don't create invisible groups on frontend)
+        if (groupMap[gName]) {
+          groupMap[gName].levels.push(levelData)
         }
-        groupMap[gName].levels.push(levelData)
       })
 
       this.treeData = Object.values(groupMap).sort((a, b) => (a.order || 0) - (b.order || 0))

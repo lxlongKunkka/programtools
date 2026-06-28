@@ -2561,6 +2561,14 @@ router.get('/levels', async (req, res) => {
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
     
     if (!isTeacher) {
+      // For students, filter out levels from invisible groups
+      const visibleGroups = await CourseGroup.find({ visible: { $ne: false } }).select('name').lean()
+      const visibleGroupNames = new Set(visibleGroups.map(g => g.name))
+      levels = levels.filter(level => {
+        // Keep levels with no group (legacy) or levels in visible groups
+        return !level.group || visibleGroupNames.has(level.group)
+      })
+      
       // For students, filter out invisible levels
       levels = levels.filter(level => level.visible !== false)
       
