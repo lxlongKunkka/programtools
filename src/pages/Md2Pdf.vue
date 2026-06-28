@@ -235,7 +235,7 @@ const options = ref({
   printBackground: true,
   preferCSSPageSize: true,  // 默认使用 CSS 紧凑格式
   watermark: '',  // 水印文字
-  watermarkImage: ''  // 水印图片URL
+  watermarkImage: 'https://qimai-1312947209.cos.ap-shanghai.myqcloud.com/images/202403271535417.png'  // 默认水印图片
 })
 
 const converting = ref(false)
