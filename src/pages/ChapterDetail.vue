@@ -809,7 +809,7 @@ export default {
         const response = await request(`/api/course/chapter/${chapterId}/export-review?levelId=${levelId}`)
         
         // 构建 Markdown 内容
-        let markdown = `# ${this.chapter.title} - 复习资料包\n\n`
+        let markdown = `# ${this.chapter.title} - 知识总结\n\n`
         markdown += `---\n\n`
         
         // 添加复习内容
@@ -841,14 +841,14 @@ export default {
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        const fileName = `${this.chapter.title}-复习资料包.md`
+        const fileName = `${this.chapter.title}-知识总结.md`
         link.download = fileName
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
         
-        this.showToastMessage('✅ 复习资料包已导出')
+        this.showToastMessage('✅ 知识总结已导出')
       } catch (error) {
         console.error('导出失败:', error)
         this.showToastMessage('❌ 导出失败: ' + (error.message || '未知错误'))
