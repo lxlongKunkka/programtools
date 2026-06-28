@@ -2801,10 +2801,21 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           }
 
           if (finishReason === 'length') {
-              const errMsg = `PPT generation truncated after ${loopCount} retries. Content may be incomplete.`
-              console.error(`[Background] ${errMsg} Chapter: ${chapterId}`)
-              // 返回错误而不是继续上传不完整的内容
-              return res.status(500).json({ error: errMsg, chapterId })
+              const errMsg = `PPT内容过长，经过${loopCount}次重试仍被截断。请尝试简化章节内容或联系管理员。`;
+              console.error(`[Background] ${errMsg} Chapter: ${chapterId}`);
+              
+              // 通过WebSocket通知前端失败
+              getIO().emit('ai_task_complete', {
+                  chapterId,
+                  chapterTitle: chapterTitle || '未知章节',
+                  clientKey,
+                  type: 'ppt',
+                  status: 'error',
+                  message: errMsg,
+                  error: 'content_truncated'
+              });
+              
+              return; // 不要继续上传不完整的内容
           }
           
           content = content.replace(/^```html\s*/, '').replace(/```$/, '')
