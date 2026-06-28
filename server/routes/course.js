@@ -1727,8 +1727,10 @@ router.get('/groups', async (req, res) => {
       } catch (err) {}
     }
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
+    console.log('[GET /groups] user:', user ? `${user.uname}(${user.role}, priv:${user.priv})` : 'null', 'isTeacher:', isTeacher, 'total groups:', groups.length)
     if (!isTeacher) {
       groups = groups.filter(g => g.visible !== false)
+      console.log('[GET /groups] After filter:', groups.length, 'visible groups')
     }
     
     // Manually populate editors from hydroConn (cross-connection populate is not supported)
