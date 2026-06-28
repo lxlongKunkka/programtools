@@ -2429,22 +2429,29 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
                     query = { domainId: 'system', pid: pidStr };
                 }
                 
-                const doc = await Document.findOne(query).select('title docId domainId content aiSolution');
+                const doc = await Document.findOne(query).select('title docId domainId content contentbak aiSolution');
                 if (doc) {
                     problems.push({
                         title: doc.title,
-                        content: doc.content || '',
+                        content: doc.content || doc.contentbak || '',
                         aiSolution: doc.aiSolution || ''
                     });
                 }
             }
             
             if (problems.length > 0) {
-                systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n`;
+                systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 题目描述和题解请完整展示，作为教学的核心参考。\n- 用适合课堂讲解的方式呈现，突出解题思路和关键步骤。\n\n`;
                 problems.forEach((prob, idx) => {
                     systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
-                    if (prob.content) systemPrompt += `${prob.content.slice(0, 500)}...\n`;
-                    if (prob.aiSolution) systemPrompt += `参考解法：${prob.aiSolution.slice(0, 800)}...\n---\n`;
+                    if (prob.content && prob.content.length > 0) {
+                        const contentText = prob.content.length > 2000 ? prob.content.slice(0, 2000) + '...' : prob.content;
+                        systemPrompt += `\n【题目描述】\n${contentText}\n`;
+                    }
+                    if (prob.aiSolution && prob.aiSolution.length > 0) {
+                        const solutionText = prob.aiSolution.length > 3000 ? prob.aiSolution.slice(0, 3000) + '...' : prob.aiSolution;
+                        systemPrompt += `\n【参考题解】\n${solutionText}\n`;
+                    }
+                    systemPrompt += `\n${'='.repeat(50)}\n`;
                 });
             }
         } catch (e) {
@@ -2724,30 +2731,34 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                           query = { domainId: 'system', pid: pidStr };
                       }
                       
-                      const doc = await Document.findOne(query).select('title docId domainId content aiSolution');
+                      const doc = await Document.findOne(query).select('title docId domainId content contentbak aiSolution');
                       if (doc) {
                           problems.push({
                               title: doc.title,
                               docId: doc.docId,
                               domainId: doc.domainId,
-                              content: doc.content || '',
+                              content: doc.content || doc.contentbak || '',
                               aiSolution: doc.aiSolution || ''
                           });
                       }
                   }
                   
                   if (problems.length > 0) {
-                      systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 如果题目有 AI 题解，请参考但用更适合课堂讲解的方式重新表述。\n- 不要直接复制粘贴题目内容，而是提炼关键信息并配合知识点讲解。\n\n`;
+                      systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 题目描述和题解请完整展示，作为教学的核心参考。\n- 用适合课堂讲解的方式呈现，突出解题思路和关键步骤。\n\n`;
                       
                       problems.forEach((prob, idx) => {
                           systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
                           if (prob.content && prob.content.length > 0) {
-                              systemPrompt += `题目描述：${prob.content.slice(0, 500)}...\n`;
+                              // 获取完整题目描述，最多2000字符
+                              const contentText = prob.content.length > 2000 ? prob.content.slice(0, 2000) + '...' : prob.content;
+                              systemPrompt += `\n【题目描述】\n${contentText}\n`;
                           }
                           if (prob.aiSolution && prob.aiSolution.length > 0) {
-                              systemPrompt += `参考解法：${prob.aiSolution.slice(0, 800)}...\n`;
+                              // 获取完整题解，最多3000字符
+                              const solutionText = prob.aiSolution.length > 3000 ? prob.aiSolution.slice(0, 3000) + '...' : prob.aiSolution;
+                              systemPrompt += `\n【参考题解】\n${solutionText}\n`;
                           }
-                          systemPrompt += `---\n`;
+                          systemPrompt += `\n${'='.repeat(50)}\n`;
                       });
                   }
               } catch (e) {
