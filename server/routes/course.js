@@ -2504,7 +2504,8 @@ router.get('/levels', async (req, res) => {
       }
     }
     const levels = await CourseLevel.find(query)
-      .select('-topics.chapters.content -chapters.content')
+      .select('-topics.chapters.content -topics.chapters.reviewContent -topics.chapters.previewContent -chapters.content -chapters.reviewContent -chapters.previewContent')
+      .lean()
       .sort({ level: 1 })
       // .populate('topics.chapters.problemIds', 'title docId domainId') // No longer needed as we store strings
       // .populate('chapters.problemIds', 'title docId domainId') // Legacy support
