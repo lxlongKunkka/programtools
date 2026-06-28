@@ -2616,7 +2616,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
   let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
   
-  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}', ProblemIds: ${problemIds ? problemIds.length : 0}`);
+  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
 
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
