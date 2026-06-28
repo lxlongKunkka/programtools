@@ -1723,8 +1723,12 @@ router.get('/groups', async (req, res) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        user = await User.findById(decoded._id)
-      } catch (err) {}
+        // Token may use 'id' or '_id' depending on when it was issued
+        const userId = decoded._id || decoded.id
+        user = await User.findById(userId)
+      } catch (err) {
+        console.log('[GET /groups] JWT verification failed:', err.message)
+      }
     }
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
     console.log('[GET /groups] user:', user ? `${user.uname}(${user.role}, priv:${user.priv}, uid:${user._id})` : 'null', 'isTeacher:', isTeacher, 'total groups:', groups.length)
@@ -2568,7 +2572,9 @@ router.get('/levels', async (req, res) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        user = await User.findById(decoded._id)
+        // Token may use 'id' or '_id' depending on when it was issued
+        const userId = decoded._id || decoded.id
+        user = await User.findById(userId)
       } catch (err) {}
     }
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
