@@ -2443,7 +2443,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
 // Generate PPT
 router.post('/generate-ppt', authenticateToken, async (req, res) => {
   try {
-    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, language, problemIds } = req.body
+    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, language } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let fullTopic = topic
@@ -2457,57 +2457,6 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     // Inject User Requirements
     if (requirements && requirements.trim()) {
         systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
-    }
-
-    // Inject Problems as Reference Examples
-    if (problemIds && Array.isArray(problemIds) && problemIds.length > 0) {
-        try {
-            const Document = (await import('../models/Document.js')).default;
-            const problems = [];
-            
-            for (const pidStr of problemIds.slice(0, 5)) {
-                let query = {};
-                if (pidStr.includes(':')) {
-                    const [domain, docId] = pidStr.split(':');
-                    if (!isNaN(docId)) {
-                        query = { domainId: domain, docId: Number(docId) };
-                    } else {
-                        query = { domainId: domain, pid: docId };
-                    }
-                } else if (!isNaN(pidStr)) {
-                    query = { domainId: 'system', docId: Number(pidStr) };
-                } else {
-                    query = { domainId: 'system', pid: pidStr };
-                }
-                
-                const doc = await Document.findOne(query).select('title docId domainId content contentbak aiSolution');
-                if (doc) {
-                    problems.push({
-                        title: doc.title,
-                        content: doc.content || doc.contentbak || '',
-                        aiSolution: doc.aiSolution || ''
-                    });
-                }
-            }
-            
-            if (problems.length > 0) {
-                systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 题目描述和题解请完整展示，作为教学的核心参考。\n- 用适合课堂讲解的方式呈现，突出解题思路和关键步骤。\n\n`;
-                problems.forEach((prob, idx) => {
-                    systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
-                    if (prob.content && prob.content.length > 0) {
-                        const contentText = prob.content.length > 2000 ? prob.content.slice(0, 2000) + '...' : prob.content;
-                        systemPrompt += `\n【题目描述】\n${contentText}\n`;
-                    }
-                    if (prob.aiSolution && prob.aiSolution.length > 0) {
-                        const solutionText = prob.aiSolution.length > 3000 ? prob.aiSolution.slice(0, 3000) + '...' : prob.aiSolution;
-                        systemPrompt += `\n【参考题解】\n${solutionText}\n`;
-                    }
-                    systemPrompt += `\n${'='.repeat(50)}\n`;
-                });
-            }
-        } catch (e) {
-            console.error('[PPT] Failed to fetch problems:', e);
-        }
     }
 
     // Inject Chapter Content (Lesson Plan)
@@ -2665,7 +2614,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group, problemIds } = req.body;
+  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
   
   console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}', ProblemIds: ${problemIds ? problemIds.length : 0}`);
 
@@ -2759,62 +2708,6 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           
           if (requirements && requirements.trim()) {
               systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
-          }
-
-          // Inject Problems as Reference Examples
-          if (problemIds && Array.isArray(problemIds) && problemIds.length > 0) {
-              try {
-                  const Document = (await import('../models/Document.js')).default;
-                  const problems = [];
-                  
-                  for (const pidStr of problemIds.slice(0, 5)) { // 最多取5道题
-                      let query = {};
-                      if (pidStr.includes(':')) {
-                          const [domain, docId] = pidStr.split(':');
-                          if (!isNaN(docId)) {
-                              query = { domainId: domain, docId: Number(docId) };
-                          } else {
-                              query = { domainId: domain, pid: docId };
-                          }
-                      } else if (!isNaN(pidStr)) {
-                          query = { domainId: 'system', docId: Number(pidStr) };
-                      } else {
-                          query = { domainId: 'system', pid: pidStr };
-                      }
-                      
-                      const doc = await Document.findOne(query).select('title docId domainId content contentbak aiSolution');
-                      if (doc) {
-                          problems.push({
-                              title: doc.title,
-                              docId: doc.docId,
-                              domainId: doc.domainId,
-                              content: doc.content || doc.contentbak || '',
-                              aiSolution: doc.aiSolution || ''
-                          });
-                      }
-                  }
-                  
-                  if (problems.length > 0) {
-                      systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 题目描述和题解请完整展示，作为教学的核心参考。\n- 用适合课堂讲解的方式呈现，突出解题思路和关键步骤。\n\n`;
-                      
-                      problems.forEach((prob, idx) => {
-                          systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
-                          if (prob.content && prob.content.length > 0) {
-                              // 获取完整题目描述，最多2000字符
-                              const contentText = prob.content.length > 2000 ? prob.content.slice(0, 2000) + '...' : prob.content;
-                              systemPrompt += `\n【题目描述】\n${contentText}\n`;
-                          }
-                          if (prob.aiSolution && prob.aiSolution.length > 0) {
-                              // 获取完整题解，最多3000字符
-                              const solutionText = prob.aiSolution.length > 3000 ? prob.aiSolution.slice(0, 3000) + '...' : prob.aiSolution;
-                              systemPrompt += `\n【参考题解】\n${solutionText}\n`;
-                          }
-                          systemPrompt += `\n${'='.repeat(50)}\n`;
-                      });
-                  }
-              } catch (e) {
-                  console.error('[Background] Failed to fetch problems:', e);
-              }
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {
