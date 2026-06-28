@@ -2751,10 +2751,12 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           let finishReason = resp.data.choices?.[0]?.finish_reason
           
           let loopCount = 0
-          const MAX_LOOPS = 3
+          const MAX_LOOPS = 5  // 增加到5次重试
+          let emptyRetries = 0
+          const MAX_EMPTY_RETRIES = 2  // 允许2次空返回
           
           while (finishReason === 'length' && loopCount < MAX_LOOPS) {
-              console.log(`[Background] PPT truncated (length), attempting to continue... Loop: ${loopCount + 1}`)
+              console.log(`[Background] PPT truncated (length), attempting to continue... Loop: ${loopCount + 1}/${MAX_LOOPS}`)
               loopCount++
               
               messages.push({ role: 'assistant', content: currentChunk })
@@ -2775,18 +2777,34 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   })
                   
                   currentChunk = continueResp.data.choices?.[0]?.message?.content || ''
-                  if (!currentChunk) break
                   
+                  if (!currentChunk) {
+                      emptyRetries++
+                      console.warn(`[Background] Empty response on retry ${loopCount}, empty count: ${emptyRetries}/${MAX_EMPTY_RETRIES}`)
+                      if (emptyRetries >= MAX_EMPTY_RETRIES) {
+                          console.error(`[Background] Too many empty responses, stopping retries`)
+                          break
+                      }
+                      continue  // 继续下一次重试而不是直接退出
+                  }
+                  
+                  emptyRetries = 0  // 重置空返回计数
                   finishReason = continueResp.data.choices?.[0]?.finish_reason
                   content += currentChunk
+                  console.log(`[Background] Retry ${loopCount} added ${currentChunk.length} chars, finish_reason: ${finishReason}`)
               } catch (err) {
-                  console.error('[Background] Error continuing generation:', err.message)
-                  break
+                  console.error(`[Background] Error continuing generation (loop ${loopCount}):`, err.message)
+                  // 不要直接break，让循环继续尝试
+                  emptyRetries++
+                  if (emptyRetries >= MAX_EMPTY_RETRIES) break
               }
           }
 
           if (finishReason === 'length') {
-              console.warn(`[Background] PPT generation still truncated after ${loopCount} loops. Chapter: ${chapterId}`)
+              const errMsg = `PPT generation truncated after ${loopCount} retries. Content may be incomplete.`
+              console.error(`[Background] ${errMsg} Chapter: ${chapterId}`)
+              // 返回错误而不是继续上传不完整的内容
+              return res.status(500).json({ error: errMsg, chapterId })
           }
           
           content = content.replace(/^```html\s*/, '').replace(/```$/, '')
