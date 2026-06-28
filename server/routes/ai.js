@@ -2765,20 +2765,33 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   currentModel = 'claude-sonnet-4'
                   currentApiKey = pickApiKey(currentModel)
                   
-                  apiResponse = await axios.post(YUN_API_URL, {
-                      model: currentModel,
-                      messages,
-                      temperature: 0.3,
-                      max_tokens: 32000
-                  }, {
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${currentApiKey}`
-                    },
-                    timeout: 300000
-                  })
-                  
-                  console.log(`[Background] Retry with ${currentModel} completed`)
+                  try {
+                      apiResponse = await axios.post(YUN_API_URL, {
+                          model: currentModel,
+                          messages,
+                          temperature: 0.3,
+                          max_tokens: 32000
+                      }, {
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${currentApiKey}`
+                        },
+                        timeout: 300000
+                      })
+                      
+                      console.log(`[Background] Retry with ${currentModel} completed`)
+                  } catch (retryErr) {
+                      console.error(`[Background] Claude retry failed (${retryErr.message}), using filtered content as error`)
+                      // Claude失败时，将finishReason保持为content_filter，让后续逻辑处理
+                      apiResponse = {
+                          data: {
+                              choices: [{
+                                  message: { content: '' },
+                                  finish_reason: 'content_filter'
+                              }]
+                          }
+                      }
+                  }
               }
           } catch (err) {
               console.error('[Background] API request failed:', err.message)
