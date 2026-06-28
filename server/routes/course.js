@@ -5,6 +5,7 @@ import path from 'path'
 import axios from 'axios'
 import multer from 'multer'
 import archiver from 'archiver'
+import jwt from 'jsonwebtoken'
 import { fileURLToPath } from 'url'
 import CourseLevel from '../models/CourseLevel.js'
 import CourseGroup from '../models/CourseGroup.js'
@@ -2528,7 +2529,14 @@ router.get('/levels', async (req, res) => {
       // .populate('chapters.problemIds', 'title docId domainId') // Legacy support
     
     // Filter invisible content for students
-    const user = req.user // From authenticateToken middleware (optional)
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    let user = null
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        user = await User.findById(decoded._id)
+      } catch (err) {}
+    }
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
     
     if (!isTeacher) {
