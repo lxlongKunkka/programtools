@@ -7,6 +7,9 @@
       <div class="view-header-row">
         <h1>{{ level.title }}</h1>
         <button v-if="canEdit" @click="$emit('enter-edit')" class="btn-inline-edit">✏️ 编辑</button>
+        <button @click="exportReviews" class="btn-export-reviews" :disabled="exporting">
+          {{ exporting ? '导出中...' : '📦 导出复习包' }}
+        </button>
       </div>
       <div class="level-status">
         <span v-if="isLevelCompletedFn()" class="badge completed">已完成</span>
@@ -67,6 +70,7 @@ import {
   getChapterStatusClass, isLevelCompleted, isLevelUnlocked
 } from '../../utils/courseUtils'
 import { canEditLevel } from '../../utils/permissionUtils'
+import request from '../../utils/request'
 import LearnersSection from './LearnersSection.vue'
 
 export default {
@@ -78,6 +82,11 @@ export default {
     treeData:     { type: Array,  default: () => [] }
   },
   emits: ['select-topic', 'select-group', 'enter-edit', 'view-learner'],
+  data() {
+    return {
+      exporting: false
+    }
+  },
   computed: {
     canEdit() { return canEditLevel(this.level, this.treeData) }
   },
@@ -90,7 +99,53 @@ export default {
       return getChapterStatusClass(level, chapter, this.userProgress, this.treeData)
     },
     isLevelCompletedFn() { return isLevelCompleted(this.level, this.userProgress, this.treeData) },
-    isLevelUnlockedFn()  { return isLevelUnlocked(this.level,  this.userProgress, this.treeData) }
+    isLevelUnlockedFn()  { return isLevelUnlocked(this.level,  this.userProgress, this.treeData) },
+    
+    async exportReviews() {
+      if (!this.level || !this.level.topics || this.level.topics.length === 0) {
+        return alert('当前级别没有知识点')
+      }
+
+      // 检查是否有复习内容
+      let hasReview = false
+      for (const topic of this.level.topics) {
+        if (topic.chapters && topic.chapters.some(c => c.reviewContent)) {
+          hasReview = true
+          break
+        }
+      }
+      
+      if (!hasReview) {
+        return alert('当前级别没有复习内容可导出')
+      }
+
+      if (!confirm(`确定要导出“${this.level.title}”的所有复习内容吗？`)) return
+
+      this.exporting = true
+      try {
+        const blob = await request(`/api/course/level/${this.level._id}/export-reviews`, {
+          method: 'GET',
+          responseType: 'blob'
+        })
+
+        // 下载 ZIP 文件
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${this.level.title}-复习内容.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        alert('✅ 复习内容已导出')
+      } catch (error) {
+        console.error('导出失败:', error)
+        alert('❌ 导出失败: ' + (error.message || '未知错误'))
+      } finally {
+        this.exporting = false
+      }
+    }
   }
 }
 </script>
@@ -116,6 +171,23 @@ export default {
   cursor: pointer;
 }
 .btn-inline-edit:hover { background: #4f46e5; }
+
+.btn-export-reviews {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  background: #f97316;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-export-reviews:hover { background: #ea580c; }
+.btn-export-reviews:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
 
 .level-status { margin-top: 8px; }
 

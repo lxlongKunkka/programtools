@@ -9,6 +9,9 @@
       <div class="view-header-row">
         <h1>{{ topic.title }}</h1>
         <button v-if="canEdit" @click="$emit('enter-edit')" class="btn-inline-edit">✏️ 编辑</button>
+        <button @click="exportReviews" class="btn-export-reviews" :disabled="exporting">
+          {{ exporting ? '导出中...' : '📦 导出复习包' }}
+        </button>
       </div>
     </div>
 
@@ -70,6 +73,7 @@ import {
   isChapterCompleted, isChapterUnlocked, getChapterStatusClass
 } from '../../utils/courseUtils'
 import { canEditLevel, isTeacherOrAdmin } from '../../utils/permissionUtils'
+import request from '../../utils/request'
 import LearnersSection from './LearnersSection.vue'
 
 export default {
@@ -83,6 +87,11 @@ export default {
     contestProblemCounts: { type: Object, default: () => ({}) }
   },
   emits: ['go-to-chapter', 'enter-edit-chapter', 'select-level', 'select-group', 'view-learner', 'enter-edit'],
+  data() {
+    return {
+      exporting: false
+    }
+  },
   computed: {
     canEdit() { return canEditLevel(this.level, this.treeData) },
     isTeacherOrAdminFn() { return isTeacherOrAdmin() }
@@ -98,6 +107,53 @@ export default {
     },
     chapterStatusClass(chapter) {
       return getChapterStatusClass(this.level, chapter, this.userProgress, this.treeData)
+    },
+    chapterTotalCount(chapter) {
+      return getChapterProblemCount(chapter, this.contestProblemCounts)
+    },
+    onChapterClick(chapter) {
+      this.$emit('go-to-chapter', chapter, this.level, this.topic)
+    },
+    
+    async exportReviews() {
+      if (!this.topic || !this.topic.chapters || this.topic.chapters.length === 0) {
+        return alert('当前知识点没有章节')
+      }
+
+      // 检查是否有复习内容
+      const hasReview = this.topic.chapters.some(c => c.reviewContent)
+      if (!hasReview) {
+        return alert('当前知识点没有复习内容可导出')
+      }
+
+      if (!confirm(`确定要导出“${this.topic.title}”的所有复习内容吗？`)) return
+
+      this.exporting = true
+      try {
+        const blob = await request(`/api/course/topic/${this.topic._id}/export-reviews?levelId=${this.level._id}`, {
+          method: 'GET',
+          responseType: 'blob'
+        })
+
+        // 下载 ZIP 文件
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${this.topic.title}-复习内容.zip`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        alert('✅ 复习内容已导出')
+      } catch (error) {
+        console.error('导出失败:', error)
+        alert('❌ 导出失败: ' + (error.message || '未知错误'))
+      } finally {
+        this.exporting = false
+      }
+    }
+  }
     },
     chapterTotalCount(chapter) {
       const direct = getChapterProblemCount(chapter)
@@ -135,6 +191,23 @@ export default {
   cursor: pointer;
 }
 .btn-inline-edit:hover { background: #4f46e5; }
+
+.btn-export-reviews {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  background: #f97316;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-export-reviews:hover { background: #ea580c; }
+.btn-export-reviews:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
 
 .description-box {
   background: white;
