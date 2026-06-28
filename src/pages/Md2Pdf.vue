@@ -115,6 +115,15 @@
               maxlength="50"
             />
           </label>
+
+          <label class="option-item">
+            <span class="option-label">水印图片URL（可选）</span>
+            <input 
+              type="text" 
+              v-model="options.watermarkImage" 
+              placeholder="例如: https://example.com/logo.png"
+            />
+          </label>
         </div>
       </div>
 
@@ -225,7 +234,8 @@ const options = ref({
   displayHeaderFooter: false,
   printBackground: true,
   preferCSSPageSize: true,  // 默认使用 CSS 紧凑格式
-  watermark: ''  // 水印文字
+  watermark: '',  // 水印文字
+  watermarkImage: ''  // 水印图片URL
 })
 
 const converting = ref(false)

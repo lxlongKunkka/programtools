@@ -76,21 +76,36 @@ function makeHtml(mdContent, options = {}) {
 ` : ''
   
   // 水印样式和 HTML
-  const watermarkHtml = options.watermark ? `
-<div class="watermark">${options.watermark}</div>
+  const watermarkHtml = (options.watermark || options.watermarkImage) ? `
+<div class="watermark-container">
+  ${options.watermarkImage ? `<img src="${options.watermarkImage}" class="watermark-image" alt="watermark" />` : ''}
+  ${options.watermark ? `<div class="watermark-text">${options.watermark}</div>` : ''}
+</div>
 <style>
-.watermark {
+.watermark-container {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+    z-index: 9999;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+.watermark-image {
+    max-width: 400px;
+    max-height: 400px;
+    opacity: 0.08;
+    filter: grayscale(100%);
+}
+.watermark-text {
     font-size: 80px;
     color: rgba(0, 0, 0, 0.05);
     font-weight: bold;
     white-space: nowrap;
-    pointer-events: none;
-    z-index: 9999;
-    user-select: none;
 }
 </style>
 ` : ''
