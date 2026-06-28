@@ -1727,10 +1727,21 @@ router.get('/groups', async (req, res) => {
       } catch (err) {}
     }
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
-    console.log('[GET /groups] user:', user ? `${user.uname}(${user.role}, priv:${user.priv})` : 'null', 'isTeacher:', isTeacher, 'total groups:', groups.length)
+    console.log('[GET /groups] user:', user ? `${user.uname}(${user.role}, priv:${user.priv}, uid:${user._id})` : 'null', 'isTeacher:', isTeacher, 'total groups:', groups.length)
+    
     if (!isTeacher) {
-      groups = groups.filter(g => g.visible !== false)
-      console.log('[GET /groups] After filter:', groups.length, 'visible groups')
+      // For non-teacher users, filter out invisible groups unless they are an editor
+      groups = groups.filter(g => {
+        // Keep visible groups
+        if (g.visible !== false) return true
+        // Keep invisible groups if user is an editor
+        if (user && g.editors && g.editors.some(editorId => editorId.toString() === user._id.toString())) {
+          console.log('[GET /groups] User', user.uname, 'is editor of invisible group:', g.name)
+          return true
+        }
+        return false
+      })
+      console.log('[GET /groups] After filter:', groups.length, 'accessible groups')
     }
     
     // Manually populate editors from hydroConn (cross-connection populate is not supported)
@@ -2563,21 +2574,44 @@ router.get('/levels', async (req, res) => {
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
     
     if (!isTeacher) {
-      // For students, filter out levels from invisible groups
-      const visibleGroups = await CourseGroup.find({ visible: { $ne: false } }).select('name').lean()
-      const visibleGroupNames = new Set(visibleGroups.map(g => g.name))
+      // For students, filter out levels from invisible groups (unless they're an editor)
+      const allGroups = await CourseGroup.find().select('name visible editors').lean()
+      const groupMap = {}
+      allGroups.forEach(g => { groupMap[g.name] = g })
+      
       levels = levels.filter(level => {
-        // Keep levels with no group (legacy) or levels in visible groups
-        return !level.group || visibleGroupNames.has(level.group)
+        // Check group visibility
+        const group = level.group ? groupMap[level.group] : null
+        if (group && group.visible === false) {
+          // Allow if user is editor of the group
+          if (user && group.editors && group.editors.some(id => id.toString() === user._id.toString())) {
+            return true
+          }
+          return false
+        }
+        
+        // Check level visibility
+        if (level.visible === false) {
+          // Allow if user is editor of the level
+          if (user && level.editors && level.editors.some(id => id.toString() === user._id.toString())) {
+            return true
+          }
+          return false
+        }
+        
+        return true
       })
       
-      // For students, filter out invisible levels
-      levels = levels.filter(level => level.visible !== false)
-      
-      // For students, filter out invisible topics
+      // For students, filter out invisible topics (unless they're an editor of the level)
       levels = levels.map(level => {
+        const isLevelEditor = user && level.editors && level.editors.some(id => id.toString() === user._id.toString())
         if (level.topics && level.topics.length > 0) {
-          level.topics = level.topics.filter(topic => topic.visible !== false)
+          level.topics = level.topics.filter(topic => {
+            // Keep visible topics
+            if (topic.visible !== false) return true
+            // Keep invisible topics if user is level editor
+            return isLevelEditor
+          })
         }
         return level
       })

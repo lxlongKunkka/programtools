@@ -13,6 +13,12 @@ export async function request(url, options = {}) {
   const token = localStorage.getItem('auth_token')
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`
+    // Debug: log token status for course API calls
+    if (url.includes('/api/course/')) {
+      console.log('[Request]', url, 'Token:', token ? `${token.substring(0, 20)}...` : 'none')
+    }
+  } else if (url.includes('/api/course/')) {
+    console.warn('[Request]', url, '⚠️ No auth_token in localStorage')
   }
 
   const config = {
