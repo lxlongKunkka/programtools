@@ -67,6 +67,7 @@ h1 {
 h1:first-of-type {
     page-break-before: avoid;
     border: none;
+    text-align: center;
     font-size: 28pt;
     color: #1a4d8f;
     padding-top: 15pt;
