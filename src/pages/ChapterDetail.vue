@@ -814,7 +814,7 @@ export default {
         
         // 添加复习内容
         if (response.reviewContent) {
-          markdown += `## 📋 课后复习总结\n\n`
+          markdown += `## 📋 知识总结\n\n`
           markdown += response.reviewContent
           markdown += `\n\n---\n\n`
         }

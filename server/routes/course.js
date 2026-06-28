@@ -2361,7 +2361,7 @@ router.get('/topic/:topicId/export-reviews', authenticateToken, async (req, res)
       markdown += `---\n\n`
       
       // 添加复习内容
-      markdown += `## 📋 课后复习总结\n\n`
+      markdown += `## 📋 知识总结\n\n`
       markdown += chapter.reviewContent
       markdown += `\n\n---\n\n`
       
@@ -2464,7 +2464,7 @@ router.get('/level/:levelId/export-reviews', authenticateToken, async (req, res)
         markdown += `---\n\n`
         
         // 添加复习内容
-        markdown += `## 📋 课后复习总结\n\n`
+        markdown += `## 📋 知识总结\n\n`
         markdown += chapter.reviewContent
         markdown += `\n\n---\n\n`
         
