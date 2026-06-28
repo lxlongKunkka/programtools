@@ -22,6 +22,7 @@ const chapterSchema = new mongoose.Schema({
 const topicSchema = new mongoose.Schema({
   title: { type: String, required: true }, // e.g. "Basic Syntax"
   description: { type: String },
+  visible: { type: Boolean, default: true }, // Whether the topic is visible to students
   chapters: [chapterSchema]
 })
 

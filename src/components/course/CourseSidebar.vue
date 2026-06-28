@@ -49,11 +49,17 @@
               <div v-for="topic in level.topics" :key="topic._id" class="tree-topic">
                 <div
                   class="tree-item topic-item"
-                  :class="{ active: selectedNode && selectedNode.type === 'topic' && selectedNode.id === topic._id }"
+                  :class="{ 
+                    active: selectedNode && selectedNode.type === 'topic' && selectedNode.id === topic._id,
+                    'topic-hidden': editMode && topic.visible === false
+                  }"
                   @click="onTopicClick(topic, level)"
                 >
                   <span v-if="editMode" class="tree-icon" @click.stop="toggleTopicInTree(topic)">{{ isTopicExpanded(topic) ? '▼' : '▶' }}</span>
-                  <span class="tree-label">{{ topic.title }}</span>
+                  <span class="tree-label">
+                    {{ topic.title }}
+                    <span v-if="editMode && topic.visible === false" class="visibility-badge" title="此专题对学员不可见">🔒</span>
+                  </span>
                   <span v-if="topic.problemCount" class="tree-count-badge">{{ topic.problemCount }}题</span>
                   <div v-if="editMode && canEditLevelNode(level)" class="tree-actions">
                     <button class="btn-node-action" title="在此前插入知识点" @click.stop="$emit('insert-topic', level, getTopicIndex(level, topic))">↰</button>
@@ -270,6 +276,18 @@ export default {
   margin-bottom: 1px;
 }
 .topic-item.active { background: #ecfdf5; border-left-color: #059669; color: #065f46; }
+.topic-item.topic-hidden {
+  opacity: 0.6;
+  background: #fafafa;
+  border-left-color: #94a3b8;
+}
+.topic-item.topic-hidden .tree-label {
+  color: #94a3b8;
+}
+.visibility-badge {
+  margin-left: 6px;
+  font-size: 11px;
+}
 
 .chapter-item-tree {
   padding-left: 64px;

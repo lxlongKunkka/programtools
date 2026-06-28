@@ -2503,12 +2503,27 @@ router.get('/levels', async (req, res) => {
         query.subject = subject
       }
     }
-    const levels = await CourseLevel.find(query)
+    let levels = await CourseLevel.find(query)
       .select('-topics.chapters.content -topics.chapters.reviewContent -topics.chapters.previewContent -chapters.content -chapters.reviewContent -chapters.previewContent')
       .lean()
       .sort({ level: 1 })
       // .populate('topics.chapters.problemIds', 'title docId domainId') // No longer needed as we store strings
       // .populate('chapters.problemIds', 'title docId domainId') // Legacy support
+    
+    // Filter invisible topics for students
+    const user = req.user // From authenticateToken middleware (optional)
+    const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
+    
+    if (!isTeacher) {
+      // For students, filter out invisible topics
+      levels = levels.map(level => {
+        if (level.topics && level.topics.length > 0) {
+          level.topics = level.topics.filter(topic => topic.visible !== false)
+        }
+        return level
+      })
+    }
+    
     res.json(levels)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -3894,7 +3909,7 @@ router.post('/levels/:id/move', authenticateToken, requireRole(['admin', 'teache
 // Add a Topic
 router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, description, insertIndex } = req.body
+    const { title, description, visible, insertIndex } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -3902,7 +3917,12 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
         return res.status(403).json({ error: 'Access denied: You cannot add topics to this group.' })
     }
     
-    const newTopic = { title, description, chapters: [] }
+    const newTopic = { 
+      title, 
+      description, 
+      visible: visible !== undefined ? visible : true, // Default to visible
+      chapters: [] 
+    }
 
     if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= level.topics.length) {
       level.topics.splice(insertIndex, 0, newTopic)
@@ -3925,7 +3945,7 @@ router.post('/levels/:id/topics', authenticateToken, requireRole(['admin', 'teac
 // Update a Topic
 router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { title, description } = req.body
+    const { title, description, visible } = req.body
     const level = await CourseLevel.findById(req.params.id)
     if (!level) return res.status(404).json({ error: 'Level not found' })
     
@@ -3937,8 +3957,9 @@ router.put('/levels/:id/topics/:topicId', authenticateToken, requireRole(['admin
     const topic = topicInfo?.topic
     if (!topic) return res.status(404).json({ error: 'Topic not found' })
     
-    topic.title = title
-    topic.description = description
+    if (title !== undefined) topic.title = title
+    if (description !== undefined) topic.description = description
+    if (visible !== undefined) topic.visible = visible
     await level.save()
     res.json(level)
   } catch (e) {

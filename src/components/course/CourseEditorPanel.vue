@@ -515,6 +515,10 @@ export default {
         // Auto-expand topic to show chapters
         data.collapsed = false
         this.editingTopic = JSON.parse(JSON.stringify(data))
+        // Ensure visible field exists (default to true for legacy data)
+        if (this.editingTopic.visible === undefined) {
+          this.editingTopic.visible = true
+        }
         this.editingLevelForTopic = parentLevel
       } else if (type === 'chapter') {
         this.editingLevelForChapter = parentLevel
@@ -710,6 +714,7 @@ export default {
       const newTopic = {
         title: '新知识点',
         description: '',
+        visible: true, // Default to visible
         _id: null, // Marker for new
         _insertIndex: insertIndex
       }
