@@ -2750,6 +2750,27 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           let content = currentChunk
           let finishReason = resp.data.choices?.[0]?.finish_reason
           
+          // 添加日志记录AI响应
+          console.log(`[Background] AI response - content length: ${content.length}, finish_reason: ${finishReason}`)
+          
+          // 验证内容不为空
+          if (!content || content.trim().length < 100) {
+              const errMsg = `AI返回的内容为空或过短（${content.length}字符）。可能是API错误或主题描述不够详细。`;
+              console.error(`[Background] ${errMsg} Chapter: ${chapterId}`);
+              
+              getIO().emit('ai_task_complete', {
+                  chapterId,
+                  chapterTitle: chapterTitle || '未知章节',
+                  clientKey,
+                  type: 'ppt',
+                  status: 'error',
+                  message: errMsg,
+                  error: 'empty_content'
+              });
+              
+              return;
+          }
+          
           let loopCount = 0
           const MAX_LOOPS = 5  // 增加到5次重试
           let emptyRetries = 0
