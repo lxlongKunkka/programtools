@@ -112,7 +112,9 @@ export default {
       return getChapterProblemCount(chapter, this.contestProblemCounts)
     },
     onChapterClick(chapter) {
-      this.$emit('go-to-chapter', chapter, this.level, this.topic)
+      if (this.chapterStatusClass(chapter) !== 'status-locked') {
+        this.$emit('go-to-chapter', this.level, chapter)
+      }
     },
     
     async exportReviews() {
@@ -151,19 +153,6 @@ export default {
         alert('❌ 导出失败: ' + (error.message || '未知错误'))
       } finally {
         this.exporting = false
-      }
-    }
-  }
-    },
-    chapterTotalCount(chapter) {
-      const direct = getChapterProblemCount(chapter)
-      const hw = (chapter.homeworkIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
-      const ex = (chapter.examIds || []).reduce((s, id) => s + (this.contestProblemCounts[id] || 0), 0)
-      return direct + hw + ex
-    },
-    onChapterClick(chapter) {
-      if (this.chapterStatusClass(chapter) !== 'status-locked') {
-        this.$emit('go-to-chapter', this.level, chapter)
       }
     }
   }
