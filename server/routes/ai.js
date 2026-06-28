@@ -2392,7 +2392,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
 // Generate PPT
 router.post('/generate-ppt', authenticateToken, async (req, res) => {
   try {
-    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, language } = req.body
+    const { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, language, problemIds } = req.body
     if (!topic) return res.status(400).json({ error: 'Missing topic' })
 
     let fullTopic = topic
@@ -2406,6 +2406,50 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
     // Inject User Requirements
     if (requirements && requirements.trim()) {
         systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
+    }
+
+    // Inject Problems as Reference Examples
+    if (problemIds && Array.isArray(problemIds) && problemIds.length > 0) {
+        try {
+            const Document = (await import('../models/Document.js')).default;
+            const problems = [];
+            
+            for (const pidStr of problemIds.slice(0, 5)) {
+                let query = {};
+                if (pidStr.includes(':')) {
+                    const [domain, docId] = pidStr.split(':');
+                    if (!isNaN(docId)) {
+                        query = { domainId: domain, docId: Number(docId) };
+                    } else {
+                        query = { domainId: domain, pid: docId };
+                    }
+                } else if (!isNaN(pidStr)) {
+                    query = { domainId: 'system', docId: Number(pidStr) };
+                } else {
+                    query = { domainId: 'system', pid: pidStr };
+                }
+                
+                const doc = await Document.findOne(query).select('title docId domainId content aiSolution');
+                if (doc) {
+                    problems.push({
+                        title: doc.title,
+                        content: doc.content || '',
+                        aiSolution: doc.aiSolution || ''
+                    });
+                }
+            }
+            
+            if (problems.length > 0) {
+                systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n`;
+                problems.forEach((prob, idx) => {
+                    systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
+                    if (prob.content) systemPrompt += `${prob.content.slice(0, 500)}...\n`;
+                    if (prob.aiSolution) systemPrompt += `参考解法：${prob.aiSolution.slice(0, 800)}...\n---\n`;
+                });
+            }
+        } catch (e) {
+            console.error('[PPT] Failed to fetch problems:', e);
+        }
     }
 
     // Inject Chapter Content (Lesson Plan)
@@ -2563,9 +2607,9 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
 
 // Generate PPT Background
 router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
-  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group } = req.body;
+  let { topic, context, level, model, chapterList, currentChapterIndex, chapterContent, requirements, chapterId, topicId, topicTitle, chapterTitle, levelNum, levelTitle, clientKey, language, group, problemIds } = req.body;
   
-  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}'`);
+  console.log(`[PPT Background] Request received. ChapterId: ${chapterId}, TopicId: ${topicId}, Group (from body): '${group}', ProblemIds: ${problemIds ? problemIds.length : 0}`);
 
   if (!topic || !chapterId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -2657,6 +2701,58 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           
           if (requirements && requirements.trim()) {
               systemPrompt += `\n\n【用户额外要求】\n${requirements}\n`
+          }
+
+          // Inject Problems as Reference Examples
+          if (problemIds && Array.isArray(problemIds) && problemIds.length > 0) {
+              try {
+                  const Document = (await import('../models/Document.js')).default;
+                  const problems = [];
+                  
+                  for (const pidStr of problemIds.slice(0, 5)) { // 最多取5道题
+                      let query = {};
+                      if (pidStr.includes(':')) {
+                          const [domain, docId] = pidStr.split(':');
+                          if (!isNaN(docId)) {
+                              query = { domainId: domain, docId: Number(docId) };
+                          } else {
+                              query = { domainId: domain, pid: docId };
+                          }
+                      } else if (!isNaN(pidStr)) {
+                          query = { domainId: 'system', docId: Number(pidStr) };
+                      } else {
+                          query = { domainId: 'system', pid: pidStr };
+                      }
+                      
+                      const doc = await Document.findOne(query).select('title docId domainId content aiSolution');
+                      if (doc) {
+                          problems.push({
+                              title: doc.title,
+                              docId: doc.docId,
+                              domainId: doc.domainId,
+                              content: doc.content || '',
+                              aiSolution: doc.aiSolution || ''
+                          });
+                      }
+                  }
+                  
+                  if (problems.length > 0) {
+                      systemPrompt += `\n\n【必做题目（作为参考例题）】\n以下是本章节的必做题目，请将这些题目作为**例题**融入到 PPT 中：\n- 在讲解对应知识点时，使用这些题目作为例题进行分析和讲解。\n- 展示题目的解题思路、代码实现和注意事项。\n- 如果题目有 AI 题解，请参考但用更适合课堂讲解的方式重新表述。\n- 不要直接复制粘贴题目内容，而是提炼关键信息并配合知识点讲解。\n\n`;
+                      
+                      problems.forEach((prob, idx) => {
+                          systemPrompt += `\n例题${idx + 1}：${prob.title}\n`;
+                          if (prob.content && prob.content.length > 0) {
+                              systemPrompt += `题目描述：${prob.content.slice(0, 500)}...\n`;
+                          }
+                          if (prob.aiSolution && prob.aiSolution.length > 0) {
+                              systemPrompt += `参考解法：${prob.aiSolution.slice(0, 800)}...\n`;
+                          }
+                          systemPrompt += `---\n`;
+                      });
+                  }
+              } catch (e) {
+                  console.error('[Background] Failed to fetch problems:', e);
+              }
           }
 
           if (chapterContent && typeof chapterContent === 'string' && chapterContent.trim().length > 20) {

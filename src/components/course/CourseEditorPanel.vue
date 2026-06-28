@@ -1703,7 +1703,8 @@ export default {
             levelNum: levelNum,
             levelTitle: levelTitle,
             clientKey: chapterId,
-            group: groupName
+            group: groupName,
+            problemIds: this.editingChapter.problemIds || []
           })
         })
         
