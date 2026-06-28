@@ -1714,7 +1714,22 @@ async function buildTeacherCourseLearnerDetailPayload(teacherId, learnerId) {
 // Get all groups
 router.get('/groups', async (req, res) => {
   try {
-    const groups = await CourseGroup.find().sort({ order: 1 }).lean()
+    let groups = await CourseGroup.find().sort({ order: 1 }).lean()
+    
+    // Filter invisible groups for non-teacher users
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    let user = null
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        user = await User.findById(decoded._id)
+      } catch (err) {}
+    }
+    const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
+    if (!isTeacher) {
+      groups = groups.filter(g => g.visible !== false)
+    }
+    
     // Manually populate editors from hydroConn (cross-connection populate is not supported)
     const allEditorIds = [...new Set(groups.flatMap(g => g.editors || []))]
     const editorMap = {}
@@ -1735,13 +1750,14 @@ router.get('/groups', async (req, res) => {
 // Create group
 router.post('/groups', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const { name, title, editors, language } = req.body
+    const { name, title, editors, language, visible } = req.body
     const count = await CourseGroup.countDocuments()
     const group = new CourseGroup({
       name,
       title: title || name,
       language: language || 'C++',
       order: count + 1,
+      visible: visible !== undefined ? visible : true,
       editors: editors || []
     })
     await group.save()
@@ -1754,7 +1770,7 @@ router.post('/groups', authenticateToken, requireRole('admin'), async (req, res)
 // Update group (Rename & Editors)
 router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const { name, title, editors, language } = req.body
+    const { name, title, editors, language, visible } = req.body
     const group = await CourseGroup.findById(req.params.id)
     if (!group) return res.status(404).json({ error: 'Group not found' })
 
@@ -1767,6 +1783,7 @@ router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, r
     if (title) group.title = title
     if (editors) group.editors = editors
     if (language) group.language = language
+    if (visible !== undefined) group.visible = visible
     
     await group.save()
     res.json(group)
@@ -2510,11 +2527,14 @@ router.get('/levels', async (req, res) => {
       // .populate('topics.chapters.problemIds', 'title docId domainId') // No longer needed as we store strings
       // .populate('chapters.problemIds', 'title docId domainId') // Legacy support
     
-    // Filter invisible topics for students
+    // Filter invisible content for students
     const user = req.user // From authenticateToken middleware (optional)
     const isTeacher = user && (user.role === 'admin' || user.priv === -1 || user.role === 'teacher')
     
     if (!isTeacher) {
+      // For students, filter out invisible levels
+      levels = levels.filter(level => level.visible !== false)
+      
       // For students, filter out invisible topics
       levels = levels.map(level => {
         if (level.topics && level.topics.length > 0) {
@@ -3741,7 +3761,7 @@ function checkLevelPermission(user, level) {
 // Create a Level
 router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject, group, label, editors } = req.body
+    const { level, title, description, subject, group, label, editors, visible } = req.body
     
     if (!(await checkGroupPermission(req.user, group))) {
         return res.status(403).json({ error: 'Access denied: You are not an editor of this group.' })
@@ -3754,6 +3774,7 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
         subject: subject || 'C++', 
         group, 
         label,
+        visible: visible !== undefined ? visible : true,
         editors: editors || [],
         chapters: [] 
     })
@@ -3767,7 +3788,7 @@ router.post('/levels', authenticateToken, requireRole(['admin', 'teacher']), asy
 // Update a Level
 router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), async (req, res) => {
   try {
-    const { level, title, description, subject, group, label, editors } = req.body
+    const { level, title, description, subject, group, label, editors, visible } = req.body
     
     // Check permission for the NEW group (if changing)
     if (group && !(await checkGroupPermission(req.user, group))) {
@@ -3785,9 +3806,12 @@ router.put('/levels/:id', authenticateToken, requireRole(['admin', 'teacher']), 
         }
     }
 
+    const updateData = { level, title, description, subject, group, label, editors }
+    if (visible !== undefined) updateData.visible = visible
+    
     const updatedLevel = await CourseLevel.findByIdAndUpdate(
       req.params.id, 
-      { level, title, description, subject, group, label, editors },
+      updateData,
       { new: true }
     )
     res.json(updatedLevel)

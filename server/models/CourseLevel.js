@@ -33,6 +33,7 @@ const courseLevelSchema = new mongoose.Schema({
   subject: { type: String, default: 'C++' }, // Course subject (e.g., 'C++', 'Python')
   title: { type: String, required: true },
   description: { type: String },
+  visible: { type: Boolean, default: true }, // Whether the level is visible to students
   editors: [{ type: Number, ref: 'User' }], // List of teachers allowed to edit this specific level
   topics: [topicSchema],
   // Legacy support (optional, can be removed if migration is done)

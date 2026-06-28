@@ -9,9 +9,24 @@
       <input v-model="level.group" class="form-input" disabled>
     </div>
 
-    <div class="form-group">
-      <label>标题 (Title):</label>
-      <input v-model="level.title" class="form-input" placeholder="例如: 基础语法">
+    <div class="form-row">
+      <div class="form-group">
+        <label>标题 (Title):</label>
+        <input v-model="level.title" class="form-input" placeholder="例如: 基础语法">
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox" 
+            v-model="level.visible" 
+            :true-value="true" 
+            :false-value="false"
+            class="form-checkbox"
+          />
+          <span class="checkbox-text">对学员可见</span>
+          <span class="hint-inline">取消勾选后，学员将无法看到此模块</span>
+        </label>
+      </div>
     </div>
 
     <!-- AI Assistant Section -->
@@ -80,3 +95,44 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  padding: 8px 0;
+}
+
+.form-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.checkbox-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.hint-inline {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.form-group .checkbox-label {
+  padding-top: 0;
+}
+</style>

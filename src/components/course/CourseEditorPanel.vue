@@ -501,6 +501,10 @@ export default {
         }
         if (!this.editingGroup.editors) this.editingGroup.editors = []
         if (!this.editingGroup.language) this.editingGroup.language = 'C++'
+        // Ensure visible field exists (default to true for legacy data)
+        if (this.editingGroup.visible === undefined) {
+          this.editingGroup.visible = true
+        }
       } else if (type === 'level') {
         // Auto-expand level and all its topics to show chapters
         data.descCollapsed = false
@@ -511,6 +515,10 @@ export default {
             this.editingLevel.editors = this.editingLevel.editors.map(e => e._id)
         }
         if (!this.editingLevel.editors) this.editingLevel.editors = []
+        // Ensure visible field exists (default to true for legacy data)
+        if (this.editingLevel.visible === undefined) {
+          this.editingLevel.visible = true
+        }
       } else if (type === 'topic') {
         // Auto-expand topic to show chapters
         data.collapsed = false
@@ -661,6 +669,7 @@ export default {
             name: '新分组',
             title: '新分组',
             language: 'C++',
+            visible: true, // Default to visible
             editors: [],
             _id: null
         }
@@ -681,6 +690,7 @@ export default {
         description: '',
         subject: group.language || 'C++', // Inherit from group
         group: group.name, // Pre-fill group
+        visible: true, // Default to visible
         _id: null // Marker for new
       }
       
@@ -701,6 +711,7 @@ export default {
         description: '',
         subject: group.language || 'C++',
         group: group.name,
+        visible: true, // Default to visible
         _id: null,
         _insertBeforeLevelId: targetLevel._id || null
       }

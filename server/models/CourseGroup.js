@@ -6,6 +6,7 @@ const courseGroupSchema = new mongoose.Schema({
   title: { type: String }, // Display name if different, or just use name
   language: { type: String, default: 'C++' },
   order: { type: Number, default: 0 },
+  visible: { type: Boolean, default: true }, // Whether the group is visible to students
   editors: [{ type: Number, ref: 'User' }], // List of teachers allowed to edit
   createdAt: { type: Date, default: Date.now }
 })

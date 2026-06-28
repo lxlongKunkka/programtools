@@ -24,6 +24,21 @@
       </select>
     </div>
 
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input 
+          type="checkbox" 
+          v-model="group.visible" 
+          :true-value="true" 
+          :false-value="false"
+          class="form-checkbox"
+          :disabled="!canEdit"
+        />
+        <span class="checkbox-text">对学员可见</span>
+        <span class="hint-inline">取消勾选后，学员将无法看到此分组</span>
+      </label>
+    </div>
+
     <div class="form-group" v-if="isAdmin">
       <label>允许编辑的教师:</label>
       <div class="checkbox-list" v-if="teachers.length > 0">
@@ -52,3 +67,37 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  padding: 8px 0;
+}
+
+.form-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.checkbox-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.hint-inline {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.form-group .checkbox-label {
+  padding-top: 0;
+}
+</style>

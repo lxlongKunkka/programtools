@@ -11,11 +11,17 @@
         <!-- Group node -->
         <div
           class="tree-item group-item"
-          :class="{ active: selectedNode && selectedNode.type === 'group' && selectedNode.id === group.name }"
+          :class="{ 
+            active: selectedNode && selectedNode.type === 'group' && selectedNode.id === group.name,
+            'group-hidden': editMode && group.visible === false
+          }"
           @click="onGroupClick(group)"
         >
           <span class="tree-icon" @click.stop="group.collapsed = !group.collapsed">{{ group.collapsed ? '▶' : '▼' }}</span>
-          <span class="tree-label">{{ group.title || group.name }}</span>
+          <span class="tree-label">
+            {{ group.title || group.name }}
+            <span v-if="editMode && group.visible === false" class="visibility-badge" title="此分组对学员不可见">🔒</span>
+          </span>
           <span v-if="group.problemCount" class="tree-count-badge">{{ group.problemCount }}题</span>
           <div v-if="editMode && canCreateLevel(group)" class="tree-actions">
             <button class="btn-node-action" title="新建课程" @click.stop="$emit('create-level', group)">+</button>
@@ -27,11 +33,17 @@
           <div v-for="level in group.levels" :key="level._id" class="tree-level">
             <div
               class="tree-item level-item"
-              :class="{ active: selectedNode && selectedNode.type === 'level' && selectedNode.id === level._id }"
+              :class="{ 
+                active: selectedNode && selectedNode.type === 'level' && selectedNode.id === level._id,
+                'level-hidden': editMode && level.visible === false
+              }"
               @click="onLevelClick(level)"
             >
               <span class="tree-icon" @click.stop="level.collapsed = !level.collapsed">{{ level.collapsed ? '▶' : '▼' }}</span>
-              <span class="tree-label">{{ level.title }}</span>
+              <span class="tree-label">
+                {{ level.title }}
+                <span v-if="editMode && level.visible === false" class="visibility-badge" title="此模块对学员不可见">🔒</span>
+              </span>
               <span v-if="level.problemCount" class="tree-count-badge">{{ level.problemCount }}题</span>
               <span v-if="isLevelCompletedFn(level)" class="status-dot completed" title="已完成">●</span>
               <span v-else-if="isLevelUnlockedFn(level)" class="status-dot unlocked" title="进行中">●</span>
@@ -258,6 +270,14 @@ export default {
   margin-bottom: 2px;
 }
 .group-item.active { background: #e2e8f0; border-left-color: #475569; color: #0f172a; }
+.group-item.group-hidden {
+  opacity: 0.6;
+  background: #fafafa;
+  border-left-color: #cbd5e1;
+}
+.group-item.group-hidden .tree-label {
+  color: #94a3b8;
+}
 
 .level-item {
   padding-left: 30px;
@@ -266,6 +286,14 @@ export default {
   margin-bottom: 1px;
 }
 .level-item.active { background: #eff6ff; border-left-color: #2563eb; color: #1e40af; }
+.level-item.level-hidden {
+  opacity: 0.6;
+  background: #fafafa;
+  border-left-color: #94a3b8;
+}
+.level-item.level-hidden .tree-label {
+  color: #94a3b8;
+}
 
 .topic-item {
   padding-left: 50px;
