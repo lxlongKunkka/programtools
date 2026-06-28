@@ -9,7 +9,7 @@
       <div class="view-header-row">
         <h1>{{ topic.title }}</h1>
         <button v-if="canEdit" @click="$emit('enter-edit')" class="btn-inline-edit">✏️ 编辑</button>
-        <button @click="exportReviews" class="btn-export-reviews" :disabled="exporting">
+        <button v-if="canEdit" @click="exportReviews" class="btn-export-reviews" :disabled="exporting">
           {{ exporting ? '导出中...' : '📦 导出复习包' }}
         </button>
       </div>
