@@ -2731,31 +2731,88 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
             { role: 'user', content: `请为主题 "${fullTopic}" 生成 HTML 课件。请务必使用 ${targetLang} 语言进行讲解和代码演示。` }
           ]
 
+          let currentModel = model || 'gemini-3.5-flash'
+          let retryWithDifferentModel = false
+          let apiResponse
+
+          // 第一次尝试
+          let currentApiKey = pickApiKey(currentModel)
           const payload = {
-            model: model || 'gemini-3.5-flash',
+            model: currentModel,
             messages,
             temperature: 0.3,
-            max_tokens: 32000  // 提高限制，减少截断
+            max_tokens: 32000
           }
 
-          const resp = await axios.post(YUN_API_URL, payload, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${YUN_API_KEY}`
-            },
-            timeout: 300000 // 5 minutes
-          })
+          console.log(`[Background] Sending PPT request - topic: "${fullTopic}", model: ${payload.model}, prompt length: ${systemPrompt.length}`)
 
-          let currentChunk = resp.data.choices?.[0]?.message?.content || ''
+          try {
+              apiResponse = await axios.post(YUN_API_URL, payload, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${currentApiKey}`
+                },
+                timeout: 300000
+              })
+              
+              const firstFinishReason = apiResponse.data.choices?.[0]?.finish_reason
+              console.log(`[Background] First attempt - finish_reason: ${firstFinishReason}`)
+              
+              // 如果被过滤且使用的是gemini，自动切换到Claude重试
+              if (firstFinishReason === 'content_filter' && /gemini/i.test(currentModel)) {
+                  console.log(`[Background] Content filtered by ${currentModel}, retrying with claude-sonnet-4`)
+                  retryWithDifferentModel = true
+                  currentModel = 'claude-sonnet-4'
+                  currentApiKey = pickApiKey(currentModel)
+                  
+                  apiResponse = await axios.post(YUN_API_URL, {
+                      model: currentModel,
+                      messages,
+                      temperature: 0.3,
+                      max_tokens: 32000
+                  }, {
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${currentApiKey}`
+                    },
+                    timeout: 300000
+                  })
+                  
+                  console.log(`[Background] Retry with ${currentModel} completed`)
+              }
+          } catch (err) {
+              console.error('[Background] API request failed:', err.message)
+              throw err
+          }
+
+          let currentChunk = apiResponse.data.choices?.[0]?.message?.content || ''
           let content = currentChunk
-          let finishReason = resp.data.choices?.[0]?.finish_reason
+          let finishReason = apiResponse.data.choices?.[0]?.finish_reason
           
           // 添加日志记录AI响应
-          console.log(`[Background] AI response - content length: ${content.length}, finish_reason: ${finishReason}`)
+          console.log(`[Background] AI response - model: ${currentModel}, content length: ${content.length}, finish_reason: ${finishReason}`)
+          
+          // 处理内容过滤器错误（重试后仍然被过滤）
+          if (finishReason === 'content_filter') {
+              const errMsg = `AI内容审查拦截了该请求（已尝试多个模型）。这通常是由于章节内容触发了安全过滤器。建议：1) 检查教案内容是否包含敏感信息；2) 尝试修改章节标题；3) 联系管理员。`;
+              console.error(`[Background] Content filtered after retry. Topic: "${fullTopic}", Chapter: ${chapterId}, Model: ${currentModel}`);
+              
+              getIO().emit('ai_task_complete', {
+                  chapterId,
+                  chapterTitle: chapterTitle || '未知章节',
+                  clientKey,
+                  type: 'ppt',
+                  status: 'error',
+                  message: errMsg,
+                  error: 'content_filter'
+              });
+              
+              return;
+          }
           
           // 验证内容不为空
           if (!content || content.trim().length < 100) {
-              const errMsg = `AI返回的内容为空或过短（${content.length}字符）。可能是API错误或主题描述不够详细。`;
+              const errMsg = `AI返回的内容为空或过短（${content.length}字符）。可能是API错误、网络问题或主题描述不够详细。`;
               console.error(`[Background] ${errMsg} Chapter: ${chapterId}`);
               
               getIO().emit('ai_task_complete', {
