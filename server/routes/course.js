@@ -1752,6 +1752,13 @@ router.get('/groups', async (req, res) => {
 router.post('/groups', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { name, title, editors, language, visible } = req.body
+    
+    // Check if group with same name already exists
+    const existingGroup = await CourseGroup.findOne({ name })
+    if (existingGroup) {
+      return res.status(400).json({ error: `分组 "${name}" 已存在，请使用其他名称` })
+    }
+    
     const count = await CourseGroup.countDocuments()
     const group = new CourseGroup({
       name,
@@ -1764,6 +1771,10 @@ router.post('/groups', authenticateToken, requireRole('admin'), async (req, res)
     await group.save()
     res.json(group)
   } catch (e) {
+    // Handle MongoDB duplicate key error
+    if (e.code === 11000) {
+      return res.status(400).json({ error: '分组名称已存在，请使用其他名称' })
+    }
     res.status(500).json({ error: e.message })
   }
 })
@@ -1777,18 +1788,28 @@ router.put('/groups/:id', authenticateToken, requireRole('admin'), async (req, r
 
     const oldName = group.name
     if (name && name !== oldName) {
+      // Check if new name conflicts with existing group
+      const existingGroup = await CourseGroup.findOne({ name, _id: { $ne: req.params.id } })
+      if (existingGroup) {
+        return res.status(400).json({ error: `分组 "${name}" 已存在，请使用其他名称` })
+      }
+      
       // Update all levels that use this group name
       await CourseLevel.updateMany({ group: oldName }, { $set: { group: name } })
       group.name = name
     }
-    if (title) group.title = title
-    if (editors) group.editors = editors
-    if (language) group.language = language
+    if (title !== undefined) group.title = title
+    if (editors !== undefined) group.editors = editors
+    if (language !== undefined) group.language = language
     if (visible !== undefined) group.visible = visible
     
     await group.save()
     res.json(group)
   } catch (e) {
+    // Handle MongoDB duplicate key error
+    if (e.code === 11000) {
+      return res.status(400).json({ error: '分组名称已存在，请使用其他名称' })
+    }
     res.status(500).json({ error: e.message })
   }
 })
