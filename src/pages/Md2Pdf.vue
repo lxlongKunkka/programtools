@@ -105,6 +105,16 @@
             <input type="checkbox" v-model="options.preferCSSPageSize" />
             <span>使用紧凑格式（CSS 预设：A4 纸张，5mm 边距）</span>
           </label>
+
+          <label class="option-item">
+            <span class="option-label">水印文字（可选）</span>
+            <input 
+              type="text" 
+              v-model="options.watermark" 
+              placeholder="例如: 内部资料 仅供学习"
+              maxlength="50"
+            />
+          </label>
         </div>
       </div>
 
@@ -214,7 +224,8 @@ const options = ref({
   customMargin: 0.5,
   displayHeaderFooter: false,
   printBackground: true,
-  preferCSSPageSize: true  // 默认使用 CSS 紧凑格式
+  preferCSSPageSize: true,  // 默认使用 CSS 紧凑格式
+  watermark: ''  // 水印文字
 })
 
 const converting = ref(false)

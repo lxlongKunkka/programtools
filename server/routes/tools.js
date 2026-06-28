@@ -75,6 +75,26 @@ function makeHtml(mdContent, options = {}) {
 </style>
 ` : ''
   
+  // 水印样式和 HTML
+  const watermarkHtml = options.watermark ? `
+<div class="watermark">${options.watermark}</div>
+<style>
+.watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 80px;
+    color: rgba(0, 0, 0, 0.05);
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 9999;
+    user-select: none;
+}
+</style>
+` : ''
+  
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -87,6 +107,7 @@ function makeHtml(mdContent, options = {}) {
 <script>${KATEX_AR_JS}</script>
 </head>
 <body>
+${watermarkHtml}
 ${body}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
