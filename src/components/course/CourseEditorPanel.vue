@@ -1663,8 +1663,8 @@ export default {
       const groupObj = this.groups.find(g => g.name === groupName)
       const language = groupObj ? (groupObj.language || 'C++') : 'C++'
 
-      // Only inject lesson plan (markdown) as reference; skip if chapter already has an HTML PPT
-      const chapterContent = (this.editingChapter.contentType !== 'html') ? (this.editingChapter.content || '') : ''
+      // Always use content field as lesson plan reference (contentType is just a marker)
+      const chapterContent = this.editingChapter.content || ''
       const requirements = this.aiRequirements
 
       console.log('[generatePPT] contentType:', this.editingChapter.contentType, '| chapterContent length:', chapterContent ? chapterContent.length : 0)
