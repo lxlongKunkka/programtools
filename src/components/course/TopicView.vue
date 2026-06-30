@@ -122,11 +122,6 @@ export default {
         return alert('当前知识点没有章节')
       }
 
-      // 检查是否有复习内容
-      const hasReview = this.topic.chapters.some(c => c.reviewContent)
-      if (!hasReview) {
-        return alert('当前知识点没有复习内容可导出')
-      }
 
       if (!confirm(`确定要导出“${this.topic.title}”的所有复习内容吗？`)) return
 

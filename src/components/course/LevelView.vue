@@ -106,18 +106,6 @@ export default {
         return alert('当前级别没有知识点')
       }
 
-      // 检查是否有复习内容
-      let hasReview = false
-      for (const topic of this.level.topics) {
-        if (topic.chapters && topic.chapters.some(c => c.reviewContent)) {
-          hasReview = true
-          break
-        }
-      }
-      
-      if (!hasReview) {
-        return alert('当前级别没有复习内容可导出')
-      }
 
       if (!confirm(`确定要导出“${this.level.title}”的所有复习内容吗？`)) return
 
