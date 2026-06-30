@@ -141,8 +141,6 @@ export default {
         link.click()
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
-
-        alert('✅ 复习内容已导出')
       } catch (error) {
         console.error('导出失败:', error)
         alert('❌ 导出失败: ' + (error.message || '未知错误'))
