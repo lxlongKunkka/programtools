@@ -6,7 +6,7 @@ import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 import { fetchNflsojContest, fetchNflsojProblem, fetchNflsojContestList } from './nflsoj.js'
 import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem, fetchHydroNflsoiProblemBank } from './hydro_nflsoi.js'
-import { fetchLyrioNflsoiContest, fetchLyrioNflsoiProblem, fetchLyrioNflsoiContestList } from './lyrio_nflsoi.js'
+import { fetchLyrioNflsoiContest, fetchLyrioNflsoiProblem, fetchLyrioNflsoiContestList, fetchLyrioNflsoiAllAcCodes } from './lyrio_nflsoi.js'
 import { LYRIO_NFLSOI_USER, LYRIO_NFLSOI_PWD } from '../config.js'
 import { fetchMnaContest, fetchMnaProblem } from './mna.js'
 
@@ -119,11 +119,26 @@ router.get('/problem', authenticateToken, async (req, res) => {
       return res.json(await fetchLyrioNflsoiProblem(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
     }
     if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiProblem(url))
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ' })
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ / Lyrio OJ' })
   } catch (err) {
     console.error(`[${platform}] problem fetch error:`, err.message)
     const code = err.response?.status
     res.status(500).json({ error: `抓取题目失败: ${code ? `HTTP ${code}` : err.message}` })
+  }
+})
+
+// GET /api/atcoder/lyrio-ac-codes?contestId=... (获取 Lyrio 比赛中所有题目的 AC 代码)
+router.get('/lyrio-ac-codes', authenticateToken, async (req, res) => {
+  const { contestId } = req.query
+  if (!contestId) return res.status(400).json({ error: '缺少 contestId 参数' })
+  if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
+    return res.status(400).json({ error: '未配置 Lyrio 账号' })
+  }
+  try {
+    return res.json(await fetchLyrioNflsoiAllAcCodes(contestId, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+  } catch (err) {
+    console.error('[lyrio-nflsoi] ac-codes error:', err.message)
+    res.status(500).json({ error: err.message })
   }
 })
 

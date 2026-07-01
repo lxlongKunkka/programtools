@@ -2,13 +2,15 @@
  * server/routes/lyrio_nflsoi.js
  * nflsoi.cc:10999（基于 Lyrio 框架）比赛与题目抓取
  *
- * Lyrio 是纯 SPA 框架，题目内容通过 API 加载但 statement 不直接暴露。
- * 本模块提供比赛列表、比赛题目列表、题目元数据抓取。
+ * Lyrio 是纯 SPA 框架，题目 statement 不通过 API 暴露（已知限制）。
+ * 本模块提供比赛列表、题目列表、题目元数据、AC 代码抓取。
  *
  * URL 格式:
  *   比赛:  https://nflsoi.cc:10999/contest/{contestId}
  *   题目:  https://nflsoi.cc:10999/contest/{contestId}/problem/{displayOrder}
  *         https://nflsoi.cc:10999/p/{problemId}
+ *
+ * AC 代码: 通过 querySubmission + getSubmissionDetail 获取本人提交的代码
  */
 
 import axios from 'axios'
@@ -69,12 +71,40 @@ function parseStandaloneProblemId(url) {
   return m ? m[1] : null
 }
 
+// ─── 辅助：获取题目标题 ───────────────────────────────────────────────────
+
+async function resolveProblemInfo(token, contestId, displayOrder, standaloneId) {
+  if (contestId && displayOrder) {
+    const r = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+      params: { contestId, displayOrder },
+      headers: makeHeaders(token),
+      validateStatus: s => s < 600,
+      timeout: 10000,
+    })
+    if (r.status === 200) {
+      const p = r.data
+      return { problemId: p.meta.id, title: p.meta.title, tags: (p.tags || []).map(t => t.name), statistics: p.statistics }
+    }
+  }
+  if (standaloneId) {
+    const r = await axios.get(`${BASE}/api/problem/getProblem`, {
+      params: { id: Number(standaloneId) },
+      headers: makeHeaders(token),
+      validateStatus: s => s < 600,
+      timeout: 10000,
+    })
+    if (r.status === 200) {
+      const p = r.data
+      return { problemId: p.meta.id, title: p.meta.title, tags: [], statistics: p.statistics }
+    }
+  }
+  return { problemId: null, title: 'Unknown', tags: [], statistics: null }
+}
+
 // ─── 导出函数 ─────────────────────────────────────────────────────────────
 
 /**
  * 获取比赛题目列表
- * 返回格式与 fetchNflsojContest 一致:
- *   { contestId, contestTitle, problems: [{ label, title, url, problemNumber }], url }
  */
 export async function fetchLyrioNflsoiContest(url, options = {}) {
   const { user, pwd } = options
@@ -83,7 +113,6 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
 
   const token = await getToken(user, pwd)
 
-  // 获取比赛元数据
   const contestR = await axios.get(`${BASE}/api/contest/getContest`, {
     params: { contestId },
     headers: makeHeaders(token),
@@ -98,7 +127,6 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
   const contestMeta = contestR.data.meta
   const contestTitle = contestMeta.name
 
-  // 遍历 displayOrder 获取所有题目
   const problems = []
   for (let displayOrder = 1; displayOrder <= 30; displayOrder++) {
     try {
@@ -112,14 +140,13 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
       if (probR.status === 200) {
         const prob = probR.data
         problems.push({
-          label: String.fromCharCode(64 + displayOrder), // A, B, C...
+          label: String.fromCharCode(64 + displayOrder),
           title: prob.meta.title,
           url: `${BASE}/contest/${contestId}/problem/${displayOrder}`,
           problemNumber: String(displayOrder),
           problemId: prob.meta.id,
         })
       } else {
-        // No more problems
         break
       }
     } catch {
@@ -136,68 +163,213 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
 }
 
 /**
- * 抓取单个题目（元数据，Lyrio API 不暴露 statement）
- * 返回格式: { title, content: markdown, problemId, tags[] }
+ * 抓取单个题目
+ * - 元数据通过 API 获取（标题、标签、统计）
+ * - 正文：Lyrio API 不暴露，返回占位提示 + 原题链接
  */
 export async function fetchLyrioNflsoiProblem(url, options = {}) {
   const { user, pwd } = options
   const token = await getToken(user, pwd)
 
-  // 尝试解析为比赛中的题目
   const inContest = parseProblemInContest(url)
-  if (inContest) {
-    const r = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
-      params: { contestId: inContest.contestId, displayOrder: inContest.displayOrder },
-      headers: makeHeaders(token),
-      validateStatus: s => s < 600,
-      timeout: 10000,
-    })
-
-    if (r.status !== 200) {
-      throw new Error(`获取题目失败，HTTP ${r.status}`)
-    }
-
-    const prob = r.data
-    const tags = (prob.tags || []).map(t => t.name)
-
-    return {
-      title: prob.meta.title,
-      content: `> ⚠️ Lyrio 框架的题目内容通过前端 SPA 加载，API 暂不暴露完整题面。\n> 请访问 [原题链接](${url}) 查看完整题目。\n\n`,
-      problemId: prob.meta.id,
-      tags,
-      statistics: prob.statistics,
-    }
-  }
-
-  // 尝试解析为独立题目
   const standaloneId = parseStandaloneProblemId(url)
-  if (standaloneId) {
-    const r = await axios.get(`${BASE}/api/problem/getProblem`, {
-      params: { id: Number(standaloneId) },
-      headers: makeHeaders(token),
-      validateStatus: s => s < 600,
-      timeout: 10000,
-    })
 
-    if (r.status !== 200) {
-      throw new Error(`获取题目失败，HTTP ${r.status}`)
-    }
+  const info = await resolveProblemInfo(
+    token,
+    inContest?.contestId || null,
+    inContest?.displayOrder || null,
+    standaloneId
+  )
 
-    const prob = r.data
-
-    return {
-      title: prob.meta.title,
-      content: `> ⚠️ Lyrio 框架的题目内容通过前端 SPA 加载，API 暂不暴露完整题面。\n> 请访问 [原题链接](${url}) 查看完整题目。\n\n`,
-      problemId: prob.meta.id,
-    }
+  if (!info.problemId && !inContest && !standaloneId) {
+    throw new Error('无法从 URL 中解析 Lyrio 题目地址')
   }
 
-  throw new Error('无法从 URL 中解析 Lyrio 题目地址')
+  const tagsSection = info.tags.length > 0
+    ? `**标签**: ${info.tags.join(', ')}\n\n`
+    : ''
+
+  const statsSection = info.statistics
+    ? `**统计**: ${info.statistics.submissionCount || 0} 提交 / ${info.statistics.acceptedSubmissionCount || 0} AC\n\n`
+    : ''
+
+  return {
+    title: info.title,
+    content: `> ⚠️ 题目正文需在浏览器中查看：[原题链接](${url})\n\n${tagsSection}${statsSection}`,
+    problemId: info.problemId,
+    tags: info.tags,
+    statistics: info.statistics,
+  }
 }
 
 /**
- * 获取比赛列表（用于批量导入）
- * 返回: { contests: [{ id, name, startTime, endTime, mode }] }
+ * 获取本人 AC 代码
+ * @param {string} contestId - 比赛 ID
+ * @param {string} displayOrder - 题目序号 (1, 2, 3...)
+ * @param {object} options - { user, pwd }
+ * @returns {{ code: string, language: string, submissionId: number, problemTitle: string }}
+ */
+export async function fetchLyrioNflsoiAcCode(contestId, displayOrder, options = {}) {
+  const { user, pwd } = options
+
+  if (!contestId || !displayOrder) {
+    throw new Error('需要 contestId 和 displayOrder 参数')
+  }
+
+  const token = await getToken(user, pwd)
+
+  // Step 1: 获取题目信息（拿到 problemId）
+  let problemId
+  try {
+    const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+      params: { contestId, displayOrder },
+      headers: makeHeaders(token),
+      validateStatus: s => s < 600,
+      timeout: 10000,
+    })
+    if (probR.status === 200) {
+      problemId = probR.data.meta.id
+    }
+  } catch {
+    // continue without problemId
+  }
+
+  // Step 2: 查询本人提交（默认拿当前登录用户）
+  const r = await axios.get(`${BASE}/api/submission/querySubmission`, {
+    params: { submitter: user, takeCount: 50 },
+    headers: makeHeaders(token),
+    validateStatus: s => s < 600,
+    timeout: 10000,
+  })
+
+  if (r.status !== 200) {
+    throw new Error(`查询提交记录失败，HTTP ${r.status}`)
+  }
+
+  const submissions = r.data.submissions || []
+
+  // 过滤当前题目的 AC 提交
+  const acSubs = submissions.filter(s => {
+    if (s.status !== 'Accepted') return false
+    if (problemId && s.problem?.id === problemId) return true
+    // 如果没有 problemId，模糊匹配（不太可靠）
+    return false
+  })
+
+  if (acSubs.length === 0) {
+    // 没找到当前题目的 AC 提交，尝试不限制 problemId
+    const anyAc = submissions.filter(s => s.status === 'Accepted')
+    if (anyAc.length === 0) {
+      return { code: null, language: null, submissionId: null, problemTitle: null, message: `账号 ${user} 没有 AC 提交记录` }
+    }
+    return { code: null, language: null, submissionId: null, problemTitle: null, message: `账号 ${user} 在该比赛中没有针对本题的 AC 提交（共有 ${anyAc.length} 个其他题目的 AC）` }
+  }
+
+  // 取第一个（最新）AC 提交
+  const acSub = acSubs[0]
+
+  // Step 3: 获取代码详情
+  const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
+    params: { submissionId: acSub.id },
+    headers: makeHeaders(token),
+    validateStatus: s => s < 600,
+    timeout: 10000,
+  })
+
+  if (detailR.status !== 200 || !detailR.data.content) {
+    throw new Error(`获取提交详情失败`)
+  }
+
+  const content = detailR.data.content
+
+  return {
+    code: content.text || '',
+    language: content.language || 'cpp',
+    submissionId: acSub.id,
+    problemTitle: acSub.problem?.title || '',
+    specName: acSub.specName || '',
+    answerSize: acSub.answerSize || 0,
+  }
+}
+
+/**
+ * 批量获取比赛中所有题目的 AC 代码
+ * @returns { acCodes: [{ displayOrder, code, language, problemTitle }] }
+ */
+export async function fetchLyrioNflsoiAllAcCodes(contestId, options = {}) {
+  const { user, pwd } = options
+  if (!contestId) throw new Error('需要 contestId 参数')
+
+  const token = await getToken(user, pwd)
+
+  // 获取本人所有提交
+  const r = await axios.get(`${BASE}/api/submission/querySubmission`, {
+    params: { submitter: user, takeCount: 200 },
+    headers: makeHeaders(token),
+    validateStatus: s => s < 600,
+    timeout: 15000,
+  })
+
+  if (r.status !== 200) {
+    throw new Error(`查询提交记录失败`)
+  }
+
+  const submissions = r.data.submissions || []
+  const acMap = new Map() // problemId → best submission
+
+  for (const sub of submissions) {
+    if (sub.status !== 'Accepted') continue
+    const pid = sub.problem?.id
+    if (!pid || acMap.has(pid)) continue
+    acMap.set(pid, sub)
+  }
+
+  // 遍历比赛题目，匹配 AC 代码
+  const results = []
+  for (let displayOrder = 1; displayOrder <= 30; displayOrder++) {
+    try {
+      const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+        params: { contestId, displayOrder },
+        headers: makeHeaders(token),
+        validateStatus: s => s < 600,
+        timeout: 10000,
+      })
+      if (probR.status !== 200) break
+
+      const prob = probR.data
+      const acSub = acMap.get(prob.meta.id)
+
+      if (acSub) {
+        try {
+          const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
+            params: { submissionId: acSub.id },
+            headers: makeHeaders(token),
+            validateStatus: s => s < 600,
+            timeout: 10000,
+          })
+          if (detailR.status === 200 && detailR.data.content) {
+            results.push({
+              displayOrder,
+              problemTitle: prob.meta.title,
+              code: detailR.data.content.text || '',
+              language: detailR.data.content.language || 'cpp',
+              submissionId: acSub.id,
+            })
+            continue
+          }
+        } catch {}
+      }
+      results.push({ displayOrder, problemTitle: prob.meta.title, code: null, language: null, submissionId: null })
+    } catch {
+      break
+    }
+  }
+
+  return { contestId, acCodes: results }
+}
+
+/**
+ * 获取比赛列表
  */
 export async function fetchLyrioNflsoiContestList(options = {}) {
   const { user, pwd, page = 0, pageSize = 50 } = options
@@ -222,7 +394,6 @@ export async function fetchLyrioNflsoiContestList(options = {}) {
 
 /**
  * 获取题库题目列表
- * 返回: { problems: [{ id, title, tags[], statistics }], count }
  */
 export async function fetchLyrioNflsoiProblemList(options = {}) {
   const { user, pwd, page = 0, pageSize = 50 } = options
