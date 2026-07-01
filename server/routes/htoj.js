@@ -608,9 +608,9 @@ async function handleSubmit(req, res) {
     res.json({ ok: true, message: result, url })
 
   } catch (err) {
-    console.error('[htoj-submit] 失败:', err.message)
+    console.error('[htoj-submit] 失败:', err.message, err.stack)
     if (browser) await browser.close().catch(() => {})
-    res.status(500).json({ ok: false, error: err.message })
+    res.status(500).json({ ok: false, error: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
   }
 }
 
