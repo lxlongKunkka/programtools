@@ -400,7 +400,116 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 })
 
-// ─── 导出核心函数供其他路由使用（如 atcoder.js 统一 URL 分发）──────────────
+// ─── 自动提交代码（Playwright）───────────────────────────────────────────────
+import { chromium } from 'playwright'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const __htojDirname = path.dirname(fileURLToPath(import.meta.url))
+const CHROME_PATH = path.join(__htojDirname, '../../other/dist/chrome-linux64/chrome')
+
+router.post('/submit', authenticateToken, async (req, res) => {
+  const { url, code, language } = req.body
+  if (!url) return res.status(400).json({ error: '缺少 url 参数（题目页面地址）' })
+  if (!code) return res.status(400).json({ error: '缺少 code 参数' })
+
+  const ids = parseHtojProblemIds(url)
+  if (!ids.pid || !ids.cid) return res.status(400).json({ error: '无法从 URL 解析 pid/cid，格式应为 ?pid=...&cid=...' })
+
+  let browser
+  try {
+    const htojToken = await getHtojToken()
+    const lang = language || 'C++'
+
+    browser = await chromium.launch({
+      executablePath: CHROME_PATH,
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    })
+
+    const context = await browser.newContext()
+    const page = await context.newPage()
+
+    // 注入 JWT token 到 localStorage，跳过登录页
+    await page.goto('https://htoj.com.cn/', { waitUntil: 'domcontentloaded', timeout: 20000 })
+    await page.evaluate((token) => {
+      localStorage.setItem('token', token)
+    }, htojToken)
+
+    // 导航到题目页面
+    console.log(`[htoj-submit] 导航到题目页: ${url}`)
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+    await page.waitForTimeout(3000)
+
+    // 查找代码编辑器（Monaco Editor / CodeMirror / textarea）
+    let editorFound = false
+    try {
+      await page.click('.monaco-editor', { timeout: 5000 })
+      await page.waitForTimeout(500)
+      await page.keyboard.press('Control+a')
+      await page.keyboard.press('Backspace')
+      await page.keyboard.type(code, { delay: 5 })
+      editorFound = true
+      console.log('[htoj-submit] 通过 Monaco Editor 填入代码')
+    } catch {
+      try {
+        const textarea = await page.$('textarea, .CodeMirror textarea, .ace_text-input')
+        if (textarea) {
+          await textarea.fill(code)
+          editorFound = true
+          console.log('[htoj-submit] 通过 textarea 填入代码')
+        }
+      } catch {}
+    }
+
+    if (!editorFound) {
+      throw new Error('无法找到代码编辑器')
+    }
+
+    // 选择语言
+    try {
+      await page.click('.language-selector, select[name="language"], .lang-select', { timeout: 3000 })
+      await page.waitForTimeout(500)
+      await page.click(`text="${lang}"`, { timeout: 3000 })
+      console.log(`[htoj-submit] 选择语言: ${lang}`)
+    } catch {
+      console.log('[htoj-submit] 未找到语言选择器')
+    }
+
+    // 点击提交
+    let clicked = false
+    for (const sel of ['button:has-text("提交")', 'button:has-text("Submit")', '.submit-btn']) {
+      try {
+        await page.click(sel, { timeout: 5000 })
+        clicked = true
+        console.log(`[htoj-submit] 点击提交: ${sel}`)
+        break
+      } catch {}
+    }
+
+    if (!clicked) {
+      throw new Error('无法找到提交按钮')
+    }
+
+    await page.waitForTimeout(5000)
+
+    let result = '已提交，等待评测...'
+    try {
+      const resultEl = await page.$('[class*="result"], [class*="status"], .submission-result')
+      if (resultEl) result = (await resultEl.textContent()).trim()
+    } catch {}
+
+    await browser.close()
+    console.log(`[htoj-submit] 提交完成: ${result}`)
+    res.json({ ok: true, message: result, url })
+
+  } catch (err) {
+    console.error('[htoj-submit] 失败:', err.message)
+    if (browser) await browser.close().catch(() => {})
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ─── 导出核心函数 ────────────────────────────────────────────────────────────
 export { fetchHtojContest, fetchHtojProblem, parseHtojCid, parseHtojProblemIds }
 
 export default router
