@@ -1717,6 +1717,10 @@ export default {
                     this.saveToTask(taskIndex, 'translationText', ev.result || '')
                     this.saveToTask(taskIndex, 'translationEnglish', ev.english || '')
                     this.mirrorImages(taskIndex, ['translationText', 'translationEnglish'])
+                    if (isOnTask()) {
+                      this.translationText = ev.result || ''
+                      this.translationEnglish = ev.english || ''
+                    }
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
                       const newMeta = mergeTranslationMeta(existingMeta, ev.meta)
