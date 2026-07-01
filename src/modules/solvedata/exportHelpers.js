@@ -311,8 +311,14 @@ export async function createRawMaterialsExportBundle({ JSZip, tasks, helperApi }
       folder.file(`ac_code.${ext}`, normalizedCode || task.manualCode.trim(), zipOptions)
     }
 
-    if (task.problemMeta?.sourceUrl) {
-      folder.file('source_url.txt', String(task.problemMeta.sourceUrl).trim(), zipOptions)
+    // 来源链接（fetchUrl > metaSourceUrl > cpret）
+    const fetchUrl = task.problemMeta?.fetchUrl || ''
+    const metaSourceUrl = task.problemMeta?.sourceUrl || ''
+    const topCpret = task.cpretResults?.[0]
+    const cpretUrl = topCpret?.url || ''
+    const primaryUrl = fetchUrl || metaSourceUrl || cpretUrl
+    if (primaryUrl) {
+      folder.file('source_url.txt', primaryUrl, zipOptions)
     }
 
     if (task.additionalFile?.base64) {
