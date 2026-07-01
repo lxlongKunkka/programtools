@@ -455,10 +455,12 @@ async function handleSubmit(req, res) {
     // 查找并点击登录按钮
     let loggedIn = false
     for (let attempt = 0; attempt < 2; attempt++) {
-      const body = await page.evaluate(() => (document.body?.innerText || '').substring(0, 500))
-      if (!body) { console.log('[htoj-submit] body is null, retrying...'); await page.waitForTimeout(2000); continue }
+      // Get body text safely
+      let body = ''
+      try { body = await page.innerText('body', { timeout: 3000 }).catch(() => '') } catch {}
+      console.log('[htoj-submit] body check, len:', body.length)
       
-      // Check if already logged in (shows username, no login button)
+      // Check if already logged in
       if (!body.includes('登 录') && !body.includes('登录')) {
         console.log('[htoj-submit] 已登录状态')
         loggedIn = true
@@ -515,7 +517,8 @@ async function handleSubmit(req, res) {
 
     if (!loggedIn) {
       // Last check
-      const finalBody = await page.evaluate(() => (document.body?.innerText || '').substring(0, 300))
+      let finalBody = ''
+      try { finalBody = await page.innerText('body', { timeout: 3000 }).catch(() => '') } catch {}
       if (finalBody.includes('登 录') || finalBody.includes('登录')) {
         throw new Error('登录失败，请检查账号密码或手动登录')
       }
