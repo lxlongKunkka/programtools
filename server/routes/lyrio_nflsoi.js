@@ -71,36 +71,6 @@ function parseStandaloneProblemId(url) {
   return m ? m[1] : null
 }
 
-// ─── 辅助：获取题目标题 ───────────────────────────────────────────────────
-
-async function resolveProblemInfo(token, contestId, displayOrder, standaloneId) {
-  if (contestId && displayOrder) {
-    const r = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
-      params: { contestId, displayOrder },
-      headers: makeHeaders(token),
-      validateStatus: s => s < 600,
-      timeout: 10000,
-    })
-    if (r.status === 200) {
-      const p = r.data
-      return { problemId: p.meta.id, title: p.meta.title, tags: (p.tags || []).map(t => t.name), statistics: p.statistics }
-    }
-  }
-  if (standaloneId) {
-    const r = await axios.get(`${BASE}/api/problem/getProblem`, {
-      params: { id: Number(standaloneId) },
-      headers: makeHeaders(token),
-      validateStatus: s => s < 600,
-      timeout: 10000,
-    })
-    if (r.status === 200) {
-      const p = r.data
-      return { problemId: p.meta.id, title: p.meta.title, tags: [], statistics: p.statistics }
-    }
-  }
-  return { problemId: null, title: 'Unknown', tags: [], statistics: null }
-}
-
 // ─── 导出函数 ─────────────────────────────────────────────────────────────
 
 /**
@@ -163,9 +133,9 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
 }
 
 /**
- * 抓取单个题目
- * - 元数据通过 API 获取（标题、标签、统计）
- * - 正文：Lyrio API 不暴露，返回占位提示 + 原题链接
+ * 抓取单个题目（含完整正文）
+ * - 通过 contentSections=true 获取题目正文
+ * - 包含 judgeInfo（时间/内存限制）
  */
 export async function fetchLyrioNflsoiProblem(url, options = {}) {
   const { user, pwd } = options
@@ -174,31 +144,78 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
   const inContest = parseProblemInContest(url)
   const standaloneId = parseStandaloneProblemId(url)
 
-  const info = await resolveProblemInfo(
-    token,
-    inContest?.contestId || null,
-    inContest?.displayOrder || null,
-    standaloneId
-  )
+  // 获取题目详情（含正文）
+  let problemData = null
+  const queryParams = { contentSections: 'true', judgeInfo: 'true' }
 
-  if (!info.problemId && !inContest && !standaloneId) {
+  if (inContest) {
+    const r = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+      params: { contestId: inContest.contestId, displayOrder: inContest.displayOrder, ...queryParams },
+      headers: makeHeaders(token),
+      validateStatus: s => s < 600,
+      timeout: 10000,
+    })
+    if (r.status === 200) problemData = r.data
+  } else if (standaloneId) {
+    const r = await axios.get(`${BASE}/api/problem/getProblem`, {
+      params: { id: Number(standaloneId), ...queryParams },
+      headers: makeHeaders(token),
+      validateStatus: s => s < 600,
+      timeout: 10000,
+    })
+    if (r.status === 200) problemData = r.data
+  }
+
+  if (!problemData) {
     throw new Error('无法从 URL 中解析 Lyrio 题目地址')
   }
 
-  const tagsSection = info.tags.length > 0
-    ? `**标签**: ${info.tags.join(', ')}\n\n`
-    : ''
+  const prob = problemData
+  const tags = (prob.tags || []).map(t => t.name)
 
-  const statsSection = info.statistics
-    ? `**统计**: ${info.statistics.submissionCount || 0} 提交 / ${info.statistics.acceptedSubmissionCount || 0} AC\n\n`
-    : ''
+  // 组装 Markdown 正文
+  let content = ''
+
+  // 题目正文
+  if (prob.contentSections && prob.contentSections.length > 0) {
+    for (const section of prob.contentSections) {
+      if (section.title) {
+        content += `## ${section.title}\n\n`
+      }
+      if (section.text) {
+        // Lyrio 正文中的样例格式特殊处理：``` → 保持
+        content += `${section.text}\n\n`
+      }
+    }
+  } else {
+    content += `> ⚠️ 未能获取题目正文。\n> 请访问 [原题链接](${url}) 查看完整题目。\n\n`
+  }
+
+  // 输入格式/输出格式 已在正文中
+
+  // 限制信息
+  if (prob.judgeInfo) {
+    const ji = prob.judgeInfo
+    const limits = []
+    if (ji.time) limits.push(`时间限制: ${ji.time}ms`)
+    if (ji.memory) limits.push(`内存限制: ${ji.memory}MB`)
+    if (limits.length > 0) {
+      content += `**${limits.join(' / ')}**\n\n`
+    }
+  }
+
+  // 标签
+  if (tags.length > 0) {
+    content += `**标签**: ${tags.join(', ')}\n\n`
+  }
 
   return {
-    title: info.title,
-    content: `> ⚠️ 题目正文需在浏览器中查看：[原题链接](${url})\n\n${tagsSection}${statsSection}`,
-    problemId: info.problemId,
-    tags: info.tags,
-    statistics: info.statistics,
+    title: prob.meta.title,
+    content,
+    problemId: prob.meta.id,
+    tags,
+    statistics: prob.statistics,
+    judgeInfo: prob.judgeInfo,
   }
 }
 
