@@ -929,83 +929,79 @@ router.get('/cpret', authenticateToken, async (req, res) => {
   const results = []
   const seenUrls = new Set()
 
-  // 并行调用两个源
-  const [cpretPromise, yuantijiPromise] = [
-    // CPret
-    (async () => {
-      try {
-        const resp = await axios.get('https://cpret.online/', {
-          params: { q, lang: 'zh' },
-          headers: { 'User-Agent': HEADERS['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' },
-          timeout: 20000
+  // 超时竞速：yuantiji 设 8 秒超时，避免拖慢 cpret
+  const yuantijiWithTimeout = (async () => {
+    try {
+      const resp = await axios.post('https://yuantiji.ac/api/search', {
+        query: q.slice(0, 16000),
+        k: 10,
+        rewrite: true,
+        skip_short: true
+      }, {
+        headers: { 'Content-Type': 'application/json', 'User-Agent': HEADERS['User-Agent'] },
+        timeout: 8000
+      })
+      const items = []
+      for (const r of (resp.data.results || [])) {
+        if (items.length >= n) break
+        const url = r.url || ''
+        if (!url || seenUrls.has(url)) continue
+        seenUrls.add(url)
+        items.push({
+          title: r.title || '',
+          url,
+          source: r.src || 'Yuantiji',
+          score: r.cos || 0,
+          detailUrl: ''
         })
-        const $ = load(resp.data)
-        const items = []
-        $('ul.list-group li.list-group-item').each((i, el) => {
-          if (i >= n) return false
-          const links = $(el).find('a')
-          const titleLink = links.first()
-          const detailLink = links.eq(1)
-          const url = titleLink.attr('href') || ''
-          if (!seenUrls.has(url)) {
-            seenUrls.add(url)
-            items.push({
-              title: titleLink.text().trim(),
-              url,
-              source: $(el).find('small.text-muted').text().trim(),
-              score: parseFloat($(el).find('.score-badge').text()) || 0,
-              detailUrl: detailLink.attr('href') ? `https://cpret.online${detailLink.attr('href')}` : ''
-            })
-          }
-        })
-        return items
-      } catch (err) {
-        console.warn('[cpret] cpret.online search error:', err.message)
-        return []
       }
-    })(),
+      return items
+    } catch (err) {
+      console.warn('[cpret] yuantiji.ac search error:', err.message)
+      return []
+    }
+  })()
 
-    // Yuantiji
-    (async () => {
-      try {
-        const resp = await axios.post('https://yuantiji.ac/api/search', {
-          query: q.slice(0, 16000),
-          k: 10,
-          rewrite: true,
-          skip_short: true
-        }, {
-          headers: { 'Content-Type': 'application/json', 'User-Agent': HEADERS['User-Agent'] },
-          timeout: 30000
+  // CPret 作为主源（速度快）
+  try {
+    const resp = await axios.get('https://cpret.online/', {
+      params: { q, lang: 'zh' },
+      headers: { 'User-Agent': HEADERS['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' },
+      timeout: 20000
+    })
+    const $ = load(resp.data)
+    $('ul.list-group li.list-group-item').each((i, el) => {
+      if (i >= n) return false
+      const links = $(el).find('a')
+      const titleLink = links.first()
+      const detailLink = links.eq(1)
+      const url = titleLink.attr('href') || ''
+      if (!seenUrls.has(url)) {
+        seenUrls.add(url)
+        results.push({
+          title: titleLink.text().trim(),
+          url,
+          source: $(el).find('small.text-muted').text().trim(),
+          score: parseFloat($(el).find('.score-badge').text()) || 0,
+          detailUrl: detailLink.attr('href') ? `https://cpret.online${detailLink.attr('href')}` : ''
         })
-        const items = []
-        for (const r of (resp.data.results || [])) {
-          if (items.length >= n) break
-          const url = r.url || ''
-          if (!url || seenUrls.has(url)) continue
-          seenUrls.add(url)
-          items.push({
-            title: r.title || '',
-            url,
-            source: r.src || 'Yuantiji',
-            score: r.cos || 0,
-            detailUrl: ''
-          })
-        }
-        return items
-      } catch (err) {
-        console.warn('[cpret] yuantiji.ac search error:', err.message)
-        return []
       }
-    })()
-  ]
+    })
+  } catch (err) {
+    console.warn('[cpret] cpret.online search error:', err.message)
+  }
 
-  const [cpretResults, yuantijiResults] = await Promise.all([cpretPromise, yuantijiPromise])
-  results.push(...cpretResults, ...yuantijiResults)
+  // 如果 cpret 结果不足，等 yuantiji 补充；否则立即返回不阻塞
+  if (results.length < n) {
+    const yResults = await yuantijiWithTimeout
+    results.push(...yResults)
+    results.sort((a, b) => (b.score || 0) - (a.score || 0))
+  } else {
+    yuantijiWithTimeout.then(yResults => {
+      if (yResults.length) console.log(`[cpret] yuantiji 补充 ${yResults.length} 条结果`)
+    }).catch(() => {})
+  }
 
-  // 按分数降序排列
-  results.sort((a, b) => (b.score || 0) - (a.score || 0))
-
-  // 截取前 n 个
   res.json({ results: results.slice(0, n) })
 })
 
