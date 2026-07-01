@@ -245,6 +245,20 @@ export async function createBatchExportBundle({ JSZip, completedTasks, helperApi
       if (cpretUrl) infoLines.push(`链接：${cpretUrl}`)
       sourceLinkLines.push(infoLines.join('\n'))
     }
+
+    // CPret + Yuantiji 完整检索结果
+    const cpret = task.cpretResults
+    if (Array.isArray(cpret) && cpret.length > 0) {
+      let cpretText = `# 原题检索结果（CPret + Yuantiji）\n\n`
+      cpretText += `检索时间：${exportTime.toISOString()}\n\n`
+      for (const r of cpret) {
+        cpretText += `- **${r.title}**\n`
+        cpretText += `  - 来源：${r.source || '未知'}\n`
+        cpretText += `  - 相似度：${((r.score || 0) * 100).toFixed(0)}%\n`
+        cpretText += `  - 链接：${r.url || r.detailUrl || '无'}\n\n`
+      }
+      folder.file('cpret_results.txt', cpretText, zipOptions)
+    }
   }
 
   if (attachmentLinkLines.length) {
