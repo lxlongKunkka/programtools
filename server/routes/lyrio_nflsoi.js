@@ -57,12 +57,12 @@ function makeHeaders(token) {
 // ─── URL 解析 ─────────────────────────────────────────────────────────────
 
 function parseContestId(url) {
-  const m = url.match(/\/contest\/(\d+)/)
+  const m = url.match(/\/(?:contest|c)\/(\d+)/)
   return m ? m[1] : null
 }
 
 function parseProblemInContest(url) {
-  const m = url.match(/\/contest\/(\d+)\/problem\/(\d+)/)
+  const m = url.match(/\/(?:contest|c)\/(\d+)\/(?:problem|p)\/(\d+)/)
   return m ? { contestId: m[1], displayOrder: m[2] } : null
 }
 
