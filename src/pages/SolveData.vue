@@ -94,6 +94,9 @@
       <button class="btn-secondary btn-sm" @click="openNflsojModal" :disabled="isBatchRunning">
         🗂️ NFLSOJ 比赛列表
       </button>
+      <button class="btn-secondary btn-sm" @click="openLyrioModal" :disabled="isBatchRunning">
+        🗂️ Lyrio 比赛列表
+      </button>
     </div>
   </div>
 
@@ -380,6 +383,47 @@
     </div>
   </div>
 
+  <!-- Lyrio 比赛列表模态框 -->
+  <div v-if="showLyrioModal" class="modal-overlay" @click.self="showLyrioModal = false">
+    <div class="nflsoj-modal">
+      <div class="nflsoj-modal-header">
+        <span>🗂️ Lyrio 比赛列表（第 {{ lyrioModalPage }} 页）</span>
+        <button class="btn-ghost btn-sm" @click="showLyrioModal = false">✕</button>
+      </div>
+      <div class="nflsoj-search-bar">
+        <input v-model="lyrioFilterKeyword" class="nflsoj-search-input" placeholder="🔍 按比赛名称或编号筛选..." @keydown.esc="lyrioFilterKeyword = ''" />
+        <span v-if="lyrioFilterKeyword" class="nflsoj-filter-count">{{ lyrioFilteredContests.length }} / {{ lyrioModalContests.length }}</span>
+      </div>
+      <div class="nflsoj-modal-toolbar">
+        <button class="btn-secondary btn-sm" @click="lyrioSelectAll">全选当前结果</button>
+        <button class="btn-ghost btn-sm" @click="lyrioClearSelected">清除选择</button>
+        <span class="flex-spacer"></span>
+        <button class="btn-ghost btn-sm" :disabled="lyrioModalPage <= 1 || isLoadingLyrioList" @click="loadLyrioContestPage(lyrioModalPage - 1)">◀ 上一页</button>
+        <button class="btn-ghost btn-sm" :disabled="!lyrioModalHasMore || isLoadingLyrioList" @click="loadLyrioContestPage(lyrioModalPage + 1)">下一页 ▶</button>
+      </div>
+      <div class="nflsoj-contest-list">
+        <div v-if="isLoadingLyrioList" class="nflsoj-loading">⏳ 加载中...</div>
+        <template v-else>
+          <label v-for="c in lyrioFilteredContests" :key="c.id" class="nflsoj-contest-row">
+            <input type="checkbox" :checked="!!lyrioModalSelected[c.id]" @change="lyrioToggle(c.id, $event.target.checked)" />
+            <span class="nflsoj-contest-id">#{{ c.id }}</span>
+            <span class="nflsoj-contest-title">{{ c.name }}</span>
+          </label>
+          <div v-if="!lyrioFilteredContests.length" class="nflsoj-loading">{{ lyrioFilterKeyword ? '没有匹配的比赛' : '暂无比赛' }}</div>
+        </template>
+      </div>
+      <div class="nflsoj-modal-footer">
+        <span class="nflsoj-selected-count">已选 {{ lyrioSelectedCount }} 个比赛</span>
+        <span v-if="isImportingLyrio" class="nflsoj-import-status">{{ lyrioImportStatus }}</span>
+        <button class="btn-primary btn-sm" @click="importSelectedLyrioContests" :disabled="lyrioSelectedCount === 0 || isImportingLyrio">
+          {{ isImportingLyrio ? '⏳ 导入中...' : '导入选中比赛 →' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载附加文件等 -->
+
 </div>
 </template>
 
@@ -468,6 +512,16 @@ export default {
       isImportingNflsoj: false,
       nflsojImportStatus: '',
       nflsojFilterKeyword: '',
+
+      // Lyrio 比赛列表模态框
+      showLyrioModal: false,
+      lyrioModalPage: 1,
+      lyrioModalContests: [],
+      lyrioModalSelected: {},
+      isLoadingLyrioList: false,
+      isImportingLyrio: false,
+      lyrioImportStatus: '',
+      lyrioFilterKeyword: '',
       
       // 进度条状态
       showStepIndicators: false,
@@ -677,6 +731,20 @@ export default {
       if (!kw) return this.nflsojModalContests
       return this.nflsojModalContests.filter(c =>
         c.title.toLowerCase().includes(kw) || c.id.includes(kw)
+      )
+    },
+
+    lyrioSelectedCount() {
+      return Object.values(this.lyrioModalSelected).filter(Boolean).length
+    },
+    lyrioModalHasMore() {
+      return this.lyrioModalContests.length >= 50
+    },
+    lyrioFilteredContests() {
+      const kw = this.lyrioFilterKeyword.trim().toLowerCase()
+      if (!kw) return this.lyrioModalContests
+      return this.lyrioModalContests.filter(c =>
+        (c.name || '').toLowerCase().includes(kw) || String(c.id).includes(kw)
       )
     }
   },
@@ -1930,6 +1998,67 @@ export default {
       }
       this.isImportingNflsoj = false
       this.nflsojImportStatus = ''
+      this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
+    },
+
+    // ── Lyrio 比赛列表 ────────────────────────────────────────────────────────
+    async openLyrioModal() {
+      this.showLyrioModal = true
+      if (!this.lyrioModalContests.length) {
+        await this.loadLyrioContestPage(1)
+      }
+    },
+
+    async loadLyrioContestPage(page) {
+      this.isLoadingLyrioList = true
+      try {
+        const skipCount = (page - 1) * 50
+        const data = await request(`/api/atcoder/contest?url=${encodeURIComponent('https://nflsoi.cc:10999/p')}&page=${page}`)
+        this.lyrioModalContests = data.contests || []
+        this.lyrioModalPage = page
+      } catch (e) {
+        this.showToastMessage(`加载 Lyrio 比赛列表失败: ${e.message}`)
+      } finally {
+        this.isLoadingLyrioList = false
+      }
+    },
+
+    lyrioToggle(id, checked) {
+      this.lyrioModalSelected = { ...this.lyrioModalSelected, [id]: checked }
+    },
+
+    lyrioSelectAll() {
+      const sel = { ...this.lyrioModalSelected }
+      this.lyrioFilteredContests.forEach(c => { sel[c.id] = true })
+      this.lyrioModalSelected = sel
+    },
+
+    lyrioClearSelected() {
+      this.lyrioModalSelected = {}
+    },
+
+    async importSelectedLyrioContests() {
+      const ids = Object.entries(this.lyrioModalSelected)
+        .filter(([, v]) => v)
+        .map(([id]) => id)
+      if (!ids.length) return
+      this.isImportingLyrio = true
+      let totalAdded = 0
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        const contest = this.lyrioModalContests.find(c => c.id === id)
+        const contestTitle = contest?.name || `#${id}`
+        this.lyrioImportStatus = `(${i + 1}/${ids.length}) ${contestTitle}`
+        try {
+          const url = `https://nflsoi.cc:10999/contest/${id}`
+          const result = await this.importTasksFromUrl(url)
+          totalAdded += result?.added || 0
+        } catch (e) {
+          console.warn(`[lyrio modal] 比赛 ${id} 导入失败:`, e.message)
+        }
+      }
+      this.isImportingLyrio = false
+      this.lyrioImportStatus = ''
       this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
     },
 
