@@ -919,38 +919,94 @@ function getNodeText($, node) {
 }
 
 // GET /api/atcoder/cpret?q=...&n=5
-// 通过 cpret.online 以题目文本检索原题
+// 通过 cpret.online + yuantiji.ac 双重检索原题
 router.get('/cpret', authenticateToken, async (req, res) => {
   const q = (req.query.q || '').trim()
   if (!q) return res.status(400).json({ error: '查询内容不能为空' })
   if (q.length > 3000) return res.status(400).json({ error: '查询内容过长（最多 3000 字符）' })
   const n = Math.min(parseInt(req.query.n) || 5, 10)
-  try {
-    const resp = await axios.get('https://cpret.online/', {
-      params: { q, lang: 'zh' },
-      headers: { 'User-Agent': HEADERS['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' },
-      timeout: 20000
-    })
-    const $ = load(resp.data)
-    const results = []
-    $('ul.list-group li.list-group-item').each((i, el) => {
-      if (i >= n) return false
-      const links = $(el).find('a')
-      const titleLink = links.first()
-      const detailLink = links.eq(1)
-      results.push({
-        title: titleLink.text().trim(),
-        url: titleLink.attr('href') || '',
-        source: $(el).find('small.text-muted').text().trim(),
-        score: parseFloat($(el).find('.score-badge').text()) || 0,
-        detailUrl: detailLink.attr('href') ? `https://cpret.online${detailLink.attr('href')}` : ''
-      })
-    })
-    res.json({ results })
-  } catch (err) {
-    console.error('[cpret] search error:', err.message)
-    res.status(500).json({ error: `检索失败: ${err.message}` })
-  }
+
+  const results = []
+  const seenUrls = new Set()
+
+  // 并行调用两个源
+  const [cpretPromise, yuantijiPromise] = [
+    // CPret
+    (async () => {
+      try {
+        const resp = await axios.get('https://cpret.online/', {
+          params: { q, lang: 'zh' },
+          headers: { 'User-Agent': HEADERS['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' },
+          timeout: 20000
+        })
+        const $ = load(resp.data)
+        const items = []
+        $('ul.list-group li.list-group-item').each((i, el) => {
+          if (i >= n) return false
+          const links = $(el).find('a')
+          const titleLink = links.first()
+          const detailLink = links.eq(1)
+          const url = titleLink.attr('href') || ''
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url)
+            items.push({
+              title: titleLink.text().trim(),
+              url,
+              source: $(el).find('small.text-muted').text().trim(),
+              score: parseFloat($(el).find('.score-badge').text()) || 0,
+              detailUrl: detailLink.attr('href') ? `https://cpret.online${detailLink.attr('href')}` : ''
+            })
+          }
+        })
+        return items
+      } catch (err) {
+        console.warn('[cpret] cpret.online search error:', err.message)
+        return []
+      }
+    })(),
+
+    // Yuantiji
+    (async () => {
+      try {
+        const resp = await axios.post('https://yuantiji.ac/api/search', {
+          query: q.slice(0, 16000),
+          k: 10,
+          rewrite: true,
+          skip_short: true
+        }, {
+          headers: { 'Content-Type': 'application/json', 'User-Agent': HEADERS['User-Agent'] },
+          timeout: 30000
+        })
+        const items = []
+        for (const r of (resp.data.results || [])) {
+          if (items.length >= n) break
+          const url = r.url || ''
+          if (!url || seenUrls.has(url)) continue
+          seenUrls.add(url)
+          items.push({
+            title: r.title || '',
+            url,
+            source: r.src || 'Yuantiji',
+            score: r.cos || 0,
+            detailUrl: ''
+          })
+        }
+        return items
+      } catch (err) {
+        console.warn('[cpret] yuantiji.ac search error:', err.message)
+        return []
+      }
+    })()
+  ]
+
+  const [cpretResults, yuantijiResults] = await Promise.all([cpretPromise, yuantijiPromise])
+  results.push(...cpretResults, ...yuantijiResults)
+
+  // 按分数降序排列
+  results.sort((a, b) => (b.score || 0) - (a.score || 0))
+
+  // 截取前 n 个
+  res.json({ results: results.slice(0, n) })
 })
 
 // GET /api/atcoder/nflsoj-contest-list?page=N — 获取 NFLSOJ 比赛列表（分页）
