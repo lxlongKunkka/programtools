@@ -456,6 +456,7 @@ async function handleSubmit(req, res) {
     let loggedIn = false
     for (let attempt = 0; attempt < 2; attempt++) {
       const body = await page.evaluate(() => (document.body?.innerText || '').substring(0, 500))
+      if (!body) { console.log('[htoj-submit] body is null, retrying...'); await page.waitForTimeout(2000); continue }
       
       // Check if already logged in (shows username, no login button)
       if (!body.includes('登 录') && !body.includes('登录')) {
@@ -514,7 +515,7 @@ async function handleSubmit(req, res) {
 
     if (!loggedIn) {
       // Last check
-      const finalBody = await page.evaluate(() => document.body?.innerText?.substring(0, 300) || '')
+      const finalBody = await page.evaluate(() => (document.body?.innerText || '').substring(0, 300))
       if (finalBody.includes('登 录') || finalBody.includes('登录')) {
         throw new Error('登录失败，请检查账号密码或手动登录')
       }
