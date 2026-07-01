@@ -493,6 +493,13 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     let meta = { title: '', tags: [] }
     let isJson = false
 
+    // 修复 LaTeX 反斜杠转义（AI 输出的 \times, \frac, \begin 等会被 JSON.parse 误解析为 \t \b \f \r）
+    const fixLatexEscapes = (str) => str
+        .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
+        .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
+        .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
+        .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
+
     // 尝试解析 JSON
     try {
         let jsonStr = content.trim()
@@ -511,7 +518,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
         }
 
         // 尝试解析
-        const jsonObj = JSON.parse(jsonStr)
+        const jsonObj = JSON.parse(fixLatexEscapes(jsonStr))
         
         if (jsonObj.translation) {
             resultText = jsonObj.translation
@@ -531,12 +538,10 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
                 try {
                     resultText = JSON.parse(`"${translationMatch[1]}"`)
                 } catch (e2) {
-                    // 手动解码
-                    resultText = translationMatch[1]
-                        .replace(/\\n/g, '\n')
-                        .replace(/\\"/g, '"')
-                        .replace(/\\\\/g, '\\')
-                        .replace(/\\t/g, '\t')
+                    // 手动解码 — 先修复 LaTeX 转义再处理 JSON 转义
+                    resultText = fixLatexEscapes(translationMatch[1])
+                    try { resultText = JSON.parse('"' + resultText + '"') }
+                    catch { resultText = resultText.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\') }
                 }
                 isJson = true
                 recovered = true
@@ -558,13 +563,11 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
                 const englishMatch = content.match(/"english"\s*:\s*"([\s\S]*?)"(?:\s*,|\s*})/)
                 if (englishMatch) {
                     try {
-                        meta.english = JSON.parse(`"${englishMatch[1]}"`)
+                        meta.english = JSON.parse(`"${fixLatexEscapes(englishMatch[1])}"`)
                     } catch (e4) {
-                        meta.english = englishMatch[1]
-                            .replace(/\\n/g, '\n')
-                            .replace(/\\"/g, '"')
-                            .replace(/\\\\/g, '\\')
-                            .replace(/\\t/g, '\t')
+                        let eng = fixLatexEscapes(englishMatch[1])
+                        try { meta.english = JSON.parse('"' + eng + '"') }
+                        catch { meta.english = eng.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\') }
                     }
                 }
 
