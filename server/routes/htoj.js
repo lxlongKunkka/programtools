@@ -408,6 +408,15 @@ const __htojDirname = path.dirname(fileURLToPath(import.meta.url))
 const CHROME_PATH = path.join(__htojDirname, '../../other/dist/chrome-linux64/chrome')
 
 router.post('/submit', authenticateToken, async (req, res) => {
+  return handleSubmit(req, res)
+})
+
+// 测试端点（无认证）
+router.post('/submit-test', async (req, res) => {
+  return handleSubmit(req, res)
+})
+
+async function handleSubmit(req, res) {
   const { url, code, language } = req.body
   if (!url) return res.status(400).json({ error: '缺少 url 参数（题目页面地址）' })
   if (!code) return res.status(400).json({ error: '缺少 code 参数' })
@@ -529,7 +538,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
     if (browser) await browser.close().catch(() => {})
     res.status(500).json({ ok: false, error: err.message })
   }
-})
+}
 
 // ─── 导出核心函数 ────────────────────────────────────────────────────────────
 export { fetchHtojContest, fetchHtojProblem, parseHtojCid, parseHtojProblemIds }
