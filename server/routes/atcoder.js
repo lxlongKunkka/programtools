@@ -1017,4 +1017,36 @@ router.get('/nflsoj-contest-list', authenticateToken, async (req, res) => {
   }
 })
 
+// GET /api/atcoder/htoj-contest-list?page=1 — 核桃OJ 比赛列表（分页）
+router.get('/htoj-contest-list', authenticateToken, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1)
+  try {
+    const resp = await axios.get('https://api.htoj.com.cn/api/code-community/api/get-contest-list', {
+      params: { currentPage: page, limit: 50 },
+      headers: {
+        'Hetao-Oj-Zone': 'cpp',
+        'Origin': 'https://htoj.com.cn',
+        'Referer': 'https://htoj.com.cn/',
+        'User-Agent': HEADERS['User-Agent'],
+      },
+      timeout: 15000,
+    })
+    if (resp.data.errCode !== 0) {
+      throw new Error(resp.data.errMsg || '未知错误')
+    }
+    const records = (resp.data.data?.records || []).map(c => ({
+      id: String(c.id),
+      title: c.title || '',
+      type: c.typeDesc?.name || '',
+      status: c.statusDesc?.name || '',
+      problemCount: c.problemCount || 0,
+    }))
+    const totalPages = Math.ceil((resp.data.data?.total || 0) / 50) || 1
+    res.json({ contests: records, currentPage: page, totalPages })
+  } catch (err) {
+    console.error('[htoj] contest-list error:', err.message)
+    res.status(500).json({ error: `获取比赛列表失败: ${err.message}` })
+  }
+})
+
 export default router

@@ -97,6 +97,9 @@
       <button class="btn-secondary btn-sm" @click="openLyrioModal" :disabled="isBatchRunning">
         🗂️ Lyrio 比赛列表
       </button>
+      <button class="btn-secondary btn-sm" @click="openHtojModal" :disabled="isBatchRunning">
+        🗂️ 核桃OJ 比赛列表
+      </button>
     </div>
   </div>
 
@@ -422,6 +425,46 @@
     </div>
   </div>
 
+  <!-- 核桃OJ 比赛列表模态框 -->
+  <div v-if="showHtojModal" class="modal-overlay" @click.self="showHtojModal = false">
+    <div class="nflsoj-modal">
+      <div class="nflsoj-modal-header">
+        <span>🗂️ 核桃OJ 比赛列表（第 {{ htojModalPage }} / {{ htojModalTotalPages }} 页）</span>
+        <button class="btn-ghost btn-sm" @click="showHtojModal = false">✕</button>
+      </div>
+      <div class="nflsoj-search-bar">
+        <input v-model="htojFilterKeyword" class="nflsoj-search-input" placeholder="🔍 按比赛名称筛选..." @keydown.esc="htojFilterKeyword = ''" />
+        <span v-if="htojFilterKeyword" class="nflsoj-filter-count">{{ htojFilteredContests.length }} / {{ htojModalContests.length }}</span>
+      </div>
+      <div class="nflsoj-modal-toolbar">
+        <button class="btn-secondary btn-sm" @click="htojSelectAll">全选当前结果</button>
+        <button class="btn-ghost btn-sm" @click="htojClearSelected">清除选择</button>
+        <span class="flex-spacer"></span>
+        <button class="btn-ghost btn-sm" :disabled="htojModalPage <= 1 || isLoadingHtojList" @click="loadHtojContestPage(htojModalPage - 1)">◀ 上一页</button>
+        <button class="btn-ghost btn-sm" :disabled="!htojModalHasMore || isLoadingHtojList" @click="loadHtojContestPage(htojModalPage + 1)">下一页 ▶</button>
+      </div>
+      <div class="nflsoj-contest-list">
+        <div v-if="isLoadingHtojList" class="nflsoj-loading">⏳ 加载中...</div>
+        <template v-else>
+          <label v-for="c in htojFilteredContests" :key="c.id" class="nflsoj-contest-row">
+            <input type="checkbox" :checked="!!htojModalSelected[c.id]" @change="htojToggle(c.id, $event.target.checked)" />
+            <span class="nflsoj-contest-id">#{{ c.id.slice(-6) }}</span>
+            <span class="nflsoj-contest-title">{{ c.title }}</span>
+            <span class="nflsoj-contest-meta">{{ c.type }} · {{ c.problemCount }}题 · {{ c.status }}</span>
+          </label>
+          <div v-if="!htojFilteredContests.length" class="nflsoj-loading">{{ htojFilterKeyword ? '没有匹配的比赛' : '暂无比赛' }}</div>
+        </template>
+      </div>
+      <div class="nflsoj-modal-footer">
+        <span class="nflsoj-selected-count">已选 {{ htojSelectedCount }} 个比赛</span>
+        <span v-if="isImportingHtoj" class="nflsoj-import-status">{{ htojImportStatus }}</span>
+        <button class="btn-primary btn-sm" @click="importSelectedHtojContests" :disabled="htojSelectedCount === 0 || isImportingHtoj">
+          {{ isImportingHtoj ? '⏳ 导入中...' : '导入选中比赛 →' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 加载附加文件等 -->
 
 </div>
@@ -522,6 +565,17 @@ export default {
       isImportingLyrio: false,
       lyrioImportStatus: '',
       lyrioFilterKeyword: '',
+
+      // 核桃OJ 比赛列表模态框
+      showHtojModal: false,
+      htojModalPage: 1,
+      htojModalContests: [],
+      htojModalTotalPages: 1,
+      htojModalSelected: {},
+      isLoadingHtojList: false,
+      isImportingHtoj: false,
+      htojImportStatus: '',
+      htojFilterKeyword: '',
       
       // 进度条状态
       showStepIndicators: false,
@@ -745,6 +799,20 @@ export default {
       if (!kw) return this.lyrioModalContests
       return this.lyrioModalContests.filter(c =>
         (c.name || '').toLowerCase().includes(kw) || String(c.id).includes(kw)
+      )
+    },
+
+    htojSelectedCount() {
+      return Object.values(this.htojModalSelected).filter(Boolean).length
+    },
+    htojModalHasMore() {
+      return this.htojModalPage < this.htojModalTotalPages
+    },
+    htojFilteredContests() {
+      const kw = this.htojFilterKeyword.trim().toLowerCase()
+      if (!kw) return this.htojModalContests
+      return this.htojModalContests.filter(c =>
+        (c.title || '').toLowerCase().includes(kw) || c.id.includes(kw)
       )
     }
   },
@@ -2059,6 +2127,67 @@ export default {
       }
       this.isImportingLyrio = false
       this.lyrioImportStatus = ''
+      this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
+    },
+
+    // ── 核桃OJ 比赛列表 ───────────────────────────────────────────────────────
+    async openHtojModal() {
+      this.showHtojModal = true
+      if (!this.htojModalContests.length) {
+        await this.loadHtojContestPage(1)
+      }
+    },
+
+    async loadHtojContestPage(page) {
+      this.isLoadingHtojList = true
+      try {
+        const data = await request(`/api/atcoder/htoj-contest-list?page=${page}`)
+        this.htojModalContests = data.contests || []
+        this.htojModalPage = data.currentPage || page
+        this.htojModalTotalPages = data.totalPages || 1
+      } catch (e) {
+        this.showToastMessage(`加载核桃OJ比赛列表失败: ${e.message}`)
+      } finally {
+        this.isLoadingHtojList = false
+      }
+    },
+
+    htojToggle(id, checked) {
+      this.htojModalSelected = { ...this.htojModalSelected, [id]: checked }
+    },
+
+    htojSelectAll() {
+      const sel = { ...this.htojModalSelected }
+      this.htojFilteredContests.forEach(c => { sel[c.id] = true })
+      this.htojModalSelected = sel
+    },
+
+    htojClearSelected() {
+      this.htojModalSelected = {}
+    },
+
+    async importSelectedHtojContests() {
+      const ids = Object.entries(this.htojModalSelected)
+        .filter(([, v]) => v)
+        .map(([id]) => id)
+      if (!ids.length) return
+      this.isImportingHtoj = true
+      let totalAdded = 0
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        const contest = this.htojModalContests.find(c => c.id === id)
+        const contestTitle = contest?.title || `#${id}`
+        this.htojImportStatus = `(${i + 1}/${ids.length}) ${contestTitle}`
+        try {
+          const url = `https://htoj.com.cn/cpp/oj/contest/detail?cid=${id}`
+          const result = await this.importTasksFromUrl(url)
+          totalAdded += result?.added || 0
+        } catch (e) {
+          console.warn(`[htoj modal] 比赛 ${id} 导入失败:`, e.message)
+        }
+      }
+      this.isImportingHtoj = false
+      this.htojImportStatus = ''
       this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
     },
 
