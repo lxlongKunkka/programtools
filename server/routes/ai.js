@@ -493,18 +493,12 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     let meta = { title: '', tags: [] }
     let isJson = false
 
-    // 修复 LaTeX 反斜杠转义（AI 可能正确转义为 \\times，也可能忘记转义为 \times。
-    // 先尝试原始 JSON，失败后再修复重试，避免破坏已正确转义的内容）
+    // 修复 LaTeX 反斜杠转义：只修复单反斜杠（\times → \\times），不碰已正确转义的双反斜杠（\\times）
     const fixLatexEscapes = (str) => str
-        .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
-        .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
-        .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
-        .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
-
-    const tryParseJSON = (jsonStr) => {
-        try { return JSON.parse(jsonStr) }
-        catch { return JSON.parse(fixLatexEscapes(jsonStr)) }
-    }
+        .replace(/(?<!\\)\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
+        .replace(/(?<!\\)\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
+        .replace(/(?<!\\)\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
+        .replace(/(?<!\\)\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
 
     // 尝试解析 JSON
     try {
@@ -524,7 +518,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
         }
 
         // 尝试解析
-        const jsonObj = tryParseJSON(jsonStr)
+        const jsonObj = JSON.parse(fixLatexEscapes(jsonStr))
         
         if (jsonObj.translation) {
             resultText = jsonObj.translation
@@ -674,19 +668,13 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
 
 function parseTranslationContent(content) {
   let resultText = '', meta = { title: '', tags: [] }, isJson = false
-  // AI sometimes writes LaTeX backslash sequences (\times, \frac) without proper JSON escaping,
-  // and sometimes properly doubles them (\\times). We try raw JSON first, then fix if needed.
+  // AI 输出的 JSON 中，LaTeX 命令（\times, \frac, \begin, \right）的反斜杠可能未 JSON 转义。
+  // 用 negative lookbehind 确保：只修复单反斜杠（\times → \\times），不碰已正确转义的双反斜杠（\\times）。
   const fixLatexEscapes = (str) => str
-    .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
-    .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
-    .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
-    .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
-
-  const tryParseJSON = (jsonStr) => {
-    try { return JSON.parse(jsonStr) }
-    catch { return JSON.parse(fixLatexEscapes(jsonStr)) }
-  }
-
+    .replace(/(?<!\\)\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
+    .replace(/(?<!\\)\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
+    .replace(/(?<!\\)\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
+    .replace(/(?<!\\)\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
   try {
     let jsonStr = content.trim()
     const jb = content.match(/```json\s*([\s\S]*?)\s*```/i)
@@ -694,7 +682,7 @@ function parseTranslationContent(content) {
       const f = content.indexOf('{'), l = content.lastIndexOf('}')
       if (f !== -1 && l > f) jsonStr = content.substring(f, l + 1)
     }
-    const obj = tryParseJSON(jsonStr)
+    const obj = JSON.parse(fixLatexEscapes(jsonStr))
     if (obj.translation) {
       resultText = obj.translation; isJson = true
       if (obj.title) meta.title = obj.title
