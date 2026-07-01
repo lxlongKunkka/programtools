@@ -455,7 +455,7 @@ async function handleSubmit(req, res) {
     // 查找并点击登录按钮
     let loggedIn = false
     for (let attempt = 0; attempt < 2; attempt++) {
-      const body = await page.evaluate(() => document.body?.innerText?.substring(0, 500) || '')
+      const body = await page.evaluate(() => (document.body?.innerText || '').substring(0, 500))
       
       // Check if already logged in (shows username, no login button)
       if (!body.includes('登 录') && !body.includes('登录')) {
