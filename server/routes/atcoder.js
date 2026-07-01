@@ -6,6 +6,8 @@ import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
 import { fetchNflsojContest, fetchNflsojProblem, fetchNflsojContestList } from './nflsoj.js'
 import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem, fetchHydroNflsoiProblemBank } from './hydro_nflsoi.js'
+import { fetchLyrioNflsoiContest, fetchLyrioNflsoiProblem, fetchLyrioNflsoiContestList } from './lyrio_nflsoi.js'
+import { LYRIO_NFLSOI_USER, LYRIO_NFLSOI_PWD } from '../config.js'
 import { fetchMnaContest, fetchMnaProblem } from './mna.js'
 
 const router = express.Router()
@@ -25,6 +27,7 @@ function detectPlatform(url) {
   if (/codeforces\.com/i.test(url)) return 'codeforces'
   if (/htoj\.com\.cn/i.test(url)) return 'htoj'
   if (/mna\.wang/i.test(url)) return 'mna'
+  if (/nflsoi\.cc:10999/i.test(url)) return 'lyrio_nflsoi'
   if (/nflsoi\.cc:10611/i.test(url)) return 'hydro_nflsoi'
   if (/nflsoi\.cc/i.test(url)) return 'nflsoj'
   return 'unknown'
@@ -36,7 +39,7 @@ const ALLOWED_HOSTS = [
   /^([\w-]+\.)?codeforces\.com$/i,
   /^([\w-]+\.)?htoj\.com\.cn$/i,
   /^([\w-]+\.)?mna\.wang$/i,
-  /^nflsoi\.cc$/i,  // 同时覆盖 :20035 (SYZOJ) 和 :10611 (Hydro)
+  /^nflsoi\.cc$/i,  // 同时覆盖 :20035 (SYZOJ), :10611 (Hydro), :10999 (Lyrio)
 ]
 function isAllowedUrl(urlStr) {
   try {
@@ -67,6 +70,16 @@ router.get('/contest', authenticateToken, async (req, res) => {
     if (platform === 'htoj') return res.json(await fetchHtojContest(url))
     if (platform === 'mna') return res.json(await fetchMnaContest(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojContest(url))
+    if (platform === 'lyrio_nflsoi') {
+      if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
+        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置 LYRIO_NFLSOI_USER / LYRIO_NFLSOI_PWD' })
+      }
+      const parsedUrl = new URL(url)
+      if (/^\/p\/?$/.test(parsedUrl.pathname)) {
+        return res.json(await fetchLyrioNflsoiContestList({ user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+      }
+      return res.json(await fetchLyrioNflsoiContest(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+    }
     if (platform === 'hydro_nflsoi') {
       // /p（无具体 pid）为题库批量列表，/contest/{id} 为比赛
       const parsedUrl = new URL(url)
@@ -75,7 +88,7 @@ router.get('/contest', authenticateToken, async (req, res) => {
       }
       return res.json(await fetchHydroNflsoiContest(url))
     }
-    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ' })
+    return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ / Lyrio OJ' })
   } catch (err) {
     console.error(`[${platform}] contest fetch error:`, err.message)
     const code = err.response?.status
@@ -99,6 +112,12 @@ router.get('/problem', authenticateToken, async (req, res) => {
     if (platform === 'htoj') return res.json(await fetchHtojProblem(url))
     if (platform === 'mna') return res.json(await fetchMnaProblem(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojProblem(url))
+    if (platform === 'lyrio_nflsoi') {
+      if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
+        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置 LYRIO_NFLSOI_USER / LYRIO_NFLSOI_PWD' })
+      }
+      return res.json(await fetchLyrioNflsoiProblem(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+    }
     if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiProblem(url))
     return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ' })
   } catch (err) {

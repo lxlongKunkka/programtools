@@ -762,6 +762,8 @@ export default {
         /htoj\.com\.cn.*[?&]pid=\d+/i.test(url) ||
         /nflsoi\.cc[^/]*\/contest\/[a-z0-9]+\/problem\/[a-z0-9_]+/i.test(url) ||
         /nflsoi\.cc[^/]*\/p\/[a-zA-Z0-9_]+([?&]tid=|$)/i.test(url) ||
+        /nflsoi\.cc:10999\/contest\/\d+\/problem\/\d+/i.test(url) ||
+        /nflsoi\.cc:10999\/p\/\d+/i.test(url) ||
         /mna\.wang\/contest\/\d+\/problem\/\d+\/?$/i.test(url)
       )
     },

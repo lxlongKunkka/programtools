@@ -91,6 +91,10 @@ export const MNA_HTTP_PROXY = process.env.MNA_HTTP_PROXY || ''
 export const HYDRO_NFLSOI_USER = process.env.HYDRO_NFLSOI_USER || ''
 export const HYDRO_NFLSOI_PWD = process.env.HYDRO_NFLSOI_PWD || ''
 
+// Lyrio OJ (nflsoi.cc:10999, Lyrio 框架) 账号，用于抓取比赛题目
+export const LYRIO_NFLSOI_USER = process.env.LYRIO_NFLSOI_USER || ''
+export const LYRIO_NFLSOI_PWD = process.env.LYRIO_NFLSOI_PWD || ''
+
 // CORS 允许的源，生产环境应在 .env 中配置；未配置则不限制来源
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
