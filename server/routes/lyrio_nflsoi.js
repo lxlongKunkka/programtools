@@ -220,98 +220,9 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
 }
 
 /**
- * 获取本人 AC 代码
- * @param {string} contestId - 比赛 ID
- * @param {string} displayOrder - 题目序号 (1, 2, 3...)
- * @param {object} options - { user, pwd }
- * @returns {{ code: string, language: string, submissionId: number, problemTitle: string }}
- */
-export async function fetchLyrioNflsoiAcCode(contestId, displayOrder, options = {}) {
-  const { user, pwd } = options
-
-  if (!contestId || !displayOrder) {
-    throw new Error('需要 contestId 和 displayOrder 参数')
-  }
-
-  const token = await getToken(user, pwd)
-
-  // Step 1: 获取题目信息（拿到 problemId）
-  let problemId
-  try {
-    const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
-      params: { contestId, displayOrder },
-      headers: makeHeaders(token),
-      validateStatus: s => s < 600,
-      timeout: 10000,
-    })
-    if (probR.status === 200) {
-      problemId = probR.data.meta.id
-    }
-  } catch {
-    // continue without problemId
-  }
-
-  // Step 2: 查询本人提交（默认拿当前登录用户）
-  const r = await axios.get(`${BASE}/api/submission/querySubmission`, {
-    params: { submitter: user, takeCount: 50 },
-    headers: makeHeaders(token),
-    validateStatus: s => s < 600,
-    timeout: 10000,
-  })
-
-  if (r.status !== 200) {
-    throw new Error(`查询提交记录失败，HTTP ${r.status}`)
-  }
-
-  const submissions = r.data.submissions || []
-
-  // 过滤当前题目的 AC 提交
-  const acSubs = submissions.filter(s => {
-    if (s.status !== 'Accepted') return false
-    if (problemId && s.problem?.id === problemId) return true
-    // 如果没有 problemId，模糊匹配（不太可靠）
-    return false
-  })
-
-  if (acSubs.length === 0) {
-    // 没找到当前题目的 AC 提交，尝试不限制 problemId
-    const anyAc = submissions.filter(s => s.status === 'Accepted')
-    if (anyAc.length === 0) {
-      return { code: null, language: null, submissionId: null, problemTitle: null, message: `账号 ${user} 没有 AC 提交记录` }
-    }
-    return { code: null, language: null, submissionId: null, problemTitle: null, message: `账号 ${user} 在该比赛中没有针对本题的 AC 提交（共有 ${anyAc.length} 个其他题目的 AC）` }
-  }
-
-  // 取第一个（最新）AC 提交
-  const acSub = acSubs[0]
-
-  // Step 3: 获取代码详情
-  const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
-    params: { submissionId: acSub.id },
-    headers: makeHeaders(token),
-    validateStatus: s => s < 600,
-    timeout: 10000,
-  })
-
-  if (detailR.status !== 200 || !detailR.data.content) {
-    throw new Error(`获取提交详情失败`)
-  }
-
-  const content = detailR.data.content
-
-  return {
-    code: content.text || '',
-    language: content.language || 'cpp',
-    submissionId: acSub.id,
-    problemTitle: acSub.problem?.title || '',
-    specName: acSub.specName || '',
-    answerSize: acSub.answerSize || 0,
-  }
-}
-
-/**
- * 批量获取比赛中所有题目的 AC 代码
- * @returns { acCodes: [{ displayOrder, code, language, problemTitle }] }
+ * 通过排行榜获取比赛中所有题目的 AC 代码
+ * 思路：从 standings API 获取每道题最高排名选手的 AC submissionId，再获取代码
+ * @returns {{ acCodes: [{ displayOrder, code, language, problemTitle, author }] }}
  */
 export async function fetchLyrioNflsoiAllAcCodes(contestId, options = {}) {
   const { user, pwd } = options
@@ -319,67 +230,86 @@ export async function fetchLyrioNflsoiAllAcCodes(contestId, options = {}) {
 
   const token = await getToken(user, pwd)
 
-  // 获取本人所有提交
-  const r = await axios.get(`${BASE}/api/submission/querySubmission`, {
-    params: { submitter: user, takeCount: 200 },
+  // Step 1: 获取排行榜
+  const standingsR = await axios.get(`${BASE}/api/contest/queryContestStandings`, {
+    params: { contestId },
     headers: makeHeaders(token),
     validateStatus: s => s < 600,
     timeout: 15000,
   })
 
-  if (r.status !== 200) {
-    throw new Error(`查询提交记录失败`)
+  if (standingsR.status !== 200) {
+    throw new Error(`获取排行榜失败，HTTP ${standingsR.status}`)
   }
 
-  const submissions = r.data.submissions || []
-  const acMap = new Map() // problemId → best submission
-
-  for (const sub of submissions) {
-    if (sub.status !== 'Accepted') continue
-    const pid = sub.problem?.id
-    if (!pid || acMap.has(pid)) continue
-    acMap.set(pid, sub)
+  const rows = standingsR.data.rows || []
+  if (rows.length === 0) {
+    return { contestId, acCodes: [], message: '排行榜无数据' }
   }
 
-  // 遍历比赛题目，匹配 AC 代码
-  const results = []
-  for (let displayOrder = 1; displayOrder <= 30; displayOrder++) {
+  // Step 2: 按 displayOrder 组织，每道题取排名最高的 AC 提交
+  const bestAcPerProblem = new Map() // displayOrder → { submissionId, author }
+  for (const row of rows) {
+    for (const problem of (row.problems || [])) {
+      const do_ = problem.displayOrder
+      if (!bestAcPerProblem.has(do_) && problem.bestSubmission?.status === 'Accepted') {
+        bestAcPerProblem.set(do_, {
+          submissionId: problem.bestSubmission.id,
+          author: row.user?.username || 'unknown',
+        })
+      }
+    }
+    // 如果所有题都已经找到，提前退出
+    if (bestAcPerProblem.size >= 30) break
+  }
+
+  // Step 3: 获取题目标题
+  const problemTitles = new Map() // displayOrder → title
+  for (let d = 1; d <= 30; d++) {
     try {
       const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
-        params: { contestId, displayOrder },
+        params: { contestId, displayOrder: d },
         headers: makeHeaders(token),
         validateStatus: s => s < 600,
         timeout: 10000,
       })
-      if (probR.status !== 200) break
+      if (probR.status === 200) {
+        problemTitles.set(d, probR.data.meta.title)
+      } else break
+    } catch { break }
+  }
 
-      const prob = probR.data
-      const acSub = acMap.get(prob.meta.id)
+  // Step 4: 获取每道题的 AC 代码
+  const results = []
+  for (let d = 1; d <= 30; d++) {
+    const best = bestAcPerProblem.get(d)
+    const title = problemTitles.get(d)
+    if (!title) break
 
-      if (acSub) {
-        try {
-          const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
-            params: { submissionId: acSub.id },
-            headers: makeHeaders(token),
-            validateStatus: s => s < 600,
-            timeout: 10000,
+    if (best) {
+      try {
+        const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
+          params: { submissionId: best.submissionId },
+          headers: makeHeaders(token),
+          validateStatus: s => s < 600,
+          timeout: 10000,
+        })
+        if (detailR.status === 200 && detailR.data.content) {
+          results.push({
+            displayOrder: d,
+            problemTitle: title,
+            code: detailR.data.content.text || '',
+            language: detailR.data.content.language || 'cpp',
+            submissionId: best.submissionId,
+            author: best.author,
           })
-          if (detailR.status === 200 && detailR.data.content) {
-            results.push({
-              displayOrder,
-              problemTitle: prob.meta.title,
-              code: detailR.data.content.text || '',
-              language: detailR.data.content.language || 'cpp',
-              submissionId: acSub.id,
-            })
-            continue
-          }
-        } catch {}
+          continue
+        }
+      } catch (e) {
+        console.warn(`[lyrio-nflsoi] 获取题目 ${d} AC 代码失败:`, e.message)
       }
-      results.push({ displayOrder, problemTitle: prob.meta.title, code: null, language: null, submissionId: null })
-    } catch {
-      break
     }
+    results.push({ displayOrder: d, problemTitle: title, code: null, language: null, submissionId: null, author: null })
   }
 
   return { contestId, acCodes: results }
