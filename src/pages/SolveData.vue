@@ -237,7 +237,7 @@
         <!-- 翻译 -->
         <template v-else-if="activeTab === 'translate'">
           <div class="tab-action-bar">
-            <button @click="autoTranslate" :disabled="isTranslating || !problemText.trim()" class="btn-primary btn-sm">
+            <button @click="autoTranslate()" :disabled="isTranslating || !problemText.trim()" class="btn-primary btn-sm">
               {{ isTranslating ? '⏳ 翻译中...' : '🌐 生成翻译' }}
             </button>
             <button @click="copyTranslation" :disabled="!translationText" class="btn-secondary btn-sm">📋 复制中文</button>
@@ -1714,16 +1714,12 @@ export default {
                     translationStart = previewState.startOffset
                     if (previewState.preview && isOnTask()) this.translationText = previewState.preview
                   } else if (ev.type === 'result') {
-                    console.log('[autoTranslate] result event:', { resultLen: (ev.result || '').length, englishLen: (ev.english || '').length, taskIndex, isOnTask: isOnTask(), currentTaskIndex: this.currentTaskIndex, activeTab: this.activeTab })
                     this.saveToTask(taskIndex, 'translationText', ev.result || '')
                     this.saveToTask(taskIndex, 'translationEnglish', ev.english || '')
                     this.mirrorImages(taskIndex, ['translationText', 'translationEnglish'])
                     if (isOnTask()) {
                       this.translationText = ev.result || ''
                       this.translationEnglish = ev.english || ''
-                      console.log('[autoTranslate] set translationText, length:', this.translationText.length, 'activeTab:', this.activeTab)
-                    } else {
-                      console.log('[autoTranslate] NOT on task, skipping display update')
                     }
                     if (ev.meta && (ev.meta.title || (ev.meta.tags && ev.meta.tags.length))) {
                       const existingMeta = isOnTask() ? (this.problemMeta || {}) : (this.tasks[taskIndex]?.problemMeta || {})
@@ -1741,7 +1737,6 @@ export default {
             }
             if (isOnTask() && this.isGenerating !== 'all' && this.isGenerating !== 'code' && this.isGenerating !== 'data') {
               this.generationStatus = '✅ 翻译完成'
-              console.log('[autoTranslate] DONE. translationText length:', this.translationText.length, 'activeTab:', this.activeTab)
               setTimeout(() => { if (this.generationStatus === '✅ 翻译完成') this.generationStatus = '' }, 3000)
             }
           } catch (e) {
