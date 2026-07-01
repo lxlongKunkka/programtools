@@ -195,11 +195,15 @@ async function fetchAcceptedSubmissionCode({ pid, cid, tid, gid }, token) {
         '获取提交详情'
       )
 
-      return {
-        submitId: accepted.submitId,
-        language: detailResp.data?.data?.language || accepted.language || '',
-        code: (detailResp.data?.data?.userCode || '').trim()
+      const code = (detailResp.data?.data?.userCode || '').trim()
+      if (code) {
+        return {
+          submitId: accepted.submitId,
+          language: detailResp.data?.data?.language || accepted.language || '',
+          code
+        }
       }
+      // 别人的提交看不到代码，继续翻页找自己的 AC
     }
 
     if (records.length < pageSize) break
