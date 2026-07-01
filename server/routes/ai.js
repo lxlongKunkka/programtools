@@ -493,12 +493,18 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     let meta = { title: '', tags: [] }
     let isJson = false
 
-    // 修复 LaTeX 反斜杠转义（AI 输出的 \times, \frac, \begin 等会被 JSON.parse 误解析为 \t \b \f \r）
+    // 修复 LaTeX 反斜杠转义（AI 可能正确转义为 \\times，也可能忘记转义为 \times。
+    // 先尝试原始 JSON，失败后再修复重试，避免破坏已正确转义的内容）
     const fixLatexEscapes = (str) => str
         .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
         .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
         .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
         .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
+
+    const tryParseJSON = (jsonStr) => {
+        try { return JSON.parse(jsonStr) }
+        catch { return JSON.parse(fixLatexEscapes(jsonStr)) }
+    }
 
     // 尝试解析 JSON
     try {
@@ -518,7 +524,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
         }
 
         // 尝试解析
-        const jsonObj = JSON.parse(fixLatexEscapes(jsonStr))
+        const jsonObj = tryParseJSON(jsonStr)
         
         if (jsonObj.translation) {
             resultText = jsonObj.translation
@@ -668,14 +674,19 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
 
 function parseTranslationContent(content) {
   let resultText = '', meta = { title: '', tags: [] }, isJson = false
-  // AI often writes LaTeX backslash sequences (\times, \begin, \frac, \right) without JSON escaping.
-  // JSON.parse interprets \t as tab, \b as backspace, \f as form-feed, \r as carriage-return.
-  // Fix: when \t/\b/\f/\r is followed by a letter, treat it as a LaTeX command and double the backslash.
+  // AI sometimes writes LaTeX backslash sequences (\times, \frac) without proper JSON escaping,
+  // and sometimes properly doubles them (\\times). We try raw JSON first, then fix if needed.
   const fixLatexEscapes = (str) => str
     .replace(/\\t(?=[a-zA-Z])/g, '\\\\t')   // \times, \text, \theta, \tau
     .replace(/\\b(?=[a-zA-Z])/g, '\\\\b')   // \begin, \binom, \boldsymbol
     .replace(/\\f(?=[a-zA-Z])/g, '\\\\f')   // \frac, \forall
     .replace(/\\r(?=[a-zA-Z])/g, '\\\\r')   // \right, \rangle
+
+  const tryParseJSON = (jsonStr) => {
+    try { return JSON.parse(jsonStr) }
+    catch { return JSON.parse(fixLatexEscapes(jsonStr)) }
+  }
+
   try {
     let jsonStr = content.trim()
     const jb = content.match(/```json\s*([\s\S]*?)\s*```/i)
@@ -683,7 +694,7 @@ function parseTranslationContent(content) {
       const f = content.indexOf('{'), l = content.lastIndexOf('}')
       if (f !== -1 && l > f) jsonStr = content.substring(f, l + 1)
     }
-    const obj = JSON.parse(fixLatexEscapes(jsonStr))
+    const obj = tryParseJSON(jsonStr)
     if (obj.translation) {
       resultText = obj.translation; isJson = true
       if (obj.title) meta.title = obj.title
