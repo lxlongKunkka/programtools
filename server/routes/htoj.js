@@ -413,13 +413,14 @@ router.post('/submit', authenticateToken, async (req, res) => {
   if (!code) return res.status(400).json({ error: '缺少 code 参数' })
 
   const ids = parseHtojProblemIds(url)
-  if (!ids.pid || !ids.cid) return res.status(400).json({ error: '无法从 URL 解析 pid/cid，格式应为 ?pid=...&cid=...' })
+  if (!ids.pid || !ids.cid) return res.status(400).json({ error: '无法从 URL 解析 pid/cid' })
 
   let browser
   try {
     const htojToken = await getHtojToken()
     const lang = language || 'C++'
 
+    console.log('[htoj-submit] 启动浏览器...')
     browser = await chromium.launch({
       executablePath: CHROME_PATH,
       headless: true,
@@ -429,77 +430,98 @@ router.post('/submit', authenticateToken, async (req, res) => {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    // 注入 JWT token 到 localStorage，跳过登录页
-    await page.goto('https://htoj.com.cn/', { waitUntil: 'domcontentloaded', timeout: 20000 })
-    await page.evaluate((token) => {
-      localStorage.setItem('token', token)
-    }, htojToken)
+    // Step 1: 设置 cookie
+    await context.addCookies([
+      { name: 'token', value: htojToken, domain: '.htoj.com.cn', path: '/', httpOnly: false, secure: true, sameSite: 'Lax' }
+    ])
 
-    // 导航到题目页面
-    console.log(`[htoj-submit] 导航到题目页: ${url}`)
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+    // Step 2: 导航到题目页（用 'load' 不用 'networkidle'，htoj 有长连接）
+    console.log(`[htoj-submit] 导航到: ${url}`)
+    await page.goto(url, { waitUntil: 'load', timeout: 30000 })
     await page.waitForTimeout(3000)
 
-    // 查找代码编辑器（Monaco Editor / CodeMirror / textarea）
-    let editorFound = false
-    try {
-      await page.click('.monaco-editor', { timeout: 5000 })
-      await page.waitForTimeout(500)
-      await page.keyboard.press('Control+a')
-      await page.keyboard.press('Backspace')
-      await page.keyboard.type(code, { delay: 5 })
-      editorFound = true
-      console.log('[htoj-submit] 通过 Monaco Editor 填入代码')
-    } catch {
+    // Step 3: 处理首次设置弹窗
+    const setupBtn = await page.$('button:has-text("确认选择")')
+    if (setupBtn) {
+      console.log('[htoj-submit] 处理首次设置弹窗')
+      await setupBtn.click()
+      await page.waitForTimeout(2000)
+    }
+
+    // Step 4: 如果需要登录，走 UI 登录
+    const body = await page.evaluate(() => document.body?.innerText?.substring(0, 300) || '')
+    if (body.includes('登 录') || body.includes('登录')) {
+      console.log('[htoj-submit] 需要登录')
       try {
-        const textarea = await page.$('textarea, .CodeMirror textarea, .ace_text-input')
-        if (textarea) {
-          await textarea.fill(code)
-          editorFound = true
-          console.log('[htoj-submit] 通过 textarea 填入代码')
-        }
+        await page.click('button:has-text("登 录")', { timeout: 5000 })
+        await page.waitForTimeout(2000)
+        await page.fill('input[type="text"]', '17753651388').catch(() => {})
+        await page.fill('input[type="password"]', 'Aa123456@').catch(() => {})
+        await page.waitForTimeout(500)
+        await page.click('button:has-text("登 录"), button:has-text("登录")', { timeout: 5000 })
+        console.log('[htoj-submit] 登录已提交')
+        await page.waitForTimeout(5000)
       } catch {}
     }
 
-    if (!editorFound) {
-      throw new Error('无法找到代码编辑器')
-    }
-
-    // 选择语言
-    try {
-      await page.click('.language-selector, select[name="language"], .lang-select', { timeout: 3000 })
-      await page.waitForTimeout(500)
-      await page.click(`text="${lang}"`, { timeout: 3000 })
-      console.log(`[htoj-submit] 选择语言: ${lang}`)
-    } catch {
-      console.log('[htoj-submit] 未找到语言选择器')
-    }
-
-    // 点击提交
-    let clicked = false
-    for (const sel of ['button:has-text("提交")', 'button:has-text("Submit")', '.submit-btn']) {
-      try {
-        await page.click(sel, { timeout: 5000 })
-        clicked = true
-        console.log(`[htoj-submit] 点击提交: ${sel}`)
-        break
-      } catch {}
-    }
-
-    if (!clicked) {
-      throw new Error('无法找到提交按钮')
-    }
-
+    // Step 5: 重新加载题目页
+    await page.goto(url, { waitUntil: 'load', timeout: 30000 })
     await page.waitForTimeout(5000)
 
-    let result = '已提交，等待评测...'
+    // Step 6: 填入代码
+    const hasMonaco = await page.$('.monaco-editor')
+    console.log(`[htoj-submit] Monaco: ${!!hasMonaco}`)
+
+    if (hasMonaco) {
+      await page.click('.monaco-editor', { timeout: 5000 })
+      await page.waitForTimeout(800)
+      await page.keyboard.press('Control+a')
+      await page.keyboard.press('Delete')
+      await page.waitForTimeout(300)
+      await page.keyboard.type(code, { delay: 3 })
+      console.log('[htoj-submit] 代码已填入')
+    } else {
+      // fallback
+      await page.evaluate((c) => {
+        const ta = document.querySelector('textarea')
+        if (ta) { ta.value = c; ta.dispatchEvent(new Event('input', { bubbles: true })) }
+      }, code)
+    }
+
+    // Step 7: 选择语言
     try {
-      const resultEl = await page.$('[class*="result"], [class*="status"], .submission-result')
-      if (resultEl) result = (await resultEl.textContent()).trim()
+      const selects = await page.$$('select')
+      for (const sel of selects) {
+        await sel.selectOption({ label: lang }).catch(() => {})
+      }
+    } catch {}
+
+    // Step 8: 点击提交
+    await page.waitForTimeout(1000)
+    const clicked = await page.evaluate(() => {
+      for (const btn of document.querySelectorAll('button')) {
+        if (/提交|Submit/.test(btn.textContent)) { btn.click(); return true }
+      }
+      return false
+    })
+    if (!clicked) {
+      try { await page.click('button:has-text("提交")', { timeout: 5000 }) }
+      catch { throw new Error('找不到提交按钮') }
+    }
+    console.log('[htoj-submit] 提交已点击')
+    await page.waitForTimeout(5000)
+
+    // Step 9: 获取结果
+    let result = '已提交'
+    try {
+      result = await page.evaluate(() => {
+        const el = document.querySelector('[class*="result"], [class*="status"], [class*="verdict"]')
+        return el ? el.textContent.trim() : '已提交'
+      })
     } catch {}
 
     await browser.close()
-    console.log(`[htoj-submit] 提交完成: ${result}`)
+    console.log(`[htoj-submit] 完成: ${result}`)
     res.json({ ok: true, message: result, url })
 
   } catch (err) {
