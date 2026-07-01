@@ -426,7 +426,6 @@ async function handleSubmit(req, res) {
 
   let browser
   try {
-    const htojToken = await getHtojToken()
     const lang = language || 'C++'
 
     console.log('[htoj-submit] 启动浏览器...')
@@ -439,73 +438,140 @@ async function handleSubmit(req, res) {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    // Step 1: 设置 cookie
-    await context.addCookies([
-      { name: 'token', value: htojToken, domain: '.htoj.com.cn', path: '/', httpOnly: false, secure: true, sameSite: 'Lax' }
-    ])
-
-    // Step 2: 导航到题目页（用 'load' 不用 'networkidle'，htoj 有长连接）
-    console.log(`[htoj-submit] 导航到: ${url}`)
-    await page.goto(url, { waitUntil: 'load', timeout: 30000 })
+    // ====== 登录流程：直接走 UI，不用 cookie ======
+    console.log('[htoj-submit] 开始 UI 登录...')
+    await page.goto('https://htoj.com.cn/', { waitUntil: 'load', timeout: 30000 })
     await page.waitForTimeout(3000)
 
-    // Step 3: 处理首次设置弹窗
-    const setupBtn = await page.$('button:has-text("确认选择")')
-    if (setupBtn) {
-      console.log('[htoj-submit] 处理首次设置弹窗')
-      await setupBtn.click()
+    // 处理首次设置弹窗（"选择擅长语言"）
+    for (let i = 0; i < 3; i++) {
+      const setup = await page.$('button:has-text("确认选择")')
+      if (!setup) break
+      console.log('[htoj-submit] 点击首次设置确认')
+      await setup.click()
       await page.waitForTimeout(2000)
     }
 
-    // Step 4: 如果需要登录，走 UI 登录
-    const body = await page.evaluate(() => document.body?.innerText?.substring(0, 300) || '')
-    if (body.includes('登 录') || body.includes('登录')) {
-      console.log('[htoj-submit] 需要登录')
+    // 查找并点击登录按钮
+    let loggedIn = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const body = await page.evaluate(() => document.body?.innerText?.substring(0, 500) || '')
+      
+      // Check if already logged in (shows username, no login button)
+      if (!body.includes('登 录') && !body.includes('登录')) {
+        console.log('[htoj-submit] 已登录状态')
+        loggedIn = true
+        break
+      }
+
+      console.log('[htoj-submit] 点击登录按钮...')
       try {
-        await page.click('button:has-text("登 录")', { timeout: 5000 })
-        await page.waitForTimeout(2000)
-        await page.fill('input[type="text"]', '17753651388').catch(() => {})
-        await page.fill('input[type="password"]', 'Aa123456@').catch(() => {})
-        await page.waitForTimeout(500)
         await page.click('button:has-text("登 录"), button:has-text("登录")', { timeout: 5000 })
-        console.log('[htoj-submit] 登录已提交')
+      } catch {
+        // Maybe a different login trigger
+        const allBtns = await page.$$('button, a, [role="button"]')
+        for (const btn of allBtns) {
+          const text = await btn.textContent().catch(() => '')
+          if (text.includes('登') && text.includes('录')) {
+            await btn.click()
+            break
+          }
+        }
+      }
+      await page.waitForTimeout(3000)
+
+      // Fill login form
+      console.log('[htoj-submit] 填写账号密码...')
+      
+      // Try to find and fill phone input
+      const inputs = await page.$$('input')
+      for (const input of inputs) {
+        const type = await input.getAttribute('type').catch(() => 'text')
+        const placeholder = await input.getAttribute('placeholder').catch(() => '')
+        if (type === 'text' || placeholder.includes('手机') || placeholder.includes('phone') || placeholder.includes('账号')) {
+          await input.click()
+          await input.fill('17753651388')
+          console.log('[htoj-submit] 填入手机号')
+          break
+        }
+      }
+      await page.waitForTimeout(500)
+
+      // Fill password
+      try {
+        await page.fill('input[type="password"]', 'Aa123456@')
+        console.log('[htoj-submit] 填入密码')
+      } catch {}
+      await page.waitForTimeout(500)
+
+      // Submit login form
+      try {
+        await page.click('button:has-text("登 录"), button:has-text("登录")', { timeout: 5000 })
+        console.log('[htoj-submit] 登录提交')
         await page.waitForTimeout(5000)
       } catch {}
     }
 
-    // Step 5: 重新加载题目页
+    if (!loggedIn) {
+      // Last check
+      const finalBody = await page.evaluate(() => document.body?.innerText?.substring(0, 300) || '')
+      if (finalBody.includes('登 录') || finalBody.includes('登录')) {
+        throw new Error('登录失败，请检查账号密码或手动登录')
+      }
+    }
+
+    // ====== 导航到题目页 ======
+    console.log(`[htoj-submit] 导航到: ${url}`)
     await page.goto(url, { waitUntil: 'load', timeout: 30000 })
     await page.waitForTimeout(5000)
 
-    // Step 6: 填入代码
+    // 截图用于调试
+    await page.screenshot({ path: '/tmp/htoj_submit_debug.png' }).catch(() => {})
+
+    // ====== 填入代码 ======
     const hasMonaco = await page.$('.monaco-editor')
     console.log(`[htoj-submit] Monaco: ${!!hasMonaco}`)
 
     if (hasMonaco) {
       await page.click('.monaco-editor', { timeout: 5000 })
-      await page.waitForTimeout(800)
+      await page.waitForTimeout(1000)
       await page.keyboard.press('Control+a')
       await page.keyboard.press('Delete')
       await page.waitForTimeout(300)
       await page.keyboard.type(code, { delay: 3 })
-      console.log('[htoj-submit] 代码已填入')
+      console.log('[htoj-submit] 代码已填入 Monaco')
     } else {
-      // fallback
+      // Fallback via evaluate
       await page.evaluate((c) => {
         const ta = document.querySelector('textarea')
-        if (ta) { ta.value = c; ta.dispatchEvent(new Event('input', { bubbles: true })) }
+        if (ta) { 
+          ta.focus()
+          ta.value = c
+          ta.dispatchEvent(new Event('input', { bubbles: true }))
+          ta.dispatchEvent(new Event('change', { bubbles: true }))
+        }
       }, code)
+      console.log('[htoj-submit] 尝试 textarea 填入')
     }
 
-    // Step 7: 选择语言
+    // ====== 选择语言 ======
     try {
       const selects = await page.$$('select')
       for (const sel of selects) {
-        await sel.selectOption({ label: lang }).catch(() => {})
+        const options = await sel.$$('option')
+        for (const opt of options) {
+          const text = await opt.textContent()
+          if (text && text.includes(lang)) {
+            const value = await opt.getAttribute('value')
+            if (value) await sel.selectOption(value)
+            break
+          }
+        }
       }
+      console.log(`[htoj-submit] 语言选择完成`)
     } catch {}
 
-    // Step 8: 点击提交
+    // ====== 点击提交 ======
     await page.waitForTimeout(1000)
     const clicked = await page.evaluate(() => {
       for (const btn of document.querySelectorAll('button')) {
@@ -514,13 +580,17 @@ async function handleSubmit(req, res) {
       return false
     })
     if (!clicked) {
-      try { await page.click('button:has-text("提交")', { timeout: 5000 }) }
-      catch { throw new Error('找不到提交按钮') }
+      // 打印所有按钮帮助调试
+      const buttonTexts = await page.evaluate(() => 
+        [...document.querySelectorAll('button')].map(b => b.textContent.trim()).join(', ')
+      )
+      console.log('[htoj-submit] 页面按钮:', buttonTexts)
+      throw new Error(`找不到提交按钮。页面按钮: ${buttonTexts}`)
     }
     console.log('[htoj-submit] 提交已点击')
     await page.waitForTimeout(5000)
 
-    // Step 9: 获取结果
+    // ====== 获取结果 ======
     let result = '已提交'
     try {
       result = await page.evaluate(() => {
