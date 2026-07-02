@@ -2390,7 +2390,26 @@ export default {
       let fileIOInfo = task?.problemMeta?.fileIO || null
       if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
-        problemText = `[CRITICAL: This problem uses FILE I/O (${fileIOInfo.input} → ${fileIOInfo.output}). You MUST write these two lines at the top of main():\n  freopen("${fileIOInfo.input}", "r", stdin);\n  freopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file I/O problems. Your code WILL fail without freopen.]\n\n${problemText}`
+        problemText = `⚠️ FILE I/O REQUIREMENT ⚠️
+This problem reads from "${fileIOInfo.input}" and writes to "${fileIOInfo.output}".
+
+YOU MUST ADD THIS CODE AT THE START OF main():
+\`\`\`cpp
+freopen("${fileIOInfo.input}", "r", stdin);
+freopen("${fileIOInfo.output}", "w", stdout);
+\`\`\`
+
+DO NOT write comments like "// 文件读写重定向" without the actual freopen() calls.
+DO NOT use cin/cout without freopen - your solution will get Wrong Answer.
+THIS IS NOT OPTIONAL - include the exact freopen lines shown above.
+
+---
+
+${problemText}
+
+---
+
+⚠️ REMINDER: Include freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) at the top of main().`
       }
       
       const resp = await request('/api/solution', {
@@ -2418,7 +2437,7 @@ export default {
       let fileIOInfo = task?.problemMeta?.fileIO || null
       if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       const fileIOHint = fileIOInfo
-        ? `[CRITICAL: Use freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) for FILE I/O!]\n`
+        ? `⚠️ FILE I/O REQUIREMENT: Use freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) at the start of main()!\n`
         : ''
       
       const model = this.getSolveDataModel(taskIndex)
