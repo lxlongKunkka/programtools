@@ -324,8 +324,6 @@
             <span v-else>暂无教案，先生成代码后查看</span>
           </div>
         </template>
-          <div v-else class="empty-hint">暂无提取到的代码，请先生成解题代码</div>
-        </template>
 
         <!-- 数据脚本 -->
         <template v-else-if="activeTab === 'data'">
