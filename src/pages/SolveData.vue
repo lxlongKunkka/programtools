@@ -2379,6 +2379,7 @@ export default {
     // 为自动解题生成代码（简化版，跳过翻译元数据等）
     async generateCodeForAutoSolve(taskIndex) {
       const task = this.tasks[taskIndex]
+      const hasExistingCode = !!(task?.manualCode?.trim() || task?.serverPureCode?.trim())
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
       
@@ -2399,7 +2400,9 @@ export default {
       })
       if (resp?.result) {
         this.saveToTask(taskIndex, 'codeOutput', resp.result)
-        if (resp.pureCode) this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
+        if (!hasExistingCode && resp.pureCode) {
+          this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
+        }
       } else {
         throw new Error('AI 未返回代码')
       }
