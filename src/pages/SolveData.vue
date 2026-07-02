@@ -100,6 +100,15 @@
       <button class="btn-secondary btn-sm" @click="openHtojModal" :disabled="isBatchRunning">
         🗂️ 核桃OJ 比赛列表
       </button>
+      <button
+        v-if="hasHtojTasks"
+        class="btn-primary btn-sm"
+        @click="batchAutoSolveHtoj"
+        :disabled="isAutoSolving || isBatchRunning"
+        style="background:#ff6b35;border-color:#ff6b35;"
+      >
+        {{ isAutoSolving ? '⏳ 批量解题中...' : '🤖 批量自动解题' }}
+      </button>
     </div>
   </div>
 
@@ -282,14 +291,15 @@
             <button @click="saveCode" class="btn-secondary btn-sm">💾 保存</button>
             <button
               v-if="isHtojProblem"
-              @click="submitToHtoj"
-              :disabled="isHtojSubmitting || !codeOutput || tasks[currentTaskIndex]?.status === 'processing'"
+              @click="autoSolveHtoj"
+              :disabled="isAutoSolving || tasks[currentTaskIndex]?.status === 'processing'"
               class="btn-primary btn-sm"
               style="background:#ff6b35;border-color:#ff6b35;"
             >
-              {{ isHtojSubmitting ? '⏳ 评测中...' : '🤖 提交到核桃OJ' }}
+              {{ isAutoSolving ? `⏳ 自动解题中 (${autoSolveAttempts}/${autoSolveMaxAttempts})...` : '🤖 自动解题（重试到AC）' }}
             </button>
             <span v-if="htojSubmitResult" :class="['htoj-result-tag', htojResultClass]">{{ htojSubmitResult }}</span>
+            <span v-if="isAutoSolving" style="font-size:12px;color:#6b7280;margin-left:8px;">第 {{ autoSolveAttempts }} 次尝试</span>
           </div>
           <div v-if="manualCode || codeOutput" class="scroll-content">
             <MarkdownViewer :content="displayCode" />
@@ -589,6 +599,9 @@ export default {
       
       // htoj 自动提交
       isHtojSubmitting: false,
+      isAutoSolving: false,
+      autoSolveAttempts: 0,
+      autoSolveMaxAttempts: 5,
       htojSubmitResult: '',
       
       // 进度条状态
@@ -844,6 +857,12 @@ export default {
       if (this.htojSubmitResult.includes('Time Limit') || this.htojSubmitResult.includes('时间超限')) return 'htoj-tle'
       if (this.htojSubmitResult.includes('Runtime Error') || this.htojSubmitResult.includes('运行错误')) return 'htoj-re'
       return 'htoj-pending'
+    },
+    hasHtojTasks() {
+      return this.tasks.some(t => {
+        const url = t?.problemMeta?.sourceUrl || t?.problemMeta?.fetchUrl || ''
+        return /htoj\.com\.cn/i.test(url)
+      })
     }
   },
   methods: {
@@ -2219,6 +2238,216 @@ export default {
       this.isImportingHtoj = false
       this.htojImportStatus = ''
       this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
+    },
+
+    async autoSolveHtoj() {
+      const taskIndex = this.currentTaskIndex
+      const task = this.tasks[taskIndex]
+      const url = task?.problemMeta?.sourceUrl || task?.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || this.problemMeta?.fetchUrl || ''
+      if (!/htoj\.com\.cn/i.test(url)) {
+        this.showToastMessage('当前题目不是核桃OJ题目')
+        return
+      }
+      
+      this.isAutoSolving = true
+      this.autoSolveAttempts = 0
+      this.htojSubmitResult = ''
+      let lastCode = ''
+      let lastError = ''
+      
+      const token = localStorage.getItem('auth_token')
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      
+      while (this.autoSolveAttempts < this.autoSolveMaxAttempts) {
+        this.autoSolveAttempts++
+        this.htojSubmitResult = ''
+        
+        // Step 1: 生成代码
+        if (this.autoSolveAttempts === 1) {
+          // 首次：用正常流程生成
+          this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
+          if (!this.codeOutput?.trim()) {
+            try {
+              await this.generateCodeForAutoSolve(taskIndex)
+            } catch (e) {
+              this.generationStatus = '❌ 代码生成失败: ' + e.message
+              break
+            }
+          }
+        } else {
+          // 重试：用错误反馈重新生成
+          this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 上次 ${lastError}，正在修复...`
+          try {
+            await this.regenerateWithFeedback(taskIndex, lastCode, lastError)
+          } catch (e) {
+            this.generationStatus = '❌ 修复生成失败: ' + e.message
+            break
+          }
+        }
+        
+        // Step 2: 提取纯代码
+        const taskAfterGen = this.tasks[taskIndex]
+        let pureCode = taskAfterGen?.serverPureCode || this.serverPureCode || ''
+        if (!pureCode.trim()) {
+          pureCode = extractPureCode(taskAfterGen?.codeOutput || this.codeOutput || '')
+        }
+        if (!pureCode.trim()) {
+          this.generationStatus = '❌ 无法提取有效代码'
+          break
+        }
+        lastCode = pureCode
+        
+        // Step 3: 提交到 htoj
+        this.isHtojSubmitting = true
+        this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在提交评测...`
+        
+        try {
+          const lang = detectLanguage(pureCode) === 'python' ? 'Python' : 'C++'
+          const resp = await fetch('/api/htoj/submit', {
+            method: 'POST', headers,
+            body: JSON.stringify({ url, code: pureCode, language: lang })
+          })
+          const data = await resp.json()
+          
+          if (data.ok) {
+            const result = data.message || '已提交'
+            this.htojSubmitResult = result
+            lastError = result
+            
+            if (result.includes('Accepted') || result.includes('答案正确')) {
+              this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功`
+              this.showToastMessage(`🎉 AC！第 ${this.autoSolveAttempts} 次提交`)
+              break
+            } else {
+              this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] ${result}，即将重试...`
+            }
+          } else {
+            lastError = data.error || '提交失败'
+            this.htojSubmitResult = '提交失败: ' + lastError
+          }
+        } catch (e) {
+          lastError = '网络错误: ' + e.message
+          this.htojSubmitResult = lastError
+        } finally {
+          this.isHtojSubmitting = false
+        }
+        
+        // 不是 AC，短暂等待后重试
+        if (this.autoSolveAttempts < this.autoSolveMaxAttempts && !(this.htojSubmitResult || '').includes('Accepted')) {
+          await new Promise(r => setTimeout(r, 2000))
+        }
+      }
+      
+      if (!(this.htojSubmitResult || '').includes('Accepted')) {
+        this.generationStatus = `❌ ${this.autoSolveMaxAttempts} 次尝试未 AC，最终结果: ${this.htojSubmitResult || '未知'}`
+      }
+      this.isAutoSolving = false
+    },
+
+    // 为自动解题生成代码（简化版，跳过翻译元数据等）
+    async generateCodeForAutoSolve(taskIndex) {
+      const task = this.tasks[taskIndex]
+      const problemText = task?.problemText || this.problemText
+      if (!problemText.trim()) throw new Error('无题目描述')
+      
+      const model = this.getSolveDataModel(taskIndex)
+      const resp = await request('/api/solution', {
+        method: 'POST',
+        body: JSON.stringify({ text: problemText, model, language: this.language })
+      })
+      if (resp?.result) {
+        this.saveToTask(taskIndex, 'codeOutput', resp.result)
+        if (resp.pureCode) this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
+      } else {
+        throw new Error('AI 未返回代码')
+      }
+    },
+
+    // 用错误反馈重新生成代码
+    async regenerateWithFeedback(taskIndex, previousCode, errorResult) {
+      const task = this.tasks[taskIndex]
+      const problemText = task?.problemText || this.problemText
+      if (!problemText.trim()) throw new Error('无题目描述')
+      
+      const model = this.getSolveDataModel(taskIndex)
+      // 构造带反馈的 prompt
+      const feedbackText = `[PREVIOUS SUBMISSION RESULT: ${errorResult}]
+[YOUR PREVIOUS CODE THAT FAILED:]
+\`\`\`${this.language.toLowerCase()}
+${previousCode}
+\`\`\`
+
+Please analyze why the code failed (${errorResult}) and write a CORRECTED version. Pay attention to edge cases, data types, and algorithm correctness.
+
+[ORIGINAL PROBLEM:]
+${problemText}`
+      
+      const resp = await request('/api/solution', {
+        method: 'POST',
+        body: JSON.stringify({ text: feedbackText, model, language: this.language })
+      })
+      if (resp?.result) {
+        this.saveToTask(taskIndex, 'codeOutput', resp.result)
+        if (resp.pureCode) this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
+      } else {
+        throw new Error('AI 未返回修复代码')
+      }
+    },
+
+    // 批量自动解题：遍历所有 htoj 任务
+    async batchAutoSolveHtoj() {
+      const htojTasks = []
+      this.tasks.forEach((t, i) => {
+        const url = t?.problemMeta?.sourceUrl || t?.problemMeta?.fetchUrl || ''
+        if (/htoj\.com\.cn/i.test(url)) htojTasks.push(i)
+      })
+      if (!htojTasks.length) { this.showToastMessage('没有核桃OJ题目'); return }
+      
+      this.isAutoSolving = true
+      const token = localStorage.getItem('auth_token')
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      
+      let acCount = 0
+      for (let idx = 0; idx < htojTasks.length; idx++) {
+        const ti = htojTasks[idx]
+        this.switchTask(ti)
+        await new Promise(r => setTimeout(r, 1000))
+        const task = this.tasks[ti]
+        const title = task?.problemMeta?.title || `题目 ${idx + 1}`
+        const url = task?.problemMeta?.sourceUrl || task?.problemMeta?.fetchUrl || ''
+        const problemText = task?.problemText || ''
+        if (!problemText.trim()) { this.generationStatus = `[批量 ${idx + 1}/${htojTasks.length}] ${title} - 无描述，跳过`; continue }
+        
+        let ac = false; let lastCode = ''; let lastError = ''
+        for (let a = 0; a < this.autoSolveMaxAttempts; a++) {
+          this.autoSolveAttempts = a + 1; this.htojSubmitResult = ''
+          try {
+            if (a === 0) await this.generateCodeForAutoSolve(ti)
+            else await this.regenerateWithFeedback(ti, lastCode, lastError)
+          } catch { continue }
+          
+          let pc = this.tasks[ti]?.serverPureCode || ''
+          if (!pc.trim()) pc = extractPureCode(this.tasks[ti]?.codeOutput || '')
+          if (!pc.trim()) continue
+          lastCode = pc
+          
+          try {
+            const lang = detectLanguage(pc) === 'python' ? 'Python' : 'C++'
+            const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: pc, language: lang }) })).json()
+            if (r.ok) {
+              lastError = r.message || ''; this.htojSubmitResult = lastError
+              if (lastError.includes('Accepted') || lastError.includes('答案正确')) { ac = true; acCount++; break }
+            }
+          } catch { lastError = '网络错误' }
+          await new Promise(r => setTimeout(r, 2000))
+        }
+        this.generationStatus = `[批量 ${idx + 1}/${htojTasks.length}] ${title} ${ac ? '✅ AC' : '❌ ' + lastError}`
+      }
+      this.isAutoSolving = false
+      this.generationStatus = `批量解题: ${acCount}/${htojTasks.length} AC`
+      this.showToastMessage(`批量解题完成: ${acCount}/${htojTasks.length} AC`)
     },
 
     async submitToHtoj() {
