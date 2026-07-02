@@ -2385,18 +2385,21 @@ export default {
     // 检测题目是否需要文件 I/O
     detectFileIO(problemText) {
       if (!problemText) return null
-      // 匹配 "输入文件名 xxx" / "输出文件名 xxx"
       const inputMatch = problemText.match(/输入文件名[：:\s]*(\S+)/)
       const outputMatch = problemText.match(/输出文件名[：:\s]*(\S+)/)
       if (inputMatch && outputMatch) {
+        console.log('[detectFileIO] 检测到文件IO:', inputMatch[1], outputMatch[1])
         return { input: inputMatch[1], output: outputMatch[1] }
       }
-      // 匹配 "文件IO" 标志 + 文件名
       if (/文件IO|文件输入输出/.test(problemText)) {
         const in2 = problemText.match(/(\S+\.in)/)
         const out2 = problemText.match(/(\S+\.out)/)
-        if (in2 && out2) return { input: in2[1], output: out2[1] }
+        if (in2 && out2) {
+          console.log('[detectFileIO] 检测到文件IO (fallback):', in2[1], out2[1])
+          return { input: in2[1], output: out2[1] }
+        }
       }
+      console.log('[detectFileIO] 未检测到文件IO')
       return null
     },
 
@@ -2409,7 +2412,10 @@ export default {
       // 检测文件 I/O 需求，显式提示 AI
       const fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
+        console.log('[generateCodeForAutoSolve] 文件IO题目，添加freopen提示:', fileIOInfo)
         problemText = `[IMPORTANT: This problem requires FILE I/O! Use:\nfreopen("${fileIOInfo.input}", "r", stdin);\nfreopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file reading, use freopen as shown above.]\n\n${problemText}`
+      } else {
+        console.log('[generateCodeForAutoSolve] 标准IO题目')
       }
       
       const model = this.getSolveDataModel(taskIndex)

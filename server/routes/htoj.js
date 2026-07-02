@@ -651,25 +651,27 @@ async function handleSubmit(req, res) {
             const statusId = latest?.status?.id
             const statusName = latest?.status?.name || ''
 
-            // status.id 映射 (htoj 实际值): 0=AC, 1/4=WA, 2/7=CE, 3=RE, 5=TLE, 6=MLE, 8/9=评测中
+            // 优先用 htoj 返回的 statusName，映射表做中文翻译
+            const statusName = latest?.status?.name || ''
             const statusMap = {
-              0: 'Accepted / 答案正确',
-              1: 'Wrong Answer / 答案错误',
-              2: 'Compile Error / 编译错误',
-              3: 'Runtime Error / 运行错误',
-              4: 'Wrong Answer / 答案错误',
-              5: 'Time Limit Exceeded / 时间超限',
-              6: 'Memory Limit Exceeded / 内存超限',
-              7: 'Compile Error / 编译错误'
+              'Accepted': 'Accepted / 答案正确',
+              'Wrong Answer': 'Wrong Answer / 答案错误',
+              'Compile Error': 'Compile Error / 编译错误',
+              'Runtime Error': 'Runtime Error / 运行错误',
+              'Time Limit Exceeded': 'Time Limit Exceeded / 时间超限',
+              'Memory Limit Exceeded': 'Memory Limit Exceeded / 内存超限',
+              'System Error': 'System Error / 系统错误',
+              'Pending': '评测中...',
+              'Judging': '评测中...'
             }
-            const isFinal = statusId !== undefined && statusId !== null && statusId !== 8 && statusId !== 9
+            const isFinal = statusName && !/Pending|Judging|评测中/i.test(statusName)
 
             if (isFinal) {
-              result = statusMap[statusId] || statusName || `状态码: ${statusId}`
-              console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId})`)
+              result = statusMap[statusName] || `${statusName} (id=${statusId})`
+              console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId}, name=${statusName})`)
               break
-            } else if (statusId === 8 || statusId === 9) {
-              console.log(`[htoj-submit] API轮询第${i + 1}轮: 评测中...`)
+            } else if (statusName) {
+              console.log(`[htoj-submit] API轮询第${i + 1}轮: ${statusName}`)
               result = '评测中...'
             }
           }
