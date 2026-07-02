@@ -122,6 +122,9 @@
         <button :class="['step-tab', { active: activeTab === 'data' }]" @click="activeTab = 'data'">
           📊 数据<span v-if="dataOutput" class="tab-done">✓</span>
         </button>
+        <button :class="['step-tab', { active: activeTab === 'report' }]" @click="activeTab = 'report'">
+          📄 报告<span v-if="reportHtml" class="tab-done">✓</span>
+        </button>
       </div>
 
       <!-- Step content -->
@@ -2424,9 +2427,11 @@ ${problemText}`
       if (!textForData.trim()) return
       
       const model = this.selectedModel
+      // 数据生成不需要 freopen（数据脚本在本地用标准输入输出）
+      const codeForData = stripFreopenStatements(pureCode || '')
       const resp = await request('/api/generate-data', {
         method: 'POST',
-        body: JSON.stringify({ text: textForData, model, code: pureCode || '' })
+        body: JSON.stringify({ text: textForData, model, code: codeForData })
       })
       if (resp?.result) {
         this.saveToTask(taskIndex, 'dataOutput', resp.result)
