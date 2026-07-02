@@ -2379,11 +2379,31 @@ export default {
     // 为自动解题生成代码（简化版，跳过翻译元数据等）
     async generateCodeForAutoSolve(taskIndex) {
       const task = this.tasks[taskIndex]
-      const hasExistingCode = !!(task?.manualCode?.trim() || task?.serverPureCode?.trim())
+      const acCode = task?.manualCode?.trim() || ''
+      const hasExistingCode = !!acCode
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
+
+      const model = this.getSolveDataModel(taskIndex)
       
-      // 检测文件 I/O 需求（优先用 API 返回的元数据，其次用文本匹配）
+      // 有 AC 代码时：用 /api/solve 解读模式（加注释），代码用清洗后的 AC 版本
+      if (hasExistingCode) {
+        const cleanCode = stripFreopenStatements(acCode)
+        const resp = await request('/api/solve', {
+          method: 'POST',
+          body: JSON.stringify({ text: problemText, acCode: cleanCode, model, language: this.language })
+        })
+        if (resp?.result) {
+          this.saveToTask(taskIndex, 'codeOutput', resp.result)  // 教案（注释版）
+          // serverPureCode 保持原 AC 代码不变（不覆盖）
+        } else {
+          throw new Error('AI 未返回教案')
+        }
+        return
+      }
+      
+      // 无 AC 代码：用 /api/solution 生成模式
+      // 检测文件 I/O 需求
       let fileIOInfo = task?.problemMeta?.fileIO || null
       if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
