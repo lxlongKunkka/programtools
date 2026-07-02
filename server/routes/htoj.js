@@ -417,8 +417,8 @@ router.post('/submit-test', async (req, res) => {
 })
 
 async function handleSubmit(req, res) {
-  const { url, code, language } = req.body
-  if (!url) return res.status(400).json({ error: '缺少 url 参数（题目页面地址）' })
+  const { url, code, language, token: browserToken } = req.body
+  if (!url) return res.status(400).json({ error: '缺少 url 参数' })
   if (!code) return res.status(400).json({ error: '缺少 code 参数' })
 
   const ids = parseHtojProblemIds(url)
@@ -427,6 +427,16 @@ async function handleSubmit(req, res) {
   let browser
   try {
     const lang = language || 'C++'
+
+    // 优先用请求中的 browser token，否则用文件中的
+    let htojBrowserToken = browserToken
+    if (!htojBrowserToken) {
+      try {
+        const fs = await import('fs')
+        htojBrowserToken = fs.readFileSync(path.join(__htojDirname, '../htoj_browser_token.txt'), 'utf8').trim()
+      } catch { /* ignore */ }
+    }
+    if (!htojBrowserToken) throw new Error('缺少 htoj 浏览器 token')
 
     console.log('[htoj-submit] 启动浏览器...')
     browser = await chromium.launch({
@@ -438,99 +448,29 @@ async function handleSubmit(req, res) {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    // ====== 登录流程：直接走 UI，不用 cookie ======
-    console.log('[htoj-submit] 开始 UI 登录...')
-    await page.goto('https://htoj.com.cn/', { waitUntil: 'load', timeout: 30000 })
-    await page.waitForTimeout(3000)
+    // ====== 注入浏览器 token，跳过所有登录流程 ======
+    console.log('[htoj-submit] 注入浏览器 token...')
+    await page.goto('https://htoj.com.cn/', { waitUntil: 'load', timeout: 20000 })
+    await page.evaluate((t) => {
+      localStorage.setItem('KEY_USER_LOGIN_TOKEN', t)
+      localStorage.setItem('KEY_ZONE', 'cpp')
+    }, htojBrowserToken)
 
-    // 处理首次设置弹窗（"选择擅长语言"）
-    for (let i = 0; i < 3; i++) {
-      const setup = await page.$('button:has-text("确认选择")')
-      if (!setup) break
-      console.log('[htoj-submit] 点击首次设置确认')
-      await setup.click()
-      await page.waitForTimeout(2000)
-    }
-
-    // 查找并点击登录按钮
-    let loggedIn = false
-    for (let attempt = 0; attempt < 2; attempt++) {
-      // Get body text safely
-      let body = ''
-      try { body = await page.innerText('body', { timeout: 3000 }).catch(() => '') } catch {}
-      console.log('[htoj-submit] body check, len:', body.length)
-      
-      // Check if already logged in
-      if (!body.includes('登 录') && !body.includes('登录')) {
-        console.log('[htoj-submit] 已登录状态')
-        loggedIn = true
-        break
-      }
-
-      console.log('[htoj-submit] 点击登录按钮...')
-      try {
-        await page.click('button:has-text("登 录"), button:has-text("登录")', { timeout: 5000 })
-      } catch {
-        // Maybe a different login trigger
-        const allBtns = await page.$$('button, a, [role="button"]')
-        for (const btn of allBtns) {
-          const text = await btn.textContent().catch(() => '')
-          if (text.includes('登') && text.includes('录')) {
-            await btn.click()
-            break
-          }
-        }
-      }
-      await page.waitForTimeout(3000)
-
-      // Fill login form
-      console.log('[htoj-submit] 填写账号密码...')
-      
-      // Try to find and fill phone input
-      const inputs = await page.$$('input')
-      for (const input of inputs) {
-        const type = await input.getAttribute('type').catch(() => 'text')
-        const placeholder = await input.getAttribute('placeholder').catch(() => '')
-        if (type === 'text' || placeholder.includes('手机') || placeholder.includes('phone') || placeholder.includes('账号')) {
-          await input.click()
-          await input.fill('17753651388')
-          console.log('[htoj-submit] 填入手机号')
-          break
-        }
-      }
-      await page.waitForTimeout(500)
-
-      // Fill password
-      try {
-        await page.fill('input[type="password"]', 'Aa123456@')
-        console.log('[htoj-submit] 填入密码')
-      } catch {}
-      await page.waitForTimeout(500)
-
-      // Submit login form
-      try {
-        await page.click('button:has-text("登 录"), button:has-text("登录")', { timeout: 5000 })
-        console.log('[htoj-submit] 登录提交')
-        await page.waitForTimeout(5000)
-      } catch {}
-    }
-
-    if (!loggedIn) {
-      // Last check
-      let finalBody = ''
-      try { finalBody = await page.innerText('body', { timeout: 3000 }).catch(() => '') } catch {}
-      if (finalBody.includes('登 录') || finalBody.includes('登录')) {
-        throw new Error('登录失败，请检查账号密码或手动登录')
-      }
-    }
-
-    // ====== 导航到题目页 ======
+    // ====== 直接导航到题目页 ======
     console.log(`[htoj-submit] 导航到: ${url}`)
     await page.goto(url, { waitUntil: 'load', timeout: 30000 })
     await page.waitForTimeout(5000)
 
-    // 截图用于调试
-    await page.screenshot({ path: '/tmp/htoj_submit_debug.png' }).catch(() => {})
+    // 验证登录状态
+    const hasLogin = await page.evaluate(() => {
+      const txt = document.body?.innerText || ''
+      return txt.includes('登 录') || txt.includes('登录')
+    })
+    if (hasLogin) {
+      await page.screenshot({ path: '/tmp/htoj_login_failed.png' }).catch(() => {})
+      throw new Error('Token 注入后仍然显示登录页面，token 可能已过期')
+    }
+    console.log('[htoj-submit] 已登录')
 
     // ====== 填入代码 ======
     const hasMonaco = await page.$('.monaco-editor')
