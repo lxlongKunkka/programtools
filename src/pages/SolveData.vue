@@ -1806,6 +1806,8 @@ export default {
           const isOnTask = () => this.currentTaskIndex === taskIndex
           const problemText = this.tasks[taskIndex]?.problemText ?? this.problemText
           if (!problemText.trim()) return;
+          const title = this.tasks[taskIndex]?.problemMeta?.title || `题目${taskIndex}`
+          this.addLog(`🌐 翻译: ${title}`, 'info')
           this.isTranslating = true;
           if (isOnTask()) {
             this.generationStatus = '正在自动翻译题目...'
@@ -2567,7 +2569,7 @@ ${problemText}`
           const title = task?.problemMeta?.title || `题目${ti}`
           if (task?.manualCode?.trim()) { this.saveToTask(ti, 'serverPureCode', task.manualCode.trim()); return }
           try {
-            if (!task?.translationText?.trim()) { this.addLog(`🌐 翻译: ${title}`, 'info'); await this.autoTranslate(ti) }
+            if (!task?.translationText?.trim()) await this.autoTranslate(ti)
             this.addLog(`📝 生成: ${title}`, 'info')
             await this.generateCodeForAutoSolve(ti, { quick: true })
           } catch (e) { this.addLog(`⚠️ ${title}: ${e.message}`, 'warn') }
