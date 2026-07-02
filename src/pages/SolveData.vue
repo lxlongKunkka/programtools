@@ -2490,7 +2490,7 @@ export default {
       } else if (/Memory Limit|内存超限/i.test(errorResult)) {
         fixHint = 'The code exceeded MEMORY LIMIT. Optimize memory usage - use smaller data types, release unused memory, or use a more space-efficient algorithm.'
       }
-      const feedbackText = `${fileIOHint}[PREVIOUS SUBMISSION RESULT: ${errorResult}]
+      const feedbackText = `[PREVIOUS SUBMISSION RESULT: ${errorResult}]
 [YOUR PREVIOUS CODE THAT FAILED:]
 \`\`\`${this.language.toLowerCase()}
 ${previousCode}
