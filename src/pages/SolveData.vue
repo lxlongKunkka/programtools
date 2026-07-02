@@ -2766,8 +2766,13 @@ ${problemText}`
       // this.translationText = '' 
       
       // 检查 manualCode 是否存在
-      const manualContent = this.manualCode.trim()
+      const manualContent = (this.tasks[targetIndex]?.manualCode || '').trim()
       const solutionModel = this.getSolveDataModel(targetIndex)
+      
+      // 有 AC 代码时，提前设置 serverPureCode（避免后续 AI 生成覆盖）
+      if (manualContent && !this.tasks[targetIndex]?.serverPureCode?.trim()) {
+        this.saveToTask(targetIndex, 'serverPureCode', manualContent, targetTaskId)
+      }
       
       if (isCurrentTask()) {
         this.codeOutput = ''
@@ -2829,7 +2834,10 @@ ${problemText}`
         // 处理题解结果
         if (solutionRes && solutionRes.result) {
             this.saveToTask(targetIndex, 'codeOutput', solutionRes.result, targetTaskId)
-            if (solutionRes.pureCode) this.saveToTask(targetIndex, 'serverPureCode', solutionRes.pureCode, targetTaskId)
+            // 有 AC 代码时不覆盖 serverPureCode，保持原 AC 代码
+            if (solutionRes.pureCode && !manualContent) {
+              this.saveToTask(targetIndex, 'serverPureCode', solutionRes.pureCode, targetTaskId)
+            }
             
             // 在进行下一步之前，确保翻译已完成 (报告和元数据依赖翻译文本)
             if (this.isTranslating) {
