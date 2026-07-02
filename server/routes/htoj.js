@@ -463,7 +463,7 @@ async function handleSubmit(req, res) {
 
     // ====== 直接导航到题目页 ======
     console.log(`[htoj-submit] 导航到: ${url}`)
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 })
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await page.waitForTimeout(5000)
 
     // 截图调试
