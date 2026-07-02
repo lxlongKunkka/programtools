@@ -87,8 +87,8 @@
         <a v-if="problemMeta?.fetchUrl||problemMeta?.sourceUrl" :href="problemMeta.fetchUrl||problemMeta.sourceUrl" target="_blank" class="problem-limit-badge source-url-badge">🔗原题</a>
         <span v-if="fetchProgress" style="font-size:12px;color:#6b7280;">{{ fetchProgress }}</span>
         <button @click="generateAll" :disabled="isGenerating||isAutoSolving||isBatchRunning" class="btn-outline btn-sm" style="margin-left:auto;">⚡一键生成</button>
-        <button @click="downloadCurrent" :disabled="!codeOutput&&!dataOutput" class="btn-outline btn-sm">📥下载</button>
-        <button @click="runAndDownload" :disabled="!(manualCode||codeOutput)||!dataOutput" class="btn-outline btn-sm">📦导出</button>
+        <button @click="downloadCurrent" :disabled="!hasCurrentContent" class="btn-outline btn-sm">📥下载</button>
+        <button @click="runAndDownload" :disabled="!hasCurrentContent||!dataOutput" class="btn-outline btn-sm">📦导出</button>
       </div>
 
       <!-- Generation status bar -->
@@ -725,8 +725,12 @@ export default {
     hasValidMeta() {
       return hasValidTaskMeta({ problemMeta: this.problemMeta })
     },
+    hasCurrentContent() {
+      const t = this.tasks[this.currentTaskIndex]
+      return !!(t?.codeOutput || t?.serverPureCode || t?.dataOutput || t?.translationText)
+    },
     hasCompletedTasks() {
-      return this.tasks.some(t => t.status === 'completed')
+      return this.tasks.some(t => t.codeOutput || t.serverPureCode || t.dataOutput || t.translationText)
     },
     hasPendingRawMaterialTasks() {
       return this.tasks.some(task => hasTaskPendingRawMaterials(task))
@@ -1529,7 +1533,7 @@ export default {
     },
     
     async downloadBatch() {
-      const completedTasks = this.tasks.filter(t => t.status === 'completed')
+      const completedTasks = this.tasks.filter(t => t.codeOutput || t.serverPureCode || t.translationText || t.dataOutput)
       if (completedTasks.length === 0) {
         this.showToastMessage('没有已完成的任务可下载')
         return
