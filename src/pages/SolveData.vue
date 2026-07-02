@@ -226,7 +226,15 @@
             <span v-if="isAutoSolving" style="font-size:12px;color:#6b7280;margin-left:8px;">第 {{ autoSolveAttempts }} 次尝试</span>
           </div>
           <div v-if="pureAcCode" class="scroll-content">
-            <MarkdownViewer :content="formattedPureCode" />
+            <div v-if="showCodeVersion === 'freopen'" style="margin-bottom:8px;">
+              <span style="font-size:11px;color:#f59e0b;background:#fef3c7;padding:2px 8px;border-radius:4px;">📤 提交版（含 freopen）</span>
+              <button @click="showCodeVersion = 'std'" class="btn-ghost btn-sm" style="margin-left:8px;font-size:11px;">查看标准版 →</button>
+            </div>
+            <div v-else style="margin-bottom:8px;">
+              <span style="font-size:11px;color:#10b981;background:#d1fae5;padding:2px 8px;border-radius:4px;">💻 标准版（std I/O）</span>
+              <button @click="showCodeVersion = 'freopen'" class="btn-ghost btn-sm" style="margin-left:8px;font-size:11px;">查看提交版 →</button>
+            </div>
+            <MarkdownViewer :content="formattedPureCodeV2" />
           </div>
           <div v-else class="empty-hint">
             <span v-if="isGenerating === 'code'">⏳ 正在生成...</span>
@@ -520,6 +528,7 @@ export default {
       htojSubmitResult: '',
       solveLogs: [],
       showSolveLogs: false,
+      showCodeVersion: 'freopen',
       
       // 进度条状态
       showStepIndicators: false,
@@ -705,6 +714,11 @@ export default {
     formattedPureCode() {
       const lang = this.language === 'C++' ? 'cpp' : 'python'
       return '```' + lang + '\n' + this.pureAcCode + '\n```'
+    },
+    formattedPureCodeV2() {
+      const lang = this.language === 'C++' ? 'cpp' : 'python'
+      const code = this.showCodeVersion === 'freopen' ? (this.serverPureCode || '') : stripFreopenStatements(this.serverPureCode || '')
+      return '```' + lang + '\n' + code + '\n```'
     },
     // 翻译完成后就应该有 title + tags，此后不需要再单独调用 /api/generate-problem-meta
     hasValidMeta() {
