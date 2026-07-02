@@ -194,9 +194,11 @@
           🌐 翻译<span v-if="translationText" class="tab-done">✓</span>
         </button>
         <button :class="['step-tab', { active: activeTab === 'code' }]" @click="activeTab = 'code'">
-          📝 解题代码<span v-if="codeOutput" class="tab-done">✓</span>
+          � 代码<span v-if="pureAcCode" class="tab-done">✓</span>
         </button>
-        <button :class="['step-tab', { active: activeTab === 'pure_code' }]" @click="activeTab = 'pure_code'">💻 纯净代码</button>
+        <button :class="['step-tab', { active: activeTab === 'lesson' }]" @click="activeTab = 'lesson'">
+          📝 教案<span v-if="codeOutput" class="tab-done">✓</span>
+        </button>
         <button :class="['step-tab', { active: activeTab === 'data' }]" @click="activeTab = 'data'">
           📊 数据脚本<span v-if="dataOutput" class="tab-done">✓</span>
         </button>
@@ -280,15 +282,13 @@
           </div>
         </template>
 
-        <!-- 解题代码 -->
+        <!-- 💻 代码：纯代码，可直接提交 -->
         <template v-else-if="activeTab === 'code'">
           <div class="tab-action-bar">
             <button @click="generateCode" :disabled="isGenerating === 'code' || tasks[currentTaskIndex]?.status === 'processing'" class="btn-primary btn-sm">
-              {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成题解代码' }}
+              {{ isGenerating === 'code' ? '⏳ 生成中...' : '📝 生成代码' }}
             </button>
-            <button @click="copyPureCode" class="btn-secondary btn-sm">📋 复制代码</button>
-            <button @click="copyCode" class="btn-secondary btn-sm">📋 全部</button>
-            <button @click="saveCode" class="btn-secondary btn-sm">💾 保存</button>
+            <button @click="copyPureCode" :disabled="!pureAcCode" class="btn-secondary btn-sm">📋 复制</button>
             <button
               v-if="isHtojProblem"
               @click="autoSolveHtoj"
@@ -301,23 +301,29 @@
             <span v-if="htojSubmitResult" :class="['htoj-result-tag', htojResultClass]">{{ htojSubmitResult }}</span>
             <span v-if="isAutoSolving" style="font-size:12px;color:#6b7280;margin-left:8px;">第 {{ autoSolveAttempts }} 次尝试</span>
           </div>
+          <div v-if="pureAcCode" class="scroll-content">
+            <MarkdownViewer :content="formattedPureCode" />
+          </div>
+          <div v-else class="empty-hint">
+            <span v-if="isGenerating === 'code'">⏳ 正在生成...</span>
+            <span v-else>暂无代码，点击"生成代码"</span>
+          </div>
+        </template>
+
+        <!-- 📝 教案：完整 AI 输出，含算法讲解 + 代码 -->
+        <template v-else-if="activeTab === 'lesson'">
+          <div class="tab-action-bar">
+            <button @click="copyCode" class="btn-secondary btn-sm">📋 复制全部</button>
+            <button @click="saveCode" class="btn-secondary btn-sm">💾 保存</button>
+          </div>
           <div v-if="manualCode || codeOutput" class="scroll-content">
             <MarkdownViewer :content="displayCode" />
           </div>
           <div v-else class="empty-hint">
             <span v-if="isGenerating === 'code'">⏳ 正在生成...</span>
-            <span v-else>暂无解题代码</span>
+            <span v-else>暂无教案，先生成代码后查看</span>
           </div>
         </template>
-
-        <!-- 纯净代码 -->
-        <template v-else-if="activeTab === 'pure_code'">
-          <div class="tab-action-bar">
-            <button @click="copyPureCode" :disabled="!pureAcCode" class="btn-secondary btn-sm">📋 复制</button>
-          </div>
-          <div v-if="pureAcCode" class="scroll-content">
-            <MarkdownViewer :content="formattedPureCode" />
-          </div>
           <div v-else class="empty-hint">暂无提取到的代码，请先生成解题代码</div>
         </template>
 
@@ -2316,8 +2322,15 @@ export default {
             lastError = result
             
             if (result.includes('Accepted') || result.includes('答案正确')) {
-              this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功`
+              this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功，正在生成数据...`
               this.showToastMessage(`🎉 AC！第 ${this.autoSolveAttempts} 次提交`)
+              // AC 后自动生成数据
+              try {
+                await this.generateDataForAutoSolve(taskIndex, pureCode)
+                this.generationStatus = `✅ AC + 数据生成完成！第 ${this.autoSolveAttempts} 次`
+              } catch {
+                this.generationStatus = `✅ AC！数据生成失败，可手动重试`
+              }
               break
             } else {
               this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] ${result}，即将重试...`
@@ -2395,6 +2408,24 @@ ${problemText}`
       }
     },
 
+    // 自动解题后生成数据（简化版，不重复翻译）
+    async generateDataForAutoSolve(taskIndex, pureCode) {
+      const task = this.tasks[taskIndex]
+      const problemText = task?.problemText || this.problemText
+      const translationText = task?.translationText || ''
+      const textForData = translationText.trim() || problemText
+      if (!textForData.trim()) return
+      
+      const model = this.selectedModel
+      const resp = await request('/api/generate-data', {
+        method: 'POST',
+        body: JSON.stringify({ text: textForData, model, code: pureCode || '' })
+      })
+      if (resp?.result) {
+        this.saveToTask(taskIndex, 'dataOutput', resp.result)
+      }
+    },
+
     // 批量自动解题：遍历所有 htoj 任务
     async batchAutoSolveHtoj() {
       const htojTasks = []
@@ -2438,7 +2469,7 @@ ${problemText}`
             const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: pc, language: lang }) })).json()
             if (r.ok) {
               lastError = r.message || ''; this.htojSubmitResult = lastError
-              if (lastError.includes('Accepted') || lastError.includes('答案正确')) { ac = true; acCount++; break }
+              if (lastError.includes('Accepted') || lastError.includes('答案正确')) { ac = true; acCount++; try { await this.generateDataForAutoSolve(ti, pc) } catch {} break }
             }
           } catch { lastError = '网络错误' }
           await new Promise(r => setTimeout(r, 2000))
