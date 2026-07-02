@@ -2490,6 +2490,7 @@ ${problemText}`
       if (!htojTasks.length) { this.showToastMessage('没有核桃OJ题目'); return }
       
       this.isAutoSolving = true
+      this.autoSolveAttempts = 0
       const token = localStorage.getItem('auth_token')
       const headers = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
@@ -2499,6 +2500,7 @@ ${problemText}`
       const PARALLEL = 3
       for (let chunk = 0; chunk < htojTasks.length; chunk += PARALLEL) {
         const batch = htojTasks.slice(chunk, chunk + PARALLEL)
+        this.autoSolveAttempts = chunk + 1
         await Promise.all(batch.map(async (ti) => {
           const task = this.tasks[ti]
           const existingAc = task?.manualCode?.trim()
@@ -2517,6 +2519,7 @@ ${problemText}`
       let acCount = 0
       for (let idx = 0; idx < htojTasks.length; idx++) {
         const ti = htojTasks[idx]
+        this.autoSolveAttempts = idx + 1
         this.switchTask(ti)
         const task = this.tasks[ti]
         const title = task?.problemMeta?.title || `题目 ${idx + 1}`
