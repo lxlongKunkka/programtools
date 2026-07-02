@@ -2523,6 +2523,8 @@ ${problemText}`
 
     // 批量自动解题：并行生成 + 串行提交
     async batchAutoSolveHtoj() {
+      console.log('[batchAutoSolveHtoj] ★★★ 批量自动解题被调用 ★★★')
+      this.addLog('📦 开始批量自动解题', 'header')
       const htojTasks = []
       this.tasks.forEach((t, i) => {
         const url = t?.problemMeta?.sourceUrl || t?.problemMeta?.fetchUrl || ''
@@ -2533,11 +2535,13 @@ ${problemText}`
       if (!htojTasks.length) { this.showToastMessage('没有核桃OJ题目'); return }
       
       this.isAutoSolving = true
+      this.addLog(`找到 ${htojTasks.length} 道 htoj 题目待处理`, 'info')
       const token = localStorage.getItem('auth_token')
       const headers = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
       
       // ── Phase 1: 并行生成代码（最多 3 并发）──
+      this.addLog(`并行生成代码 (最多${htojTasks.length}题，${PARALLEL}并发)...`, 'info')
       this.generationStatus = `[批量] 并行生成代码 (${htojTasks.length} 题)...`
       const PARALLEL = 3
       for (let chunk = 0; chunk < htojTasks.length; chunk += PARALLEL) {
@@ -2602,6 +2606,7 @@ ${problemText}`
           const codeToSubmit = fileIO ? this.injectFreopen(pc, fileIO) : pc
           
           try {
+            this.addLog(`[${idx+1}/${htojTasks.length}] ${title} 提交 (第${a+1}次)...`, 'info')
             this.generationStatus = `[批量 ${idx + 1}/${htojTasks.length}] ${title} 提交中 (第${a + 1}次)...`
             const lang = detectLanguage(codeToSubmit) === 'python' ? 'Python' : 'C++'
             const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: codeToSubmit, language: lang }) })).json()
@@ -2609,10 +2614,12 @@ ${problemText}`
               lastError = r.message || ''; this.htojSubmitResult = lastError
               if (lastError.includes('Accepted') || lastError.includes('答案正确')) {
                 ac = true; acCount++
-                // 用 AC 代码生成教案（解读模式）
+                this.addLog(`✅ ${title} AC! (第${a+1}次)`, 'success')
                 this.tasks[ti].manualCode = pc
                 try { await this.generateCodeForAutoSolve(ti) } catch {}
                 break
+              } else {
+                this.addLog(`❌ ${title}: ${lastError}`, 'error')
               }
               if (a < this.autoSolveMaxAttempts - 1) await new Promise(r => setTimeout(r, 2000))
             }
