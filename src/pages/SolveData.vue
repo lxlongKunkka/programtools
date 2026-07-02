@@ -724,8 +724,15 @@ export default {
     },
     formattedPureCodeV2() {
       const lang = this.language === 'C++' ? 'cpp' : 'python'
-      const code = this.showCodeVersion === 'freopen' ? (this.serverPureCode || '') : stripFreopenStatements(this.serverPureCode || '')
-      return '```' + lang + '\n' + code + '\n```'
+      if (this.showCodeVersion === 'freopen') {
+        // 提交版：实时注入 freopen
+        const task = this.tasks[this.currentTaskIndex]
+        const fileIO = task?.problemMeta?.fileIO || null
+        const code = this.injectFreopen(this.serverPureCode || '', fileIO)
+        return '```' + lang + '\n' + code + '\n```'
+      }
+      // 标准版：AI 原始干净代码
+      return '```' + lang + '\n' + (this.serverPureCode || '') + '\n```'
     },
     // 翻译完成后就应该有 title + tags，此后不需要再单独调用 /api/generate-problem-meta
     hasValidMeta() {
