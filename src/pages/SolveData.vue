@@ -2605,9 +2605,11 @@ ${problemText}`
         for (let a = 0; a < this.autoSolveMaxAttempts; a++) {
           this.autoSolveAttempts = a + 1; this.htojSubmitResult = ''
           
-          // 重试时修复代码
+          // 重试时修复代码（失败也不跳过，仍用旧代码提交）
           if (a > 0 && lastCode && lastError) {
-            try { await this.regenerateWithFeedback(ti, lastCode, lastError, true) } catch { continue }
+            try { await this.regenerateWithFeedback(ti, lastCode, lastError, true) } catch (e) {
+              this.addLog(`⚠️ 修复失败: ${e.message}，用旧代码重试`, 'warn')
+            }
           }
           
           let pc = this.tasks[ti]?.serverPureCode || ''
