@@ -496,13 +496,29 @@ async function handleSubmit(req, res) {
     const hasMonaco = pageInfo.monacoExists
 
     if (hasMonaco) {
-      await page.click('.monaco-editor', { timeout: 5000 })
-      await page.waitForTimeout(1000)
-      await page.keyboard.press('Control+a')
-      await page.keyboard.press('Delete')
-      await page.waitForTimeout(300)
-      await page.keyboard.type(code, { delay: 3 })
-      console.log('[htoj-submit] 代码已填入 Monaco')
+      // 用 Monaco API 直接设值，避免 keyboard.type 把 \n 变成 Enter 触发自动补全
+      await page.evaluate((c) => {
+        // 尝试获取 Monaco editor 实例
+        const editors = window.monaco?.editor?.getEditors?.()
+        if (editors && editors.length > 0) {
+          editors[0].setValue(c)
+          return
+        }
+        // Fallback: 通过全局变量
+        if (window._monacoEditor) {
+          window._monacoEditor.setValue(c)
+          return
+        }
+        // 最后尝试：找 textarea
+        const ta = document.querySelector('.monaco-editor textarea, textarea')
+        if (ta) {
+          ta.focus()
+          ta.value = c
+          ta.dispatchEvent(new Event('input', { bubbles: true }))
+          ta.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      }, code)
+      console.log('[htoj-submit] 代码已填入 Monaco (API)')
     } else if (pageInfo.textareaExists) {
       // Fallback via evaluate
       await page.evaluate((c) => {
@@ -640,16 +656,18 @@ async function handleSubmit(req, res) {
             const statusId = latest?.status?.id
             const statusName = latest?.status?.name || ''
 
-            // status.id 映射: 0=Accepted, 1=Wrong Answer, 2=Compile Error, 3=Runtime Error, 4=Time Limit, 5=Memory Limit, 6=Pending/Judging
+            // status.id 映射 (htoj 实际值)
             const statusMap = {
               0: 'Accepted / 答案正确',
               1: 'Wrong Answer / 答案错误',
               2: 'Compile Error / 编译错误',
               3: 'Runtime Error / 运行错误',
-              4: 'Time Limit Exceeded / 时间超限',
-              5: 'Memory Limit Exceeded / 内存超限',
-              6: '评测中...',
-              7: 'System Error / 系统错误'
+              4: 'Wrong Answer / 答案错误',
+              5: 'Time Limit Exceeded / 时间超限',
+              6: 'Memory Limit Exceeded / 内存超限',
+              7: 'Compile Error / 编译错误',
+              8: '评测中...',
+              9: '评测中...'
             }
 
             if (statusId !== undefined && statusId !== null && statusId !== 6) {
