@@ -2374,6 +2374,32 @@ export default {
       return null
     },
 
+    // 自动注入 freopen（提交前）
+    injectFreopen(code, fileIO) {
+      if (!fileIO || !code) return code
+      const { input, output } = fileIO
+      
+      // 检查是否已有 freopen（避免重复注入）
+      if (/freopen\s*\(/.test(code)) {
+        console.log('[injectFreopen] 代码已包含 freopen，跳过注入')
+        return code
+      }
+      
+      // 在 main() 开头注入 freopen
+      const injected = code.replace(
+        /(int|void)\s+main\s*\(.*?\)\s*\{/,
+        `$&\n    freopen("${input}", "r", stdin);\n    freopen("${output}", "w", stdout);`
+      )
+      
+      if (injected !== code) {
+        console.log(`[injectFreopen] 已注入 freopen("${input}", "r", stdin) 和 freopen("${output}", "w", stdout)`)
+        return injected
+      }
+      
+      console.warn('[injectFreopen] 未找到 main() 函数，freopen 注入失败')
+      return code
+    },
+
     // 为自动解题生成代码（简化版，跳过翻译元数据等）
     async generateCodeForAutoSolve(taskIndex, opts = {}) {
       const { quick = false } = opts
