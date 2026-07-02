@@ -2541,9 +2541,9 @@ ${problemText}`
       if (token) headers['Authorization'] = `Bearer ${token}`
       
       // ── Phase 1: 并行生成代码（最多 3 并发）──
+      const PARALLEL = 3
       this.addLog(`并行生成代码 (最多${htojTasks.length}题，${PARALLEL}并发)...`, 'info')
       this.generationStatus = `[批量] 并行生成代码 (${htojTasks.length} 题)...`
-      const PARALLEL = 3
       for (let chunk = 0; chunk < htojTasks.length; chunk += PARALLEL) {
         const batch = htojTasks.slice(chunk, chunk + PARALLEL)
         await Promise.all(batch.map(async (ti) => {
