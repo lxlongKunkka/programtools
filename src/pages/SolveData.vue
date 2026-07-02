@@ -109,7 +109,6 @@
         <span style="font-size:11px;color:#9ca3af;">（AI 生成代码 → 提交 htoj → 不 AC 则自动修复重试，最多5次）</span>
       </div>
     </div>
-    </div>
   </div>
 
   <!-- ── Main layout ──────────────────────────────────────── -->
