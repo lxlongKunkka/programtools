@@ -3547,14 +3547,18 @@ ${problemText}`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 6px 12px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.top-bar h2 { margin: 0; font-size: 18px; font-weight: 700; color: #1a1a2e; }
-.top-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.top-controls label { font-size: 13px; color: #6b7280; font-weight: 500; }
+.top-left { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.top-center { flex: 1; min-width: 200px; display: flex; gap: 4px; }
+.top-center .url-input { flex: 1; }
+.top-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
+.compact-select { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; color: #374151; outline: none; }
 .top-controls select {
   padding: 4px 8px;
   border: 1px solid #d1d5db;
