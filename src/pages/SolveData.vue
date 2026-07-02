@@ -1,119 +1,56 @@
 ﻿<template>
 <div class="solve-data-container">
 
-  <!-- ── Top bar ────────────────────────────────────────── -->
-  <div class="top-bar">
-    <h2>Solve + Data 生成器</h2>
-    <div class="top-controls">
-      <label>模型:</label>
-      <select v-model="selectedModel" @change="updateMainModelPreference">
-        <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
-      </select>
-      <label style="margin-left:12px;">语言:</label>
-      <select v-model="language">
+  <!-- ── Top bar（精简）───────────────────────────── -->
+  <div class="top-bar compact">
+    <div class="top-left">
+      <select v-model="language" class="compact-select">
         <option value="C++">C++</option>
         <option value="Python">Python</option>
       </select>
-      <div class="translation-model-config">
-        <button type="button" class="btn-secondary btn-sm" @click="showTranslationModelConfig = !showTranslationModelConfig">
-          翻译模型: {{ translationModelLabel }}
-        </button>
-        <div v-if="showTranslationModelConfig" class="translation-model-popover">
-          <label>默认翻译/解释模型</label>
-          <select v-model="translationModel" @change="updateTranslationModelPreference">
-            <option v-for="m in modelOptions" :key="`translation-${m.id}`" :value="m.id">{{ m.name }}</option>
-          </select>
-          <p>自动翻译、解释代码、独立翻译页共用这个设置。</p>
-        </div>
-      </div>
-      <div class="translation-model-config">
-        <button type="button" class="btn-secondary btn-sm" @click="showReportModelConfig = !showReportModelConfig">
-          报告模型: {{ reportModelLabel }}
-        </button>
-        <div v-if="showReportModelConfig" class="translation-model-popover">
-          <label>标题/元数据/报告模型</label>
-          <select v-model="reportModel" @change="updateReportModelPreference">
-            <option v-for="m in modelOptions" :key="`report-${m.id}`" :value="m.id">{{ m.name }}</option>
-          </select>
-          <p>总结标题、补元数据、生成解题报告都会使用这个设置。</p>
-        </div>
-      </div>
+      <select v-model="selectedModel" @change="updateMainModelPreference" class="compact-select" style="min-width:160px;">
+        <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+      </select>
     </div>
-  </div>
-
-  <!-- ── URL bar ─────────────────────────────────────────── -->
-  <div class="url-bar">
-    <input
-      v-model="fetchUrl"
-      class="url-input"
-      placeholder="输入题目/比赛链接：AtCoder / Codeforces / 核桃OJ"
-      @keydown.enter="fetchFromUrl"
-      :disabled="isFetchingUrl"
-    />
-    <button class="btn-primary btn-fetch-top" @click="fetchFromUrl" :disabled="isFetchingUrl || !fetchUrl.trim()">
-      {{ isFetchingUrl ? '⏳ 获取中...' : '🔍 获取题目' }}
-    </button>
-    <span v-if="fetchUrlError" class="url-hint url-error">❌ {{ fetchUrlError }}</span>
-    <span v-else-if="isFetchingUrl && fetchProgress" class="url-hint url-progress">⏳ {{ fetchProgress }}</span>
-  </div>
-
-  <!-- ── Task info bar ────────────────────────────────────── -->
-  <div class="task-info-bar">
-    <span class="task-count-label">共 {{ tasks.length }} 个任务</span>
-    <div class="task-bulk-right">
+    <div class="top-center">
+      <input v-model="fetchUrl" class="url-input" placeholder="题目/比赛链接" @keydown.enter="fetchFromUrl" :disabled="isFetchingUrl" />
+      <button class="btn-primary btn-sm" @click="fetchFromUrl" :disabled="isFetchingUrl || !fetchUrl.trim()">
+        {{ isFetchingUrl ? '⏳' : '🔍 获取' }}
+      </button>
+    </div>
+    <div class="top-right">
+      <span class="task-count">共 {{ tasks.length }} 题</span>
+      <button class="btn-secondary btn-sm" @click="openFolderImport" :disabled="isBatchRunning">📥 导入</button>
+      <div class="dropdown-wrap">
+        <button class="btn-secondary btn-sm" @click="showContestDropdown = !showContestDropdown" :disabled="isBatchRunning">🗂️ 比赛 ▾</button>
+        <div v-if="showContestDropdown" class="dropdown-menu" @click.stop>
+          <button class="dropdown-item" @click="openNflsojModal(); showContestDropdown = false">🏫 NFLSOJ</button>
+          <button class="dropdown-item" @click="openLyrioModal(); showContestDropdown = false">🎓 Lyrio</button>
+          <button class="dropdown-item" @click="openHtojModal(); showContestDropdown = false">🌰 核桃OJ</button>
+        </div>
+      </div>
+      <div class="dropdown-wrap">
+        <button class="btn-primary btn-sm" @click="showBatchDropdown = !showBatchDropdown" :disabled="isBatchRunning">🚀 生成 ▾</button>
+        <div v-if="showBatchDropdown" class="dropdown-menu" @click.stop>
+          <button class="dropdown-item" @click="batchMode='code_data';runBatch();showBatchDropdown=false">📝 仅代码和数据</button>
+          <button class="dropdown-item" @click="batchMode='code_data_report';runBatch();showBatchDropdown=false">📦 全部</button>
+        </div>
+      </div>
+      <button v-if="hasHtojTasks" class="btn-primary btn-sm" @click="batchAutoSolveHtoj" :disabled="isAutoSolving||isBatchRunning" style="background:#ff6b35;border-color:#ff6b35;">
+        {{ isAutoSolving ? '⏳' : '🤖 自动解题' }}
+      </button>
+      <label v-if="hasHtojTasks" style="font-size:12px;color:#6b7280;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" v-model="autoGenerateDataAfterAC" checked /> 含数据
+      </label>
+      <button class="btn-ghost btn-sm" @click="downloadBatch" :disabled="isBatchRunning||!hasCompletedTasks">📦</button>
+      <button class="btn-ghost btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning||isBatchCpretSearching">🔍</button>
       <input ref="folderImporter" type="file" webkitdirectory directory multiple style="display:none" @change="handleFolderImport" />
-
-      <!-- 第1行：通用操作 -->
-      <div class="toolbar-row">
-        <button class="btn-secondary btn-sm" @click="openFolderImport" :disabled="isBatchRunning">📥 导入目录</button>
-
-        <!-- 导入比赛下拉 -->
-        <div class="dropdown-wrap" :class="{ open: showContestDropdown }">
-          <button class="btn-secondary btn-sm" @click="showContestDropdown = !showContestDropdown" :disabled="isBatchRunning">
-            🗂️ 导入比赛 ▾
-          </button>
-          <div v-if="showContestDropdown" class="dropdown-menu" @click.stop>
-            <button class="dropdown-item" @click="openNflsojModal(); showContestDropdown = false">🏫 NFLSOJ</button>
-            <button class="dropdown-item" @click="openLyrioModal(); showContestDropdown = false">🎓 Lyrio</button>
-            <button class="dropdown-item" @click="openHtojModal(); showContestDropdown = false">🌰 核桃OJ</button>
-          </div>
-        </div>
-
-        <!-- 批量生成下拉 -->
-        <div class="dropdown-wrap" :class="{ open: showBatchDropdown }">
-          <button class="btn-primary btn-sm" @click="showBatchDropdown = !showBatchDropdown" :disabled="isBatchRunning">
-            🚀 批量生成 ▾
-          </button>
-          <div v-if="showBatchDropdown" class="dropdown-menu" @click.stop>
-            <button class="dropdown-item" @click="batchMode = 'code_data'; runBatch(); showBatchDropdown = false">📝 仅代码和数据</button>
-            <button class="dropdown-item" @click="batchMode = 'code_data_report'; runBatch(); showBatchDropdown = false">📦 代码、数据和报告</button>
-            <button class="dropdown-item" @click="batchMode = 'report_only'; runBatch(); showBatchDropdown = false">📄 仅解题报告</button>
-          </div>
-        </div>
-
-        <button class="btn-secondary btn-sm" @click="downloadBatch" :disabled="isBatchRunning || !hasCompletedTasks">📦 批量下载</button>
-        <button class="btn-secondary btn-sm" @click="downloadPendingRawMaterials" :disabled="isBatchRunning || !hasPendingRawMaterialTasks">📥 下载素材</button>
-        <button class="btn-secondary btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning || isBatchCpretSearching">
-          {{ isBatchCpretSearching ? '⏳ 检索中...' : '🔍 检索原题' }}
-        </button>
-      </div>
-
-      <!-- 第2行：htoj 自动解题（仅 htoj 任务时显示） -->
-      <div v-if="hasHtojTasks" class="toolbar-row htoj-toolbar">
-        <button class="btn-primary btn-sm" @click="batchAutoSolveHtoj" :disabled="isAutoSolving || isBatchRunning" style="background:#ff6b35;border-color:#ff6b35;">
-          {{ isAutoSolving ? '⏳ 批量解题中...' : '🤖 批量自动解题（验证AC）' }}
-        </button>
-        <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#6b7280;cursor:pointer;">
-          <input type="checkbox" v-model="autoGenerateDataAfterAC" style="margin:0;" /> AC后生成数据
-        </label>
-      </div>
     </div>
   </div>
 
   <!-- ── Main layout ──────────────────────────────────────── -->
   <div class="main-layout">
 
-    <!-- Task list (260px) -->
     <TaskListPanel
       :tasks="tasks"
       :current-task-index="currentTaskIndex"
@@ -126,47 +63,15 @@
       @remove-task="removeTask"
     />
 
-    <!-- Detail panel -->
     <div class="detail-panel">
-
-      <!-- Detail header -->
-      <div class="detail-header">
-        <div class="detail-title-area">
-          <input
-            v-if="problemMeta"
-            v-model="problemMeta.title"
-            class="meta-title-input"
-            placeholder="题目标题"
-          />
-          <span v-else class="detail-title-placeholder">暂无标题 — 请输入题目或从 URL 获取</span>
-          <button @click="generateTitle" :disabled="isGeneratingTitle || !problemText" class="btn-outline btn-sm">
-            {{ isGeneratingTitle ? '生成中...' : '✨ 总结标题' }}
-          </button>
-          <div class="meta-tags" v-if="problemMeta && problemMeta.tags && problemMeta.tags.length">
-            <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
-          </div>
-          <span
-            v-if="tasks[currentTaskIndex]?.additionalFile"
-            :class="['sample-zip-badge', { 'has-base64': tasks[currentTaskIndex].additionalFile.base64 }]"
-            :title="getAdditionalFileTitle(tasks[currentTaskIndex].additionalFile)"
-            @click="openAdditionalFile()"
-          >📦 {{ tasks[currentTaskIndex].additionalFile.filename }} ({{ formatAdditionalFileSize(tasks[currentTaskIndex].additionalFile) }})</span>
-          <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱ {{ problemMeta.timeLimit }}ms</span>
-          <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾 {{ problemMeta.memoryLimit }}MB</span>
-          <a v-if="problemMeta?.fetchUrl || problemMeta?.sourceUrl" :href="problemMeta.fetchUrl || problemMeta.sourceUrl" target="_blank" rel="noopener" class="problem-limit-badge source-url-badge" title="查看原题">🔗 原题</a>
-        </div>
-        <div class="detail-actions">
-          <button @click="generateAll" :disabled="tasks[currentTaskIndex]?.status === 'processing' || isBatchRunning" class="btn-primary btn-sm">
-            {{ tasks[currentTaskIndex]?.status === 'processing' ? '⏳ 生成中...' : '⚡ 一键生成' }}
-          </button>
-          <button @click="downloadCurrentRawMaterials" :disabled="!currentTaskHasRawMaterials" class="btn-secondary btn-sm">
-            📥 下载原始素材
-          </button>
-          <button @click="runAndDownload" :disabled="!(manualCode || codeOutput) || !dataOutput" class="btn-secondary btn-sm">
-            📦 下载项目包
-          </button>
-          <button @click="clearAll" :disabled="isBatchRunning" class="btn-ghost btn-sm">🗑️ 清空</button>
-        </div>
+      <!-- 标题行 -->
+      <div class="detail-header compact">
+        <input v-if="problemMeta" v-model="problemMeta.title" class="meta-title-input compact" placeholder="题目标题" />
+        <span v-else class="detail-title-placeholder">暂无标题</span>
+        <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱{{ problemMeta.timeLimit }}ms</span>
+        <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾{{ problemMeta.memoryLimit }}MB</span>
+        <a v-if="problemMeta?.fetchUrl||problemMeta?.sourceUrl" :href="problemMeta.fetchUrl||problemMeta.sourceUrl" target="_blank" class="problem-limit-badge source-url-badge">🔗原题</a>
+        <span v-if="fetchProgress" style="font-size:12px;color:#6b7280;">{{ fetchProgress }}</span>
       </div>
 
       <!-- Generation status bar -->
@@ -187,7 +92,6 @@
       <!-- Step tabs -->
       <div class="step-tabs">
         <button :class="['step-tab', { active: activeTab === 'problem' }]" @click="activeTab = 'problem'">📋 题目</button>
-        <button :class="['step-tab', { active: activeTab === 'reference' }]" @click="activeTab = 'reference'">💡 参考</button>
         <button :class="['step-tab', { active: activeTab === 'translate' }]" @click="activeTab = 'translate'">
           🌐 翻译<span v-if="translationText" class="tab-done">✓</span>
         </button>
@@ -198,10 +102,7 @@
           📝 教案<span v-if="codeOutput" class="tab-done">✓</span>
         </button>
         <button :class="['step-tab', { active: activeTab === 'data' }]" @click="activeTab = 'data'">
-          📊 数据脚本<span v-if="dataOutput" class="tab-done">✓</span>
-        </button>
-        <button :class="['step-tab', { active: activeTab === 'report' }]" @click="activeTab = 'report'">
-          📽️ 报告<span v-if="reportHtml" class="tab-done">✓</span>
+          📊 数据<span v-if="dataOutput" class="tab-done">✓</span>
         </button>
       </div>
 

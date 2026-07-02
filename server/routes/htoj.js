@@ -362,20 +362,11 @@ async function fetchHtojProblem(url) {
 }
 
 function detectHtojFileIO(base, ojDetail) {
-  // 检查 ojDetail 中的 IO 类型字段
-  const ioType = ojDetail.ioType || ojDetail.ioMode || ojDetail.judgeType || ''
-  const inputFile = ojDetail.inputFileName || ojDetail.inputFile || ''
-  const outputFile = ojDetail.outputFileName || ojDetail.outputFile || ''
+  const inputFile = ojDetail.ioReadFileName || ojDetail.inputFileName || ''
+  const outputFile = ojDetail.ioWriteFileName || ojDetail.outputFileName || ''
   
   if (inputFile && outputFile) {
     return { input: inputFile, output: outputFile }
-  }
-  if (ioType === 'file' || ioType === 'FILE' || /文件/i.test(ioType)) {
-    // 尝试从 content 中匹配文件名
-    const content = base.content || ''
-    const inM = content.match(/(\S+\.in)/)
-    const outM = content.match(/(\S+\.out)/)
-    if (inM && outM) return { input: inM[1], output: outM[1] }
   }
   return null
 }
