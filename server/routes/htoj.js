@@ -343,6 +343,10 @@ async function fetchHtojProblem(url) {
     console.warn('[htoj] AC code skipped:', error.message)
   }
 
+  // 检测文件 I/O
+  const fileIO = detectHtojFileIO(base, ojDetail)
+  console.log(`[htoj] pid=${pid} fileIO:`, fileIO || '无')
+
   return {
     title,
     content: fullContent,
@@ -352,8 +356,28 @@ async function fetchHtojProblem(url) {
     additionalFile,
     timeLimit: ojDetail.timeLimit,
     memoryLimit: ojDetail.memoryLimit,
-    source: base.source?.name || ''
+    source: base.source?.name || '',
+    fileIO  // { input: 'a.in', output: 'a.out' } 或 null
   }
+}
+
+function detectHtojFileIO(base, ojDetail) {
+  // 检查 ojDetail 中的 IO 类型字段
+  const ioType = ojDetail.ioType || ojDetail.ioMode || ojDetail.judgeType || ''
+  const inputFile = ojDetail.inputFileName || ojDetail.inputFile || ''
+  const outputFile = ojDetail.outputFileName || ojDetail.outputFile || ''
+  
+  if (inputFile && outputFile) {
+    return { input: inputFile, output: outputFile }
+  }
+  if (ioType === 'file' || ioType === 'FILE' || /文件/i.test(ioType)) {
+    // 尝试从 content 中匹配文件名
+    const content = base.content || ''
+    const inM = content.match(/(\S+\.in)/)
+    const outM = content.match(/(\S+\.out)/)
+    if (inM && outM) return { input: inM[1], output: outM[1] }
+  }
+  return null
 }
 
 // ─── 路由 ─────────────────────────────────────────────────────────────────────
@@ -649,10 +673,9 @@ async function handleSubmit(req, res) {
             // 检查最新提交的状态
             const latest = records[0]
             const statusId = latest?.status?.id
-            const statusName = latest?.status?.name || ''
+            const name = latest?.status?.name || ''
 
             // 优先用 htoj 返回的 statusName，映射表做中文翻译
-            const statusName = latest?.status?.name || ''
             const statusMap = {
               'Accepted': 'Accepted / 答案正确',
               'Wrong Answer': 'Wrong Answer / 答案错误',
@@ -664,14 +687,14 @@ async function handleSubmit(req, res) {
               'Pending': '评测中...',
               'Judging': '评测中...'
             }
-            const isFinal = statusName && !/Pending|Judging|评测中/i.test(statusName)
+            const isFinal = name && !/Pending|Judging|评测中/i.test(name)
 
             if (isFinal) {
-              result = statusMap[statusName] || `${statusName} (id=${statusId})`
-              console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId}, name=${statusName})`)
+              result = statusMap[name] || `${name} (id=${statusId})`
+              console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId}, name=${name})`)
               break
-            } else if (statusName) {
-              console.log(`[htoj-submit] API轮询第${i + 1}轮: ${statusName}`)
+            } else if (name) {
+              console.log(`[htoj-submit] API轮询第${i + 1}轮: ${name}`)
               result = '评测中...'
             }
           }

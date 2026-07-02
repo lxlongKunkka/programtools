@@ -148,6 +148,7 @@ export function createFetchedProblemTask({ url, data, fallbackTitle, contestLabe
         ...(timeLimit ? { timeLimit } : {}),
         ...(memoryLimit ? { memoryLimit } : {}),
         ...(url ? { fetchUrl: url } : {}),
+        ...(data.fileIO ? { fileIO: data.fileIO } : {}),
       },
     }),
     editorial,

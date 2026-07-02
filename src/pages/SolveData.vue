@@ -2409,8 +2409,9 @@ export default {
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
       
-      // 检测文件 I/O 需求，显式提示 AI
-      const fileIOInfo = this.detectFileIO(problemText)
+      // 检测文件 I/O 需求（优先用 API 返回的元数据，其次用文本匹配）
+      let fileIOInfo = task?.problemMeta?.fileIO || null
+      if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
         console.log('[generateCodeForAutoSolve] 文件IO题目，添加freopen提示:', fileIOInfo)
         problemText = `[IMPORTANT: This problem requires FILE I/O! Use:\nfreopen("${fileIOInfo.input}", "r", stdin);\nfreopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file reading, use freopen as shown above.]\n\n${problemText}`
@@ -2437,8 +2438,9 @@ export default {
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
       
-      // 检测文件 I/O
-      const fileIOInfo = this.detectFileIO(problemText)
+      // 检测文件 I/O（优先 API 元数据）
+      let fileIOInfo = task?.problemMeta?.fileIO || null
+      if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       const fileIOHint = fileIOInfo
         ? `[CRITICAL: Use freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) for FILE I/O!]\n`
         : ''
