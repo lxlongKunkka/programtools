@@ -100,9 +100,6 @@
       <div v-if="showSolveLogs && solveLogs.length" class="solve-log-panel">
         <div v-for="(log, i) in solveLogs" :key="i" class="log-line" :class="log.type">{{ log.text }}</div>
       </div>
-          <div class="step-item" :class="currentGenerationSteps.meta"><div class="step-dot"></div><span>元数据</span></div>
-        </div>
-      </div>
 
       <!-- Step tabs -->
       <div class="step-tabs">
