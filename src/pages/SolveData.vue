@@ -105,6 +105,9 @@
       <!-- Step tabs -->
       <div class="step-tabs">
         <button :class="['step-tab', { active: activeTab === 'problem' }]" @click="activeTab = 'problem'">📋 题目</button>
+        <button :class="['step-tab', { active: activeTab === 'reference' }]" @click="activeTab = 'reference'">
+          💡 AC<span v-if="manualCode">✓</span>
+        </button>
         <button :class="['step-tab', { active: activeTab === 'translate' }]" @click="activeTab = 'translate'">
           🌐 翻译<span v-if="translationText" class="tab-done">✓</span>
         </button>
