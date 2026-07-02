@@ -2280,16 +2280,19 @@ export default {
         }
         lastCode = pureCode
         
-        // Step 3: 提交到 htoj
+        // Step 3: 提交到 htoj（自动注入 freopen）
+        const fileIO = this.tasks[taskIndex]?.problemMeta?.fileIO || null
+        const codeToSubmit = fileIO ? this.injectFreopen(pureCode, fileIO) : pureCode
+        
         this.isHtojSubmitting = true
-        this.addLog(`第${this.autoSolveAttempts}次提交: ${pureCode.length} 字符`, 'info')
+        this.addLog(`第${this.autoSolveAttempts}次提交: ${codeToSubmit.length} 字符`, 'info')
         this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在提交评测...`
         
         try {
-          const lang = detectLanguage(pureCode) === 'python' ? 'Python' : 'C++'
+          const lang = detectLanguage(codeToSubmit) === 'python' ? 'Python' : 'C++'
           const resp = await fetch('/api/htoj/submit', {
             method: 'POST', headers,
-            body: JSON.stringify({ url, code: pureCode, language: lang })
+            body: JSON.stringify({ url, code: codeToSubmit, language: lang })
           })
           const data = await resp.json()
           
@@ -2386,31 +2389,7 @@ export default {
         return
       }
       
-      // 无 AC 代码：用 /api/solution 生成
-      let fileIOInfo = task?.problemMeta?.fileIO || null
-      if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
-      if (fileIOInfo) {
-        problemText = `⚠️ FILE I/O REQUIREMENT ⚠️
-This problem reads from "${fileIOInfo.input}" and writes to "${fileIOInfo.output}".
-
-YOU MUST ADD THIS CODE AT THE START OF main():
-\`\`\`cpp
-freopen("${fileIOInfo.input}", "r", stdin);
-freopen("${fileIOInfo.output}", "w", stdout);
-\`\`\`
-
-DO NOT write comments like "// 文件读写重定向" without the actual freopen() calls.
-DO NOT use cin/cout without freopen - your solution will get Wrong Answer.
-THIS IS NOT OPTIONAL - include the exact freopen lines shown above.
-
----
-
-${problemText}
-
----
-
-⚠️ REMINDER: Include freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) at the top of main().`
-      }
+      // 无 AC 代码：用 /api/solution 生成（AI 只生成标准代码，freopen 由系统注入）
       
       const resp = await request('/api/solution', {
         method: 'POST',
@@ -2433,12 +2412,7 @@ ${problemText}
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
       
-      // 检测文件 I/O（优先 API 元数据）
-      let fileIOInfo = task?.problemMeta?.fileIO || null
-      if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
-      const fileIOHint = fileIOInfo
-        ? `⚠️ FILE I/O REQUIREMENT: Use freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) at the start of main()!\n`
-        : ''
+      // 错误反馈重试时不需要 freopen 提示（系统会自动注入）
       
       const model = this.getSolveDataModel(taskIndex)
       // 根据错误类型给具体建议
@@ -2575,10 +2549,14 @@ ${problemText}`
           if (!pc.trim()) { lastError = '无有效代码'; break }
           lastCode = pc
           
+          // 自动注入 freopen（如果需要）
+          const fileIO = this.tasks[ti]?.problemMeta?.fileIO || null
+          const codeToSubmit = fileIO ? this.injectFreopen(pc, fileIO) : pc
+          
           try {
             this.generationStatus = `[批量 ${idx + 1}/${htojTasks.length}] ${title} 提交中 (第${a + 1}次)...`
-            const lang = detectLanguage(pc) === 'python' ? 'Python' : 'C++'
-            const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: pc, language: lang }) })).json()
+            const lang = detectLanguage(codeToSubmit) === 'python' ? 'Python' : 'C++'
+            const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: codeToSubmit, language: lang }) })).json()
             if (r.ok) {
               lastError = r.message || ''; this.htojSubmitResult = lastError
               if (lastError.includes('Accepted') || lastError.includes('答案正确')) {
@@ -2626,6 +2604,10 @@ ${problemText}`
         return
       }
       
+      // 自动注入 freopen（如果需要）
+      const fileIO = task?.problemMeta?.fileIO || null
+      const codeToSubmit = fileIO ? this.injectFreopen(pureCode, fileIO) : pureCode
+      
       this.isHtojSubmitting = true
       this.htojSubmitResult = ''
       this.generationStatus = '正在提交到核桃OJ...'
@@ -2635,12 +2617,12 @@ ${problemText}`
         const headers = { 'Content-Type': 'application/json' }
         if (token) headers['Authorization'] = `Bearer ${token}`
         
-        const lang = detectLanguage(pureCode) === 'python' ? 'Python' : 'C++'
+        const lang = detectLanguage(codeToSubmit) === 'python' ? 'Python' : 'C++'
         
         const resp = await fetch('/api/htoj/submit', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ url, code: pureCode, language: lang })
+          body: JSON.stringify({ url, code: codeToSubmit, language: lang })
         })
         const data = await resp.json()
         
