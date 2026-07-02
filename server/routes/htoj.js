@@ -362,11 +362,13 @@ async function fetchHtojProblem(url) {
 }
 
 function detectHtojFileIO(base, ojDetail) {
-  const inputFile = ojDetail.ioReadFileName || ojDetail.inputFileName || ''
-  const outputFile = ojDetail.ioWriteFileName || ojDetail.outputFileName || ''
-  
-  if (inputFile && outputFile) {
-    return { input: inputFile, output: outputFile }
+  // 优先用 ioMode 判断（id=1标准IO, id=2文件IO）
+  if (ojDetail.ioMode?.id === 2) {
+    const inputFile = ojDetail.ioReadFileName || ojDetail.inputFileName || ''
+    const outputFile = ojDetail.ioWriteFileName || ojDetail.outputFileName || ''
+    if (inputFile && outputFile) {
+      return { input: inputFile, output: outputFile }
+    }
   }
   return null
 }
