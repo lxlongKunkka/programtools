@@ -91,8 +91,8 @@
         </span>
         <span v-if="fetchProgress" style="font-size:12px;color:#6b7280;">{{ fetchProgress }}</span>
         <div class="detail-actions" style="margin-left:auto;display:flex;gap:4px;flex-shrink:0;">
-          <button v-if="solveLogs.length" class="btn-ghost btn-sm" @click="showSolveLogs = !showSolveLogs" :style="{background: showSolveLogs ? '#dbeafe' : ''}">
-            {{ showSolveLogs ? '📋 收起日志' : '📋 日志 (' + solveLogs.length + ')' }}
+          <button class="btn-ghost btn-sm" @click="showSolveLogs = !showSolveLogs" :style="{background: showSolveLogs ? '#dbeafe' : '', opacity: solveLogs.length ? 1 : 0.4}">
+            {{ showSolveLogs ? '📋 收起日志' : (solveLogs.length ? '📋 日志 (' + solveLogs.length + ')' : '📋 日志') }}
           </button>
           <button @click="generateAll" :disabled="isGenerating||isAutoSolving||isBatchRunning" class="btn-primary btn-sm">⚡一键生成</button>
           <button @click="downloadCurrentRawMaterials" :disabled="!currentTaskHasRawMaterials" class="btn-secondary btn-sm">📥素材</button>
@@ -107,7 +107,8 @@
           {{ generationStatus }}
         </div>
       </div>
-      <div v-if="showSolveLogs && solveLogs.length" class="solve-log-panel">
+      <div v-if="showSolveLogs" class="solve-log-panel">
+        <div v-if="!solveLogs.length" style="color:#888;text-align:center;padding:12px;">暂无日志，点击"自动解题"开始</div>
         <div v-for="(log, i) in solveLogs" :key="i" class="log-line" :class="log.type">{{ log.text }}</div>
       </div>
 
