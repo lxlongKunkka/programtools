@@ -2400,13 +2400,27 @@ export default {
         return code
       }
       
+      let result = code
+      
+      // 确保 #include <cstdio>（freopen 需要）
+      if (!/#include\s*[<"]\s*(cstdio|stdio\.h|bits\/stdc\+\+\.h)/.test(result)) {
+        const lastInclude = result.lastIndexOf('#include')
+        if (lastInclude >= 0) {
+          const afterInclude = result.indexOf('\n', lastInclude) + 1
+          result = result.slice(0, afterInclude) + '#include <cstdio>\n' + result.slice(afterInclude)
+        } else {
+          result = '#include <cstdio>\n' + result
+        }
+        console.log('[injectFreopen] 已添加 #include <cstdio>')
+      }
+      
       // 在 main() 开头注入 freopen
-      const injected = code.replace(
+      const injected = result.replace(
         /(int|void)\s+main\s*\(.*?\)\s*\{/,
         `$&\n    freopen("${input}", "r", stdin);\n    freopen("${output}", "w", stdout);`
       )
       
-      if (injected !== code) {
+      if (injected !== result) {
         console.log(`[injectFreopen] 已注入 freopen("${input}", "r", stdin) 和 freopen("${output}", "w", stdout)`)
         return injected
       }
