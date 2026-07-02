@@ -2283,7 +2283,13 @@ export default {
         
         // Step 1: 生成代码
         if (this.autoSolveAttempts === 1) {
-          // 首次：用正常流程生成
+          // 首次：先翻译，再生成代码
+          if (!this.tasks[taskIndex]?.translationText?.trim()) {
+            this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在翻译题目...`
+            try {
+              await this.autoTranslate(taskIndex)
+            } catch { /* 翻译失败不阻断 */ }
+          }
           this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
           if (!this.codeOutput?.trim()) {
             try {
@@ -2470,7 +2476,12 @@ ${problemText}`
         for (let a = 0; a < this.autoSolveMaxAttempts; a++) {
           this.autoSolveAttempts = a + 1; this.htojSubmitResult = ''
           try {
-            if (a === 0) await this.generateCodeForAutoSolve(ti)
+            if (a === 0) {
+              if (!this.tasks[ti]?.translationText?.trim()) {
+                try { await this.autoTranslate(ti) } catch {}
+              }
+              await this.generateCodeForAutoSolve(ti)
+            }
             else await this.regenerateWithFeedback(ti, lastCode, lastError)
           } catch { continue }
           
