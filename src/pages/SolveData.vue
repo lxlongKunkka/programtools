@@ -85,6 +85,9 @@
         <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱{{ problemMeta.timeLimit }}ms</span>
         <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾{{ problemMeta.memoryLimit }}MB</span>
         <a v-if="problemMeta?.fetchUrl||problemMeta?.sourceUrl" :href="problemMeta.fetchUrl||problemMeta.sourceUrl" target="_blank" class="problem-limit-badge source-url-badge">🔗原题</a>
+        <span v-if="problemMeta?.tags?.length" style="display:flex;gap:3px;flex-wrap:wrap;">
+          <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
+        </span>
         <span v-if="fetchProgress" style="font-size:12px;color:#6b7280;">{{ fetchProgress }}</span>
         <div class="detail-actions" style="margin-left:auto;display:flex;gap:4px;flex-shrink:0;">
           <button @click="generateAll" :disabled="isGenerating||isAutoSolving||isBatchRunning" class="btn-primary btn-sm">⚡一键生成</button>
@@ -2418,13 +2421,28 @@ export default {
         : ''
       
       const model = this.getSolveDataModel(taskIndex)
+      // 根据错误类型给具体建议
+      let fixHint = ''
+      if (/Compile Error|编译错误/i.test(errorResult)) {
+        fixHint = 'The code has a COMPILE ERROR. Check for syntax errors, missing includes, undefined variables, or type mismatches.'
+      } else if (/Wrong Answer|答案错误/i.test(errorResult)) {
+        fixHint = 'The code got WRONG ANSWER. Re-read the problem carefully - check edge cases, off-by-one errors, overflow, and output format (spaces, newlines). Consider if the algorithm itself is correct.'
+      } else if (/Time Limit|时间超限/i.test(errorResult)) {
+        fixHint = 'The code got TIME LIMIT EXCEEDED. The algorithm is likely too slow. Consider using a more efficient algorithm or data structure. Check for infinite loops.'
+      } else if (/Runtime Error|运行错误/i.test(errorResult)) {
+        fixHint = 'The code got RUNTIME ERROR. Check for: array out of bounds, null pointer, stack overflow, division by zero, or invalid memory access.'
+      } else if (/Memory Limit|内存超限/i.test(errorResult)) {
+        fixHint = 'The code exceeded MEMORY LIMIT. Optimize memory usage - use smaller data types, release unused memory, or use a more space-efficient algorithm.'
+      }
       const feedbackText = `${fileIOHint}[PREVIOUS SUBMISSION RESULT: ${errorResult}]
 [YOUR PREVIOUS CODE THAT FAILED:]
 \`\`\`${this.language.toLowerCase()}
 ${previousCode}
 \`\`\`
 
-Please analyze why the code failed (${errorResult}) and write a CORRECTED version. Pay attention to edge cases, data types, and algorithm correctness.
+${fixHint}
+
+Please analyze why the code failed and write a CORRECTED version.
 
 [ORIGINAL PROBLEM:]
 ${problemText}`
