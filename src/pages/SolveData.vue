@@ -2267,9 +2267,9 @@ export default {
             try { await this.autoTranslate(taskIndex) } catch {}
           }
           this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
-          if (!this.codeOutput?.trim()) {
+          if (!this.codeOutput?.trim() || this.autoSolveAttempts === 1) {
             try {
-              await this.generateCodeForAutoSolve(taskIndex)
+              await this.generateCodeForAutoSolve(taskIndex, { quick: true })
             } catch (e) {
               this.generationStatus = '❌ 代码生成失败: ' + e.message
               break
@@ -2318,6 +2318,8 @@ export default {
             
             if (result.includes('Accepted') || result.includes('答案正确')) {
               this.addLog(`✅ AC! 第${this.autoSolveAttempts}次`, 'success')
+              this.generationStatus = `✅ AC！正在生成教案...`
+              try { await this.generateCodeForAutoSolve(taskIndex) } catch {}
               this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功`
               this.showToastMessage(`🎉 AC！第 ${this.autoSolveAttempts} 次提交`)
               break
@@ -2377,7 +2379,8 @@ export default {
     },
 
     // 为自动解题生成代码（简化版，跳过翻译元数据等）
-    async generateCodeForAutoSolve(taskIndex) {
+    async generateCodeForAutoSolve(taskIndex, opts = {}) {
+      const { quick = false } = opts
       const task = this.tasks[taskIndex]
       const acCode = task?.manualCode?.trim() || ''
       const hasExistingCode = !!acCode
@@ -2386,31 +2389,22 @@ export default {
 
       const model = this.getSolveDataModel(taskIndex)
       
-      // 有 AC 代码时：用 /api/solve 解读模式（加注释），代码用清洗后的 AC 版本
+      // 有 AC 代码时：用 /api/solve 解读模式
       if (hasExistingCode) {
         const cleanCode = stripFreopenStatements(acCode)
         const resp = await request('/api/solve', {
           method: 'POST',
           body: JSON.stringify({ text: problemText, acCode: cleanCode, model, language: this.language })
         })
-        if (resp?.result) {
-          this.saveToTask(taskIndex, 'codeOutput', resp.result)  // 教案（注释版）
-          // serverPureCode 保持原 AC 代码不变（不覆盖）
-        } else {
-          throw new Error('AI 未返回教案')
-        }
+        if (resp?.result) this.saveToTask(taskIndex, 'codeOutput', resp.result)
         return
       }
       
-      // 无 AC 代码：用 /api/solution 生成模式
-      // 检测文件 I/O 需求
+      // 无 AC 代码：用 /api/solution 生成
       let fileIOInfo = task?.problemMeta?.fileIO || null
       if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
-        console.log('[generateCodeForAutoSolve] 文件IO题目，添加freopen提示:', fileIOInfo)
         problemText = `[IMPORTANT: This problem requires FILE I/O! Use:\nfreopen("${fileIOInfo.input}", "r", stdin);\nfreopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file reading, use freopen as shown above.]\n\n${problemText}`
-      } else {
-        console.log('[generateCodeForAutoSolve] 标准IO题目')
       }
       
       const resp = await request('/api/solution', {
@@ -2418,7 +2412,8 @@ export default {
         body: JSON.stringify({ text: problemText, model, language: this.language })
       })
       if (resp?.result) {
-        this.saveToTask(taskIndex, 'codeOutput', resp.result)
+        // quick模式：只存代码，不存教案（解题过程中避免多次生成教案）
+        if (!quick) this.saveToTask(taskIndex, 'codeOutput', resp.result)
         if (!hasExistingCode && resp.pureCode) {
           this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
         }
@@ -2512,7 +2507,7 @@ ${problemText}`
           }
           try {
             if (!task?.translationText?.trim()) await this.autoTranslate(ti).catch(() => {})
-            await this.generateCodeForAutoSolve(ti)
+            await this.generateCodeForAutoSolve(ti, { quick: true })
           } catch { /* 生成失败，后面提交时跳过 */ }
         }))
       }
@@ -2563,7 +2558,12 @@ ${problemText}`
             const r = await (await fetch('/api/htoj/submit', { method: 'POST', headers, body: JSON.stringify({ url, code: pc, language: lang }) })).json()
             if (r.ok) {
               lastError = r.message || ''; this.htojSubmitResult = lastError
-              if (lastError.includes('Accepted') || lastError.includes('答案正确')) { ac = true; acCount++; break }
+              if (lastError.includes('Accepted') || lastError.includes('答案正确')) {
+                ac = true; acCount++
+                // AC 后生成完整教案
+                try { await this.generateCodeForAutoSolve(ti) } catch {}
+                break
+              }
               if (a < this.autoSolveMaxAttempts - 1) await new Promise(r => setTimeout(r, 2000))
             }
           } catch { lastError = '网络错误' }
