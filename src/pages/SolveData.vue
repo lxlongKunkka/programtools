@@ -84,6 +84,7 @@
         <span v-else class="detail-title-placeholder">暂无标题</span>
         <span v-if="problemMeta?.timeLimit" class="problem-limit-badge">⏱{{ problemMeta.timeLimit }}ms</span>
         <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾{{ problemMeta.memoryLimit }}MB</span>
+        <span v-if="problemMeta?.fileIO" class="problem-limit-badge" style="background:#fef3c7;color:#92400e;" title="文件IO: {{ problemMeta.fileIO.input }} → {{ problemMeta.fileIO.output }}">📁{{ problemMeta.fileIO.input }}</span>
         <a v-if="problemMeta?.fetchUrl||problemMeta?.sourceUrl" :href="problemMeta.fetchUrl||problemMeta.sourceUrl" target="_blank" class="problem-limit-badge source-url-badge">🔗原题</a>
         <span v-if="problemMeta?.tags?.length" style="display:flex;gap:3px;flex-wrap:wrap;">
           <span v-for="tag in problemMeta.tags" :key="tag" class="meta-tag">{{ tag }}</span>
