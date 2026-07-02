@@ -2390,7 +2390,7 @@ export default {
       let fileIOInfo = task?.problemMeta?.fileIO || null
       if (!fileIOInfo) fileIOInfo = this.detectFileIO(problemText)
       if (fileIOInfo) {
-        problemText = `[IMPORTANT: This problem requires FILE I/O! Use:\nfreopen("${fileIOInfo.input}", "r", stdin);\nfreopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file reading, use freopen as shown above.]\n\n${problemText}`
+        problemText = `[CRITICAL: This problem uses FILE I/O (${fileIOInfo.input} → ${fileIOInfo.output}). You MUST write these two lines at the top of main():\n  freopen("${fileIOInfo.input}", "r", stdin);\n  freopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file I/O problems. Your code WILL fail without freopen.]\n\n${problemText}`
       }
       
       const resp = await request('/api/solution', {
