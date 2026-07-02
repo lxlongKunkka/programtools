@@ -411,11 +411,6 @@ router.post('/submit', authenticateToken, async (req, res) => {
   return handleSubmit(req, res)
 })
 
-// 调试端点
-router.post('/submit-debug', async (req, res) => {
-  return handleSubmit(req, res)
-})
-
 async function handleSubmit(req, res) {
   const { url, code, language, token: browserToken } = req.body
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
@@ -656,7 +651,7 @@ async function handleSubmit(req, res) {
             const statusId = latest?.status?.id
             const statusName = latest?.status?.name || ''
 
-            // status.id 映射 (htoj 实际值)
+            // status.id 映射 (htoj 实际值): 0=AC, 1/4=WA, 2/7=CE, 3=RE, 5=TLE, 6=MLE, 8/9=评测中
             const statusMap = {
               0: 'Accepted / 答案正确',
               1: 'Wrong Answer / 答案错误',
@@ -665,16 +660,15 @@ async function handleSubmit(req, res) {
               4: 'Wrong Answer / 答案错误',
               5: 'Time Limit Exceeded / 时间超限',
               6: 'Memory Limit Exceeded / 内存超限',
-              7: 'Compile Error / 编译错误',
-              8: '评测中...',
-              9: '评测中...'
+              7: 'Compile Error / 编译错误'
             }
+            const isFinal = statusId !== undefined && statusId !== null && statusId !== 8 && statusId !== 9
 
-            if (statusId !== undefined && statusId !== null && statusId !== 6) {
+            if (isFinal) {
               result = statusMap[statusId] || statusName || `状态码: ${statusId}`
               console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId})`)
               break
-            } else if (statusId === 6) {
+            } else if (statusId === 8 || statusId === 9) {
               console.log(`[htoj-submit] API轮询第${i + 1}轮: 评测中...`)
               result = '评测中...'
             }

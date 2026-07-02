@@ -280,6 +280,16 @@
             <button @click="copyPureCode" class="btn-secondary btn-sm">📋 复制代码</button>
             <button @click="copyCode" class="btn-secondary btn-sm">📋 全部</button>
             <button @click="saveCode" class="btn-secondary btn-sm">💾 保存</button>
+            <button
+              v-if="isHtojProblem"
+              @click="submitToHtoj"
+              :disabled="isHtojSubmitting || !codeOutput || tasks[currentTaskIndex]?.status === 'processing'"
+              class="btn-primary btn-sm"
+              style="background:#ff6b35;border-color:#ff6b35;"
+            >
+              {{ isHtojSubmitting ? '⏳ 评测中...' : '🤖 提交到核桃OJ' }}
+            </button>
+            <span v-if="htojSubmitResult" :class="['htoj-result-tag', htojResultClass]">{{ htojSubmitResult }}</span>
           </div>
           <div v-if="manualCode || codeOutput" class="scroll-content">
             <MarkdownViewer :content="displayCode" />
@@ -577,6 +587,10 @@ export default {
       htojImportStatus: '',
       htojFilterKeyword: '',
       
+      // htoj 自动提交
+      isHtojSubmitting: false,
+      htojSubmitResult: '',
+      
       // 进度条状态
       showStepIndicators: false,
       generationSteps: {
@@ -814,6 +828,22 @@ export default {
       return this.htojModalContests.filter(c =>
         (c.title || '').toLowerCase().includes(kw) || c.id.includes(kw)
       )
+    },
+
+    // ─── htoj 自动提交 ───
+    isHtojProblem() {
+      const task = this.tasks[this.currentTaskIndex]
+      const url = task?.problemMeta?.sourceUrl || task?.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || this.problemMeta?.fetchUrl || ''
+      return /htoj\.com\.cn/i.test(url)
+    },
+    htojResultClass() {
+      if (!this.htojSubmitResult) return ''
+      if (this.htojSubmitResult.includes('Accepted') || this.htojSubmitResult.includes('答案正确')) return 'htoj-ac'
+      if (this.htojSubmitResult.includes('Compile Error') || this.htojSubmitResult.includes('编译错误')) return 'htoj-ce'
+      if (this.htojSubmitResult.includes('Wrong Answer') || this.htojSubmitResult.includes('答案错误')) return 'htoj-wa'
+      if (this.htojSubmitResult.includes('Time Limit') || this.htojSubmitResult.includes('时间超限')) return 'htoj-tle'
+      if (this.htojSubmitResult.includes('Runtime Error') || this.htojSubmitResult.includes('运行错误')) return 'htoj-re'
+      return 'htoj-pending'
     }
   },
   methods: {
@@ -2189,6 +2219,61 @@ export default {
       this.isImportingHtoj = false
       this.htojImportStatus = ''
       this.showToastMessage(`✅ 导入完成，共添加 ${totalAdded} 道题目`)
+    },
+
+    async submitToHtoj() {
+      const taskIndex = this.currentTaskIndex
+      const task = this.tasks[taskIndex]
+      const url = task?.problemMeta?.sourceUrl || task?.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || this.problemMeta?.fetchUrl || ''
+      if (!/htoj\.com\.cn/i.test(url)) {
+        this.showToastMessage('当前题目不是核桃OJ题目')
+        return
+      }
+      
+      // 获取纯代码
+      let pureCode = task?.serverPureCode || this.serverPureCode || ''
+      if (!pureCode.trim()) {
+        const codeOutput = task?.codeOutput || this.codeOutput || ''
+        pureCode = extractPureCode(codeOutput)
+      }
+      if (!pureCode.trim()) {
+        this.showToastMessage('请先生成题解代码')
+        return
+      }
+      
+      this.isHtojSubmitting = true
+      this.htojSubmitResult = ''
+      this.generationStatus = '正在提交到核桃OJ...'
+      
+      try {
+        const token = localStorage.getItem('auth_token')
+        const headers = { 'Content-Type': 'application/json' }
+        if (token) headers['Authorization'] = `Bearer ${token}`
+        
+        const lang = detectLanguage(pureCode) === 'python' ? 'Python' : 'C++'
+        
+        const resp = await fetch('/api/htoj/submit', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ url, code: pureCode, language: lang })
+        })
+        const data = await resp.json()
+        
+        if (data.ok) {
+          this.htojSubmitResult = data.message || '已提交'
+          this.generationStatus = `✅ htoj 评测: ${data.message}`
+        } else {
+          this.htojSubmitResult = '提交失败'
+          this.generationStatus = '❌ 提交失败: ' + (data.error || '未知错误')
+          this.showToastMessage('提交失败: ' + (data.error || '未知错误'))
+        }
+      } catch (e) {
+        this.htojSubmitResult = '网络错误'
+        this.generationStatus = '❌ 网络错误: ' + e.message
+        this.showToastMessage('提交失败: ' + e.message)
+      } finally {
+        this.isHtojSubmitting = false
+      }
     },
 
     async generateCode() {
@@ -3740,4 +3825,20 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .nflsoj-search-input { flex: 1; padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; outline: none; }
 .nflsoj-search-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.12); }
 .nflsoj-filter-count { font-size: 12px; color: #6b7280; white-space: nowrap; }
+
+/* htoj 自动提交结果标签 */
+.htoj-result-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+.htoj-result-tag.htoj-ac { background: #d1fae5; color: #065f46; }
+.htoj-result-tag.htoj-wa { background: #fee2e2; color: #991b1b; }
+.htoj-result-tag.htoj-ce { background: #fef3c7; color: #92400e; }
+.htoj-result-tag.htoj-tle { background: #dbeafe; color: #1e40af; }
+.htoj-result-tag.htoj-re { background: #ede9fe; color: #5b21b6; }
+.htoj-result-tag.htoj-pending { background: #e5e7eb; color: #374151; }
 </style>
