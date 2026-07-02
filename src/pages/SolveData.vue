@@ -58,7 +58,6 @@
       <button class="btn-ghost btn-sm" @click="downloadBatch" :disabled="isBatchRunning||!hasCompletedTasks" title="打包下载全部已完成任务">📦 打包下载</button>
       <button class="btn-ghost btn-sm" @click="downloadPendingRawMaterials" :disabled="isBatchRunning||!hasPendingRawMaterialTasks" title="下载未生成素材">📥 素材</button>
       <button class="btn-ghost btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning||isBatchCpretSearching" title="检索原题">🔍</button>
-      <button class="btn-ghost btn-sm" @click="clearAllFileIO" title="清除所有题目的文件IO标记（重新导入后自动正确识别）" style="color:#dc2626;">🗑️ 清IO</button>
       <input ref="folderImporter" type="file" webkitdirectory directory multiple style="display:none" @change="handleFolderImport" />
     </div>
   </div>
@@ -1303,18 +1302,6 @@ export default {
         this.loadTask(this.currentTaskIndex)
       }
       this.showToastMessage(`已清除 ${completedCount} 个已完成任务`)
-    },
-
-    clearAllFileIO() {
-      let count = 0
-      this.tasks.forEach(t => {
-        if (t.problemMeta?.fileIO) {
-          delete t.problemMeta.fileIO
-          count++
-        }
-      })
-      this.showToastMessage(`已清除 ${count} 道题的文件IO标记`)
-      if (count > 0) this.addLog(`🗑️ 已清除 ${count} 道题的 fileIO 标记`, 'warn')
     },
 
     clearAllTasks() {
