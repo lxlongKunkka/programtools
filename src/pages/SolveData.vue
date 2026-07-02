@@ -2281,22 +2281,28 @@ export default {
         this.autoSolveAttempts++
         this.htojSubmitResult = ''
         
-        // Step 1: 生成代码
+        // Step 1: 获取/生成代码
         if (this.autoSolveAttempts === 1) {
-          // 首次：先翻译，再生成代码
-          if (!this.tasks[taskIndex]?.translationText?.trim()) {
-            this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在翻译题目...`
-            try {
-              await this.autoTranslate(taskIndex)
-            } catch { /* 翻译失败不阻断 */ }
-          }
-          this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
-          if (!this.codeOutput?.trim()) {
-            try {
-              await this.generateCodeForAutoSolve(taskIndex)
-            } catch (e) {
-              this.generationStatus = '❌ 代码生成失败: ' + e.message
-              break
+          // 优先用已抓取的 AC 代码
+          const existingAcCode = task?.manualCode?.trim()
+          if (existingAcCode) {
+            this.generationStatus = '[自动解题] 使用已抓取的 AC 代码，跳过生成...'
+            this.saveToTask(taskIndex, 'serverPureCode', existingAcCode)
+            this.saveToTask(taskIndex, 'codeOutput', '```cpp\n' + existingAcCode + '\n```')
+          } else {
+            // 翻译 + AI 生成
+            if (!this.tasks[taskIndex]?.translationText?.trim()) {
+              this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在翻译题目...`
+              try { await this.autoTranslate(taskIndex) } catch {}
+            }
+            this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
+            if (!this.codeOutput?.trim()) {
+              try {
+                await this.generateCodeForAutoSolve(taskIndex)
+              } catch (e) {
+                this.generationStatus = '❌ 代码生成失败: ' + e.message
+                break
+              }
             }
           }
         } else {
@@ -2477,10 +2483,15 @@ ${problemText}`
           this.autoSolveAttempts = a + 1; this.htojSubmitResult = ''
           try {
             if (a === 0) {
-              if (!this.tasks[ti]?.translationText?.trim()) {
-                try { await this.autoTranslate(ti) } catch {}
+              const existingAc = this.tasks[ti]?.manualCode?.trim()
+              if (existingAc) {
+                this.saveToTask(ti, 'serverPureCode', existingAc)
+              } else {
+                if (!this.tasks[ti]?.translationText?.trim()) {
+                  try { await this.autoTranslate(ti) } catch {}
+                }
+                await this.generateCodeForAutoSolve(ti)
               }
-              await this.generateCodeForAutoSolve(ti)
             }
             else await this.regenerateWithFeedback(ti, lastCode, lastError)
           } catch { continue }
