@@ -4346,17 +4346,18 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .solve-log-panel {
   max-height: 200px;
   overflow-y: auto;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: #f5f5f5;
+  color: #1f2937;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
   padding: 8px 12px;
   border-radius: 4px;
+  border: 1px solid #e5e7eb;
   margin: 0 8px 4px;
 }
-.log-line { padding: 2px 0; border-bottom: 1px solid #333; }
-.log-line.header { color: #569cd6; font-weight: bold; }
-.log-line.success { color: #4ec9b0; }
-.log-line.error { color: #f44747; }
-.log-line.warn { color: #ce9178; }
+.log-line { padding: 2px 0; border-bottom: 1px solid #e5e7eb; }
+.log-line.header { color: #2563eb; font-weight: bold; }
+.log-line.success { color: #059669; }
+.log-line.error { color: #dc2626; }
+.log-line.warn { color: #d97706; }
 </style>
