@@ -2413,7 +2413,6 @@ export default {
         console.log('[generateCodeForAutoSolve] 标准IO题目')
       }
       
-      const model = this.getSolveDataModel(taskIndex)
       const resp = await request('/api/solution', {
         method: 'POST',
         body: JSON.stringify({ text: problemText, model, language: this.language })
