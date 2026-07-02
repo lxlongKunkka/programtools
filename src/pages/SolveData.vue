@@ -2010,29 +2010,29 @@ export default {
       this.showSolveLogs = true
     },
 
-    downloadCurrent() {
+    async downloadCurrent() {
       const task = this.tasks[this.currentTaskIndex]
       if (!task) return
       const title = (task.problemMeta?.title || 'problem').replace(/[\\/:*?"<>|]/g, '_')
       const files = []
-      if (task.serverPureCode) files.push({ name: `${title}.cpp`, content: task.serverPureCode })
+      if (task.problemText) files.push({ name: `${title}.md`, content: task.problemText })
       if (task.translationText) files.push({ name: `${title}_zh.md`, content: task.translationText })
+      if (task.serverPureCode) files.push({ name: `${title}.cpp`, content: task.serverPureCode })
       if (task.dataOutput) files.push({ name: `${title}_data.md`, content: task.dataOutput })
-      if (files.length === 0) return
+      if (task.reportHtml) files.push({ name: `${title}_report.html`, content: task.reportHtml })
+      if (files.length === 0) { this.showToastMessage('没有可下载的内容'); return }
       if (files.length === 1) {
         const blob = new Blob([files[0].content], { type: 'text/plain' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a'); a.href = url; a.download = files[0].name; a.click()
-        URL.revokeObjectURL(url)
-      } else {
-        // 多个文件可以用 JSZip，这里简化：逐个下载
-        files.forEach(f => {
-          const blob = new Blob([f.content], { type: 'text/plain' })
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a'); a.href = url; a.download = f.name; a.click()
-          URL.revokeObjectURL(url)
-        })
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = files[0].name; a.click()
+        return
       }
+      try {
+        const JSZip = await loadJsZip()
+        const zip = new JSZip()
+        files.forEach(f => zip.file(f.name, f.content))
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${title}.zip`; a.click()
+      } catch { files.forEach(f => { const b = new Blob([f.content]); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = f.name; a.click() }) }
     },
 
     async openNflsojModal() {
