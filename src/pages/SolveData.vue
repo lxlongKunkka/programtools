@@ -86,9 +86,11 @@
         <span v-if="problemMeta?.memoryLimit" class="problem-limit-badge">💾{{ problemMeta.memoryLimit }}MB</span>
         <a v-if="problemMeta?.fetchUrl||problemMeta?.sourceUrl" :href="problemMeta.fetchUrl||problemMeta.sourceUrl" target="_blank" class="problem-limit-badge source-url-badge">🔗原题</a>
         <span v-if="fetchProgress" style="font-size:12px;color:#6b7280;">{{ fetchProgress }}</span>
-        <button @click="generateAll" :disabled="isGenerating||isAutoSolving||isBatchRunning" class="btn-outline btn-sm" style="margin-left:auto;">⚡一键生成</button>
-        <button @click="downloadCurrent" :disabled="!hasCurrentContent" class="btn-outline btn-sm">📥下载</button>
-        <button @click="runAndDownload" :disabled="!hasCurrentContent||!dataOutput" class="btn-outline btn-sm">📦导出</button>
+        <div class="detail-actions" style="margin-left:auto;display:flex;gap:4px;flex-shrink:0;">
+          <button @click="generateAll" :disabled="isGenerating||isAutoSolving||isBatchRunning" class="btn-primary btn-sm">⚡一键生成</button>
+          <button @click="downloadCurrentRawMaterials" :disabled="!currentTaskHasRawMaterials" class="btn-secondary btn-sm">📥素材</button>
+          <button @click="runAndDownload" :disabled="!(manualCode||codeOutput)||!dataOutput" class="btn-secondary btn-sm">📦项目包</button>
+        </div>
       </div>
 
       <!-- Generation status bar -->
