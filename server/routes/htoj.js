@@ -411,6 +411,11 @@ router.post('/submit', authenticateToken, async (req, res) => {
   return handleSubmit(req, res)
 })
 
+// 调试端点
+router.post('/submit-debug', async (req, res) => {
+  return handleSubmit(req, res)
+})
+
 async function handleSubmit(req, res) {
   const { url, code, language, token: browserToken } = req.body
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
