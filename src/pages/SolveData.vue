@@ -58,6 +58,7 @@
       <button class="btn-ghost btn-sm" @click="downloadBatch" :disabled="isBatchRunning||!hasCompletedTasks" title="打包下载全部已完成任务">📦 打包下载</button>
       <button class="btn-ghost btn-sm" @click="downloadPendingRawMaterials" :disabled="isBatchRunning||!hasPendingRawMaterialTasks" title="下载未生成素材">📥 素材</button>
       <button class="btn-ghost btn-sm" @click="batchSearchAllCpret" :disabled="isBatchRunning||isBatchCpretSearching" title="检索原题">🔍</button>
+      <button class="btn-ghost btn-sm" @click="clearAllFileIO" title="清除所有题目的文件IO标记（重新导入后自动正确识别）" style="color:#dc2626;">🗑️ 清IO</button>
       <input ref="folderImporter" type="file" webkitdirectory directory multiple style="display:none" @change="handleFolderImport" />
     </div>
   </div>
@@ -1304,6 +1305,18 @@ export default {
       this.showToastMessage(`已清除 ${completedCount} 个已完成任务`)
     },
 
+    clearAllFileIO() {
+      let count = 0
+      this.tasks.forEach(t => {
+        if (t.problemMeta?.fileIO) {
+          delete t.problemMeta.fileIO
+          count++
+        }
+      })
+      this.showToastMessage(`已清除 ${count} 道题的文件IO标记`)
+      if (count > 0) this.addLog(`🗑️ 已清除 ${count} 道题的 fileIO 标记`, 'warn')
+    },
+
     clearAllTasks() {
       if (!confirm('确认清空所有任务？此操作不可撤销。')) return
       const emptyTask = createEmptyTask()
@@ -2378,14 +2391,7 @@ export default {
         console.log('[detectFileIO] 检测到文件IO:', inputMatch[1], outputMatch[1])
         return { input: inputMatch[1], output: outputMatch[1] }
       }
-      if (/文件IO|文件输入输出/.test(problemText)) {
-        const in2 = problemText.match(/(\S+\.in)/)
-        const out2 = problemText.match(/(\S+\.out)/)
-        if (in2 && out2) {
-          console.log('[detectFileIO] 检测到文件IO (fallback):', in2[1], out2[1])
-          return { input: in2[1], output: out2[1] }
-        }
-      }
+      // 不再用模糊匹配（\S+\.in 会误匹配示例中的文件名）
       console.log('[detectFileIO] 未检测到文件IO')
       return null
     },
