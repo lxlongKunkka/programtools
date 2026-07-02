@@ -8,9 +8,22 @@
         <option value="C++">C++</option>
         <option value="Python">Python</option>
       </select>
-      <select v-model="selectedModel" @change="updateMainModelPreference" class="compact-select" style="min-width:160px;">
+      <select v-model="selectedModel" @change="updateMainModelPreference" class="compact-select" style="min-width:150px;">
         <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
       </select>
+      <div class="dropdown-wrap">
+        <button class="btn-ghost btn-sm" @click="showModelSettings = !showModelSettings" title="模型设置">⚙️</button>
+        <div v-if="showModelSettings" class="dropdown-menu model-settings-menu" @click.stop style="min-width:220px;">
+          <div style="padding:6px 12px;font-size:12px;color:#6b7280;">翻译模型</div>
+          <select v-model="translationModel" @change="updateTranslationModelPreference" style="width:100%;margin:0 12px 8px;padding:4px;font-size:12px;border:1px solid #e5e7eb;border-radius:4px;">
+            <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <div style="padding:6px 12px;font-size:12px;color:#6b7280;">报告/元数据模型</div>
+          <select v-model="reportModel" @change="updateReportModelPreference" style="width:100%;margin:0 12px 8px;padding:4px;font-size:12px;border:1px solid #e5e7eb;border-radius:4px;">
+            <option v-for="m in modelOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="top-center">
       <input v-model="fetchUrl" class="url-input" placeholder="题目/比赛链接" @keydown.enter="fetchFromUrl" :disabled="isFetchingUrl" />
@@ -470,6 +483,7 @@ export default {
       isBatchCpretSearching: false,
       showContestDropdown: false,
       showBatchDropdown: false,
+      showModelSettings: false,
       batchMode: localStorage.getItem('solvedata_batch_mode') || 'code_data', // code_data, code_data_report, report_only
       showBatchImport: false,
       batchImportText: '',
@@ -1973,6 +1987,7 @@ export default {
       if (!e.target.closest('.dropdown-wrap')) {
         this.showContestDropdown = false
         this.showBatchDropdown = false
+        this.showModelSettings = false
       }
     },
 
