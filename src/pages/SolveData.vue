@@ -2016,8 +2016,9 @@ export default {
     addLog(text, type = 'info') {
       const time = new Date().toLocaleTimeString()
       this.solveLogs.push({ text: `[${time}] ${text}`, type })
-      if (this.solveLogs.length > 200) this.solveLogs.shift()
+      if (this.solveLogs.length > 200) this.solveLogs.splice(0, 1)
       this.showSolveLogs = true
+      console.log('[addLog]', text.slice(0, 80))
     },
 
 
@@ -2215,7 +2216,8 @@ export default {
       this.isAutoSolving = true
       this.autoSolveAttempts = 0
       this.htojSubmitResult = ''
-      this.solveLogs = []
+      this.solveLogs.splice(0, this.solveLogs.length)
+      console.log('[autoSolveHtoj] solveLogs cleared, starting...')
       this.addLog(`开始自动解题: ${task?.problemMeta?.title || url}`, 'header')
       let lastCode = ''
       let lastError = ''
