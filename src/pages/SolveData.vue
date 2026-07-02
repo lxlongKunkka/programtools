@@ -2205,6 +2205,8 @@ export default {
     },
 
     async autoSolveHtoj() {
+      console.log('[autoSolveHtoj] ★★★ 方法被调用 ★★★')
+      try {
       const taskIndex = this.currentTaskIndex
       const task = this.tasks[taskIndex]
       const url = task?.problemMeta?.sourceUrl || task?.problemMeta?.fetchUrl || this.problemMeta?.sourceUrl || this.problemMeta?.fetchUrl || ''
@@ -2216,8 +2218,8 @@ export default {
       this.isAutoSolving = true
       this.autoSolveAttempts = 0
       this.htojSubmitResult = ''
+      console.log('[autoSolveHtoj] solveLogs type:', typeof this.solveLogs, 'isArray:', Array.isArray(this.solveLogs), 'length:', this.solveLogs?.length)
       this.solveLogs.splice(0, this.solveLogs.length)
-      console.log('[autoSolveHtoj] solveLogs cleared, starting...')
       this.addLog(`开始自动解题: ${task?.problemMeta?.title || url}`, 'header')
       let lastCode = ''
       let lastError = ''
@@ -2358,6 +2360,12 @@ export default {
       // 标记完成
       if (this.tasks[taskIndex]) this.tasks[taskIndex].status = 'completed'
       this.isAutoSolving = false
+      } catch (err) {
+        console.error('[autoSolveHtoj] CRASH:', err.message, err.stack)
+        this.addLog(`💥 崩溃: ${err.message}`, 'error')
+        this.generationStatus = `❌ 错误: ${err.message}`
+        this.isAutoSolving = false
+      }
     },
 
     // 检测题目是否需要文件 I/O
