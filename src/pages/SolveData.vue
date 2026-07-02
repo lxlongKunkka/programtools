@@ -2281,7 +2281,9 @@ export default {
         this.autoSolveAttempts++
         this.htojSubmitResult = ''
         
-          // 已有抓取的 AC 代码 → 直接跳过解题
+        // Step 1: 获取/生成代码
+        if (this.autoSolveAttempts === 1) {
+          // 已有 AC 代码 → 直接跳过
           const existingAcCode = task?.manualCode?.trim()
           if (existingAcCode) {
             this.htojSubmitResult = 'Accepted / 答案正确（已有AC代码）'
@@ -2290,19 +2292,18 @@ export default {
             this.saveToTask(taskIndex, 'codeOutput', '```cpp\n' + existingAcCode + '\n```')
             break
           }
-            // 翻译 + AI 生成
-            if (!this.tasks[taskIndex]?.translationText?.trim()) {
-              this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在翻译题目...`
-              try { await this.autoTranslate(taskIndex) } catch {}
-            }
-            this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
-            if (!this.codeOutput?.trim()) {
-              try {
-                await this.generateCodeForAutoSolve(taskIndex)
-              } catch (e) {
-                this.generationStatus = '❌ 代码生成失败: ' + e.message
-                break
-              }
+          // 翻译 + AI 生成
+          if (!this.tasks[taskIndex]?.translationText?.trim()) {
+            this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在翻译题目...`
+            try { await this.autoTranslate(taskIndex) } catch {}
+          }
+          this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在生成代码...`
+          if (!this.codeOutput?.trim()) {
+            try {
+              await this.generateCodeForAutoSolve(taskIndex)
+            } catch (e) {
+              this.generationStatus = '❌ 代码生成失败: ' + e.message
+              break
             }
           }
         } else {
