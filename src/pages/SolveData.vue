@@ -2484,6 +2484,8 @@ ${problemText}`
       const htojTasks = []
       this.tasks.forEach((t, i) => {
         const url = t?.problemMeta?.sourceUrl || t?.problemMeta?.fetchUrl || ''
+        // 跳过已完成和非 htoj 题目
+        if (t.status === 'completed') return
         if (/htoj\.com\.cn/i.test(url)) htojTasks.push(i)
       })
       if (!htojTasks.length) { this.showToastMessage('没有核桃OJ题目'); return }
