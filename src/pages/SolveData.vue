@@ -2516,13 +2516,14 @@ ${problemText}`
     // 自动解题后生成数据（简化版，不重复翻译）
     async generateDataForAutoSolve(taskIndex, pureCode) {
       const task = this.tasks[taskIndex]
+      const title = task?.problemMeta?.title || `题目${taskIndex}`
       const problemText = task?.problemText || this.problemText
       const translationText = task?.translationText || ''
       const textForData = translationText.trim() || problemText
       if (!textForData.trim()) return
       
+      this.addLog(`📊 生成数据: ${title}`, 'info')
       const model = this.selectedModel
-      // 数据生成不需要 freopen（数据脚本在本地用标准输入输出）
       const codeForData = stripFreopenStatements(pureCode || '')
       const resp = await request('/api/generate-data', {
         method: 'POST',
@@ -2530,6 +2531,9 @@ ${problemText}`
       })
       if (resp?.result) {
         this.saveToTask(taskIndex, 'dataOutput', resp.result)
+        this.addLog(`✅ 数据完成: ${title}`, 'success')
+      } else {
+        this.addLog(`⚠️ 数据生成失败: ${title}`, 'warn')
       }
     },
 
