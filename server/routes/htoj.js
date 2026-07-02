@@ -411,11 +411,6 @@ router.post('/submit', authenticateToken, async (req, res) => {
   return handleSubmit(req, res)
 })
 
-// 测试端点（无认证）
-router.post('/submit-test', async (req, res) => {
-  return handleSubmit(req, res)
-})
-
 async function handleSubmit(req, res) {
   const { url, code, language, token: browserToken } = req.body
   if (!url) return res.status(400).json({ error: '缺少 url 参数' })
@@ -448,14 +443,16 @@ async function handleSubmit(req, res) {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    // ====== 注入浏览器 token，跳过所有登录流程 ======
-    console.log('[htoj-submit] 注入浏览器 token...')
+    // ====== 注入浏览器 token + userInfo，跳过所有登录流程 ======
+    console.log('[htoj-submit] 注入浏览器认证信息...')
+    const userInfo = JSON.stringify({uid:"5af35ba36e214ff3861956eaae82648c",userId:50558995,countryCode:"86",countryShort:"CN",nickname:"kunkka",username:"kunkka",phoneNumber:"177dtwo1388",avatar:"https://public.hetaoimg.com/code-community/markdownImg/prod/2c3fd7b1e84c470cb2c04b23b2c660f0.png",isAdmin:false,setPassword:true,windowFlag:true,language:7,ccfLevel:0,city:"潍坊",province:"山东省",hasAccount:false,posterPermission:0,replyPermission:0,myGroup:[],myZone:[],permissions:[]})
     await page.goto('https://htoj.com.cn/', { waitUntil: 'load', timeout: 20000 })
-    await page.evaluate((t) => {
-      localStorage.setItem('KEY_USER_LOGIN_TOKEN', t)
+    await page.evaluate((info) => {
+      localStorage.setItem('KEY_USER_LOGIN_TOKEN', info.token)
+      localStorage.setItem('KEY_USER_INFO', info.userInfo)
       localStorage.setItem('KEY_ZONE', 'cpp')
-    }, htojBrowserToken)
-    // 刷新页面让 SPA 读取新的 localStorage
+    }, { token: htojBrowserToken, userInfo })
+    // 刷新让 SPA 读取
     await page.reload({ waitUntil: 'load', timeout: 20000 })
     await page.waitForTimeout(2000)
 
@@ -518,33 +515,52 @@ async function handleSubmit(req, res) {
       console.log(`[htoj-submit] 语言选择完成`)
     } catch {}
 
-    // ====== 点击提交 ======
-    await page.waitForTimeout(1000)
-    const clicked = await page.evaluate(() => {
-      for (const btn of document.querySelectorAll('button')) {
-        if (/提交|Submit/.test(btn.textContent)) { btn.click(); return true }
+    // ====== 点击提交评测 ======
+    // 先点击空白处让 Monaco 失焦
+    await page.mouse.click(10, 10)
+    await page.waitForTimeout(500)
+
+    // 用 evaluate 精确查找"提交评测"按钮
+    const submitClicked = await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button')]
+      // 优先找 class 含 submit 的，再找文字含"提交评测"的
+      for (const btn of btns) {
+        const cls = btn.className || ''
+        const txt = btn.textContent || ''
+        if (cls.includes('submit') || txt.trim() === '提交评测') {
+          console.log('Clicking:', txt.trim(), 'class:', cls)
+          btn.click()
+          return true
+        }
       }
       return false
     })
-    if (!clicked) {
-      // 打印所有按钮帮助调试
-      const buttonTexts = await page.evaluate(() => 
-        [...document.querySelectorAll('button')].map(b => b.textContent.trim()).join(', ')
-      )
-      console.log('[htoj-submit] 页面按钮:', buttonTexts)
-      throw new Error(`找不到提交按钮。页面按钮: ${buttonTexts}`)
+    if (!submitClicked) {
+      throw new Error('找不到提交评测按钮')
     }
-    console.log('[htoj-submit] 提交已点击')
+    console.log('[htoj-submit] 提交评测已点击')
     await page.waitForTimeout(5000)
 
     // ====== 获取结果 ======
-    let result = '已提交'
-    try {
+    let result = '已提交，等待评测...'
+    // 等待评测结果出现
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(3000)
       result = await page.evaluate(() => {
-        const el = document.querySelector('[class*="result"], [class*="status"], [class*="verdict"]')
-        return el ? el.textContent.trim() : '已提交'
+        // 查找评测结果标签
+        const el = document.querySelector('[class*="verdict"], [class*="judge-result"], .result-text, [class*="Accepted"], [class*="Wrong"], [class*="Compile"]')
+        if (el) return el.textContent.trim()
+        // 查找包含评测结果的 span/div
+        const spans = [...document.querySelectorAll('span, div')]
+        for (const s of spans) {
+          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|评测通过|答案错误|编译错误|运行错误/.test(s.textContent)) {
+            return s.textContent.trim()
+          }
+        }
+        return ''
       })
-    } catch {}
+      if (result && result !== '运行自测') break
+    }
 
     await browser.close()
     console.log(`[htoj-submit] 完成: ${result}`)
