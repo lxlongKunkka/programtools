@@ -3630,6 +3630,7 @@ ${problemText}`
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  max-height: 100vh;
   overflow: hidden;
   font-size: 14px;
   background: #f5f7fa;
