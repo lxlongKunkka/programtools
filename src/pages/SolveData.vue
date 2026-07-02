@@ -4119,13 +4119,13 @@ ${problemText}`
 }
 .ref-textarea { height: 1000px; flex: 0 0 auto; border: 1px solid #e5e7eb; border-radius: 6px; }
 
-.scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; min-height: 0; }
 
 .translation-dual-pane { flex: 1; display: flex; flex-direction: row; gap: 0; overflow: hidden; }
 .translation-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; border-right: 1px solid #e5e7eb; }
 .translation-pane:last-child { border-right: none; }
 .translation-pane-header { padding: 4px 14px; font-size: 12px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
-.translation-pane .scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.translation-pane .scroll-content { flex: 1; overflow-y: auto; padding: 10px 14px; min-height: 0; }
 
 .empty-hint {
   flex: 1;
