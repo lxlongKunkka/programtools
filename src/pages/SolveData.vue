@@ -265,23 +265,6 @@
           </div>
         </template>
 
-        <!-- 解题报告 -->
-        <template v-else-if="activeTab === 'report'">
-          <div class="tab-action-bar">
-            <button @click="generateReportInline" :disabled="isGeneratingReport" class="btn-primary btn-sm">
-              {{ isGeneratingReport ? '⏳ 生成中...' : '⚡ 生成报告' }}
-            </button>
-            <button @click="openReportNewWindow" :disabled="!reportHtml" class="btn-secondary btn-sm">↗️ 新窗口</button>
-            <button @click="downloadReport" :disabled="!reportHtml" class="btn-secondary btn-sm">💾 下载</button>
-          </div>
-          <div v-if="reportHtml" class="report-frame">
-            <iframe :srcdoc="reportHtml" style="width:100%;height:100%;border:none;" :style="{ 'pointer-events': isDragging ? 'none' : 'auto' }"></iframe>
-          </div>
-          <div v-else class="empty-hint">
-            <span v-if="isGeneratingReport">⏳ 正在生成报告...</span>
-            <span v-else>暂无解题报告，请点击上方"生成报告"</span>
-          </div>
-        </template>
 
       </div><!-- /step-content -->
     </div><!-- /detail-panel -->
