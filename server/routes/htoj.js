@@ -463,23 +463,37 @@ async function handleSubmit(req, res) {
 
     // ====== 直接导航到题目页 ======
     console.log(`[htoj-submit] 导航到: ${url}`)
-    await page.goto(url, { waitUntil: 'load', timeout: 30000 })
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 })
     await page.waitForTimeout(5000)
 
+    // 截图调试
+    await page.screenshot({ path: '/tmp/htoj_page_loaded.png' }).catch(() => {})
+
     // 验证登录状态
-    const hasLogin = await page.evaluate(() => {
-      const txt = document.body?.innerText || ''
-      return txt.includes('登 录') || txt.includes('登录')
+    const pageInfo = await page.evaluate(() => {
+      const bodyTxt = document.body?.innerText?.substring(0, 500) || ''
+      const allBtns = [...document.querySelectorAll('button')].map(b => ({
+        text: (b.textContent || '').trim().substring(0, 30),
+        cls: (b.className || '').toString().substring(0, 40)
+      }))
+      return {
+        hasLogin: bodyTxt.includes('登 录') || bodyTxt.includes('登录'),
+        monacoExists: !!document.querySelector('.monaco-editor'),
+        textareaExists: !!document.querySelector('textarea'),
+        buttonCount: allBtns.length,
+        buttons: allBtns.slice(0, 15)
+      }
     })
-    if (hasLogin) {
+    console.log('[htoj-submit] 页面信息:', JSON.stringify(pageInfo).slice(0, 400))
+
+    if (pageInfo.hasLogin) {
       await page.screenshot({ path: '/tmp/htoj_login_failed.png' }).catch(() => {})
       throw new Error('Token 注入后仍然显示登录页面，token 可能已过期')
     }
     console.log('[htoj-submit] 已登录')
 
     // ====== 填入代码 ======
-    const hasMonaco = await page.$('.monaco-editor')
-    console.log(`[htoj-submit] Monaco: ${!!hasMonaco}`)
+    const hasMonaco = pageInfo.monacoExists
 
     if (hasMonaco) {
       await page.click('.monaco-editor', { timeout: 5000 })
@@ -489,7 +503,7 @@ async function handleSubmit(req, res) {
       await page.waitForTimeout(300)
       await page.keyboard.type(code, { delay: 3 })
       console.log('[htoj-submit] 代码已填入 Monaco')
-    } else {
+    } else if (pageInfo.textareaExists) {
       // Fallback via evaluate
       await page.evaluate((c) => {
         const ta = document.querySelector('textarea')
@@ -500,7 +514,23 @@ async function handleSubmit(req, res) {
           ta.dispatchEvent(new Event('change', { bubbles: true }))
         }
       }, code)
-      console.log('[htoj-submit] 尝试 textarea 填入')
+      console.log('[htoj-submit] textarea 填入完成')
+    } else {
+      // 尝试 CodeMirror 或其他编辑器
+      await page.evaluate((c) => {
+        // 尝试找任何可见的代码区域
+        const editors = document.querySelectorAll('.CodeMirror, .monaco-editor, [class*=\"code\"], [class*=\"editor\"]')
+        if (editors.length > 0) {
+          editors[0].click()
+        }
+        const ta = document.querySelector('textarea')
+        if (ta) {
+          ta.focus()
+          ta.value = c
+          ta.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      }, code)
+      console.log('[htoj-submit] 尝试通用代码填入')
     }
 
     // ====== 选择语言 ======
@@ -520,8 +550,11 @@ async function handleSubmit(req, res) {
       console.log(`[htoj-submit] 语言选择完成`)
     } catch {}
 
+    // ====== 截图调试（提交前） ======
+    await page.screenshot({ path: '/tmp/htoj_before_submit.png' }).catch(() => {})
+
     // ====== 点击提交评测 ======
-    // 先点击空白处让 Monaco 失焦
+    // 先点击空白处让编辑器失焦
     await page.mouse.click(10, 10)
     await page.waitForTimeout(500)
 
@@ -531,31 +564,40 @@ async function handleSubmit(req, res) {
       { timeout: 15000 }
     ).catch(() => null)
 
-    // 用 evaluate 精确查找"提交评测"按钮
+    // 用 evaluate 查找提交按钮（更宽松）
     const submitClicked = await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('button')]
-      // 优先精确匹配"提交评测"文字
+      const btns = [...document.querySelectorAll('button, a[class*=\"btn\"], div[class*=\"submit\"]')]
+      // 优先级1: 精确"提交评测"
       for (const btn of btns) {
         const txt = (btn.textContent || '').trim()
-        if (txt === '提交评测') {
-          btn.click()
-          return true
-        }
+        if (txt === '提交评测') { btn.click(); return txt }
       }
-      // 再尝试 class 含 submit
+      // 优先级2: 包含"提交"且不含"运行"
       for (const btn of btns) {
-        const cls = (btn.className || '').toString()
         const txt = (btn.textContent || '').trim()
-        if (cls.includes('submit') && !txt.includes('运行自测') && !txt.includes('运行')) {
-          btn.click()
-          return true
+        if (txt.includes('提交') && !txt.includes('运行自测') && !txt.includes('运行结果')) {
+          btn.click(); return txt
         }
       }
-      return false
+      // 优先级3: class 含 submit 且不含 run
+      for (const btn of btns) {
+        const cls = (btn.className || '').toString().toLowerCase()
+        const txt = (btn.textContent || '').trim()
+        if (cls.includes('submit') && !cls.includes('run') && !txt.includes('运行')) {
+          btn.click(); return txt
+        }
+      }
+      return ''
     })
     if (!submitClicked) {
-      throw new Error('找不到提交评测按钮')
+      // 再试试所有按钮
+      const allBtnTexts = await page.evaluate(() => {
+        return [...document.querySelectorAll('button')].map(b => (b.textContent || '').trim())
+      })
+      console.log('[htoj-submit] 所有按钮:', JSON.stringify(allBtnTexts))
+      throw new Error(`找不到提交评测按钮。页面按钮: ${JSON.stringify(allBtnTexts).slice(0, 200)}`)
     }
+    console.log(`[htoj-submit] 点击了按钮: "${submitClicked}"`)
 
     // 等待提交 API 响应
     const submitResp = await submitPromise
