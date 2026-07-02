@@ -520,15 +520,28 @@ async function handleSubmit(req, res) {
     await page.mouse.click(10, 10)
     await page.waitForTimeout(500)
 
+    // 监听提交 API 响应
+    const submitPromise = page.waitForResponse(
+      resp => resp.url().includes('/api/') && (resp.url().includes('submit') || resp.url().includes('judge')) && resp.status() === 200,
+      { timeout: 15000 }
+    ).catch(() => null)
+
     // 用 evaluate 精确查找"提交评测"按钮
     const submitClicked = await page.evaluate(() => {
       const btns = [...document.querySelectorAll('button')]
-      // 优先找 class 含 submit 的，再找文字含"提交评测"的
+      // 优先精确匹配"提交评测"文字
       for (const btn of btns) {
-        const cls = btn.className || ''
-        const txt = btn.textContent || ''
-        if (cls.includes('submit') || txt.trim() === '提交评测') {
-          console.log('Clicking:', txt.trim(), 'class:', cls)
+        const txt = (btn.textContent || '').trim()
+        if (txt === '提交评测') {
+          btn.click()
+          return true
+        }
+      }
+      // 再尝试 class 含 submit
+      for (const btn of btns) {
+        const cls = (btn.className || '').toString()
+        const txt = (btn.textContent || '').trim()
+        if (cls.includes('submit') && !txt.includes('运行自测') && !txt.includes('运行')) {
           btn.click()
           return true
         }
@@ -538,28 +551,87 @@ async function handleSubmit(req, res) {
     if (!submitClicked) {
       throw new Error('找不到提交评测按钮')
     }
-    console.log('[htoj-submit] 提交评测已点击')
-    await page.waitForTimeout(5000)
 
-    // ====== 获取结果 ======
+    // 等待提交 API 响应
+    const submitResp = await submitPromise
+    if (submitResp) {
+      const respBody = await submitResp.json().catch(() => null)
+      console.log('[htoj-submit] 提交API响应:', JSON.stringify(respBody).slice(0, 200))
+    } else {
+      console.log('[htoj-submit] 未捕获到提交API响应')
+    }
+    console.log('[htoj-submit] 提交评测已点击')
+    await page.waitForTimeout(3000)
+
+    // ====== 截图调试 ======
+    await page.screenshot({ path: '/tmp/htoj_after_submit.png' }).catch(() => {})
+
+    // ====== 获取真实评测结果：导航到提交记录页 ======
+    const submissionsUrl = `https://htoj.com.cn/cpp/oj/contest/submissions?cid=${ids.cid}&pid=${ids.pid}`
+    console.log(`[htoj-submit] 导航到提交记录: ${submissionsUrl}`)
+    await page.goto(submissionsUrl, { waitUntil: 'load', timeout: 20000 })
+    await page.waitForTimeout(3000)
+
     let result = '已提交，等待评测...'
-    // 等待评测结果出现
-    for (let i = 0; i < 6; i++) {
+
+    // 等待评测结果出现（最多等 30 秒）
+    for (let i = 0; i < 10; i++) {
       await page.waitForTimeout(3000)
+
+      // 截图调试
+      await page.screenshot({ path: `/tmp/htoj_result_${i}.png` }).catch(() => {})
+
       result = await page.evaluate(() => {
-        // 查找评测结果标签
-        const el = document.querySelector('[class*="verdict"], [class*="judge-result"], .result-text, [class*="Accepted"], [class*="Wrong"], [class*="Compile"]')
-        if (el) return el.textContent.trim()
-        // 查找包含评测结果的 span/div
-        const spans = [...document.querySelectorAll('span, div')]
-        for (const s of spans) {
-          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|评测通过|答案错误|编译错误|运行错误/.test(s.textContent)) {
-            return s.textContent.trim()
+        // 方式1: 查找评测状态标签/span
+        const statusEls = [...document.querySelectorAll('span, div, td')]
+        for (const el of statusEls) {
+          const txt = el.textContent?.trim() || ''
+          // htoj 状态关键词
+          if (/^(Accepted|答案正确|通过|Wrong Answer|答案错误|Compile Error|编译错误|Runtime Error|运行错误|Memory Limit Exceeded|内存超限|Time Limit Exceeded|时间超限|评测中|等待评测|Pending|Judging|System Error)/i.test(txt)) {
+            return txt
+          }
+          // 包含状态
+          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|评测通过|答案正确|答案错误|编译错误|运行错误/.test(txt) && txt.length < 50) {
+            return txt
+          }
+        }
+        // 方式2: 查找表格中的状态列
+        const tables = document.querySelectorAll('table')
+        for (const table of tables) {
+          const rows = table.querySelectorAll('tr')
+          for (const row of rows) {
+            const cells = row.querySelectorAll('td')
+            for (const cell of cells) {
+              const txt = cell.textContent?.trim() || ''
+              if (/Accepted|Wrong Answer|Compile Error|Runtime Error|答案正确|答案错误|编译错误|运行错误|评测通过/.test(txt) && txt.length < 30) {
+                return txt
+              }
+            }
           }
         }
         return ''
       })
-      if (result && result !== '运行自测') break
+
+      if (result) {
+        console.log(`[htoj-submit] 第${i + 1}轮获取到结果: ${result}`)
+        break
+      }
+      console.log(`[htoj-submit] 第${i + 1}轮未获取到结果，继续等待...`)
+    }
+
+    if (!result || result === '评测中' || result === '等待评测' || result === 'Pending' || result === 'Judging') {
+      // 再等一轮
+      await page.waitForTimeout(5000)
+      result = await page.evaluate(() => {
+        const statusEls = [...document.querySelectorAll('span, div, td')]
+        for (const el of statusEls) {
+          const txt = el.textContent?.trim() || ''
+          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|答案正确|答案错误|编译错误|运行错误|评测通过/.test(txt) && txt.length < 50) {
+            return txt
+          }
+        }
+        return result || '未知'
+      })
     }
 
     await browser.close()
