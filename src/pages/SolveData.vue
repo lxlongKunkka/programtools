@@ -2279,7 +2279,7 @@ export default {
           // 重试：用错误反馈重新生成
           this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 上次 ${lastError}，正在修复...`
           try {
-            await this.regenerateWithFeedback(taskIndex, lastCode, lastError)
+            await this.regenerateWithFeedback(taskIndex, lastCode, lastError, true)
           } catch (e) {
             this.generationStatus = '❌ 修复生成失败: ' + e.message
             break
@@ -2319,6 +2319,8 @@ export default {
             if (result.includes('Accepted') || result.includes('答案正确')) {
               this.addLog(`✅ AC! 第${this.autoSolveAttempts}次`, 'success')
               this.generationStatus = `✅ AC！正在生成教案...`
+              // 用 AC 代码生成教案（解读模式），不重新生成代码
+              this.tasks[taskIndex].manualCode = pureCode
               try { await this.generateCodeForAutoSolve(taskIndex) } catch {}
               this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功`
               this.showToastMessage(`🎉 AC！第 ${this.autoSolveAttempts} 次提交`)
@@ -2423,7 +2425,7 @@ export default {
     },
 
     // 用错误反馈重新生成代码
-    async regenerateWithFeedback(taskIndex, previousCode, errorResult) {
+    async regenerateWithFeedback(taskIndex, previousCode, errorResult, quick = false) {
       const task = this.tasks[taskIndex]
       let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
@@ -2452,7 +2454,7 @@ ${problemText}`
         body: JSON.stringify({ text: feedbackText, model, language: this.language })
       })
       if (resp?.result) {
-        this.saveToTask(taskIndex, 'codeOutput', resp.result)
+        if (!quick) this.saveToTask(taskIndex, 'codeOutput', resp.result)
         if (resp.pureCode) this.saveToTask(taskIndex, 'serverPureCode', resp.pureCode)
       } else {
         throw new Error('AI 未返回修复代码')
@@ -2544,7 +2546,7 @@ ${problemText}`
           
           // 重试时修复代码
           if (a > 0 && lastCode && lastError) {
-            try { await this.regenerateWithFeedback(ti, lastCode, lastError) } catch { continue }
+            try { await this.regenerateWithFeedback(ti, lastCode, lastError, true) } catch { continue }
           }
           
           let pc = this.tasks[ti]?.serverPureCode || ''
@@ -2560,7 +2562,8 @@ ${problemText}`
               lastError = r.message || ''; this.htojSubmitResult = lastError
               if (lastError.includes('Accepted') || lastError.includes('答案正确')) {
                 ac = true; acCount++
-                // AC 后生成完整教案
+                // 用 AC 代码生成教案（解读模式）
+                this.tasks[ti].manualCode = pc
                 try { await this.generateCodeForAutoSolve(ti) } catch {}
                 break
               }
