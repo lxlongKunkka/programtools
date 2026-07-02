@@ -613,75 +613,60 @@ async function handleSubmit(req, res) {
     // ====== 截图调试 ======
     await page.screenshot({ path: '/tmp/htoj_after_submit.png' }).catch(() => {})
 
-    // ====== 获取真实评测结果：导航到提交记录页 ======
-    const submissionsUrl = `https://htoj.com.cn/cpp/oj/contest/submissions?cid=${ids.cid}&pid=${ids.pid}`
-    console.log(`[htoj-submit] 导航到提交记录: ${submissionsUrl}`)
-    await page.goto(submissionsUrl, { waitUntil: 'load', timeout: 20000 })
-    await page.waitForTimeout(3000)
-
+    // ====== 用 API 轮询获取真实评测结果 ======
+    await browser.close()
     let result = '已提交，等待评测...'
 
-    // 等待评测结果出现（最多等 30 秒）
-    for (let i = 0; i < 10; i++) {
-      await page.waitForTimeout(3000)
+    const apiToken = await getHtojToken()
+    const h = htojHeaders(apiToken)
+    const submitTime = Date.now()
 
-      // 截图调试
-      await page.screenshot({ path: `/tmp/htoj_result_${i}.png` }).catch(() => {})
+    // 等待 + 轮询（最多等 60 秒）
+    for (let i = 0; i < 12; i++) {
+      await sleep(5000)
 
-      result = await page.evaluate(() => {
-        // 方式1: 查找评测状态标签/span
-        const statusEls = [...document.querySelectorAll('span, div, td')]
-        for (const el of statusEls) {
-          const txt = el.textContent?.trim() || ''
-          // htoj 状态关键词
-          if (/^(Accepted|答案正确|通过|Wrong Answer|答案错误|Compile Error|编译错误|Runtime Error|运行错误|Memory Limit Exceeded|内存超限|Time Limit Exceeded|时间超限|评测中|等待评测|Pending|Judging|System Error)/i.test(txt)) {
-            return txt
-          }
-          // 包含状态
-          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|评测通过|答案正确|答案错误|编译错误|运行错误/.test(txt) && txt.length < 50) {
-            return txt
-          }
-        }
-        // 方式2: 查找表格中的状态列
-        const tables = document.querySelectorAll('table')
-        for (const table of tables) {
-          const rows = table.querySelectorAll('tr')
-          for (const row of rows) {
-            const cells = row.querySelectorAll('td')
-            for (const cell of cells) {
-              const txt = cell.textContent?.trim() || ''
-              if (/Accepted|Wrong Answer|Compile Error|Runtime Error|答案正确|答案错误|编译错误|运行错误|评测通过/.test(txt) && txt.length < 30) {
-                return txt
-              }
+      try {
+        const query = buildQuery({ cid: ids.cid, pid: ids.pid, tid: ids.tid, gid: ids.gid, currentPage: 1, limit: 5 })
+        const listResp = await axios.get(
+          `${HTOJ_API}/api/code-community/api/get-submission-list?${query}`,
+          { headers: h, timeout: 10000 }
+        )
+
+        if (listResp.data?.errCode === 0) {
+          const records = listResp.data?.data?.records || []
+          if (records.length > 0) {
+            // 检查最新提交的状态
+            const latest = records[0]
+            const statusId = latest?.status?.id
+            const statusName = latest?.status?.name || ''
+
+            // status.id 映射: 0=Accepted, 1=Wrong Answer, 2=Compile Error, 3=Runtime Error, 4=Time Limit, 5=Memory Limit, 6=Pending/Judging
+            const statusMap = {
+              0: 'Accepted / 答案正确',
+              1: 'Wrong Answer / 答案错误',
+              2: 'Compile Error / 编译错误',
+              3: 'Runtime Error / 运行错误',
+              4: 'Time Limit Exceeded / 时间超限',
+              5: 'Memory Limit Exceeded / 内存超限',
+              6: '评测中...',
+              7: 'System Error / 系统错误'
+            }
+
+            if (statusId !== undefined && statusId !== null && statusId !== 6) {
+              result = statusMap[statusId] || statusName || `状态码: ${statusId}`
+              console.log(`[htoj-submit] API轮询第${i + 1}轮获得结果: ${result} (statusId=${statusId})`)
+              break
+            } else if (statusId === 6) {
+              console.log(`[htoj-submit] API轮询第${i + 1}轮: 评测中...`)
+              result = '评测中...'
             }
           }
         }
-        return ''
-      })
-
-      if (result) {
-        console.log(`[htoj-submit] 第${i + 1}轮获取到结果: ${result}`)
-        break
+      } catch (e) {
+        console.log(`[htoj-submit] API轮询第${i + 1}轮出错:`, e.message)
       }
-      console.log(`[htoj-submit] 第${i + 1}轮未获取到结果，继续等待...`)
     }
 
-    if (!result || result === '评测中' || result === '等待评测' || result === 'Pending' || result === 'Judging') {
-      // 再等一轮
-      await page.waitForTimeout(5000)
-      result = await page.evaluate(() => {
-        const statusEls = [...document.querySelectorAll('span, div, td')]
-        for (const el of statusEls) {
-          const txt = el.textContent?.trim() || ''
-          if (/Accepted|Wrong Answer|Compile Error|Runtime Error|Memory Limit|Time Limit|答案正确|答案错误|编译错误|运行错误|评测通过/.test(txt) && txt.length < 50) {
-            return txt
-          }
-        }
-        return result || '未知'
-      })
-    }
-
-    await browser.close()
     console.log(`[htoj-submit] 完成: ${result}`)
     res.json({ ok: true, message: result, url })
 
