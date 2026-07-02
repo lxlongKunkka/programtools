@@ -455,6 +455,9 @@ async function handleSubmit(req, res) {
       localStorage.setItem('KEY_USER_LOGIN_TOKEN', t)
       localStorage.setItem('KEY_ZONE', 'cpp')
     }, htojBrowserToken)
+    // 刷新页面让 SPA 读取新的 localStorage
+    await page.reload({ waitUntil: 'load', timeout: 20000 })
+    await page.waitForTimeout(2000)
 
     // ====== 直接导航到题目页 ======
     console.log(`[htoj-submit] 导航到: ${url}`)
