@@ -2383,11 +2383,35 @@ export default {
       this.isAutoSolving = false
     },
 
+    // 检测题目是否需要文件 I/O
+    detectFileIO(problemText) {
+      if (!problemText) return null
+      // 匹配 "输入文件名 xxx" / "输出文件名 xxx"
+      const inputMatch = problemText.match(/输入文件名[：:\s]*(\S+)/)
+      const outputMatch = problemText.match(/输出文件名[：:\s]*(\S+)/)
+      if (inputMatch && outputMatch) {
+        return { input: inputMatch[1], output: outputMatch[1] }
+      }
+      // 匹配 "文件IO" 标志 + 文件名
+      if (/文件IO|文件输入输出/.test(problemText)) {
+        const in2 = problemText.match(/(\S+\.in)/)
+        const out2 = problemText.match(/(\S+\.out)/)
+        if (in2 && out2) return { input: in2[1], output: out2[1] }
+      }
+      return null
+    },
+
     // 为自动解题生成代码（简化版，跳过翻译元数据等）
     async generateCodeForAutoSolve(taskIndex) {
       const task = this.tasks[taskIndex]
-      const problemText = task?.problemText || this.problemText
+      let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
+      
+      // 检测文件 I/O 需求，显式提示 AI
+      const fileIOInfo = this.detectFileIO(problemText)
+      if (fileIOInfo) {
+        problemText = `[IMPORTANT: This problem requires FILE I/O! Use:\nfreopen("${fileIOInfo.input}", "r", stdin);\nfreopen("${fileIOInfo.output}", "w", stdout);\nDo NOT use cin/cout for file reading, use freopen as shown above.]\n\n${problemText}`
+      }
       
       const model = this.getSolveDataModel(taskIndex)
       const resp = await request('/api/solution', {
@@ -2405,12 +2429,17 @@ export default {
     // 用错误反馈重新生成代码
     async regenerateWithFeedback(taskIndex, previousCode, errorResult) {
       const task = this.tasks[taskIndex]
-      const problemText = task?.problemText || this.problemText
+      let problemText = task?.problemText || this.problemText
       if (!problemText.trim()) throw new Error('无题目描述')
       
+      // 检测文件 I/O
+      const fileIOInfo = this.detectFileIO(problemText)
+      const fileIOHint = fileIOInfo
+        ? `[CRITICAL: Use freopen("${fileIOInfo.input}", "r", stdin) and freopen("${fileIOInfo.output}", "w", stdout) for FILE I/O!]\n`
+        : ''
+      
       const model = this.getSolveDataModel(taskIndex)
-      // 构造带反馈的 prompt
-      const feedbackText = `[PREVIOUS SUBMISSION RESULT: ${errorResult}]
+      const feedbackText = `${fileIOHint}[PREVIOUS SUBMISSION RESULT: ${errorResult}]
 [YOUR PREVIOUS CODE THAT FAILED:]
 \`\`\`${this.language.toLowerCase()}
 ${previousCode}
