@@ -2218,6 +2218,7 @@ export default {
       this.isAutoSolving = true
       this.autoSolveAttempts = 0
       this.htojSubmitResult = ''
+      this.tasks[taskIndex].status = 'processing' // 重置失败/完成状态
       console.log('[autoSolveHtoj] solveLogs type:', typeof this.solveLogs, 'isArray:', Array.isArray(this.solveLogs), 'length:', this.solveLogs?.length)
       this.solveLogs.splice(0, this.solveLogs.length)
       this.addLog(`开始自动解题: ${task?.problemMeta?.title || url}`, 'header')
@@ -2550,6 +2551,7 @@ ${problemText}`
       
       this.isAutoSolving = true
       this.addLog(`找到 ${htojTasks.length} 道 htoj 题目待处理`, 'info')
+      htojTasks.forEach(ti => { this.tasks[ti].status = 'processing' }) // 重置状态
       const token = localStorage.getItem('auth_token')
       const headers = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
