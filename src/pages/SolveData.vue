@@ -2293,8 +2293,9 @@ export default {
         const codeToSubmit = fileIO ? this.injectFreopen(pureCode, fileIO) : pureCode
         
         this.isHtojSubmitting = true
-        this.addLog(`第${this.autoSolveAttempts}次提交: ${codeToSubmit.length} 字符`, 'info')
-        this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 正在提交评测...`
+        const submitStart = Date.now()
+        this.addLog(`第${this.autoSolveAttempts}次提交 (${codeToSubmit.length}字符) → 启动浏览器/轮询评测...`, 'info')
+        this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] 提交+评测中（约需15-60秒）...`
         
         try {
           const lang = detectLanguage(codeToSubmit) === 'python' ? 'Python' : 'C++'
@@ -2303,6 +2304,7 @@ export default {
             body: JSON.stringify({ url, code: codeToSubmit, language: lang })
           })
           const data = await resp.json()
+          const elapsed = ((Date.now() - submitStart) / 1000).toFixed(1)
           
           if (data.ok) {
             const result = data.message || '已提交'
@@ -2310,24 +2312,26 @@ export default {
             lastError = result
             
             if (result.includes('Accepted') || result.includes('答案正确')) {
-              this.addLog(`✅ AC! 第${this.autoSolveAttempts}次`, 'success')
+              this.addLog(`✅ AC! (耗时${elapsed}s)`, 'success')
               this.generationStatus = `✅ AC！正在生成教案...`
-              // 用 AC 代码生成教案（解读模式），不重新生成代码
               this.tasks[taskIndex].manualCode = pureCode
               try { await this.generateCodeForAutoSolve(taskIndex) } catch {}
               this.generationStatus = `✅ AC了！第 ${this.autoSolveAttempts} 次尝试成功`
               this.showToastMessage(`🎉 AC！第 ${this.autoSolveAttempts} 次提交`)
               break
             } else {
-              this.addLog(`❌ ${result}`, 'error')
+              this.addLog(`❌ ${result} (耗时${elapsed}s)`, 'error')
               this.generationStatus = `[自动解题 ${this.autoSolveAttempts}/${this.autoSolveMaxAttempts}] ${result}，即将重试...`
             }
           } else {
             lastError = data.error || '提交失败'
             this.htojSubmitResult = '提交失败: ' + lastError
+            this.addLog(`⛔ 提交失败: ${lastError} (耗时${elapsed}s)`, 'error')
           }
         } catch (e) {
+          const elapsed = ((Date.now() - submitStart) / 1000).toFixed(1)
           lastError = '网络错误: ' + e.message
+          this.addLog(`⛔ 网络错误 (耗时${elapsed}s): ${e.message}`, 'error')
           this.htojSubmitResult = lastError
         } finally {
           this.isHtojSubmitting = false

@@ -422,6 +422,32 @@ import { fileURLToPath } from 'url'
 const __htojDirname = path.dirname(fileURLToPath(import.meta.url))
 const CHROME_PATH = path.join(__htojDirname, '../../other/dist/chrome-linux64/chrome')
 
+// ─── 持久浏览器实例（复用，避免每次提交都启动）─────────────────────────────
+let _browser = null
+let _browserLastUsed = 0
+
+async function getBrowser() {
+  const now = Date.now()
+  // 如果浏览器还在且上次使用不超过 30 分钟，直接复用
+  if (_browser && _browser.isConnected() && (now - _browserLastUsed) < 30 * 60 * 1000) {
+    _browserLastUsed = now
+    return _browser
+  }
+  // 否则重新启动
+  if (_browser) {
+    await _browser.close().catch(() => {})
+    _browser = null
+  }
+  console.log('[htoj-browser] 启动新浏览器实例...')
+  _browser = await chromium.launch({
+    executablePath: CHROME_PATH,
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  })
+  _browserLastUsed = now
+  return _browser
+}
+
 router.post('/submit', authenticateToken, async (req, res) => {
   return handleSubmit(req, res)
 })
@@ -448,12 +474,8 @@ async function handleSubmit(req, res) {
     }
     if (!htojBrowserToken) throw new Error('缺少 htoj 浏览器 token')
 
-    console.log('[htoj-submit] 启动浏览器...')
-    browser = await chromium.launch({
-      executablePath: CHROME_PATH,
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    })
+    console.log('[htoj-submit] 获取浏览器实例...')
+    browser = await getBrowser()
 
     const context = await browser.newContext()
     const page = await context.newPage()
@@ -640,16 +662,16 @@ async function handleSubmit(req, res) {
     await page.screenshot({ path: '/tmp/htoj_after_submit.png' }).catch(() => {})
 
     // ====== 用 API 轮询获取真实评测结果 ======
-    await browser.close()
+    // 浏览器保持打开以供下次复用
     let result = '已提交，等待评测...'
 
     const apiToken = await getHtojToken()
     const h = htojHeaders(apiToken)
     const submitTime = Date.now()
 
-    // 等待 + 轮询（最多等 60 秒）
-    for (let i = 0; i < 12; i++) {
-      await sleep(5000)
+    // 等待 + 轮询（最多等 60 秒，每 2 秒检查一次）
+    for (let i = 0; i < 30; i++) {
+      await sleep(2000)
 
       try {
         const query = buildQuery({ cid: ids.cid, pid: ids.pid, tid: ids.tid, gid: ids.gid, currentPage: 1, limit: 5 })
@@ -699,9 +721,9 @@ async function handleSubmit(req, res) {
     res.json({ ok: true, message: result, url })
 
   } catch (err) {
-    console.error('[htoj-submit] 失败:', err.message, err.stack)
-    if (browser) await browser.close().catch(() => {})
-    res.status(500).json({ ok: false, error: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
+    console.error('[htoj-submit] 失败:', err.message)
+    // 不关闭浏览器，留待复用
+    res.status(500).json({ ok: false, error: err.message })
   }
 }
 
