@@ -42,9 +42,9 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
-// 推理模型（claude 4 系列、OpenAI o1/o3 系列）不支持 temperature 参数。
-// 通过 axios 请求拦截器统一剔除，避免分散在每个接口里单独处理。
-const REASONING_MODEL_RE = /claude-(opus|sonnet|haiku)-[4-9]|^o[13]/i
+// 推理模型（OpenAI o1/o3 系列）不支持 temperature 参数。
+// Claude 4 系列支持 temperature，不在剔除范围内。
+const REASONING_MODEL_RE = /^o[13]/i
 axios.interceptors.request.use(cfg => {
   try {
     const body = typeof cfg.data === 'string' ? JSON.parse(cfg.data) : cfg.data
@@ -1061,7 +1061,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
     const payload = {
       model: model || 'gemini-3.5-flash',
       messages,
-      temperature: 0.5,
+      temperature: 0.2,
       max_tokens: 32767
     }
     res.locals.logModel = payload.model
