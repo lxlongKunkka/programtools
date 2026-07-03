@@ -679,6 +679,8 @@ export default {
         { id: 'o3-mini', name: 'o3-mini' },
         { id: 'o2-mini', name: 'o2-mini' },
         { id: 'o1-mini', name: 'o1-mini' },
+        { id: 'deepseek-chat', name: 'DeepSeek V3' },
+        { id: 'deepseek-reasoner', name: 'DeepSeek R1' },
         { id: 'grok-4-fast', name: 'grok-4-fast' },
         { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash' }
       ]
