@@ -430,8 +430,8 @@ let _browserLastUsed = 0
 
 async function getBrowser() {
   const now = Date.now()
-  // 如果浏览器还在且上次使用不超过 30 分钟，直接复用
-  if (_browser && _browser.isConnected() && (now - _browserLastUsed) < 30 * 60 * 1000) {
+  // 浏览器空闲超过 5 分钟自动关闭，防止资源泄漏
+  if (_browser && _browser.isConnected() && (now - _browserLastUsed) < 5 * 60 * 1000) {
     _browserLastUsed = now
     return _browser
   }
@@ -444,7 +444,7 @@ async function getBrowser() {
   _browser = await chromium.launch({
     executablePath: CHROME_PATH,
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
   })
   _browserLastUsed = now
   return _browser
