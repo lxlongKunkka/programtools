@@ -1041,7 +1041,7 @@ router.get('/htoj-contest-list', authenticateToken, async (req, res) => {
       status: c.statusDesc?.name || '',
       problemCount: c.problemCount || 0,
     }))
-    const totalPages = Math.ceil((resp.data.data?.total || 0) / 50) || 1
+    const totalPages = Math.ceil((resp.data.data?.total || 0) / records.length) || 1
     res.json({ contests: records, currentPage: page, totalPages })
   } catch (err) {
     console.error('[htoj] contest-list error:', err.message)
