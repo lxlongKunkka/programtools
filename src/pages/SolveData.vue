@@ -672,7 +672,8 @@ export default {
         { id: 'claude-opus-4-8', name: 'claude-opus-4-8' },
         { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash' },
         { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash' },
-        { id: 'o4-mini', name: 'o4-mini' }
+        { id: 'o4-mini', name: 'o4-mini' },
+        { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro' }
       ]
     },
     translationModelLabel() {

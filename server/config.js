@@ -61,12 +61,27 @@ export const YUN_API_KEY = process.env.YUN_API_KEY
 export const YUN_API_KEY_CLAUDE = process.env.YUN_API_KEY_CLAUDE
 export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
 
-// 根据模型名选择 API Key：Claude 模型用 official_Claude 分组 key，其余用默认 key
+// DeepSeek 直连 API
+export const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || ''
+export const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
+
+// 根据模型名选择 API Key
 export function pickApiKey(model) {
+  if (model && model.toLowerCase().startsWith('deepseek') && DEEPSEEK_API_KEY) {
+    return DEEPSEEK_API_KEY
+  }
   if (model && model.toLowerCase().startsWith('claude') && YUN_API_KEY_CLAUDE) {
     return YUN_API_KEY_CLAUDE
   }
   return YUN_API_KEY
+}
+
+// 根据模型名选择 API URL
+export function pickApiUrl(model) {
+  if (model && model.toLowerCase().startsWith('deepseek') && DEEPSEEK_API_KEY) {
+    return DEEPSEEK_API_URL
+  }
+  return YUN_API_URL
 }
 
 // AtCoder 用户名（可选）：用于在 kenkoooo 中优先查找该用户的 AC 提交
