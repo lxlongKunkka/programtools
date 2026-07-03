@@ -448,7 +448,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
 
     const textForModel = String(text)
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -775,7 +775,7 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
   }
 
   try {
-    const resp = await axios.post(YUN_API_URL, {
+    const resp = await axios.post(pickApiUrl(model || currentModel || ""), {
       model: model || 'gemini-3.5-flash',
       messages: [{ role: 'system', content: TRANSLATE_PROMPT }, { role: 'user', content: textWithPlaceholders }],
       temperature: 0.1, max_tokens: 8192, stream: true
@@ -920,7 +920,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     const { text, model } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1044,7 +1044,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
     const { text, model, language, requireAC } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1145,7 +1145,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
       }
     }
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1214,7 +1214,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     const hasAcCode = cleanedAcCode && cleanedAcCode.trim()
     const prompt = hasAcCode ? getSolveWithCodePrompt(lang) : getSolvePrompt(lang)
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1292,7 +1292,7 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
     const { problem, model } = req.body
     if (!problem) return res.status(400).json({ error: 'Missing problem data' })
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
 
@@ -1423,7 +1423,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
 
     const prompt = getDataGenPrompt(extraConstraintPrompt, cyaronDocs, code)
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1556,7 +1556,7 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
     ${text.slice(0, 2000)}
     `
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY' })
 
@@ -1625,7 +1625,7 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
     const { text, model, solution } = req.body
     if (!text) return res.status(400).json({ error: '缺少 text 字段' })
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1734,7 +1734,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
       userContent += `\n\n【特别要求】\n当前题目属于 Level ${level}（入门阶段）。学生尚未学习 STL 容器（如 vector）。请在生成 C++ 代码时，**务必使用静态数组**（如 int a[1005]），**严禁使用 std::vector**。`;
     }
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
 
@@ -1804,7 +1804,7 @@ router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermi
         max_tokens: 16000
     };
 
-    const resp = await axios.post(YUN_API_URL, payload, {
+    const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${YUN_API_KEY}`
@@ -1901,7 +1901,7 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
               max_tokens: 16000
           };
 
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
               headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${YUN_API_KEY}`
@@ -2122,7 +2122,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
               max_tokens: 32767
           };
 
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
               headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${YUN_API_KEY}`
@@ -2399,7 +2399,7 @@ router.post('/lesson-plan', authenticateToken, async (req, res) => {
         userPrompt = `所属知识点：${context}\n` + userPrompt
     }
     
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     
     const targetLang = language || 'C++';
@@ -2481,7 +2481,7 @@ router.post('/generate-ppt', authenticateToken, async (req, res) => {
         systemPrompt += contextInfo
     }
 
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     
     const messages = [
@@ -2536,7 +2536,7 @@ router.post('/topic-plan', authenticateToken, async (req, res) => {
         })
     }
     
-    const apiUrl = YUN_API_URL
+    const apiUrl = pickApiUrl(req.body.model || "")
     const apiKey = pickApiKey(req.body.model)
     
     let systemPrompt = TOPIC_PLAN_PROMPT
@@ -2749,7 +2749,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
           console.log(`[Background] Sending PPT request - topic: "${fullTopic}", model: ${payload.model}, prompt length: ${systemPrompt.length}`)
 
           try {
-              apiResponse = await axios.post(YUN_API_URL, payload, {
+              apiResponse = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
                 headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${currentApiKey}`
@@ -2768,7 +2768,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   currentApiKey = pickApiKey(currentModel)
                   
                   try {
-                      apiResponse = await axios.post(YUN_API_URL, {
+                      apiResponse = await axios.post(pickApiUrl(model || currentModel || ""), {
                           model: currentModel,
                           messages,
                           temperature: 0.3,
@@ -2856,7 +2856,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
               messages.push({ role: 'user', content: 'Continue generating the rest. Do not repeat content.' })
               
               try {
-                  const continueResp = await axios.post(YUN_API_URL, {
+                  const continueResp = await axios.post(pickApiUrl(model || currentModel || ""), {
                       model: model || 'gemini-3.5-flash',
                       messages,
                       temperature: 0.3,
@@ -3167,7 +3167,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
             max_tokens: 16000
           }
 
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${YUN_API_KEY}`
@@ -3339,7 +3339,7 @@ router.post('/preview-content/background', authenticateToken, async (req, res) =
             { role: 'user', content: userPrompt }
           ];
           const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
             timeout: 120000
           });
@@ -3420,7 +3420,7 @@ router.post('/review-content/background', authenticateToken, async (req, res) =>
             { role: 'user', content: userPrompt }
           ];
           const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
             timeout: 120000
           });
@@ -3517,7 +3517,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
             max_tokens: 4000
           }
 
-          const resp = await axios.post(YUN_API_URL, payload, {
+          const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${YUN_API_KEY}`
@@ -3689,7 +3689,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     // 1. Generate Solution (Markdown + Code)
     // Fix: Pass 'C++' as language, and append content separately
     const solutionPrompt = getSolutionPrompt('C++') + `\n\n题目内容：\n${content}`
-    const solutionRes = await axios.post(YUN_API_URL, {
+    const solutionRes = await axios.post(pickApiUrl(model || currentModel || ""), {
       model: model || 'gemini-3.5-flash',
       messages: [{ role: 'user', content: solutionPrompt }],
       temperature: 0.7
@@ -3748,7 +3748,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
     
     // 2. Generate HTML Report
     const reportPrompt = SOLUTION_REPORT_PROMPT + `\n\n题目内容：\n${content}\n\n题解内容：\n${solutionText}`
-    const reportRes = await axios.post(YUN_API_URL, {
+    const reportRes = await axios.post(pickApiUrl(model || currentModel || ""), {
       model: model || 'gemini-3.5-flash',
       messages: [{ role: 'user', content: reportPrompt }],
       temperature: 0.7
