@@ -463,6 +463,7 @@ async function handleSubmit(req, res) {
   if (!ids.pid || !ids.cid) return res.status(400).json({ error: '无法从 URL 解析 pid/cid' })
 
   let browser
+  let context
   try {
     const lang = language || 'C++'
 
@@ -478,8 +479,7 @@ async function handleSubmit(req, res) {
 
     console.log('[htoj-submit] 获取浏览器实例...')
     browser = await getBrowser()
-
-    const context = await browser.newContext()
+    context = await browser.newContext()
     const page = await context.newPage()
 
     // ====== 注入浏览器 token + userInfo，跳过所有登录流程 ======
@@ -724,8 +724,10 @@ async function handleSubmit(req, res) {
 
   } catch (err) {
     console.error('[htoj-submit] 失败:', err.message)
-    // 不关闭浏览器，留待复用
     res.status(500).json({ ok: false, error: err.message })
+  } finally {
+    // 关闭 context 释放资源，browser 保留复用
+    if (context) await context.close().catch(() => {})
   }
 }
 
