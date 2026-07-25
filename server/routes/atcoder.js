@@ -76,7 +76,7 @@ router.get('/contest', authenticateToken, async (req, res) => {
       }
       const parsedUrl = new URL(url)
       if (/^\/p\/?$/.test(parsedUrl.pathname)) {
-        const page = parseInt(req.query.page) || 0
+        const page = Math.max(0, (parseInt(req.query.page) || 1) - 1)
         return res.json(await fetchLyrioNflsoiContestList({ user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD, page, pageSize: 50 }))
       }
       return res.json(await fetchLyrioNflsoiContest(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
