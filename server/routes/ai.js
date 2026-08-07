@@ -1807,7 +1807,7 @@ router.post('/solution-plan', authenticateToken, requirePremium, checkModelPermi
     const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${YUN_API_KEY}`
+            'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
         },
         timeout: 300000
     });
@@ -1904,7 +1904,7 @@ router.post('/solution-plan/background', authenticateToken, requirePremium, chec
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
               headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${YUN_API_KEY}`
+                  'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
               },
               timeout: 300000
           });
@@ -2125,7 +2125,7 @@ router.post('/solution-report/background', authenticateToken, requirePremium, ch
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
               headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${YUN_API_KEY}`
+                  'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
               },
               timeout: 600000 // 10 minutes
           });
@@ -2864,7 +2864,7 @@ router.post('/generate-ppt/background', authenticateToken, async (req, res) => {
                   }, {
                     headers: {
                       'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${YUN_API_KEY}`
+                      'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
                     },
                     timeout: 300000
                   })
@@ -3170,7 +3170,7 @@ router.post('/lesson-plan/background', authenticateToken, async (req, res) => {
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${YUN_API_KEY}`
+              'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
             },
             timeout: 120000
           })
@@ -3340,7 +3340,7 @@ router.post('/preview-content/background', authenticateToken, async (req, res) =
           ];
           const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` },
             timeout: 120000
           });
           const content = resp.data?.choices?.[0]?.message?.content || '';
@@ -3421,7 +3421,7 @@ router.post('/review-content/background', authenticateToken, async (req, res) =>
           ];
           const payload = { model: model || 'gemini-3.5-flash', messages, temperature: 0.7, max_tokens: 8000 };
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${YUN_API_KEY}` },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` },
             timeout: 120000
           });
           const content = resp.data?.choices?.[0]?.message?.content || '';
@@ -3520,7 +3520,7 @@ router.post('/topic-plan/background', authenticateToken, async (req, res) => {
           const resp = await axios.post(pickApiUrl(model || currentModel || ""), payload, {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${YUN_API_KEY}`
+              'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}`
             },
             timeout: 60000
           })
@@ -3694,7 +3694,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
       messages: [{ role: 'user', content: solutionPrompt }],
       temperature: 0.7
     }, {
-      headers: { 'Authorization': `Bearer ${YUN_API_KEY}` }
+      headers: { 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` }
     })
     
     const solutionText = solutionRes.data.choices[0].message.content
@@ -3753,7 +3753,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
       messages: [{ role: 'user', content: reportPrompt }],
       temperature: 0.7
     }, {
-      headers: { 'Authorization': `Bearer ${YUN_API_KEY}` }
+      headers: { 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` }
     })
     
     let reportHtml = reportRes.data.choices[0].message.content
