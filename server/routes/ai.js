@@ -1,4 +1,4 @@
-import express from 'express'
+﻿import express from 'express'
 import axios from 'axios'
 import https from 'https'
 import FormData from 'form-data'
@@ -12,6 +12,12 @@ import User from '../models/User.js'
 import Document from '../models/Document.js'
 import CourseLevel from '../models/CourseLevel.js'
 import { YUN_API_KEY, YUN_API_KEY_CLAUDE, YUN_API_URL, DEEPSEEK_API_KEY, DEEPSEEK_API_URL, DIRS, MAIL_CONFIG, HYDRO_CONFIG, pickApiKey, pickApiUrl } from '../config.js'
+
+/** 从 AI 响应中提取内容，兼容 reasoning_content（DeepSeek 推理模型） */
+function extractContent(data) {
+  const msg = data?.choices?.[0]?.message || {}
+  return msg.content || msg.reasoning_content || ''
+}
 import { checkModelPermission, authenticateToken, requirePremium, requireRole } from '../middleware/auth.js'
 import { isCosConfigured, uploadTextToCos } from '../utils/cosClient.js'
 import { proxyImageToCos } from '../utils/cosUploader.js'
@@ -477,7 +483,7 @@ router.post('/translate', authenticateToken, checkModelPermission, async (req, r
     let content = ''
     try {
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
       } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
       } else if (data.data && data.data[0] && data.data[0].text) {
@@ -950,7 +956,7 @@ router.post('/refine-hydro', authenticateToken, checkModelPermission, async (req
     const data = resp.data
     let resultText = ''
     if (data.choices && data.choices[0] && data.choices[0].message) {
-      resultText = data.choices[0].message.content
+      resultText = extractContent(data)
     } else if (data.choices && data.choices[0] && data.choices[0].text) {
       resultText = data.choices[0].text
     } else {
@@ -1078,7 +1084,7 @@ router.post('/solution', authenticateToken, checkModelPermission, async (req, re
     let content = ''
     try {
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
       } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
       } else if (data.data && data.data[0] && data.data[0].text) {
@@ -1174,7 +1180,7 @@ router.post('/checker', authenticateToken, checkModelPermission, async (req, res
     let content = ''
     try {
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
       } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
       } else if (data.data && data.data[0] && data.data[0].text) {
@@ -1252,7 +1258,7 @@ router.post('/solve', authenticateToken, requirePremium, checkModelPermission, a
     let content = ''
     try {
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
       } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
       } else if (data.data && data.data[0] && data.data[0].text) {
@@ -1331,7 +1337,7 @@ router.post('/generate-answer', authenticateToken, checkModelPermission, async (
     const data = resp.data
     let content = ''
     if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
     } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
     } else {
@@ -1452,7 +1458,7 @@ router.post('/generate-data', authenticateToken, requirePremium, checkModelPermi
     let content = ''
     try {
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        content = data.choices[0].message.content
+        content = extractContent(data)
       } else if (data.choices && data.choices[0] && data.choices[0].text) {
         content = data.choices[0].text
       } else if (data.data && data.data[0] && data.data[0].text) {
@@ -1583,7 +1589,7 @@ router.post('/generate-tags', authenticateToken, checkModelPermission, async (re
     const data = resp.data
     let content = ''
     if (data.choices && data.choices[0]?.message?.content) {
-      content = data.choices[0].message.content
+      content = extractContent(data)
     } else if (data.data && data.data[0]?.text) {
       content = data.data[0].text
     } else {
@@ -1658,7 +1664,7 @@ router.post('/generate-problem-meta', authenticateToken, checkModelPermission, a
     const data = resp.data
     let content = ''
     if (data.choices && data.choices[0] && data.choices[0].message) {
-      content = data.choices[0].message.content
+      content = extractContent(data)
     } else if (data.data && data.data[0] && data.data[0].text) {
       content = data.data[0].text
     } else {
@@ -1762,7 +1768,7 @@ router.post('/solution-report', authenticateToken, requirePremium, checkModelPer
     const data = resp.data
     let content = ''
     if (data.choices && data.choices[0] && data.choices[0].message) {
-      content = data.choices[0].message.content
+      content = extractContent(data)
     } else {
       content = JSON.stringify(data)
     }
@@ -3697,7 +3703,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
       headers: { 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` }
     })
     
-    const solutionText = solutionRes.data.choices[0].message.content
+    const solutionText = extractContent(solutionRes.data)
     
     // Extract Code
     let stdCode = '// No code generated'
@@ -3756,7 +3762,7 @@ router.post('/generate-solution-report', authenticateToken, async (req, res) => 
       headers: { 'Authorization': `Bearer ${pickApiKey(model || currentModel || "")}` }
     })
     
-    let reportHtml = reportRes.data.choices[0].message.content
+    let reportHtml = extractContent(reportRes.data)
     // Clean up markdown code blocks if present
     reportHtml = reportHtml.replace(/^```html\s*/, '').replace(/```$/, '')
     
