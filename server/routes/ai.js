@@ -795,7 +795,7 @@ router.post('/translate/stream', authenticateToken, checkModelPermission, async 
         if (d === '[DONE]') continue
         try {
           const parsed = JSON.parse(d)
-          const delta = parsed.choices?.[0]?.delta?.content || ''
+          const delta = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.delta?.reasoning_content || ''
           if (delta) { fullContent += delta; send({ type: 'chunk', text: delta }) }
         } catch {}
       }
