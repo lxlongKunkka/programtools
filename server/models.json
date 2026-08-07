@@ -1,4 +1,5 @@
 [
-  { "id": "deepseek-chat", "name": "DeepSeek Chat (推荐)", "role": "user" },
-  { "id": "deepseek-reasoner", "name": "DeepSeek R1 (推理)", "role": "user" }
+  { "id": "deepseek-chat", "name": "DeepSeek Chat (推荐·通用)", "role": "user" },
+  { "id": "deepseek-reasoner", "name": "DeepSeek R1 (推理)", "role": "user" },
+  { "id": "deepseek-v4-pro", "name": "DeepSeek V4 Pro (推理·代码)", "role": "user" }
 ]
