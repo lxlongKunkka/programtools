@@ -57,15 +57,16 @@ if (process.env.JWT_SECRET === undefined || process.env.JWT_SECRET === 'your_jwt
     console.warn('[WARN] JWT_SECRET 使用默认值，请在 server/.env 中配置强密钥（仅开发环境允许）')
   }
 }
-export const YUN_API_KEY = process.env.YUN_API_KEY
-export const YUN_API_KEY_CLAUDE = process.env.YUN_API_KEY_CLAUDE
-export const YUN_API_URL = process.env.YUN_API_URL || 'https://yunwu.ai/v1/chat/completions'
-
-// DeepSeek 直连 API
+// DeepSeek 直连 API（默认主 provider）
 export const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || ''
 export const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 
-// 根据模型名选择 API Key
+// 云雾 API（备用，兼容旧配置；未配置时回退到 DeepSeek）
+export const YUN_API_KEY = process.env.YUN_API_KEY
+export const YUN_API_KEY_CLAUDE = process.env.YUN_API_KEY_CLAUDE
+export const YUN_API_URL = process.env.YUN_API_URL || DEEPSEEK_API_URL
+
+// 根据模型名选择 API Key（优先级：DeepSeek > Claude专用 > 云雾 > DeepSeek兜底）
 export function pickApiKey(model) {
   if (model && model.toLowerCase().startsWith('deepseek') && DEEPSEEK_API_KEY) {
     return DEEPSEEK_API_KEY
@@ -73,10 +74,10 @@ export function pickApiKey(model) {
   if (model && model.toLowerCase().startsWith('claude') && YUN_API_KEY_CLAUDE) {
     return YUN_API_KEY_CLAUDE
   }
-  return YUN_API_KEY
+  return YUN_API_KEY || DEEPSEEK_API_KEY
 }
 
-// 根据模型名选择 API URL
+// 根据模型名选择 API URL（DeepSeek 模型走直连，其他走默认 URL）
 export function pickApiUrl(model) {
   if (model && model.toLowerCase().startsWith('deepseek') && DEEPSEEK_API_KEY) {
     return DEEPSEEK_API_URL

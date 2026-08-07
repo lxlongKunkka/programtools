@@ -1,8 +1,5 @@
 [
-  { "id": "o4-mini", "name": "o4-mini", "role": "user" },
-  { "id": "gpt-5.5", "name": "gpt-5.5", "role": "premium" },
-  { "id": "claude-opus-4-8", "name": "claude-opus-4-8", "role": "premium" },
-  { "id": "gemini-3.5-flash", "name": "gemini-3.5-flash", "role": "user" },
-  { "id": "gemini-2.5-flash", "name": "gemini-2.5-flash", "role": "user" },
+  { "id": "deepseek-chat", "name": "DeepSeek V3", "role": "user" },
+  { "id": "deepseek-reasoner", "name": "DeepSeek R1", "role": "user" },
   { "id": "deepseek-v4-pro", "name": "DeepSeek V4 Pro", "role": "user" }
 ]

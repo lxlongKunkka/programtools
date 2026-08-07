@@ -31,9 +31,9 @@ _logfile = open(os.path.join(os.path.dirname(__file__), 'batch_gen_log.txt'), 'w
 sys.stdout = TeeWriter(sys.__stdout__, _logfile)
 
 # ========== 配置 ==========
-API_URL = "https://yunwu.ai/v1/chat/completions"
-API_KEY = "sk-OJYtBCN6HtbAN1XtoWgjxEe43CHiEbHhHnOJF4TUZ5ArMMXn"
-MODEL   = "gemini-2.5-flash"
+API_URL = "https://api.deepseek.com/v1/chat/completions"
+API_KEY = os.environ.get("DEEPSEEK_API_KEY", "YOUR_DEEPSEEK_API_KEY_HERE")
+MODEL   = "deepseek-chat"
 LANG    = "C++"
 CURRICULUM_ROOT = r"e:\app\programtools\curriculum_export"
 # 只处理哪些等级 (None=全部)

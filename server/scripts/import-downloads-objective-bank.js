@@ -5,7 +5,7 @@ import path from 'path'
 import axios from 'axios'
 import mongoose from 'mongoose'
 import { fileURLToPath } from 'url'
-import { APP_MONGODB_URI, YUN_API_KEY, YUN_API_URL } from '../config.js'
+import { APP_MONGODB_URI, pickApiKey, pickApiUrl, DEEPSEEK_API_KEY } from '../config.js'
 import { ANSWER_GEN_PROMPT } from '../prompts/answer_gen.js'
 import { markdownToPlainText, extractMarkdownImages } from '../utils/gesp/objectiveImport.js'
 
@@ -56,8 +56,8 @@ async function main() {
   const pendingQuestions = allQuestions.filter((item) => !item.answer)
 
   if (aiFillMissing) {
-    if (!backendApiUrl && !YUN_API_KEY) {
-      throw new Error('缺少 YUN_API_KEY，且未提供 backend-api-url，无法执行 AI 补全')
+    if (!backendApiUrl && !DEEPSEEK_API_KEY) {
+      throw new Error('缺少 DEEPSEEK_API_KEY，且未提供 backend-api-url，无法执行 AI 补全')
     }
 
     let completed = 0
@@ -455,7 +455,9 @@ async function generateAnswerAndExplanation(question, modelId) {
     .join('\n')
   const userContent = `题目：${question.stemText || question.stem}\n选项：\n${optionLines}`
 
-  const resp = await axios.post(YUN_API_URL, {
+  const apiUrl = pickApiUrl(modelId)
+  const apiKey = pickApiKey(modelId)
+  const resp = await axios.post(apiUrl, {
     model: modelId,
     messages: [
       { role: 'system', content: ANSWER_GEN_PROMPT },
@@ -466,7 +468,7 @@ async function generateAnswerAndExplanation(question, modelId) {
   }, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${YUN_API_KEY}`
+      Authorization: `Bearer ${apiKey}`
     },
     timeout: 120000
   })

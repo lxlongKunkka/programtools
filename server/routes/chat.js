@@ -1,6 +1,6 @@
 import express from 'express'
 import axios from 'axios'
-import { YUN_API_KEY, YUN_API_URL } from '../config.js'
+import { YUN_API_KEY, YUN_API_URL, pickApiKey, pickApiUrl } from '../config.js'
 import { checkModelPermission, authenticateToken, requirePremium } from '../middleware/auth.js'
 import { saveSession } from '../utils/session.js'
 import { debugLog } from '../utils/logger.js'
@@ -56,12 +56,12 @@ router.post('/chat', authenticateToken, requirePremium, checkModelPermission, as
       debugLog('[/api/chat] roles:', roles)
     } catch (e) {}
 
-    const apiUrl = YUN_API_URL
-    const apiKey = YUN_API_KEY
-    if (!apiKey) return res.status(500).json({ error: 'Server: missing YUN_API_KEY in environment' })
+    const apiUrl = pickApiUrl(model || req.body.model || '')
+    const apiKey = pickApiKey(model || req.body.model)
+    if (!apiKey) return res.status(500).json({ error: 'Server: missing AI API key (set DEEPSEEK_API_KEY in .env)' })
 
     const payload = {
-      model: model || 'gemini-3.5-flash',
+      model: model || 'deepseek-chat',
       messages,
       temperature: 0.2,
       max_tokens: 2048

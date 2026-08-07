@@ -1,6 +1,6 @@
 import axios from 'axios'
 import mongoose from 'mongoose'
-import { APP_MONGODB_URI, YUN_API_KEY, YUN_API_URL } from '../config.js'
+import { APP_MONGODB_URI, pickApiKey, pickApiUrl, DEEPSEEK_API_KEY } from '../config.js'
 import {
   buildQuizKnowledgeTaggingPrompt,
   normalizeQuizKnowledgeTags,
@@ -53,9 +53,15 @@ async function generateKnowledgeTags(question, model) {
     temperature: 0.1,
     max_tokens: 400
   }
-  const response = await axios.post(YUN_API_URL, payload, {
+  const apiUrl = pickApiUrl(model)
+  const apiKey = pickApiKey(model)
+  if (!apiKey) {
+    console.warn('[enrich] 未配置 API Key，跳过')
+    return []
+  }
+  const response = await axios.post(apiUrl, payload, {
     headers: {
-      Authorization: `Bearer ${YUN_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
     timeout: 60000
