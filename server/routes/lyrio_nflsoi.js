@@ -15,18 +15,29 @@
 
 import axios from 'axios'
 
-const BASE = 'https://nflsoi.cc:10999'
+const DEFAULT_BASE = 'https://nflsoi.cc:10999'
 
-// ─── Session 缓存 ─────────────────────────────────────────────────────────
-let cachedToken = ''
-let sessionExpireAt = 0  // Unix ms
+/** 从 URL 或 options.base 解析 Lyrio 实例 base（如 https://nflsoi.cc:20035） */
+function resolveBase(url, options = {}) {
+  if (options.base) return String(options.base).replace(/\/+$/, '')
+  if (url) {
+    const m = String(url).match(/^(https?:\/\/[^/]+)/i)
+    if (m) return m[1]
+  }
+  return DEFAULT_BASE
+}
+
+// ─── Session 缓存（按 base + user 隔离）──────────────────────────────────
+const tokenCache = new Map()  // key: `${base}|${user}` -> { token, expireAt }
 
 /** 登录获取 token，缓存 4 小时 */
-async function getToken(user, pwd) {
+async function getToken(base, user, pwd) {
+  const key = `${base}|${user}`
   const now = Date.now()
-  if (cachedToken && now < sessionExpireAt) return cachedToken
+  const cached = tokenCache.get(key)
+  if (cached && now < cached.expireAt) return cached.token
 
-  const r = await axios.post(`${BASE}/api/auth/login`, {
+  const r = await axios.post(`${base}/api/auth/login`, {
     username: user,
     password: pwd,
   }, {
@@ -39,10 +50,14 @@ async function getToken(user, pwd) {
     throw new Error(`Lyrio 登录失败，HTTP ${r.status}: ${JSON.stringify(r.data)}`)
   }
 
-  cachedToken = r.data.token
-  sessionExpireAt = now + 4 * 60 * 60 * 1000
-  console.log(`[lyrio-nflsoi] 登录成功，token 已缓存`)
-  return cachedToken
+  const token = r.data.token
+  if (!token) {
+    throw new Error(`Lyrio 登录失败（无 token）: ${JSON.stringify(r.data)}`)
+  }
+
+  tokenCache.set(key, { token, expireAt: now + 4 * 60 * 60 * 1000 })
+  console.log(`[lyrio-nflsoi] 登录成功（${base} ${user}），token 已缓存`)
+  return token
 }
 
 /** 构造请求 Headers */
@@ -78,12 +93,13 @@ function parseStandaloneProblemId(url) {
  */
 export async function fetchLyrioNflsoiContest(url, options = {}) {
   const { user, pwd } = options
+  const base = resolveBase(url, options)
   const contestId = parseContestId(url)
   if (!contestId) throw new Error('无法从 URL 中解析 Lyrio 比赛 ID')
 
-  const token = await getToken(user, pwd)
+  const token = await getToken(base, user, pwd)
 
-  const contestR = await axios.get(`${BASE}/api/contest/getContest`, {
+  const contestR = await axios.get(`${base}/api/contest/getContest`, {
     params: { contestId },
     headers: makeHeaders(token),
     validateStatus: s => s < 600,
@@ -100,7 +116,7 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
   const problems = []
   for (let displayOrder = 1; displayOrder <= 30; displayOrder++) {
     try {
-      const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+      const probR = await axios.get(`${base}/api/problem/getProblemInContest`, {
         params: { contestId, displayOrder },
         headers: makeHeaders(token),
         validateStatus: s => s < 600,
@@ -112,7 +128,7 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
         problems.push({
           label: String.fromCharCode(64 + displayOrder),
           title: prob.meta.title,
-          url: `${BASE}/contest/${contestId}/problem/${displayOrder}`,
+          url: `${base}/contest/${contestId}/problem/${displayOrder}`,
           problemNumber: String(displayOrder),
           problemId: prob.meta.id,
         })
@@ -128,7 +144,7 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
     contestId,
     contestTitle,
     problems,
-    url: `${BASE}/contest/${contestId}`,
+    url: `${base}/contest/${contestId}`,
   }
 }
 
@@ -139,7 +155,8 @@ export async function fetchLyrioNflsoiContest(url, options = {}) {
  */
 export async function fetchLyrioNflsoiProblem(url, options = {}) {
   const { user, pwd } = options
-  const token = await getToken(user, pwd)
+  const base = resolveBase(url, options)
+  const token = await getToken(base, user, pwd)
 
   const inContest = parseProblemInContest(url)
   const standaloneId = parseStandaloneProblemId(url)
@@ -149,7 +166,7 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
   const queryParams = { contentSections: 'true', judgeInfo: 'true' }
 
   if (inContest) {
-    const r = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+    const r = await axios.get(`${base}/api/problem/getProblemInContest`, {
       params: { contestId: inContest.contestId, displayOrder: inContest.displayOrder, ...queryParams },
       headers: makeHeaders(token),
       validateStatus: s => s < 600,
@@ -157,7 +174,7 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
     })
     if (r.status === 200) problemData = r.data
   } else if (standaloneId) {
-    const r = await axios.get(`${BASE}/api/problem/getProblem`, {
+    const r = await axios.get(`${base}/api/problem/getProblem`, {
       params: { id: Number(standaloneId), ...queryParams },
       headers: makeHeaders(token),
       validateStatus: s => s < 600,
@@ -213,7 +230,7 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
   let acCode = null
   if (inContest) {
     try {
-      const acCodes = await fetchLyrioNflsoiAcCodesFromStandings(token, inContest.contestId)
+      const acCodes = await fetchLyrioNflsoiAcCodesFromStandings(base, token, inContest.contestId)
       const match = acCodes.find(c => c.displayOrder === Number(inContest.displayOrder))
       if (match && match.code) {
         acCode = match.code
@@ -237,8 +254,8 @@ export async function fetchLyrioNflsoiProblem(url, options = {}) {
 // ─── AC 代码辅助函数 ─────────────────────────────────────────────────────
 
 /** 从排行榜获取所有题目的 AC 代码（内部使用，共享 token） */
-async function fetchLyrioNflsoiAcCodesFromStandings(token, contestId) {
-  const standingsR = await axios.get(`${BASE}/api/contest/queryContestStandings`, {
+async function fetchLyrioNflsoiAcCodesFromStandings(base, token, contestId) {
+  const standingsR = await axios.get(`${base}/api/contest/queryContestStandings`, {
     params: { contestId },
     headers: makeHeaders(token),
     validateStatus: s => s < 600,
@@ -266,7 +283,7 @@ async function fetchLyrioNflsoiAcCodesFromStandings(token, contestId) {
   const results = []
   for (const [displayOrder, info] of bestAcPerProblem) {
     try {
-      const detailR = await axios.get(`${BASE}/api/submission/getSubmissionDetail`, {
+      const detailR = await axios.get(`${base}/api/submission/getSubmissionDetail`, {
         params: { submissionId: info.submissionId },
         headers: makeHeaders(token),
         validateStatus: s => s < 600,
@@ -296,16 +313,17 @@ export async function fetchLyrioNflsoiAllAcCodes(contestId, options = {}) {
   const { user, pwd } = options
   if (!contestId) throw new Error('需要 contestId 参数')
 
-  const token = await getToken(user, pwd)
+  const base = resolveBase('', options)
+  const token = await getToken(base, user, pwd)
 
   // 使用共享函数获取 AC 代码
-  const acCodes = await fetchLyrioNflsoiAcCodesFromStandings(token, contestId)
+  const acCodes = await fetchLyrioNflsoiAcCodesFromStandings(base, token, contestId)
 
   // 获取题目标题映射
   const problemTitles = new Map()
   for (let d = 1; d <= 30; d++) {
     try {
-      const probR = await axios.get(`${BASE}/api/problem/getProblemInContest`, {
+      const probR = await axios.get(`${base}/api/problem/getProblemInContest`, {
         params: { contestId, displayOrder: d },
         headers: makeHeaders(token),
         validateStatus: s => s < 600,
@@ -342,9 +360,10 @@ export async function fetchLyrioNflsoiAllAcCodes(contestId, options = {}) {
  */
 export async function fetchLyrioNflsoiContestList(options = {}) {
   const { user, pwd, page = 0, pageSize = 50 } = options
-  const token = await getToken(user, pwd)
+  const base = resolveBase('', options)
+  const token = await getToken(base, user, pwd)
 
-  const r = await axios.get(`${BASE}/api/contest/getContestList`, {
+  const r = await axios.get(`${base}/api/contest/getContestList`, {
     params: { skipCount: page * pageSize, takeCount: pageSize },
     headers: makeHeaders(token),
     validateStatus: s => s < 600,
@@ -366,9 +385,10 @@ export async function fetchLyrioNflsoiContestList(options = {}) {
  */
 export async function fetchLyrioNflsoiProblemList(options = {}) {
   const { user, pwd, page = 0, pageSize = 50 } = options
-  const token = await getToken(user, pwd)
+  const base = resolveBase('', options)
+  const token = await getToken(base, user, pwd)
 
-  const r = await axios.get(`${BASE}/api/problem/getProblemList`, {
+  const r = await axios.get(`${base}/api/problem/getProblemList`, {
     params: { skipCount: page * pageSize, takeCount: pageSize },
     headers: makeHeaders(token),
     validateStatus: s => s < 600,

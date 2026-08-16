@@ -4,10 +4,10 @@ import { load } from 'cheerio'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { ATCODER_USERNAME } from '../config.js'
 import { fetchHtojContest, fetchHtojProblem } from './htoj.js'
-import { fetchNflsojContest, fetchNflsojProblem, fetchNflsojContestList } from './nflsoj.js'
+import { fetchNflsojContest, fetchNflsojProblem } from './nflsoj.js'
 import { fetchHydroNflsoiContest, fetchHydroNflsoiProblem, fetchHydroNflsoiProblemBank } from './hydro_nflsoi.js'
 import { fetchLyrioNflsoiContest, fetchLyrioNflsoiProblem, fetchLyrioNflsoiContestList, fetchLyrioNflsoiAllAcCodes } from './lyrio_nflsoi.js'
-import { LYRIO_NFLSOI_USER, LYRIO_NFLSOI_PWD } from '../config.js'
+import { LYRIO_NFLSOI_USER, LYRIO_NFLSOI_PWD, NFLSOJ_USER, NFLSOJ_PWD } from '../config.js'
 import { fetchMnaContest, fetchMnaProblem } from './mna.js'
 
 const router = express.Router()
@@ -28,9 +28,24 @@ function detectPlatform(url) {
   if (/htoj\.com\.cn/i.test(url)) return 'htoj'
   if (/mna\.wang/i.test(url)) return 'mna'
   if (/nflsoi\.cc:10999/i.test(url)) return 'lyrio_nflsoi'
+  if (/nflsoi\.cc:20035/i.test(url)) return 'lyrio_nflsoi'  // 20035 已从 SYZOJ 迁移到 Lyrio
   if (/nflsoi\.cc:10611/i.test(url)) return 'hydro_nflsoi'
   if (/nflsoi\.cc/i.test(url)) return 'nflsoj'
   return 'unknown'
+}
+
+// 根据 Lyrio URL 的 host 选择对应账号（10999 与 20035 是独立账号系统）
+function getLyrioAccount(url) {
+  try {
+    const parsed = new URL(url)
+    if (parsed.port === '20035') {
+      return { user: NFLSOJ_USER, pwd: NFLSOJ_PWD, base: `https://${parsed.host}` }
+    }
+    if (parsed.port === '10999') {
+      return { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD, base: `https://${parsed.host}` }
+    }
+  } catch {}
+  return { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD, base: 'https://nflsoi.cc:10999' }
 }
 
 // SSRF 防护：只允许已知外部竞赛平台域名，拒绝内网/任意地址
@@ -71,15 +86,16 @@ router.get('/contest', authenticateToken, async (req, res) => {
     if (platform === 'mna') return res.json(await fetchMnaContest(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojContest(url))
     if (platform === 'lyrio_nflsoi') {
-      if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
-        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置 LYRIO_NFLSOI_USER / LYRIO_NFLSOI_PWD' })
+      const acct = getLyrioAccount(url)
+      if (!acct.user || !acct.pwd) {
+        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置对应账号' })
       }
       const parsedUrl = new URL(url)
       if (/^\/p\/?$/.test(parsedUrl.pathname)) {
         const page = Math.max(0, (parseInt(req.query.page) || 1) - 1)
-        return res.json(await fetchLyrioNflsoiContestList({ user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD, page, pageSize: 50 }))
+        return res.json(await fetchLyrioNflsoiContestList({ user: acct.user, pwd: acct.pwd, base: acct.base, page, pageSize: 50 }))
       }
-      return res.json(await fetchLyrioNflsoiContest(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+      return res.json(await fetchLyrioNflsoiContest(url, { user: acct.user, pwd: acct.pwd, base: acct.base }))
     }
     if (platform === 'hydro_nflsoi') {
       // /p（无具体 pid）为题库批量列表，/contest/{id} 为比赛
@@ -114,10 +130,11 @@ router.get('/problem', authenticateToken, async (req, res) => {
     if (platform === 'mna') return res.json(await fetchMnaProblem(url))
     if (platform === 'nflsoj') return res.json(await fetchNflsojProblem(url))
     if (platform === 'lyrio_nflsoi') {
-      if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
-        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置 LYRIO_NFLSOI_USER / LYRIO_NFLSOI_PWD' })
+      const acct = getLyrioAccount(url)
+      if (!acct.user || !acct.pwd) {
+        return res.status(400).json({ error: '未配置 Lyrio 账号，请在 server/.env 中配置对应账号' })
       }
-      return res.json(await fetchLyrioNflsoiProblem(url, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+      return res.json(await fetchLyrioNflsoiProblem(url, { user: acct.user, pwd: acct.pwd, base: acct.base }))
     }
     if (platform === 'hydro_nflsoi') return res.json(await fetchHydroNflsoiProblem(url))
     return res.status(400).json({ error: '不支持的平台，目前支持 AtCoder / Codeforces / 核桃OJ / 梦熊联盟 / NFLSOJ / Hydro OJ / Lyrio OJ' })
@@ -128,15 +145,20 @@ router.get('/problem', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /api/atcoder/lyrio-ac-codes?contestId=... (获取 Lyrio 比赛中所有题目的 AC 代码)
+// GET /api/atcoder/lyrio-ac-codes?contestId=...&host=nflsoi.cc:20035 (获取 Lyrio 比赛中所有题目的 AC 代码)
 router.get('/lyrio-ac-codes', authenticateToken, async (req, res) => {
-  const { contestId } = req.query
+  const { contestId, host } = req.query
   if (!contestId) return res.status(400).json({ error: '缺少 contestId 参数' })
-  if (!LYRIO_NFLSOI_USER || !LYRIO_NFLSOI_PWD) {
+  // host 可选：nflsoi.cc:10999（默认）或 nflsoi.cc:20035
+  const is20035 = /:20035$/.test(String(host || ''))
+  const acct = is20035
+    ? { user: NFLSOJ_USER, pwd: NFLSOJ_PWD, base: 'https://nflsoi.cc:20035' }
+    : { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD, base: 'https://nflsoi.cc:10999' }
+  if (!acct.user || !acct.pwd) {
     return res.status(400).json({ error: '未配置 Lyrio 账号' })
   }
   try {
-    return res.json(await fetchLyrioNflsoiAllAcCodes(contestId, { user: LYRIO_NFLSOI_USER, pwd: LYRIO_NFLSOI_PWD }))
+    return res.json(await fetchLyrioNflsoiAllAcCodes(contestId, { user: acct.user, pwd: acct.pwd, base: acct.base }))
   } catch (err) {
     console.error('[lyrio-nflsoi] ac-codes error:', err.message)
     res.status(500).json({ error: err.message })
@@ -1005,12 +1027,25 @@ router.get('/cpret', authenticateToken, async (req, res) => {
   res.json({ results: results.slice(0, n) })
 })
 
-// GET /api/atcoder/nflsoj-contest-list?page=N — 获取 NFLSOJ 比赛列表（分页）
+// GET /api/atcoder/nflsoj-contest-list?page=N — 获取 NFLSOJ (nflsoi.cc:20035) 比赛列表（分页）
 router.get('/nflsoj-contest-list', authenticateToken, async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1)
   try {
-    const result = await fetchNflsojContestList(page)
-    res.json(result)
+    // 20035 已从 SYZOJ 迁移到 Lyrio，改用 Lyrio API 获取比赛列表
+    const pageSize = 50
+    const result = await fetchLyrioNflsoiContestList({
+      user: NFLSOJ_USER, pwd: NFLSOJ_PWD,
+      base: 'https://nflsoi.cc:20035',
+      page: page - 1, pageSize,
+    })
+    const contests = (result.contests || []).map(c => ({
+      id: c.id,
+      title: c.name || `比赛 #${c.id}`,
+      url: `https://nflsoi.cc:20035/contest/${c.id}`,
+    }))
+    // Lyrio 的 count 字段不可靠（常为 0），用"满页即还有下一页"的方式估算
+    const hasMore = contests.length >= pageSize
+    res.json({ contests, currentPage: page, hasMore, totalPages: hasMore ? page + 1 : page })
   } catch (err) {
     console.error('[nflsoj] contest-list error:', err.message)
     res.status(500).json({ error: `获取比赛列表失败: ${err.message}` })
